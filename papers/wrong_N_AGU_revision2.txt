@@ -1,0 +1,997 @@
+--- Page 1 ---
+manuscript submitted toAGU Advances
+Rates of sea-level rise are highly sensitive to ice 1
+viscosity parameters in model benchmarks 2
+D.F. Martin1∗, S.B. Kachuck2, M. Trevers3, J.D. Millstein4, S.L. Cornford3, 3
+B.M. Minchew5,64
+1Applied Mathematics and Computational Research Division, Lawrence Berkeley National Laboratory, 5
+Berkeley, CA, USA 6
+2Climate and Space Sciences and Engineering, University of Michigan, Ann Arbor, MI, USA 7
+3School of Geographical Sciences, University of Bristol, Bristol, UK 8
+4Department of Geophysics, Colorado School of Mines, Golden, CO, USA 9
+5Department of Earth, Atmospheric, and Planetary Sciences, Massachusetts Institute of Technology, 10
+Cambridge, MA, USA 11
+6Seismological Laboratory, California Institute of Technology, Pasadena, CA, USA 12
+Key Points:13
+•Ice sheet model projections are sensitive to the choice of flow law exponent, which 14
+governs how ice viscosity responds to changes in stress. 15
+•Models incorrectly assumingn= 3 can be initialized to matchn= 4 glaciers, 16
+but significantly underestimate ice loss in retreat benchmarks. 17
+•This bias increases with the speed of retreat, indicating a need to assess uncer- 18
+tainty from ice rheology mismatches in sea level projections. 19
+∗1 Cyclotron Rd, Berkeley, CA 94720, USA
+Corresponding author: Dan Martin,DFMartin@lbl.gov
+–1–
+
+--- Page 2 ---
+manuscript submitted toAGU Advances
+Abstract20
+Glacier flow plays a major role in current and future rates of globally averaged sea- 21
+level rise. The viscosity of glacial ice, controlling the rate of flow, decreases as stress in- 22
+creases and is highly sensitive to the value of the stress exponent,n, in the constitutive 23
+equation for viscous flow. Glaciologists and climate modelers almost exclusively assume 24
+n= 3 when modeling ice flow and projecting sea-level rise through forward modeling. 25
+However, recent work suggests thatn≈4 better fits observations, prompting the ques- 26
+tion: How sensitive are projections of sea-level rise to the value ofn? We use an estab- 27
+lished community ice flow model and standard benchmark experiments designed as an 28
+idealized representation of Pine Island Glacier, West Antarctica. While initializing an 29
+n= 3 model to match observations of ann= 4 ice sheet is possible, we find that in- 30
+correctly assumingn= 3 when in factn= 4 dramatically underestimates rates of sea- 31
+level rise. The scale of this error grows nonlinearly with the magnitude of the climate 32
+forcing, acting to increase projection uncertainties. Additionally, we find that models of- 33
+ten account for this stress-dependent rheology mismatch during model initialization in 34
+a way that masks this rheological effect in the short term while leaving model outputs 35
+vulnerable to larger biases in longer-term projections. Initializations to observations of 36
+Pine Island Glacier display similar rheology-mismatch fingerprints to our idealized ex- 37
+ample.38
+Plain Language Summary 39
+The ice found in glaciers and ice sheets responds to applied stresses with reduced 40
+resistance to flow and deformation: push twice as hard, get more than twice the flow. 41
+We can model this behavior with a stress-dependent viscosity whose exponent,n, gov- 42
+erns the sensitivity of flow to changes in stress. Recent work suggests thatn= 4 in many 43
+regions, departing from the current standard practice ofn= 3, a pervasive assumption 44
+that underpins all existing sea level projections that depend on modeling the flow of ice 45
+sheets. We ask: If numerical ice sheet models have been using incorrect values ofn, how 46
+does that affect their model projections for ice sheet change? We show that in bench- 47
+mark models of marine ice sheets typically found in Antarctica, usingn= 3 whenn 48
+should be 4 leads to underestimates of 100-year sea-level rise contributions of between 49
+21% and 35% depending on the climate forcing. Our work highlights that a simple quan- 50
+tity prescribed for the physical behavior of ice has far reaching implications for model- 51
+ing of ice sheets and understanding future sea level rise. 52
+1 Introduction53
+The present reality of global sea level rise (SLR) will impact hundreds of millions 54
+of people globally by 2100 (Kulp & Strauss, 2019; Oppenheimer et al., 2019). The mag- 55
+nitude and timing of SLR risk depends on the dynamic response of ice sheets and glaciers 56
+to changes in climate, particularly in response to marine forcing from incursion of warmer 57
+water into the cavities under ice shelves. The dynamic response of ice sheets, in turn, 58
+depends fundamentally on the viscosity of glacial ice and its response to perturbations 59
+within the ice column and in the environment. 60
+The ice found within glaciers and ice sheets deforms as a “shear-thinning” (strain- 61
+weakening) non-Newtonian viscous fluid. (Budd & Jacka, 1989) To model this behav- 62
+ior, ice flow is often represented using a power law rheology (J. Glen, 1952). Convention- 63
+ally, most ice sheet models assume Glen’s Flow Law (J. W. Glen & Perutz, 1955) to de- 64
+scribe the relationship between the deviatoric stress tensorτ ijand strain rate tensor ˙ε ij: 65
+τij= 2η˙ε ijwithη=τ1−n
+2An(1)
+–2–
+
+--- Page 3 ---
+manuscript submitted toAGU Advances
+where the dynamic viscosityηis a function ofτ=p
+τijτij/2, the square root of the 66
+second invariant of the deviatoric stress tensor, and the prefactorA n=A 0,nexp−Q
+RT67
+which is a function of absolute temperatureT, the universal gas constantR, and ma- 68
+terial properties such as activation energyQand those represented byA 0,n, which has 69
+units of Pa−na−1(Budd & Jacka, 1989; K. M. Cuffey & Paterson, 2010). The flow law 70
+exponentnis taken to be a scalar where different values indicate particular mechanisms 71
+of deformation (Goldsby & Kohlstedt, 2001). Laboratory experiments show that the phys- 72
+ical mechanisms for ice deformation, and thus the values ofA nandn, vary depending 73
+on stress, temperature, and impurity content (Schulson & Duval, 2009; Goldsby & Kohlst- 74
+edt, 2001). While experimental data suggest a wide variability in the viscous parame- 75
+ters (Bromer & Kingery, 1968; Duval et al., 1983; Goldsby & Kohlstedt, 2001; Steine- 76
+mann, 1954), ice sheet models have historically assumedn= 3 as the standard, and 77
+only, value of the flow law exponent (e.g., S. Cornford et al. (2013); Larour et al. (2012); 78
+Hoffman et al. (2018); Lipscomb et al. (2019); Gagliardini et al. (2013); Khrulev et al. 79
+(2025)).80
+Recently, however, analysis of observational and in situ data suggests that a higher 81
+value of the flow law exponent may better match the behavior of ice flow at scales rel- 82
+evant to the natural world (Bons et al., 2018; K. Cuffey & Kavanaugh, 2011; Gillet-Chaulet 83
+et al., 2011; Jezek et al., 1985; Millstein et al., 2022; Fan et al., 2025; Wang et al., 2025). 84
+For at least some of the deformation regimes most commonly observed in areas with high 85
+strain rates in the Antarctic and Greenland Ice Sheets, these results suggest thatn= 86
+4 can better represent observations than the canonicaln= 3. As a specific example, 87
+Millstein et al. (2022) infern= 4.1±0.4 based on observations of ice deformation and 88
+thickness in Antarctic ice shelves, with largely unquantified implications for modeling 89
+the evolution of ice sheets and their contribution to sea-level rise. 90
+In recent years, the ice sheet modeling community has contributed a number of in- 91
+creasingly sophisticated projections of SLR designed to inform climate scientists and decision- 92
+makers (e.g., S. L. Cornford et al. (2015); Seroussi et al. (2020); Edwards et al. (2021); 93
+Seroussi et al. (2024)). Since most, if not all, contemporary ice sheet models use flow laws 94
+withn= 3, this leaves open the question of what implications the higher value ofn= 95
+4, and resulting nonlinearity, might have on ice sheet model projections and the under- 96
+standing of ice sheet dynamics that has been gleaned from their use. For example, Getraer 97
+and Morlighem (2025) performed a set of experiments based on the ISMIP6 projection 98
+experiments (Seroussi et al., 2020) and found that using ann= 4 rheology resulted in 99
+a 32±14% increase in ice loss from the Amundsen Sea Embayment (ASE), in West Antarc- 100
+tica by 2100 compared with similar projections withn= 3 and a roughly 70±15% 101
+increase by 2300. However, in the same region, Sergienko (2025) found a more limited 102
+impact, with consequences on ice thickness and speed limited to around 5%. These con- 103
+tested uncertainties in SLR projections arising from an unresolved uncertainty innmo- 104
+tivate this study, where we employ the framework of simple and relevant community model 105
+benchmarks to explore the impacts of a higher than typical value ofn. 106
+We look to gain understanding of the impacts of incorrectly initializing a model 107
+withn= 3 to match a spun up ice sheet state with the true value ofn= 4, and then 108
+comparing resulting projections of the behavior of the incorrectly initializedn= 3 model 109
+against the truen= 4 ice sheet. Our approach is motivated by simplicity, where we 110
+aim to analyze the discrepancies betweenn= 3 andn= 4 projections in a controlled 111
+set-up. Our ability to prescribe the true value ofnand other relevant parameters, gen- 112
+erate synthetic data used to initialize ice-flow models from prescribed (and known) para- 113
+metric values, and initialize our model with values ofnthat differ from the true value 114
+allows us to isolate and assess how the model results differ between the true model and 115
+one that assumes a different value ofn. To our knowledge, this is the first study to take 116
+this approach. Previous studies by Getraer and Morlighem (2025) and Sergienko (2025) 117
+use observations of the Antarctic Ice Sheet, where the value of and uncertainties innand 118
+–3–
+
+--- Page 4 ---
+manuscript submitted toAGU Advances
+other relevant physical parameters are not fully constrained, introducing unexplored and 119
+unquantified parametric uncertainties into their results that do not exist in our ideal- 120
+ized study. In this way, our study complements and expands on the findings of these pre- 121
+vious studies by targeting a simple comparison ice flow and different stress responses. 122
+2 Methods123
+2.1 The Role of Observations in Ice Sheet Modeling 124
+Ice sheet models require spatially-varying parameter fields which are not easily ob- 125
+served, like the coefficient of friction at the beds of glaciers and parameters which rep- 126
+resent local deviations from the standard Glen’s Law due to local physical processes like 127
+damage, ice fabric and grain size, strain-induced heating and other localized and tran- 128
+sient thermal effects, interstitial liquid water content, and impurities. To address this 129
+when simulating present-day ice sheets, ice sheet modelers commonly create initial con- 130
+ditions for their experiments to match (as best as possible) observations of existing ice 131
+sheets. The observations include basal topography, surface elevation, and ice velocities. 132
+In ice sheet models, the ice velocities are obtained by solving a system of nonlinear par- 133
+tial differential equations derived from the momentum balance. Many, if not most, ice 134
+sheet modelers reproduce a fit to observed velocities for a given ice geometry by infer- 135
+ring values for the (harder to measure) basal friction coefficient and some combination 136
+of viscous parameters, such asA 0,norT. (MacAyeal, 1993; Morlighem & Goldberg, 2023) 137
+In this study, we use the BISICLES model (S. Cornford et al., 2013), and infer a 138
+basal friction field along with a viscosity multiplier coefficientϕ(sometimes called an“enhancement 139
+factor” (Minchew et al., 2018) ) as a proxy for the effects on ice viscosity of mismatches 140
+between expected and actual damage, temperature fields, fabric, impurities, and liquid 141
+water content (S. L. Cornford et al., 2015). As the name suggests,ϕmultiplies the vis- 142
+cosity in Equation 1, which then becomes 143
+τij= 2ϕη˙ε ij.(2)
+While modelers generally assume that their models broadly represent the physics 144
+of glacial ice, we note that this approach does not actually require that the rheology as- 145
+sumed in the model be a particularly good representation of the physics of the observed 146
+ice. John von Neumann would say, “Give me four parameters and I can fit an elephant; 147
+with five I can make him wiggle his trunk”; given the number of parameters and nonunique- 148
+ness in both the spatially varying basal friction and viscosity multiplier fields, there are 149
+presumably many combinations which allow one to fit a model that assumesn= 3 in 150
+Equation 1 to observations of an ice sheet regardless of the physical processes at work 151
+(MacAyeal, 1993; Gudmundsson, 2003; Dyson, 2004) . 152
+It is not yet possible to infer the values ofAandnin grounded areas where the 153
+friction at the bed is unknown due to limitations in our observations and the uncertain- 154
+ties in the inferences of the friction coefficient at the bed. As a result, while the process 155
+of tuning basal friction and ice viscosity parameters to fit observations is effective in ini- 156
+tializing models to modern observations, it can create uncertainties in time-dependent 157
+evolution of models because constitutive parameters likengovern modeled ice sheet evo- 158
+lution. To illustrate this point, consider that studies which infer the basal friction co- 159
+efficient and the value ofA 0,3(assumingn= 3) show that values ofA 0,3tend to be larger 160
+in areas of rapid shear and deformation [e.g., (Ranganathan, Minchew, Meyer, & Gud- 161
+mundsson, 2021)]. The higher value ofA 0,3in these areas relative to the surrounding 162
+areas indicates localized deformation, which is often attributed to a combination of crys- 163
+tallographic fabric development and grain size evolution, local variations in ice temper- 164
+ature, and damage (Hudleston, 2015; Minchew et al., 2018). However, increasingnfrom 165
+3 to 4 is likely to further localize deformation in ice sheets (Turcotte & Schubert, 2014). 166
+–4–
+
+--- Page 5 ---
+manuscript submitted toAGU Advances
+For initializations or short-term projections, this distinction in physical mechanisms may 167
+not be important, but when evolving the model over long periods of time, it has the po- 168
+tential to lead to different results because the value ofn, the development of fabric, lo- 169
+cal shear heating, and the damage development lead to different rates and magnitudes 170
+of change in viscosity.171
+2.2 The MISMIP+ and ABUMIP Ice Sheet Model Benchmarks 172
+To explore the ice-sheet-modeling consequences of errors inn, we use the MISMIP+ 173
+benchmark (Asay-Davis et al., 2016; S. L. Cornford et al., 2020), which is designed to 174
+explore the impact of ice shelf thinning (and resulting weakening of buttressing effects) 175
+in marine ice sheets, currently believed to be a primary driver of Antarctic contributions 176
+to SLR in the present day and for the next century. The ice sheet configuration (Fig- 177
+ure 1) is a glacier in a trough with a section of retrograde bed. The basal friction and 178
+surface mass balance are tuned to place the steady-state grounding line on the section 179
+of retrograde slope indicating a balance between the various competing physics and ten- 180
+dencies present. This steady-state configuration is then perturbed by introducing a depth- 181
+dependent subshelf melt-rate, resulting in ice shelf thinning and weakening, reducing but- 182
+tressing (the back-stress ice shelves exert on the upstream ice), which in turn results in 183
+upstream acceleration, thinning, and grounding-line retreat. The configuration repre- 184
+sents a simplified Pine Island Glacier, and is designed to explore the impact on marine 185
+ice sheet systems of buttressing and ice-shelf weakening due to warm-water incursion as 186
+has been observed in the Amundsen Sea Embayment in West Antarctica, where Pine Is- 187
+land Glacier resides. A similar modeling benchmark, the ABUMIP experiments (Sun et 188
+al., 2020), applies an extreme melt forcing to any floating ice, rapidly eliminating ice shelves. 189
+This provides an indication of the maximum possible response to rapid ice shelf loss or 190
+collapse, and can be an indication of marine ice sheet vulnerability (Martin et al., 2019). 191
+In this work, we use the MISMIP+ and ABUMIP benchmark experiments to ex- 192
+plore the consequences of initializing an ice sheet model which assumesn= 3 to ob- 193
+servations of a marine ice sheet in whichn= 4. We do this by first generating an ice- 194
+sheet state with an underlying rheology usingn= 4, then initializing ourn= 3 model 195
+to match our synthetically “observed” thickness and velocity field following S. L. Corn- 196
+ford et al. (2015). We then perform evolution experiments forced by specified sub-shelf 197
+melting profiles to observe how then= 3 model differs from the truen= 4 behav- 198
+ior. Using this idealized set up allows us to isolate precisely the consequences of assum- 199
+ing a particular flow-law exponent on initializing and projecting the grounding line evo- 200
+lution of an embayed ice shelf that buttresses a grounded glacier, like Pine Island, with- 201
+out the compounding and trading-off uncertainties of basal friction or other mechanisms 202
+that complicate searching for an initial state. By including the ABUMIP benchmark ex- 203
+periment we furthermore explore a proxy for ice shelf collapse that hasn’t been consid- 204
+ered in previous work on the impact ofnon the response to ice sheets to ocean-induced 205
+melting (Getraer & Morlighem, 2025; Sergienko, 2025). 206
+2.3 Ice Sheet Model207
+Our numerical experiments employ the BISICLES model (S. Cornford et al., 2013), 208
+which uses a variant of the vertically-integrated “L1L2” stress balance (Schoof & Hind- 209
+marsh, 2010). BISICLES employs adaptive mesh refinement to ensure that fine mesh res- 210
+olution is dynamically deployed as needed; for these experiments, mesh resolution ranges 211
+from a coarsest resolution of 4 km in quiescent regions down to a finest resolution of 250 m 212
+near grounding lines and regions of high strain rates. We use the Coulomb-limited basal 213
+friction rule from Tsai et al. (2015). 214
+–5–
+
+--- Page 6 ---
+manuscript submitted toAGU Advances
+Figure 1.Schematic of the initial conditions for the model experiments in this work. The
+glacier flows from upper left to lower right in a trough. Upper and lower ice surfaces are painted
+with ice speed (darker blue is faster-flowing ice). Ice is cut away at the centerline to reveal
+bedrock topography (orange/brown coloring). The grounding line (where the ice transitions from
+grounded to floating) is depicted by a magenta line. Note that the vertical dimension has been
+stretched by 20x for clarity. More details in Asay-Davis et al. (2016).
+2.4 MISMIP+ Spinup and Choosing a value forA n 215
+The MISMIP+ experiment begins with a constant-temperature ice sheet, on a bed 216
+with a constant basal-friction coefficient C andϕequal to unity, spun up to a steady- 217
+state configuration without any subshelf melt forcing and with a constant surface accu- 218
+mulation rate. The upstream boundary is taken to be an ice divide, and the lateral bound- 219
+aries are free-slip. We choose values ofAand the basal friction coefficient so that a spun- 220
+up steady-state ice sheet places its grounding line on the retrograde bed at the center- 221
+line of the domain.222
+For this experiment, we use the values of the basal friction coefficientCand ac- 223
+cumulation rate ˙asuggested by Asay-Davis et al. (C= 1×104Pa m1
+3a−1
+3, ˙a= 3 m a−1) 224
+and then choose the value ofAby running an ensemble of spin-up experiments to find 225
+one in which the steady-state grounding line at the centerline of the domain is on the 226
+retrograde slope (nearx= 550 km) per the MISMIP+ problem specification (Asay-Davis 227
+et al., 2016). In then= 4 case, we found that a spatially constant value ofA 4= 1.9× 228
+10−22Pa−4a−1(6.02×10−30Pa−4s−1) worked well. Following the approach outlined 229
+in the Appendix, we calculateA 3=A 4τref= 1.71×10−17Pa−3a−1(5.46×10−25Pa−3s−1) 230
+forτ ref= 90 kPa. This value ofA 3is comparable to the suggested value of 2.0×10−17Pa−3a−1231
+from Asay-Davis et al. (2016). We define the reference stressτ ref= 90 kPa because 232
+it produced aϕdistribution that is roughly symmetric and centered on the reference value 233
+ϕ= 1.0. We note, however, that because the MISMIP+ experiment is a constant-temperature 234
+ice sheet, our assumption for the value ofτ refmerely appears as a spatially constant pref- 235
+actor to the viscosity, and will be compensated for when we computeϕduring the in- 236
+version process. We tested this by confirming that changingτ refdid not result in a dif- 237
+ferent initial viscosity.238
+–6–
+
+--- Page 7 ---
+manuscript submitted toAGU Advances
+Figure 2.(top) Basal friction coefficientCand (middle) viscosity multiplier,ϕ, computed
+byn= 3 inversion to matchn= 4 steady-state using a combined inversion forCandϕ. Black
+contour indicates grounding-line location, where the ice transitions from grounded into the float-
+ing ice shelf. (bottom) Viscosity multiplier computed byn= 3 inversion which only inferredϕ.
+In the plot ofC, red hues indicate lower friction, while blue indicates higher friction coefficients.
+Note that the colormaps are centered around the prescribedn= 4 values ofC= 1.0×104m1
+3a−1
+3
+andϕ= 1.0. In plots ofϕ, red hues indicate viscosity reduction (“softening”), while blue indi-
+cates viscosity increase (“hardening”).
+–7–
+
+--- Page 8 ---
+manuscript submitted toAGU Advances
+2.5 Inversion withn= 3 239
+Once we obtained steady-staten= 4 MISMIP+ thickness and velocity fields and 240
+a matchedn= 3 value for the rate-factorA 3, we initialized then= 3 model using 241
+the approach described by S. L. Cornford et al. (2015) to infer spatially-varying basal 242
+friction coefficient (C) and viscosity multiplier (ϕ) fields. Many, if not most, models per- 243
+form initializations by inferring some combination of the basal friction field under grounded 244
+ice along with a viscosity multiplier which usually is primarily active in the floating ice 245
+shelves. Details of our inversion approach are described in the supplementary informa- 246
+tion. The basal friction (C) and viscosity multiplier (ϕ) fields we computed are shown 247
+in Figure 2. Note that our inversion attempts to compensate for the rheology mismatch 248
+via small-magnitude (on the order of 1 percent) variations in the basal friction field, along 249
+with a more-pronounced correction evident in theϕfield. Since we expect rheology mis- 250
+matches to be better addressed via the viscosity multiplier, we can also leverage our prior 251
+knowledge of the correct value ofCin the MISMIP+ problem specification and optimize 252
+for the viscosity multiplierϕin isolation withCheld fixed at the prescribed value; we 253
+expect that this approach will lead to a more-faithful representation of the correction 254
+needed to matchn= 3 ice to truen= 4 ice. The resultingϕfield produced by this 255
+second inversion is also shown in Figure 2. Whether inverting for basal friction or not, 256
+to match then= 3 model to then= 4 synthetic observation requires viscosity re- 257
+ductions in regions of high strain rates (red hues inϕin Figure 2), and a correspond- 258
+ing increase in the viscosity in regions of low strain rates (blue hues). In short, we ex- 259
+pect the magnitude of variations fromϕ= 1 to increase withn= 3. This is the ex- 260
+pected consequence of the increased sensitivity to changes in viscosity withn= 4, hence 261
+larger perturbations ofϕare required withn= 3 to produce the equivalent effect on 262
+ice flow. The primary impact of including the basal friction coefficient in the inversion 263
+is in the grounded ice, with little impact on the viscosity multiplier on floating sections 264
+or at the grounding line.265
+2.6 Evolution experiment 266
+With then= 3 rheology initialized to then= 4 initial state via inversion, we 267
+carry out a set of experiments for each rheology – a control experiment to confirm steady 268
+state and a pair of retreat-and-advance experiments. For the control experiments, we sim- 269
+ply restarted the configurations without any additional forcing. For the retreat and read- 270
+vance experiment, we apply a prescribed subshelf depth-dependent basal melt rate to 271
+represent the impact of climate forcing. Starting with the spun-up ice configuration, we 272
+allow the ice sheet to retreat under the influence of melt for 100 years, after which we 273
+turn off the melt and the ice sheet is allowed to recover, running out a total of 400 years. 274
+We perform an additional control run of then= 3 rheology without the inversion-computed 275
+viscosity multiplier field to identify the impact of the inversion. For the forced exper- 276
+iments, we use two distinct forcing regimes.Moderateforcing uses the depth-dependent 277
+melt formula prescribed in the original MISMIP+ experiment (Asay-Davis et al., 2016), 278
+which represents currently-observed melt-forcing and shelf-thinning regimes, likely due 279
+to incursions of subshelf warm water. A secondextremeforcing is based on the ABU- 280
+MIP experiments (Sun et al., 2020) and is designed to represent extreme shelf loss and 281
+collapse, like the collapse of the Larsen B Ice Shelf in 2002 (Scambos et al., 2004). The 282
+experiments are tabulated in Table 1. Except where specifically indicated, we choose to 283
+use the viscosity multiplier inverted with the (known) basal friction parameter rather 284
+than the combined inversion to focus on the effects of the viscosity multiplier. 285
+–8–
+
+--- Page 9 ---
+manuscript submitted toAGU Advances
+Table 1.Ice sheet experiments performed
+Experiment ExperimentnMeltϕ
+Number Name Forcing
+1 n4Control 4 none 1.0
+2 n4MISMIP 4 moderate 1.0
+2a n4ABUMIP 4 extreme 1.0
+3 n3Control 3 none inversion
+4 n3Control-noϕ3 none 1.0
+5 n3MISMIP 3 moderate inversion
+5a n3ABUMIP 3 extreme inversion
+6 n3MISMIP-combined 3 moderate combined inversion
+6a n3ABUMIP-combined 3 extreme combined inversion
+3 Experiment Results286
+3.1 Moderate Melt Experiments 287
+Figure 3 shows snapshots of the evolution of ice velocity, grounding line position 288
+and upper ice surface elevation for then= 3 (ϕ-only inversion) andn= 4 moderate 289
+melt experiments (Experiments 2 and 5 in Table 1). Figure 4 shows the evolution of the 290
+grounded area (which is the sum of the ice sheet grounding line advance or retreat) and 291
+the change in the total volume of ice above the flotation point (which corresponds to the 292
+contribution to SLR in the absence of solid-earth and variable sea-level effects) for the 293
+experiments in Table 1. The control runs maintain the initial condition, as expected for 294
+a successful (and successfully inverted) steady-state, while the experiment runs initially 295
+exhibit the expected thinning, grounding-line retreat, and reduction in volume above flota- 296
+tion (corresponding to a positive contribution to SLR). When the melt forcing is turned 297
+off after 100 years in the experiment runs, the ice sheet recovers, albeit at a slower rate 298
+than the retreat.299
+Notable observations from the results: 300
+1. The steady-state configuration is well-maintained in both then= 3 andn= 4 301
+control runs (Figure 4, Experiments 1 and 3). This points to the effectiveness of 302
+the inversion-producedϕfield in enabling then= 3 ice sheet to match the ini- 303
+tial steady-staten= 4 configuration. 304
+2. Then= 3 control run withϕ= 1 (Experiment 4) experiences a small advance 305
+and mass gain (Figure 4). This is a consequence of then= 3 rheology’s increased 306
+viscosity and decreased sensitivity to changes in shear stress across the ice shelf 307
+margin, allowing for a greater buttressing back-stress and the observed thicken- 308
+ing and grounding line advance. This demonstrates the impact of theϕfield when 309
+matching observations, and shows that it is relatively straightforward to match 310
+ann= 3 ice sheet to a snapshot of observations of ann= 4 ice sheet using a 311
+viscosity multiplier.312
+3. Owing to its decreased sensitivity to changes in stress and higher initial viscos- 313
+ity, then= 3 ice sheet in Experiment 5 noticeably under-predicts the initial re- 314
+sponse of the ice sheet relative to then= 4 baseline in Experiment 2, with max- 315
+imum reduction in grounded area 17.6% less than then= 4 response, and a cor- 316
+responding 21% underestimate in the reduction in the volume above flotation (con- 317
+tribution to SLR). These results are consistent with modeled projections of Antarc- 318
+tica’s contribution to sea level rise as shown in Figure 1B of Fricker et al. (2025). 319
+During retreat, when the ice shelf is thinned, then= 4 rheology has a much faster 320
+–9–
+
+--- Page 10 ---
+manuscript submitted toAGU Advances
+response time and allows faster draining of grounded ice than predicted withn= 321
+3 Figures 3– 5.322
+4. Conversely, in the recovery phase we see a faster response withn= 4, but while 323
+then= 3 andn= 4 grounding lines have recovered similarly byt= 400 years, 324
+the ice thickness (as expressed in the volume above flotation) has not recovered 325
+to the same degree – it is noticeable in Figure 3 that while the grounding lines for 326
+both cases are essentially identical, the ice thickness and velocity fields are notice- 327
+ably different.328
+5. Compared to differences with then= 4 evolutions, differences between then= 329
+3 results using the two inversion approaches are relatively small, suggesting these 330
+observations are robust regardless of the specific inversion approach used. 331
+We can highlight the differences in response rates between then= 3 andn= 4 ice 332
+sheets (Experiments 2 and 5) by plotting the relative difference (in percent) between the 333
+n= 3 andn= 4 grounded areas and total volumes above flotation, as in Figure 5. 334
+Again, notable features are that then= 3 case underestimates the rates of both re- 335
+treat and readvance, and that the grounded area (grounding-line location) recovers much 336
+more quickly than the ice volume. 337
+3.2 Effect of Ice Shelf Collapse and Loss 338
+Using the same MISMIP+ initial condition and inversion as before, we exposed the 339
+ice shelves to the extreme melt forcing (ABUMIP) specified in Sun et al. (2020), essen- 340
+tially removing any floating ice in a very short interval. 341
+The resulting evolution of glacier flow, surface elevation, and grounding line po- 342
+sition (Figure 6) along with total grounded area and volume above flotation (Figure 4) 343
+broadly follow the same patterns as for the moderate-melt case. Under extreme melt con- 344
+ditions, the less-sensitiven= 3 ice sheet retreats an additional 1.44×the grounded area 345
+loss and sees a 1.64×reduction in volume above flotation compared to the moderate melt 346
+case. The more-sensitiven= 4 ice sheet sees a difference of 1.59×in grounded area loss. 347
+The response in total volume over flotation is also stark, contributing to global SLR at 348
+1.86×the amount from the moderate-melt experiment. This represents an under-estimate 349
+of SLR by then= 3 model of 35% after 100 years. Note that the discrepancy between 350
+then= 3 andn= 4 response is more than proportionally larger (the ABUMIP re- 351
+sponse divided by the MISMIP response is greater forn= 4 than forn= 3). Figure 352
+7 shows the relative response (∆(V aF) ABUMIP
+∆(V aF) MISMIP) indicating a larger sensitivity of then= 353
+4 ice to extreme forcing relative to projections from then= 3 model. This discrepancy 354
+in sensitivity is particularly pronounced in the initial dynamic phase of the experiments, 355
+in which then= 4 ice sheet is as much as 50% more sensitive (defined by the ratio of 356
+the ratios) to the more-extreme forcing. However, even in the long-term response, the 357
+n= 4 sensitivity is 20% more than seen in then= 3 result. 358
+Movies corresponding to Figures 3 and 6 are included in the supplementary ma- 359
+terial.360
+4 Application to Pine Island Glacier 361
+It is notable that the pattern our inversion retrieves in the viscosity multiplier closely 362
+resembles the patterns that previous studies have tended to produce when attempting 363
+to match observed Antarctic velocity fields withn= 3 models (e.g., S. L. Cornford et 364
+al. (2015)). This pattern, characterized by sharply localized softening in shear margins 365
+and diffuse hardening in regions of lower strain rates, can be observed in the upper-left 366
+panel in Figure 8, which shows a viscosity multiplier field inverted to reproduce 2010 ve- 367
+locities for Pine Island Glacier, which flows into the Amundsen Sea Embayment in West 368
+Antarctica. Bedrock elevation and ice thickness were provided by BedMachine Antarc- 369
+–10–
+
+--- Page 11 ---
+manuscript submitted toAGU Advances
+Figure 3.Snapshots of the MISMIP+ (moderate ice-shelf melt) experiment for (from top
+to bottom) t = 0, 50 years, 100 years, 150 years, 200 years, and 400 years. Glacier flow is from
+left to right, flow speed is shown in the colormap, thick green and magenta colored lines indicate
+grounding line position, and red/black contour lines illustrate the upper ice surface elevation.
+The domain is split – the lower half isn= 4 (Experiment 2), and the upper half isn= 3 with
+inversion-produced viscosity multiplier to match initialn= 4 velocities att= 0 (Experiment
+5). The yellow colored portions of the model time clocks indicate the period 0-100 years when
+melting is applied to the model, while the remaining time allows the model to recover with no
+applied melting.
+–11–
+
+--- Page 12 ---
+manuscript submitted toAGU Advances
+Figure 4.Plots of (top) change in grounded area, and (bottom) change in total volume above
+flotation for the set of experiments in Table 1. Red indicatesn= 3 results, purple indicates
+n= 3 results using the combined inversion, green indicatesn= 3 results holdingϕ= 1, and blue
+indicatesn= 4 results. The yellow shaded region shows the interval of active melt forcing (t= 0
+to 100 years). Line types denote the specific experiments: control runs (Experiments 1, 3, and
+4) are represented by dot-dashed lines, the standard MISMIP+ experiments (Experiments 2 and
+5) by solid lines, and the ABUMIP extreme-melt Experiments (2a and 5a) by dashed lines. Note
+that the lines forn= 4 control (Experiment 1) andn= 3 control with the inversion-computedϕ
+(Experiment 3) overlie and are indistinguishable in these plots.
+–12–
+
+--- Page 13 ---
+manuscript submitted toAGU Advances
+Figure 5.Relative percentage differences in grounded area change and total volume above
+flotation change betweenn= 3 andn= 4 results for Experiments 2 and 5 in Table 1. Relative
+difference in a time-dependent quantityQ(t) is defined as (∆Q(t) n=3−∆Q(t) n=4
+∆Q(t) n=4×100%), in which
+∆Q(t) =Q(t)−Q(0). The yellow shaded region shows the interval of active melt forcing (t= 0
+to 100 years). Note that the relative difference at the initial time is defined to be zero; as a ratio
+of two very small numbers at early times, relative differences can change very rapidly causing the
+initial relative difference of grounded area to appear nonzero on this plot.
+tica v3 (Morlighem, 2022), and velocity observations came from Mouginot et al. (2019). 370
+Details of the ASE inversions can be found in Supplementary Section S4. In this figure, 371
+green hues indicate required increases to the viscosity and purple hues indicate required 372
+softening. As with Figure 2, stiffening is required in the main trunks of the ice shelf, along 373
+with softening in the shear margins. In the context of this work, the similarities suggest 374
+that at least some of the computed viscosity modifications may result from employing 375
+ann= 3 rheology in the inversion in regions where a different power-law better rep- 376
+resents the actual flow of ice.377
+If this is the case, then one could expect the level of correction imparted by the vis- 378
+cosity multiplier to be less when using ann= 4 rheology compared to the standardn= 379
+3 rheology. We performedn= 3 andn= 4 inversions based on ASE observations com- 380
+piled in Morlighem (2022). Figure 8 showsϕfor the Pine Island Glacier Ice shelf, com- 381
+puted vian= 3 andn= 4 inversions, and a representative cross-section across the 382
+shelf. In this figure, it is apparent that then= 4 inversions infer noticeably less weak- 383
+ening (about 10% less) in the shear margins, as expected based on our idealized exper- 384
+iment. We also compute the difference between then= 3 andn= 4 viscosity multi- 385
+pliers (shown in the middle-left panel in Figure 8). Sinceϕ= 1 in our idealizedn= 386
+4 ice sheet, this difference is roughly equivalent to the deviation (ϕ−1) in the viscos- 387
+ity multiplier shown in Figure 2. Red regions represent reduced viscosity (weakening), 388
+and blue indicates increased viscosity (hardening) for then= 3 inversion relative to 389
+then= 4 inversion. We see the same basic pattern as we see in Figure 2 – additional 390
+weakening in the ice stream margins forn= 3 compared ton= 4, and some addi- 391
+tional strengthening (blue) in the lower-stress regions in the ice-stream trunks. 392
+Figure 8 also shows the distribution of the viscosity multiplierϕwithin the Pine 393
+Island Glacier subdomain (bottom-right panel). Based on the results of our idealized ex- 394
+periment, we expectϕto impose less of a correction for then= 4 case than for then= 395
+3 inversion, which is what we see in the figure – the distribution ofϕ n=4is more closely 396
+clustered around 1 (less corrective) than that forϕ n=3. That is consistent with a view 397
+that the inclusion ofn= 4 processes such as dislocation creep better fits the true pic- 398
+ture, but also consistent with a view that processes such as fabric formation can emu- 399
+late highernin kilometer-scale observations of strain rates. 400
+–13–
+
+--- Page 14 ---
+manuscript submitted toAGU Advances
+Figure 6.Snapshots of the ABUMIP (extreme melt representing ice-shelf collapse) experi-
+ment for (from top to bottom) t = 0, 50 years, 100 years, 150 years, 200 years, and 400 years.
+Glacier flow is from left to right, flow speed is shown in the colormap, thick green and magenta
+colored lines indicate grounding line position, and red/black contour lines illustrate the upper ice
+surface elevation. The domain is split – the lower half isn= 4 (Experiment 2a), and the upper
+half isn= 3 with inversion-produced viscosity multiplier to match initialn= 4 velocities at
+t= 0 (Experiment 5a). The yellow colored portions of the model time clocks indicate the period
+0-100 years when melting is applied to the ice shelf, while the remaining time allows the model to
+recover with no applied melting.
+–14–
+
+--- Page 15 ---
+manuscript submitted toAGU Advances
+Figure 7.Ratio of change in VaF (contribution to SLR) for the ABUMIP experiment to the
+change in VaF for the MISMIP+ experiment (∆(V aF) ABUMIP
+∆(V aF) MISMIP) forn= 3 andn= 4.
+5 Discussion401
+All ice-sheet model initializations require modelers to make assumptions and de- 402
+cisions about which parameters to prescribe and which to infer by minimizing the mis- 403
+fit between the model and observations. The results of these inversions can be used to 404
+glean insights into the physical mechanisms acting in the ice sheets. For example, some 405
+inferred viscosity multiplier (ϕ) values have been interpreted as damage in ice, which nat- 406
+urally tend to occur in regions of high strain rate (C. P. Borstad et al., 2012; Bassis et 407
+al., 2024) while others working in different areas of Antarctica highlight the importance 408
+of fabric development, recrystallization, and internal shear heating and melting on ice 409
+viscosity (Minchew et al., 2018; Ranganathan, Minchew, Meyer, & Gudmundsson, 2021; 410
+Ranganathan, Minchew, Meyer, & Peˇ c, 2021). For compactness, we take “softening” to 411
+refer to the combined effects of such local deviations from Glen’s Law as crevassing, mi- 412
+croscopic cracking, warmer ice temperatures, interstitial water, recrystallization, and fab- 413
+ric. The inversion results presented here suggest that at least part of what has been at- 414
+tributed to damage and other softening processes may be the effect of matching ann= 415
+3 model to observations of ann= 4 ice sheet. If true, this misattribution of physics 416
+can have profound impacts on modeling efforts. For example, many efforts are under- 417
+way to incorporate the physics of ice damage into ice sheet modeling efforts (C. Borstad 418
+et al., 2016; Kachuck et al., 2022) – any attempts to validate these models using obser- 419
+vations will be complicated by the presence of the effects of rheology mismatches. At the 420
+level of this study, there is the parallel case where the true value ofnfor pure ice is in- 421
+deed 3, but the softening processes captured by the viscosity multiplier act to cause ice 422
+in real-world situations like the ASE to appear asn= 4 in data snapshots and short 423
+time-series. We note in this case, however, that until robust and well-tested approaches 424
+to evolveϕfields are developed along with longer data time-series that allow us to dis- 425
+tinguish values ofnfrom other softening processes, it is likely thatn= 4 would remain 426
+a better choice for modelers of large-scale marine ice sheets. Regardless, our results, com- 427
+bined with those of Getraer and Morlighem (2025), show that reliable ensemble projec- 428
+tions of ice sheet response and resulting contributions to sea level rise must include an 429
+exploration of the known uncertainties in the viscous stress exponentn. 430
+In both the MISMIP+ and ASE examples, we are able to match the initial and true 431
+n= 4 thickness and velocity observations withn= 3 using a spatially varyingϕ. But 432
+our model’s ability to evolve this field is rudimentary at best, and our initialization does 433
+not reflect the transient nature of a real ice sheet. It is common practice to simply main- 434
+tain this spatially-varyingϕfield as constant in time, as we do in our experiments. This 435
+means that as the ice sheet evolves, the prescribed viscosity modifications will no longer 436
+–15–
+
+--- Page 16 ---
+manuscript submitted toAGU Advances
+1700
+ 1650
+ 1600
+ 1550
+ 1500
+ 1450
+km-350 -300 -250 -200 -150kmViscosity multiplier, n=3
+1700
+ 1650
+ 1600
+ 1550
+ 1500
+ 1450
+km-350 -300 -250 -200 -150kmViscosity multiplier, n=4
+0.5 1.0 1.5
+1700
+ 1650
+ 1600
+ 1550
+ 1500
+ 1450
+km-350 -300 -250 -200 -150kmViscosity multiplier difference
+0.1
+ 0.0 0.1
+(n=3)(n=4)
+1620
+ 1600
+ 1580
+km0.0 0.5 1.0 1.5 2.0viscosity multiplier, 
+n=4
+n=3
+0.0 0.5 1.0 1.5 2.0
+viscosity multiplier, 
+0200 400 600Frequencyn=4
+n=3
+Figure 8.Viscosity multiplierϕcomputed for Pine Island Glacier, West Antarctica, as a part
+of (top left)n= 3 and (top right)n= 4 inversions. Green indicatesϕ <1 (reduced viscos-
+ity) and purpleϕ >1 (increased viscosity) (middle left). Difference plot showingϕ n=3−ϕn=4.
+Red denotes viscosity reduction (“softening”) forn= 3, while blue denotes viscosity increase
+(“hardening”) forn= 3 relative ton= 4. (middle right) Location of the Pine Island Glacier
+in West Antarctica, where the map shows only the grounded portions of the ice sheet. (bottom
+left) Cross-sectional profiles ofϕalong the marked line in (a) and (b). (bottom right) Binned
+distributions for the inversion parameterϕcomputed in then= 3 andn= 4 inversions for Pine
+Island Glacier, calculated for cells where the ice velocity is in excess of 500 m a−1.
+–16–
+
+--- Page 17 ---
+manuscript submitted toAGU Advances
+align with current stress fields in the ice, and will likely exert their own effects on the 437
+ice dynamics. Even if one uses other models to evolve the viscosity multiplier, as is com- 438
+mon with the application of damage fields, the response time of the shear-thinning vis- 439
+cosity to changes in stress is instantaneous in the model, while different processes like 440
+heating and damage evolution respond over finite timescales to changes in the stress en- 441
+vironment (Ranganathan et al., 2025; Hills et al., 2023). 442
+Our results suggest that the impact of buttressing in ice shelves may be over-estimated 443
+in the idealized experiments designed and carried out for then= 3 rheology, such as 444
+the MISMIP+ experiment and related MISOMIP experiments, designed to explore the 445
+coupling between local ocean warming and ice sheet retreat. These have generally been 446
+used to gain insight into the relative importance of buttressing and other ice-dynamic 447
+effects. The stronger stress-concentration and coincident weakening via viscosity reduc- 448
+tion present in ann= 4 rheology reduce the ability of the ice shelf to maintain and 449
+transmit the stresses that provide buttressing through lateral shear stresses inn= 3 450
+models. This manifest itself during the generation of a steady-state MISMIP+ initial con- 451
+dition for ourn= 4 ice sheet – the reduced impact of buttressing resulted in different 452
+initial condition values than for the standardn= 3 experiment. Consequently, glaciol- 453
+ogists looking for insight from benchmarks performed withn= 3 may also overesti- 454
+mate the impacts of buttressing effects in projections of real-world ice sheets. 455
+Finally, we note that uncertainties due to the value ofncompound with other un- 456
+certainties. As shown in Figure 7, the difference betweenn= 3 andn= 4 projections 457
+increases more than proportionally for larger forcings, implying that ice sheets which fol- 458
+low ann= 4 rheology will exhibit a greater spread between lower and upper bound 459
+response than we currently see with projections which employn= 3. This functions 460
+as an uncertainty multiplier. For instance, uncertainty around time scales of ice shelf weak- 461
+ening ranges from the rapid disintegration of the Larsen B Ice Shelf to the more mod- 462
+erate (but still substantial) thinning seen in the Amundsen Sea Embayment (represented 463
+here by the ABUMIP and MISMIP+ forcing regimes). Incorporating these together, one 464
+now sees a range of more than 2×in SLR after 100 years between the n=3 moderate melt 465
+and the n=4 shelf collapse results. This finding underscores the likelihood that both the 466
+magnitude and uncertainties in current sea level rise projections are severely underes- 467
+timated and that a more thorough and systematic sensitivity analysis of ice sheet mod- 468
+els to the value ofnis needed.469
+6 Conclusions470
+In this work, we show that it is possible for ann= 3 ice sheet model to success- 471
+fully match the state of an observedn= 4 ice sheet, while potentially misattributing 472
+the rheology mismatch to other physics like ice damage, ice fabric, or temperature. The 473
+results of ourn= 3 runs substantially under-predict the sensitivity and response time 474
+of ice shelves to changes in both external and internal forcings, leading to differences in 475
+both the amount and rate of grounding line retreat and contributions to sea level rise. 476
+This is likely because the viscosity multiplier is required to be fixed in time for model 477
+initialization, an algorithmic consequence not grounded in the reality of a time-dependent 478
+ice rheology.479
+Looking forward, it is apparent that further sensitivity studies are needed in more- 480
+realistic configurations, and projections of sea-level rise must take into account uncer- 481
+tainties in the viscous flow law parameters, particularly the exponentnand prefactor 482
+A, to effectively capture the range of potential responses to various forcings. Our model, 483
+like other ice-flow models used to simulate the behavior of the Antarctic Ice Sheet, strongly 484
+depends on the prescribed value ofnto capture the viscous responses to stress pertur- 485
+bations caused by both external climate forcing and the internal variability. As such, ac- 486
+–17–
+
+--- Page 18 ---
+manuscript submitted toAGU Advances
+curately capturing the viscous stresses within glacier ice is a primary control governing 487
+our ability to predict the future of the Antarctic Ice Sheet. 488
+Appendix A A note on the viscosity prefactorA 489
+Ice properties represented byA n(Equation 1) in current ice sheet models have been 490
+fitted in the context ofn= 3 rheologies. We have no assurances that thesen= 3 val- 491
+ues are consistent with other values of the flow-law exponent, and in fact they are di- 492
+mensionally inconsistent. To test other flow law exponents, we can exploit the fact that 493
+the viscositiesη n=3andη n=4will be equal at some reference stressτ ref. We can then 494
+hold viscosity constant and adjust the value ofA nin Equation 1 such that 495
+η=τ1−n
+ref
+2An=τ1−m
+ref
+2Am.(A1)
+If we assume that we know the strain rates at the particular stressτ=τ ref(equiva- 496
+lent to knowing the viscosity at a particular stress), then 497
+Am=A 3τ(3−m)
+ref,(A2)
+which provides a simple way to incorporate the temperature-dependent correlations for 498
+A developed over the past few decades (which assumedn= 3) to modeling ice in which 499
+n= 4. Conversely, if we’re starting in a modeled world whereinn= 4, we can com- 500
+pute the equivalent value forA 3using the following: 501
+A3=A 4τref (A3)
+and we can write the viscosity502
+η3=A−1
+4τrefτ−2(A4)
+Following from this approach, we can see that the viscosityη 3will be greater than 503
+η4for stresses greater thanτ ref(τ > τ ref) and vice-versa (i.e.,η 4< η3forτ < τ ref), 504
+as expected for a rheology less sensitive to changes in stress. 505
+Moreover, in equation 2 above, the viscosity multiplier multiplies the viscosity in 506
+equation A4:507
+η3=ϕA−1
+4τrefτ−2.(A5)
+In our idealized setup, this illustrates why neither the choice of the reference stress nor 508
+the initial rate factor should affect the ability to initialize then= 3 experiment. As 509
+a product of all these factors, the inversion cannot distinguish between them. 510
+Open Research Section511
+All code and relevant data and input files for this work are freely available. The 512
+numerical experiments in this work were conducted using the BISICLES open-source ice 513
+sheet model (https://bisicles.lbl.gov), which in turn is built upon the Chombo open- 514
+source software framework (https://chombo.lbl.gov) (Adams et al., 2001-2021) 515
+Downloading Chombo and BISICLES requires free registration athttps://anag 516
+-repo.lbl.gov, and then can be downloaded using svn. For Chombo (this work uses 517
+svn revision 23947):518
+svn --username username co https://anag-repo.lbl.gov/svn/Chombo/release/3.2 519
+Chombo520
+For BISICLES (this work uses svn revision 4414): 521
+–18–
+
+--- Page 19 ---
+manuscript submitted toAGU Advances
+svn --username username co https://anag-repo.lbl.gov/svn/BISICLES/public/trunk 522
+BISICLES523
+We have placed the relevant data in a repository at the National Energy Research 524
+Scientific Computing Center (NERSC): 525
+https://portal.nersc.gov/cfs/m1041/dmartin/n4RheologyData 526
+In this location are tarfiles containing the input and data files used in this work, 527
+along with a set of README files with instructions on how to reproduce these results. 528
+For convenience, we also include the specific versions of Chombo and BISICLES used 529
+in this work inChombo.tar.gzandBISICLES.tar.gz. 530
+Conflict of Interest Statement 531
+The authors have no conflicts of interest to declare. Disclosure: BM is a co-founder 532
+of Arˆ ete Glacier Initiative (areteglaciers.org), where he maintains an affiliation through 533
+his allowance for outside professional activities provided by Caltech (current affiliation) 534
+and MIT (past affiliation). Arˆ ete is a non-profit organization (currently a fiscally spon- 535
+sored project of the 401(c) 3 Digital Harbor Foundation) founded in 2024 to provide fund- 536
+ing for glaciological research focused on sea-level rise. No funding was provided by Arˆ ete 537
+for this work.538
+Acknowledgments539
+Miigwechis the word for thanks in Ojibwe. We thank Benjamin Getraer and an anony- 540
+mous reviewer for their thoughtful and constructive feedback, which have substantially 541
+improved the quality and clarity of this work. We also thank a wide range of colleagues 542
+for many fruitful discussions on this and other topics. Financial support for this study 543
+was provided through the Scientific Discovery through Advanced Computing (SciDAC) 544
+program funded by the U.S. Department of Energy (DOE), Office of Science, Biologi- 545
+cal and Environmental Research and Advanced Scientific Computing Research programs, 546
+as a part of the ProSPect SciDAC Partnership. Work at Berkeley Lab was supported 547
+by the Director, Office of Science, of the U.S. Department of Energy under Contract No. 548
+DE-AC02-05CH11231. This research used resources of the National Energy Research Sci- 549
+entific Computing Center (NERSC), a U.S. Department of Energy Office of Science User 550
+Facility located at Lawrence Berkeley National Laboratory, operated under Contract No. 551
+DE-AC02-05CH11231 using NERSC award ASCR-ERCAPm1041. SBK was funded by 552
+DoE grant C3710, Framework for Antarctic System Science in E3SM and by the DOMI- 553
+NOS project, a component of the International Thwaites Glacier Collaboration (ITGC). 554
+Support from National Science Foundation (NSF: Grant 1738896) and Natural Environ- 555
+ment Research Council (NERC: Grant NE/S006605/1). Support for BMM was also pro- 556
+vided through funding from the Grantham Foundation. MT and SLC were supported 557
+by the Natural Environment Research Council on the ISOTIPIC project (NERC Grant 558
+NE/Y503320/1).559
+References560
+Adams, M., Colella, P., Graves, D. T., Johnson, J. N., Keen, N. D., Ligocki, T. J., 561
+. . . Van Straalen, B. (2001-2021).Chombo software package for AMR applica- 562
+tions - Design Document(Tech. Rep. No. LBNL-6616E). Lawrence Berkeley 563
+National Laboratory. Retrieved fromhttps://commons.lbl.gov/display/ 564
+chombo/Chombo+-+Software+for+Adaptive+Solutions+of+Partial+ 565
+Differential+Equations 566
+Asay-Davis, X. S., Cornford, S. L., Durand, G., Galton-Fenzi, B. K., Gladstone, 567
+R. M., Gudmundsson, G. H., . . . Seroussi, H. (2016). Experimental de- 568
+–19–
+
+--- Page 20 ---
+manuscript submitted toAGU Advances
+sign for three interrelated marine ice sheet and ocean model intercomparison 569
+projects: MISMIP v. 3 (MISMIP+), ISOMIP v. 2 (ISOMIP+) and MISOMIP 570
+v. 1 (MISOMIP1).Geoscientific Model Development,9(7), 2471–2497. doi: 571
+10.5194/gmd-9-2471-2016 572
+Bassis, J. N., Crawford, A., Kachuck, S. B., Benn, D. I., Walker, C., Millstein, J., . . . 573
+Luckman, A. (2024). Stability of ice shelves and ice cliffs in a changing climate 574
+[Journal Article].Annual Review of Earth and Planetary Sciences,52(Volume 575
+52, 2024), 221-247. Retrieved fromhttps://www.annualreviews.org/ 576
+content/journals/10.1146/annurev-earth-040522-122817doi: 577
+https://doi.org/10.1146/annurev-earth-040522-122817 578
+Bons, P. D., Kleiner, T., Llorens, M.-G., Prior, D. J., Sachau, T., Weikusat, I., & 579
+Jansen, D. (2018). Greenland ice sheet: Higher nonlinearity of ice flow signif- 580
+icantly reduces estimated basal motion.Geophysical Research Letters,45(13), 581
+6542–6548.582
+Borstad, C., Khazendar, A., Scheuchl, B., Morlighem, M., Larour, E., & Rignot, 583
+E. (2016). A constitutive framework for predicting weakening and reduced 584
+buttressing of ice shelves based on observations of the progressive deterioration 585
+of the remnant Larsen B Ice Shelf.Geophysical Research Letters,43(5), 2027- 586
+2035. Retrieved fromhttps://agupubs.onlinelibrary.wiley.com/doi/abs/ 587
+10.1002/2015GL067365doi: https://doi.org/10.1002/2015GL067365 588
+Borstad, C. P., Khazendar, A., Larour, E., Morlighem, M., Rignot, E., Schod- 589
+lok, M. P., & Seroussi, H. (2012). A damage mechanics assessment of 590
+the Larsen B ice shelf prior to collapse: Toward a physically-based calv- 591
+ing law.Geophysical Research Letters,39(18). Retrieved fromhttps:// 592
+agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2012GL053317doi: 593
+https://doi.org/10.1029/2012GL053317 594
+Bromer, D., & Kingery, W. (1968). Flow of polycrystalline ice at low stresses and 595
+small strains.Journal of Applied Physics,39(3), 1688–1691. 596
+Budd, W. F., & Jacka, T. (1989). A review of ice rheology for ice sheet modelling. 597
+Cold regions science and technology,16(2), 107–144. 598
+Cornford, S., Martin, D., Graves, D., Ranken, D., Brocq, A. L., Gladstone, R., . . . 599
+Lipscomb, W. (2013). Adaptive mesh, finite volume modeling of marine ice 600
+sheets.Journal of Computational Physics,232, 529-549. 601
+Cornford, S. L., Martin, D. F., Payne, A. J., Ng, E. G., Le Brocq, A. M., Gladstone, 602
+R. M., . . . Vaughan, D. G. (2015). Century-scale simulations of the response 603
+of the West Antarctic Ice Sheet to a warming climate.The Cryosphere,9(4), 604
+1579–1600. doi: 10.5194/tc-9-1579-2015 605
+Cornford, S. L., Seroussi, H., Asay-Davis, X. S., Gudmundsson, G. H., Arthern, R., 606
+Borstad, C., . . . Yu, H. (2020). Results of the third Marine Ice Sheet Model 607
+Intercomparison Project (MISMIP+).The Cryosphere,14(7), 2283–2301. doi: 608
+10.5194/tc-14-2283-2020609
+Cuffey, K., & Kavanaugh, J. (2011). How nonlinear is the creep deformation of polar 610
+ice? a new field assessment.Geology,39(11), 1027–1030. 611
+Cuffey, K. M., & Paterson, W. S. B. (2010).The physics of glaciers. Academic 612
+Press.613
+Duval, P., Ashby, M., & Anderman, I. (1983). Rate-controlling processes in the 614
+creep of polycrystalline ice.The Journal of Physical Chemistry,87(21), 4066– 615
+4074.616
+Dyson, F. (2004). A meeting with Enrico Fermi.Nature,427. doi: https://doi.org/ 617
+10.1038/427297a618
+Edwards, T., Nowicki, S., Marzeion, B., & et al. (2021). Projected land ice contribu- 619
+tions to twenty-first-century sea level rise.Nature,593, 74–82. doi: 10.1038/ 620
+s41586-021-03302-y621
+Fan, S., Wang, T., Prior, D. J., Breithaupt, T., Hager, T. F., & Wallis, D. (2025). 622
+Flow laws for ice constrained by 70 years of laboratory experiments.Nature 623
+–20–
+
+--- Page 21 ---
+manuscript submitted toAGU Advances
+geoscience, 1–9.624
+Fricker, H. A., Galton-Fenzi, B. K., Walker, C. C., Freer, B. I. D., Padman, L., 625
+& DeConto, R. (2025). Antarctica in 2025: Drivers of deep uncertainty in 626
+projected ice loss.Science,387(6734), 601–609. doi: 10.1126/science.adt9619 627
+Gagliardini, O., Zwinger, T., Gillet-Chaulet, F., Durand, G., Favier, L., de Fleurian, 628
+B., . . . Thies, J. (2013). Capabilities and performance of Elmer/Ice, a 629
+new-generation ice sheet model.Geosci. Model Dev.,6, 1299-1318. doi: 630
+doi:10.5194/gmd-6-1299-2013 631
+Getraer, B., & Morlighem, M. (2025). Increasing the Glen–Nye power-law expo- 632
+nent accelerates ice-loss projections for the Amundsen Sea Embayment, West 633
+Antarctica.Geophysical Research Letters,52(7), e2024GL112516. Retrieved 634
+fromhttps://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/ 635
+2024GL112516(e2024GL112516 2024GL112516) doi: https://doi.org/10.1029/ 636
+2024GL112516637
+Gillet-Chaulet, F., Hindmarsh, R. C., Corr, H. F., King, E. C., & Jenkins, A. 638
+(2011). In-situ quantification of ice rheology and direct measurement of the 639
+Raymond Effect at Summit, Greenland using a phase-sensitive radar.Geophys- 640
+ical Research Letters,38(24). 641
+Glen, J. (1952). Experiments on the deformation of ice.Journal of Glaciology, 642
+2(12), 111–114.643
+Glen, J. W., & Perutz, M. F. (1955). The creep of polycrystalline ice.Proceedings 644
+of the Royal Society of London. Series A. Mathematical and Physical Sciences, 645
+228(1175), 519-538. Retrieved fromhttps://royalsocietypublishing.org/ 646
+doi/abs/10.1098/rspa.1955.0066doi: 10.1098/rspa.1955.0066 647
+Goldsby, D., & Kohlstedt, D. L. (2001). Superplastic deformation of ice: Exper- 648
+imental observations.Journal of Geophysical Research: Solid Earth,106(B6), 649
+11017–11030.650
+Gudmundsson, G. H. (2003). Transmission of basal variability to a glacier sur- 651
+face.Journal of Geophysical Research: Solid Earth,108(B5). Retrieved 652
+fromhttps://agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/ 653
+2002JB002107doi: https://doi.org/10.1029/2002JB002107 654
+Hills, B. H., Christianson, K., Jacobel, R. W., Conway, H., & Pettersson, R. (2023). 655
+Radar attenuation demonstrates advective cooling in the Siple Coast ice 656
+streams.Journal of Glaciology,69(275), 566–576. doi: 10.1017/jog.2022.86 657
+Hoffman, M. J., Perego, M., Price, S. F., Lipscomb, W. H., Zhang, T., Jacob- 658
+sen, D., . . . Bertagna, L. (2018). MPAS-Albany Land Ice (MALI): a 659
+variable-resolution ice sheet model for earth system modeling using Voronoi 660
+grids.Geoscientific Model Development,11(9), 3747–3780. Retrieved 661
+fromhttps://gmd.copernicus.org/articles/11/3747/2018/doi: 662
+10.5194/gmd-11-3747-2018 663
+Hudleston, P. J. (2015). Structures and fabrics in glacial ice: A review.Journal of 664
+Structural Geology,81, 1–27. doi: 10.1016/j.jsg.2015.09.003 665
+Jezek, K. C., Alley, R. B., & Thomas, R. H. (1985). Rheology of glacier ice.Science, 666
+227(4692), 1335–1337.667
+Kachuck, S. B., Whitcomb, M., Bassis, J. N., Martin, D. F., & Price, S. F. (2022). 668
+Simulating ice-shelf extent using damage mechanics.Journal of Glaciology, 669
+68(271), 987–998. doi: 10.1017/jog.2022.12 670
+Khrulev, C., Aschwanden, A., Bueler, E., Brown, J., Maxwell, D., Albrecht, T., 671
+. . . Schoell, S. (2025, March).Parallel Ice Sheet Model (PISM).Zen- 672
+odo. Retrieved fromhttps://doi.org/10.5281/zenodo.14991122doi: 673
+10.5281/zenodo.14991122 674
+Kulp, S. A., & Strauss, B. H. (2019). New elevation data triple estimates of global 675
+vulnerability to sea-level rise and coastal flooding.Nature Communications, 676
+10(1), 4844. doi: 10.1038/s41467-019-12808-z 677
+Larour, E., Seroussi, H., Morlighem, M., & Rignot, E. (2012). Continental scale, 678
+–21–
+
+--- Page 22 ---
+manuscript submitted toAGU Advances
+high order, high spatial resolution, ice sheet modeling using the Ice Sheet 679
+System Model.J. Geophys. Res.,117. doi: doi:10.1029/2011JF002140 680
+Lipscomb, W. H., Price, S. F., Hoffman, M. J., Leguy, G. R., Bennett, A. R., 681
+Bradley, S. L., . . . Worley, P. H. (2019). Description and evaluation of the 682
+Community Ice Sheet Model (CISM) v2.1.Geoscientific Model Development, 683
+12(1), 387–424. Retrieved fromhttps://gmd.copernicus.org/articles/12/ 684
+387/2019/doi: 10.5194/gmd-12-387-2019 685
+MacAyeal, D. R. (1993). A tutorial on the use of control methods in ice- 686
+sheet modeling.Journal of Glaciology,39(131), 91–98. doi: 10.3189/ 687
+S0022143000015744688
+Martin, D. F., Cornford, S. L., & Payne, A. J. (2019). Millennial-scale vulnerability 689
+of the Antarctic Ice Sheet to regional ice shelf collapse.Geophysical Research 690
+Letters,46(3), 1467-1475. Retrieved fromhttps://agupubs.onlinelibrary 691
+.wiley.com/doi/abs/10.1029/2018GL081229doi: https://doi.org/10.1029/ 692
+2018GL081229693
+Millstein, J., Minchew, B., & Pegler, S. (2022). Ice viscosity is more sensitive to 694
+stress than commonly assumed.Commun Earth Environ,3(57). Retrieved 695
+fromhttps://doi.org/10.1038/s43247-022-00385-xdoi: 10.1038/s43247 696
+-022-00385-x697
+Minchew, B. M., Meyer, C. R., Robel, A. A., Gudmundsson, G. H., & Simons, M. 698
+(2018). Processes controlling the downstream evolution of ice rheology in 699
+glacier shear margins: case study on Rutford Ice Stream, West Antarctica. 700
+Journal of Glaciology,64(246), 583–594. doi: 10.1017/jog.2018.47 701
+Morlighem, M. (2022).MEaSUREs BedMachine Antarctica, version 3.NASA 702
+National Snow and Ice Data Center Distributed Active Archive Center. 703
+Retrieved fromhttp://nsidc.org/data/NSIDC-0756/versions/3doi: 704
+10.5067/FPSU0V1MWUB6 705
+Morlighem, M., & Goldberg, D. (2023). Data assimilation in glaciology. In A. Ismail- 706
+Zadeh, F. Castelli, D. Jones, & S. Sanchez (Eds.),Applications of data assim- 707
+ilation and inverse problems in the earth sciences(p. 93–111). Cambridge 708
+University Press.709
+Mouginot, J., Rignot, E., & Scheuchl, B. (2019).MEaSUREs Phase-Based 710
+Antarctica Ice Velocity Map, Version 1 [Data Set].Retrieved 2024-01- 711
+29, fromhttps://nsidc.org/data/nsidc-0754/versions/1doi: 712
+10.5067/PZ3NJ5RXRH10 713
+Oppenheimer, M., Glavovic, B., Hinkel, J., van de Wal, R., Magnan, A., Abd- 714
+Elgawad, A., . . . Sebesvari, Z. (2019). Sea level rise and implications for 715
+low-lying islands, coasts and communities. In H.-O. P¨ ortner et al. (Eds.),Ipcc 716
+special report on the ocean and cryosphere in a changing climate(pp. 321– 717
+445). Cambridge, UK and New York, NY, USA: Cambridge University Press. 718
+doi: 10.1017/9781009157964.006 719
+Ranganathan, M., Minchew, B., Meyer, C. R., & Gudmundsson, G. H. (2021). A 720
+new approach to inferring basal drag and ice rheology in ice streams, with 721
+applications to West Antarctic ice streams.Journal of Glaciology,67(262), 722
+229–242. doi: 10.1017/jog.2020.95 723
+Ranganathan, M., Minchew, B., Meyer, C. R., & Peˇ c, M. (2021). Recrystallization 724
+of ice enhances the creep and vulnerability to fracture of ice shelves.Earth and 725
+Planetary Science Letters,576, 117219. doi: 10.1016/j.epsl.2021.117219 726
+Ranganathan, M., Robel, A. A., Huth, A., & Duddu, R. (2025). Glacier damage evo- 727
+lution over ice flow timescales.The Cryosphere,19(4), 1599–1619. Retrieved 728
+fromhttps://tc.copernicus.org/articles/19/1599/2025/doi: 10.5194/ 729
+tc-19-1599-2025730
+Scambos, T. A., Bohlander, J. A., Shuman, C. A., & Skvarca, P. (2004). Glacier 731
+acceleration and thinning after ice shelf collapse in the Larsen B embayment, 732
+Antarctica.Geophysical Research Letters,31(18). Retrieved fromhttps:// 733
+–22–
+
+--- Page 23 ---
+manuscript submitted toAGU Advances
+agupubs.onlinelibrary.wiley.com/doi/abs/10.1029/2004GL020670doi: 734
+https://doi.org/10.1029/2004GL020670 735
+Schohn, C. M., Iverson, N. R., Zoet, L. K., Fowler, J. R., & Morgan-Witts, N. 736
+(2025). Linear-viscous flow of temperate ice.Science,387(6730), 182-185. Re- 737
+trieved fromhttps://www.science.org/doi/abs/10.1126/science.adp7708 738
+doi: 10.1126/science.adp7708 739
+Schoof, C., & Hindmarsh, R. (2010). Thin-film flows with wall slip: an asymptotic 740
+analysis of higher order glacier flow models.Q. Jl Mech. Appl. Math.,63(1), 741
+73-114.742
+Schulson, E. M., & Duval, P. (2009).Creep and fracture of ice. Cambridge: Cam- 743
+bridge University Press.744
+Sergienko, O. (2025, Jun). Pine Island Glacier ice shelf (West Antarctica) 745
+is more sensitive to climate conditions than to rheological parameters on 746
+multidecadal timescales.Phys. Rev. E,111, L062201. Retrieved from 747
+https://link.aps.org/doi/10.1103/n3xh-bt95doi: 10.1103/n3xh-bt95 748
+Seroussi, H., Nowicki, S., Payne, A. J., Goelzer, H., Lipscomb, W. H., Abe-Ouchi, 749
+A., . . . Zwinger, T. (2020). ISMIP6 Antarctica: a multi-model ensemble of the 750
+Antarctic Ice Sheet evolution over the 21st century.The Cryosphere,14(9), 751
+3033–3070. Retrieved fromhttps://tc.copernicus.org/articles/14/3033/ 752
+2020/doi: 10.5194/tc-14-3033-2020 753
+Seroussi, H., Pelle, T., Lipscomb, W. H., Abe-Ouchi, A., Albrecht, T., Alvarez-Solas, 754
+J., . . . Zwinger, T. (2024). Evolution of the Antarctic Ice Sheet over the 755
+next three centuries from an ISMIP6 model ensemble.Earth’s Future,12(9), 756
+e2024EF004561. Retrieved fromhttps://agupubs.onlinelibrary.wiley 757
+.com/doi/abs/10.1029/2024EF004561(e2024EF004561 2024EF004561) doi: 758
+https://doi.org/10.1029/2024EF004561 759
+Steinemann, S. (1954). Results of preliminary experiments on the plasticity of ice 760
+crystals.Journal of Glaciology,2(16), 404–416. 761
+Sun, S., Pattyn, F., Simon, E. G., Albrecht, T., Cornford, S., Calov, R., . . . et 762
+al. (2020). Antarctic Ice Sheet response to sudden and sustained ice- 763
+shelf collapse (ABUMIP).Journal of Glaciology,66(260), 891–904. doi: 764
+10.1017/jog.2020.67765
+Tsai, V. C., Stewart, A. L., & Thompson, A. F. (2015). Marine ice-sheet profiles 766
+and stability under coulomb basal conditions.Journal of Glaciology,61(226), 767
+205–215. doi: 10.3189/2015JoG14J221 768
+Turcotte, D., & Schubert, G. (2014).Geodynamics(3rd ed.). Cambridge University 769
+Press.770
+Wang, Y., Lai, C.-Y., Prior, D. J., & Cowen-Breen, C. (2025). Deep learning the 771
+flow law of Antarctic ice shelves.Science,387(6739), 1219-1224. Retrieved 772
+fromhttps://www.science.org/doi/abs/10.1126/science.adp3300doi: 773
+10.1126/science.adp3300774
+–23–

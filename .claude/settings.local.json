@@ -9,7 +9,8 @@
       "Bash(jupyter nbconvert:*)",
       "Bash(pdflatex:*)",
       "Bash(ls:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(brew install:*)"
     ]
   }
 }

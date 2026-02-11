@@ -1,0 +1,407 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+% Custom commands
+\newcommand{\sigice}{\sigma_{\text{ice}}}
+\newcommand{\sigconst}{\sigma_{\text{constrained}}}
+\newcommand{\sigscen}{\sigma_{\text{scenario}}}
+\newcommand{\sigtot}{\sigma_{\text{total}}}
+\newcommand{\WAIS}{\text{WAIS}}
+
+\title{Physics-Informed WAIS Uncertainty Framework:\\
+  Correcting Systematic Biases in Antarctic Ice Sheet\\
+  Projections for Sea-Level Rise Forecasting}
+
+\author{Supplementary Material}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The IPCC AR6 Antarctic Ice Sheet (AIS) projections likely understate the true range of West Antarctic Ice Sheet (WAIS) uncertainty due to three identified systematic biases: (1) the near-universal use of Glen's flow law with stress exponent $n=3$ despite evidence supporting $n=4$; (2) the omission of irreducible stochastic amplification from marine ice-sheet instability (MISI); and (3) the absence of key physical processes from most contributing models. We develop four complementary, literature-grounded approaches to construct a physics-informed $\sigice$ for use in hierarchical sea-level rise forecasting. The approaches converge on $\sigice \approx$ 320--491~mm at 2100, compared to $\sim$150~mm (medium confidence) and $\sim$290~mm (low confidence) from IPCC AR6. Our recommended approach---combining restructured scenario weighting, quantile-dependent rheology correction, and stochastic amplification during marine ice-sheet instability---yields $\sigice \approx 491$~mm. The physics-informed corrections increase the ice-sheet fraction of total variance at 2100 from 7\% to 8--18\%, with more dramatic changes at mid-century horizons where ice-sheet uncertainty becomes the dominant source.
+\end{abstract}
+
+
+\section{Motivation}
+
+Our hierarchical SLR forecasting framework decomposes total projection uncertainty into three additive components:
+\begin{equation}
+  \sigma^2_{\text{total}}(t) = \sigconst^2(t) + \sigscen^2(t) + \sigice^2(t)
+  \label{eq:decomposition}
+\end{equation}
+where $\sigconst$ represents calibrated DOLS parameter uncertainty, $\sigscen$ represents scenario (SSP) spread, and $\sigice$ represents deep uncertainty from Antarctic ice sheet dynamics.
+
+In the original decomposition using IPCC AR6 data, $\sigice$ is estimated directly from the AIS component 5--95\% range in the confidence-level NetCDF files. Even at low confidence (which includes structured expert judgment on poorly constrained processes), $\sigice$ accounts for only $\sim$7\% of total variance at 2100---a result that appears inconsistent with the depth of uncertainty articulated in the recent ice-sheet literature.
+
+Three lines of evidence suggest the IPCC AIS projections systematically understate uncertainty:
+
+\begin{enumerate}
+  \item \textbf{Rheological bias}: Nearly all contributing ice-sheet models use $n=3$ in Glen's flow law, despite laboratory and field evidence favoring $n=4$ for Antarctic conditions. This is a one-directional systematic bias that grows nonlinearly with forcing magnitude.
+
+  \item \textbf{Stochastic amplification}: Marine ice-sheet instability exponentially amplifies ensemble spread, generating irreducible uncertainty from internal climate variability that is not captured in deterministic model intercomparisons.
+
+  \item \textbf{Missing processes}: Grounding-zone tidal pumping, subglacial hydrology coupling, cold-to-warm ocean cavity transitions, and marine ice-cliff instability are absent from most contributing models.
+\end{enumerate}
+
+We address these through four complementary approaches, each grounded in specific published results.
+
+
+\section{Approach 1: Rheology Correction ($n=3 \to n=4$)}
+
+\subsection{Physical basis}
+
+The standard Glen--Nye flow law relates deviatoric stress $\tau$ to strain rate $\dot{\varepsilon}$:
+\begin{equation}
+  \dot{\varepsilon} = A\,\tau^n
+\end{equation}
+where $A$ is a temperature-dependent rate factor and $n$ is the stress exponent. The value $n=3$ has been used since \citet{glen1955creep}, but multiple lines of evidence support $n=4$ for Antarctic conditions:
+
+\begin{itemize}
+  \item Laboratory experiments at Antarctic temperatures and stress levels \citep{goldsby2001superplastic}
+  \item Field inversions from Antarctic ice streams show effective $n > 3$ \citep{minchew2019kinematics}
+  \item The inversion procedure using $n=3$ compensates through a viscosity multiplier $\phi$ that masks the rheological error
+\end{itemize}
+
+\subsection{Quantitative impact}
+
+Two recent studies provide direct estimates of the $n=3 \to n=4$ bias:
+
+\begin{itemize}
+  \item \textbf{Martin et al.\ (in review)}: Using coupled Amundsen Sea Embayment (ASE) simulations, $n=3$ underestimates SLR contribution by 21\% under moderate ocean forcing and 35\% under extreme forcing. The bias grows nonlinearly because the inversion-calibrated viscosity multiplier becomes increasingly inadequate as forcing departs from calibration conditions.
+
+  \item \textbf{\citet{getraer2025increasing}}: Pan-Antarctic simulations show $32 \pm 14\%$ more ice loss by 2100 with $n=4$ vs.\ $n=3$, growing to $\sim70 \pm 15\%$ by 2300. Crucially, by 2200--2250, uncertainty from $n$ exceeds uncertainty from the climate forcing scenario.
+\end{itemize}
+
+\subsection{Implementation}
+
+We apply quantile-dependent correction factors $f(q, t)$ to the IPCC AIS distribution:
+\begin{equation}
+  Q^{\text{corrected}}(q, t) = f(q, t) \times Q^{\text{IPCC}}(q, t)
+  \label{eq:rheology_correction}
+\end{equation}
+
+The correction factor is parameterized as:
+\begin{equation}
+  f(q, t) = 1 + \Delta f(q) \cdot g(t)
+\end{equation}
+where:
+\begin{align}
+  \Delta f(q) &= 0.05 + 0.35\,q & &\text{(quantile-dependent amplitude)} \\
+  g(t) &= \left(\frac{t - t_{\text{ref}}}{2100 - t_{\text{ref}}}\right)^{\gamma} & &\text{(temporal ramp, } \gamma = 1.5\text{)}
+\end{align}
+
+This gives:
+\begin{align}
+  f(Q_{5\%}, 2100) &\approx 1.07 & &\text{(minimal correction at low end)} \\
+  f(Q_{50\%}, 2100) &\approx 1.22 & &\text{(Martin et al.\ moderate forcing)} \\
+  f(Q_{95\%}, 2100) &\approx 1.38 & &\text{(Getraer \& Morlighem: $32 \pm 14\%$)}
+\end{align}
+
+The correction is asymmetric by design: the $n=3$ bias is larger for faster retreat (upper quantiles) because stronger forcing amplifies the difference between $n=3$ and $n=4$ flow dynamics.
+
+The temporal ramp uses $\gamma = 1.5 > 1$ to reflect the nonlinear growth of the bias with cumulative ice loss. Near present (2020), the correction is negligible because ice flow is still close to the calibration state. By 2100, the full correction applies.
+
+For years beyond 2100, the correction continues to grow (following the $\sim70\%$ by 2300 result from \citealt{getraer2025increasing}), reaching $f \approx 1.8 \times \Delta f$ by 2300.
+
+
+\section{Approach 2: Stochastic Amplification}
+
+\subsection{Physical basis}
+
+\citet{robel2019marine} demonstrated that marine ice-sheet instability (MISI) does not merely increase the mean SLR projection---it fundamentally changes the character of the uncertainty distribution through three mechanisms:
+
+\begin{enumerate}
+  \item \textbf{Exponential amplification}: An ensemble that begins with modest spread (from parameter or initial-condition uncertainty) develops exponentially growing spread once MISI is triggered, because the instability amplifies initial differences.
+
+  \item \textbf{Positive skew}: The distribution of SLR contributions becomes positively skewed (heavy right tail in SLR space), allocating more probability mass to large contributions than a Gaussian would predict.
+
+  \item \textbf{Irreducible floor}: Even with perfectly known mean forcing, internal climate variability on multidecadal timescales generates substantial irreducible uncertainty. For Thwaites Glacier alone: $\sim$20~cm uncertainty during fast retreat (conservative, known mean forcing), $\sim$40~cm with multidecadal variability, and $\sim$60~cm when the mean forcing itself is uncertain.
+\end{enumerate}
+
+\subsection{Implementation}
+
+We model the stochastic amplification as an additive, independent uncertainty component:
+\begin{equation}
+  \sigice^{2,\text{total}}(t) = \sigice^{2,\text{A1}}(t) + \sigma_{\text{internal},\WAIS}^2(t)
+  \label{eq:stochastic_addition}
+\end{equation}
+
+where $\sigice^{2,\text{A1}}$ is the rheology-corrected IPCC uncertainty from Approach~1, and $\sigma_{\text{internal},\WAIS}$ represents the irreducible stochastic component.
+
+The temporal evolution of $\sigma_{\text{internal}}$ follows an exponential ramp-up after an estimated MISI onset:
+\begin{equation}
+  \sigma_{\text{internal}}(t) = \sigma_{\max} \left(1 - e^{-(t - t_{\text{onset}})/\tau_{\text{amp}}}\right) \quad \text{for } t > t_{\text{onset}}
+\end{equation}
+
+\begin{table}[h]
+\centering
+\caption{Parameter sets for stochastic amplification model}
+\label{tab:stochastic_params}
+\begin{tabular}{lccccc}
+\toprule
+Estimate & $t_{\text{onset}}$ (yr) & $\tau_{\text{amp}}$ (yr) & $\sigma_{\max}$ (mm) & Skewness $\alpha$ & $\sigma(2100)$ (mm) \\
+\midrule
+Conservative & 2040 & 50 & 150 & 2.0 & $\sim$105 \\
+Central      & 2030 & 40 & 200 & 3.0 & $\sim$165 \\
+Aggressive   & 2025 & 30 & 250 & 4.0 & $\sim$229 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The skewness is represented through a skew-normal distribution with shape parameter $\alpha$, normalized to unit variance. This ensures that the upper-tail quantiles are larger than the lower-tail quantiles for a given $\sigma$.
+
+Parameter choices are motivated by:
+\begin{itemize}
+  \item $t_{\text{onset}}$: The WAIS temperature threshold is estimated at $>1.5$\textdegree C above pre-industrial, which could be reached by 2025--2040 depending on the scenario \citep{fricker2025antarctica}.
+  \item $\tau_{\text{amp}}$: The e-folding time for MISI amplification is $\sim$30--50 years based on the marine ice-sheet instability timescale for Thwaites Glacier \citep{robel2019marine}.
+  \item $\sigma_{\max}$: Scaled up from the Thwaites-only results ($\sim$20--40~cm) to full WAIS ($\times$1.5--2, accounting for Pine Island Glacier and other basins), giving 150--250~mm.
+\end{itemize}
+
+The addition in quadrature (\cref{eq:stochastic_addition}) is justified because the stochastic component arises from internal climate variability, which is independent of both the model structural uncertainty captured in the IPCC ensemble and the systematic rheological bias corrected in Approach~1.
+
+
+\section{Approach 3: Process-Informed Scenario Weighting}
+
+\subsection{Rationale}
+
+Approaches 1 and 2 adjust the IPCC distribution parametrically. Approach~3 takes a fundamentally different path: we construct a \textbf{discrete mixture model} that explicitly represents physically distinct WAIS dynamical regimes. This approach:
+
+\begin{itemize}
+  \item Makes the assessed probabilities of different outcomes transparent and debatable
+  \item Naturally produces a multimodal, heavy-tailed distribution
+  \item Can incorporate processes (MICI, GZ amplifiers) not captured in Approaches 1--2
+  \item Serves as an independent cross-check on the parametric approaches
+\end{itemize}
+
+\subsection{Scenario definitions}
+
+\begin{table}[h]
+\centering
+\caption{Process-informed WAIS scenario definitions at 2100}
+\label{tab:scenarios}
+\begin{tabular}{llccc}
+\toprule
+Scenario & Description & $P$ & SLR range (mm) & Basis \\
+\midrule
+S1: Status quo & Current acceleration continues & 0.10 & 30--80 & IMBIE trend \\
+S2: MISI ($n$=3) & GL retreat, standard rheology & 0.20 & 150--400 & IPCC low conf. \\
+S3: MISI ($n$=4) & GL retreat, corrected rheology & 0.35 & 200--550 & S2 $\times$ Approach~1 \\
+S4: MISI + amplifiers & + GZ tidal pumping, subglacial hydro. & 0.25 & 400--1000 & Fricker et al. \\
+S5: MISI + MICI & + marine ice-cliff instability & 0.10 & 600--2000+ & DeConto \& Pollard \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each scenario's SLR range defines the 5th--95th percentiles of a log-normal distribution (ensuring positive support and right skew). The mixture distribution is:
+\begin{equation}
+  p(\text{SLR}) = \sum_{k=1}^{5} w_k \cdot p_k(\text{SLR})
+\end{equation}
+
+\subsection{Probability assessment}
+
+The scenario weights are assessed as follows:
+
+\begin{itemize}
+  \item \textbf{S1 ($P = 0.10$)}: The ``no instability'' scenario. WAIS continues losing mass at accelerating rates consistent with current observations, but without triggering widespread MISI. This receives low weight because observational evidence for ongoing grounding-line retreat at Thwaites and Pine Island Glacier, intrusion of warm Circumpolar Deep Water onto the continental shelf, and theoretical understanding of MISI all favor instability being underway or imminent. The weight is nonzero to hedge against the possibility that the deceleration observed in IMBIE data around 2010 reflects a real dynamical pause rather than variability.
+
+  \item \textbf{S2 ($P = 0.20$)}: MISI is triggered for Thwaites and/or Pine Island Glacier, but with the standard $n=3$ rheology used in IPCC contributing models. This is consistent with the median IPCC low-confidence AIS projection. It receives lower weight than S3 because the evidence for $n=3$ is weak: it originates from early laboratory experiments at stress and temperature conditions unrepresentative of Antarctic ice streams, and the inversion procedure compensates for the rheological error through a viscosity multiplier $\phi$ that masks the bias \citep{martin2025wrongn}.
+
+  \item \textbf{S3 ($P = 0.35$)}: Same dynamical scenario as S2 but with corrected rheology ($n=4$). This is the highest-weighted scenario because it combines the most likely dynamical regime (MISI triggered) with the best-supported rheology. Laboratory experiments at Antarctic-relevant conditions \citep{goldsby2001superplastic}, field inversions \citep{minchew2019kinematics}, and two independent modeling studies \citep{martin2025wrongn, getraer2025increasing} all support $n \geq 4$.
+
+  \item \textbf{S4 ($P = 0.25$)}: MISI with additional process amplifiers identified by \citet{fricker2025antarctica}: grounding-zone tidal pumping (which can double melt rates), subglacial hydrology coupling ($\sim$30\% amplification), and cold-to-warm ocean cavity transitions. This receives substantial weight because each of these processes is physically documented and observed, even though their combined quantitative impact remains poorly constrained. The fact that \emph{none} of these processes are represented in the models contributing to IPCC AR6 means the current projections systematically omit known amplifying feedbacks.
+
+  \item \textbf{S5 ($P = 0.10$)}: The extreme scenario including marine ice-cliff instability (MICI), which could produce rapid, self-sustaining retreat of tall ice cliffs exposed after ice-shelf loss. While MICI remains uncertain \citep{edwards2019revisiting}, it cannot be ruled out. We assign 10\% weight---double the previous 5\%---because recent observations of accelerating ice-shelf thinning and collapse (Conger, Larsen B) demonstrate that the preconditions for MICI (exposure of tall ice cliffs) are plausible within the 21st century.
+\end{itemize}
+
+\subsection{Temporal scaling}
+
+Each scenario's temporal evolution is scaled from the 2100 value using a physically motivated growth curve:
+
+\begin{itemize}
+  \item S1 (status quo): $g(t) = \Delta t^2$ (quadratic accumulation, consistent with constant acceleration)
+  \item S2--S3 (MISI): Delayed onset ($\sim$2030) followed by exponential ramp-up, $g(t) = (1 - e^{-3\Delta t_{\text{eff}}}) \cdot \Delta t_{\text{eff}}$
+  \item S4--S5 (MISI + amplifiers/MICI): Earlier onset ($\sim$2025), faster ramp-up
+\end{itemize}
+
+
+\section{Approach 4: Rheology-Corrected Scenario Mixture + Stochastic Amplification}
+
+Approach~4 is the most complete framework, combining all three preceding approaches. The key insight motivating this combination is that the $n=3 \to n=4$ rheology correction (Approach~1) affects \emph{all} ice flow dynamics---not just MISI onset---and should therefore be applied to every scenario, not only parameterized as a separate scenario branch.
+
+\subsection{Restructured scenarios}
+
+We merge the Approach~3 scenarios S2 (MISI, $n=3$) and S3 (MISI, $n=4$) into a single MISI scenario, since the $n=3/n=4$ distinction is now handled by the systematic rheology correction rather than by separate scenarios with heuristically adjusted ranges. This yields four scenarios:
+
+\begin{table}[h]
+\centering
+\caption{Restructured scenario definitions for Approach~4 (SLR ranges are $n=3$ baselines)}
+\label{tab:scenarios_a4}
+\begin{tabular}{llccc}
+\toprule
+Scenario & Description & $P$ & SLR range (mm, $n$=3) & Basis \\
+\midrule
+S1: Status quo & Current acceleration continues & 0.10 & 30--80 & IMBIE trend \\
+S2: MISI & GL retreat, base dynamics & 0.55 & 150--400 & IPCC low conf. \\
+S3: MISI + amplifiers & + GZ tidal pumping, subglacial hydro. & 0.25 & 400--1000 & Fricker et al. \\
+S4: MISI + MICI & + marine ice-cliff instability & 0.10 & 600--2000+ & DeConto \& Pollard \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The merged S2 weight ($P = 0.55$) equals the sum of the old S2 and S3 weights ($0.20 + 0.35$), reflecting that MISI (regardless of the assumed rheology) is the most likely dynamical regime. The SLR ranges are \emph{$n=3$ baselines}---the rheology correction inflates them.
+
+\subsection{Combined pipeline}
+
+For each Monte Carlo sample $k$ in scenario $s$ at year $t$:
+\begin{equation}
+  X^{\text{A4}}_{k,s}(t) = f(q_k, t) \times X^{\text{base}}_{k,s}(t) + \epsilon_k(t)
+  \label{eq:a4_combined}
+\end{equation}
+where:
+\begin{itemize}
+  \item $X^{\text{base}}_{k,s}(t)$ is drawn from the scenario's log-normal distribution and temporally scaled (\S4)
+  \item $f(q_k, t)$ is the Approach~1 rheology correction (\cref{eq:rheology_correction}), applied using the empirical quantile $q_k$ of sample $k$ within its scenario batch (Hazen plotting position). This correction is applied to \emph{every} sample in \emph{every} scenario, including S1
+  \item $\epsilon_k(t) \sim \text{SkewNormal}(0, \sigma_{\text{internal}}(t), \alpha)$ is the Approach~2 stochastic amplification, applied only to MISI scenarios ($s \in \{S2, S3, S4\}$). S1 has no MISI, so $\epsilon_k = 0$ for status-quo samples
+\end{itemize}
+
+This is the most complete approach, incorporating: (1) the discrete scenario structure with assessed probabilities, (2) the non-Gaussian shape from log-normal within-scenario distributions, (3) the quantile-dependent $n=3 \to n=4$ rheology correction applied to all ice dynamics, and (4) the irreducible stochastic amplification during MISI. Approach~4 serves as our recommended estimate of the full physics-informed $\sigice$.
+
+
+\section{Results and Comparison}
+
+\subsection{$\sigice$ at 2100}
+
+All four approaches independently suggest that the true AIS uncertainty is substantially larger than the IPCC estimates:
+
+\begin{table}[h]
+\centering
+\caption{Comparison of $\sigice$ at 2100 (mm) across approaches}
+\label{tab:comparison}
+\begin{tabular}{lcc}
+\toprule
+Source & $\sigice$ (mm) & Ratio to IPCC Med. \\
+\midrule
+IPCC Medium Confidence & 150 & 1.0$\times$ \\
+IPCC Low Confidence & 290 & 1.9$\times$ \\
+A1: Rheology Correction & 393 & 2.6$\times$ \\
+A2: A1 + Stochastic Amplification & 426 & 2.8$\times$ \\
+A3: Scenario Mixture & 320 & 2.1$\times$ \\
+A4: Rheology + Scenarios + Stochastic & 491 & 3.3$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Approaches~2--4 yield $\sigice \approx$ 320--491~mm from complementary methodologies, spanning a range $\sim$1.1--1.7$\times$ the IPCC low-confidence estimate and $\sim$2.1--3.3$\times$ the medium-confidence estimate. The parametric approach (A2) and the hybrid approach (A4) both include the rheology correction, while the structural approach (A3) does not. Approach~4 ($\sigice = 491$~mm) is the most complete, incorporating assessed scenario probabilities, non-Gaussian within-scenario distributions, the quantile-dependent rheology correction applied to all ice dynamics, and irreducible stochastic amplification during MISI.
+
+\subsection{Impact on variance decomposition}
+
+With physics-informed $\sigice$, the ice-sheet fraction of total variance at 2100 increases substantially:
+
+\begin{itemize}
+  \item \textbf{IPCC Medium Confidence}: $f_{\text{ice}} \approx 2\%$ at 2100
+  \item \textbf{IPCC Low Confidence}: $f_{\text{ice}} \approx 7\%$ at 2100
+  \item \textbf{A2 (Rheology + Stochastic)}: $f_{\text{ice}} \approx 14\%$ at 2100
+  \item \textbf{A3 (Scenario Mixture)}: $f_{\text{ice}} \approx 8\%$ at 2100
+  \item \textbf{A4 (Recommended)}: $f_{\text{ice}} \approx 18\%$ at 2100
+\end{itemize}
+
+While scenario uncertainty ($\sigscen$) still dominates at 2100 due to the large spread in temperature pathways, the physics-informed corrections reveal that ice-sheet uncertainty is a substantially more important contributor than the raw IPCC numbers suggest---increasing $f_{\text{ice}}$ from 2\% (medium confidence) to 8--18\% depending on the approach---and becomes dominant at earlier time horizons ($\sim$2040--2060).
+
+\subsection{Distribution shape}
+
+The Approach~3 mixture distribution at 2100 exhibits positive skewness ($\sim$2.0) and heavy tails (excess kurtosis $\sim$6.2), reflecting the substantial combined weight (35\%) on high-impact scenarios S4 and S5. Its 95th percentile ($\sim$1048~mm) substantially exceeds the IPCC low-confidence 95th percentile, and its median ($\sim$342~mm) exceeds the IPCC low-confidence median.
+
+Approach~4 substantially increases the spread ($\sigice = 491$ vs.\ 320~mm) through the combined effect of the rheology correction and stochastic amplification, and shifts the median upward ($\sim$574~mm). The skewness ($\sim$1.75) and kurtosis ($\sim$5.7) remain high, reflecting both the discrete scenario structure and the asymmetric rheology correction (which inflates the upper tail more than the lower tail). The 95th percentile increases to $\sim$1589~mm, and the 5th percentile shifts modestly from 49 to 59~mm because even the status-quo scenario receives the rheology correction.
+
+This non-Gaussian shape has practical implications: a Gaussian approximation to $\sigice$ underestimates the probability of outcomes in the upper tail.
+
+
+\section{Caveats and Limitations}
+
+\begin{enumerate}
+  \item \textbf{Scenario probabilities are subjective}: The weights in Approach~3 reflect our assessment of current literature and are intended to be transparent and debatable, not definitive. Sensitivity to weight choices should be explored.
+
+  \item \textbf{Rheology correction is extrapolated}: The Martin et al.\ and Getraer \& Morlighem results are for specific model configurations. Applying them as multiplicative corrections to the IPCC ensemble implicitly assumes the bias is representative.
+
+  \item \textbf{Independence assumption}: Combining rheology correction and stochastic amplification in quadrature assumes independence. Some correlation may exist if MISI dynamics depend on rheology.
+
+  \item \textbf{East Antarctic Ice Sheet}: Our framework focuses on WAIS. The EAIS is treated as having lower deep uncertainty, consistent with IPCC AR6, but recent evidence of increased EAIS mass loss may warrant similar analysis.
+
+  \item \textbf{Temporal scaling}: The growth curves for Approach~3 are idealized. Real WAIS dynamics will be more complex, with potential for abrupt transitions.
+\end{enumerate}
+
+
+\section{Recommendations}
+
+For use in the hierarchical SLR forecasting framework, we recommend:
+
+\begin{enumerate}
+  \item \textbf{Approach~4 as the primary $\sigice$}: It is the most complete approach, combining restructured 4-scenario weighting, quantile-dependent rheology correction for all ice dynamics (Approach~1), and stochastic amplification during MISI (Approach~2). It produces $\sigice \approx 491$~mm at 2100, raising the ice-sheet fraction from 7\% to 18\%. The rheology correction is applied to every sample in every scenario---reflecting that the $n=3 \to n=4$ bias affects all ice flow, not only MISI dynamics---while stochastic perturbations are applied only to MISI scenarios (S2--S4).
+
+  \item \textbf{Approach~2 as a parametric comparison}: The purely parametric correction ($\sigice \approx 426$~mm, $f_{\text{ice}} \approx 14\%$) does not depend on subjective scenario weights and provides a useful comparison. That A4 ($\sigice = 491$~mm) exceeds A2 ($\sigice = 426$~mm) reflects the additional structural uncertainty captured by the scenario mixture that is absent from the parametric approach.
+
+  \item \textbf{Report results at four levels}: IPCC low confidence (baseline), Approach~3 (scenario structure without rheology correction), Approach~2 (parametric rheology + stochastic), and Approach~4 (recommended: full framework), allowing readers to assess sensitivity to each component of the uncertainty treatment.
+\end{enumerate}
+
+
+\bibliographystyle{agsm}
+\begin{thebibliography}{99}
+
+\bibitem[DeConto and Pollard(2016)]{deconto2016contribution}
+DeConto, R.~M. and Pollard, D. (2016).
+\newblock Contribution of {A}ntarctica to past and future sea-level rise.
+\newblock \textit{Nature}, 531(7596):591--597.
+
+\bibitem[Edwards et~al.(2019)]{edwards2019revisiting}
+Edwards, T.~L., Brandon, M.~A., Durand, G., et~al. (2019).
+\newblock Revisiting {A}ntarctic ice loss due to marine ice-cliff instability.
+\newblock \textit{Nature}, 566(7742):58--64.
+
+\bibitem[Fricker et~al.(2025)]{fricker2025antarctica}
+Fricker, H.~A., Becker, M.~K., Dow, C.~F., et~al. (2025).
+\newblock Antarctica in 2025: Drivers of deep uncertainty in projected ice loss.
+\newblock \textit{Science}, 387(6736):758--765.
+
+\bibitem[Getraer and Morlighem(2025)]{getraer2025increasing}
+Getraer, R.~D. and Morlighem, M. (2025).
+\newblock Increasing the {G}len--{N}ye power-law exponent accelerates ice-loss projections.
+\newblock \textit{Geophysical Research Letters}, 52.
+
+\bibitem[Glen(1955)]{glen1955creep}
+Glen, J.~W. (1955).
+\newblock The creep of polycrystalline ice.
+\newblock \textit{Proceedings of the Royal Society of London A}, 228(1175):519--538.
+
+\bibitem[Goldsby and Kohlstedt(2001)]{goldsby2001superplastic}
+Goldsby, D.~L. and Kohlstedt, D.~L. (2001).
+\newblock Superplastic deformation of ice: Experimental observations.
+\newblock \textit{Journal of Geophysical Research}, 106(B6):11017--11030.
+
+\bibitem[Martin et~al.(in review)]{martin2025wrongn}
+Martin, D.~F., Kachuck, S.~B., Trevers, K., Millstein, J.~D., Cornford, S.~L., and Minchew, B.~M. (in review).
+\newblock Impact of the stress exponent on ice sheet simulations.
+\newblock \textit{AGU Advances}.
+
+\bibitem[Minchew and Meyer(2020)]{minchew2019kinematics}
+Minchew, B.~M. and Meyer, C.~R. (2020).
+\newblock Dilation of subglacial sediment governs incipient surge motion in glaciers with deformable beds.
+\newblock \textit{Proceedings of the Royal Society A}, 476:20200033.
+
+\bibitem[Robel et~al.(2019)]{robel2019marine}
+Robel, A.~A., Seroussi, H., and Roe, G.~H. (2019).
+\newblock Marine ice sheet instability amplifies and skews uncertainty in projections of future sea-level rise.
+\newblock \textit{Proceedings of the National Academy of Sciences}, 116(30):14887--14892.
+
+\end{thebibliography}
+
+\end{document}

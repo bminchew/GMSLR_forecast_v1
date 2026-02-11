@@ -1,0 +1,1356 @@
+--- Page 1 ---
+REVIEW
+Antarctica in 2025: Drivers of deep uncertainty in
+projected ice loss
+Helen Amanda Fricker1*, Benjamin K. Galton-Fenzi2,3,4, Catherine Colello Walker5,
+Bryony Isabella Diana Freer1, Laurie Padman6, Robert DeConto7
+Antarctica is a vital component of Earth ’s climate system, influencing global sea level, ocean circulation,
+and planetary albedo. Major knowledge gaps in critical processes —spanning the atmosphere, ocean,
+ice sheets, underlying beds, ice shelves, and sea ice —create uncertainties in future projections, hindering
+climate adaptation and risk assessments of ice intervention strategies. Antarctica ’s ice sheet could
+contribute 28 centimeters to sea level by 2100, and potentially more if we surpass warming thresholds
+that trigger instabilities and rapid retreat. We review recent advances in understanding the changing
+stability of the ice sheet margins and identify key processes that require further research. Progress
+requires high-resolution satellite data, targeted field campaigns, improved modeling, and refined theory.Increased investment and interdisciplinary collaboration are essential to uncovering Antarctica ’s hidden
+processes and reducing uncertainties in future projections.
+The Antarctic Ice Sheet (AIS) is Earth ’sl a r g e s t
+freshwater reservoir, storing enough ice to
+add 58 m to global sea level if it all melted,
+w i t h~ 5 . 3mf r o mt h eW e s tA n t a r c t i cI c e
+S h e e t( W A I S )a n dt h er e s tf r o mt h eE a s t
+Antarctic Ice Sheet (EAIS) ( 1). Other land ice
+reservoirs are the Greenland Ice Sheet (GrIS;
+7.4 m) and glaciers and ice caps (GIC; 0.5 m).
+During the 20th century, global sea level rise
+(SLR) was dominated by o cean thermal expan-sion and GIC melt ( 2); however, over the past
+two decades, accelerated mass loss from GrIS
+and WAIS has made land ice (including GIC)
+the largest contribution [( 2,3); Fig. 1A]. Between
+1979 and 1989, the total AIS contribution was
+just 0.11 mm per year ( 4). In the early 1990s,
+AIS SLR contribution st arted to accelerate,
+reaching 0.19 mm per year for the period 1992
+to 1996 and 0.32 mm per year for 2017 to 2020
+(3). Models often do not capture the trends,
+leading to large differences between simulatedand observed ice sheet changes. Projections
+initialized in 2016 indicate that most simu-
+lations produce a growing ice sheet over the
+~5-year overlap period with observations, and
+this growth persists for several decades before
+eventual retreat occurs (Fig. 1B). This leads
+to diverging outcomes over time and greater
+uncertainty in long-term projections ( 5). Future
+AIS mass is so poorly known that the IPCC
+considers it “deeply uncertain ”(6). The AIS
+could raise sea levels by 28 cm by 2100, equal-
+ing the contribution due to thermal expansion,a n du pt o6 . 9mb y2 3 0 0u n d e rh i g he m i s s i o n s
+[(6); Fig. 1B], with uneven impacts globally ( 7).
+Flood risks are compounded by increased stormi-
+ness from climate change, leading to the need
+for more complex adaptation strategies ( 8).
+WAIS and EAIS have been identified as being
+vulnerable to crossing tipping points where
+abrupt, irrecoverable change occurs if a thresh-
+old in global average temperature is exceeded
+(9). The temperature threshold for WAIS is esti-
+mated at >1.5°C above preindustrial levels, which
+could occur by 2030 ( 10). Owing to its size, thick-
+ness, and location, EAIS is thought to be less
+sensitive, with a threshold of 4°C, based on re-sponse to past climate perturbations [( 11); Fig. 2A].
+These thresholds may be conservative, given
+that they are inferred from paleo warming rates
+that are much lower than those of today ( 12)
+and given the uncertainty in how globally aver-
+aged warming manifests in Antarctica. Projec-
+tions of ice sheet tipping points are sensitive to
+where the models start from (initial conditions),
+the geometry of ice and the underlying bed, cli-
+mate forcing, representation of the processes
+that control the change ( 6,13,14), and model
+numerics. Small variat ions in these inputs can
+lead to large differences in projected SLR. Deter-
+mining the exact timing and magnitude at which
+tipping points are reached remains a huge chal-
+lenge; therefore, AIS projections diverge widely in
+both the onset and magnitude of mass loss ( 8,15).
+Uncertainty in future AIS mass loss stems
+from a limited understanding of physical pro-
+cesses that act at dynamic ice margins, which
+are missing or crudely represented in models
+(Fig. 2B), combined with uncertain future changes
+in climate forcing ( 14,16,17). These processes
+are undersampled because they occur on spa-
+tial and temporal scales and in locations be-
+yond our present observational capabilities
+(see the scales of change in Fig. 2B) and involve
+complex feedbacks between the AIS, ice shelves,
+sea ice, seabed, ocean, and atmosphere ( 2,18), with
+insufficient observations ( 19,20). As more dataTHE POLAR WORLD
+1Scripps Polar Center, IGPP, Scripps Institution of
+Oceanography, University of California, San Diego, La Jolla,
+CA, USA.2Australian Antarctic Division, Kingston, TAS,
+Australia.3Australian Antarctic Program Partnership (AAPP),
+Institute for Marine and Antarctic Studies, University of
+Tasmania, Hobart, TAS, Australia.4Australian Centre for
+Excellence in Antarctic Science (ACEAS), University of
+Tasmania, Hobart, TAS, Australia.5Department of Applied
+Ocean Physics and Engineering, Woods Hole Oceanographic
+Institution, Woods Hole, MA, USA.6Earth and Space
+Research, Corvallis, OR, USA.7Department of Earth,
+Geographic, and Climate Sciences, University of
+Massachusetts Amherst, Amherst, MA, USA.
+*Corresponding author. Email: hafricker@ucsd.edu
+0.3
+0.10.2
+0 01234567A  Global sea level rise (2006–2018) B  Future sea level rise from Antarctica 
+A large increase 
+in sea level rise 
+is projected 
+between
+2100 and 2300.Distribution of simulation
+scenarios in 2300
+Antarctic 
+Ice Sheet
+Land
+water 
+storageGreenland Ice Sheet
+39%17%Melting land ice caused
+almost half  of the increase in sea level.
+Glaciers
+Thermal 
+expansionIce shelves collapse
+Observed dataExtrapolated observations (dashed line)
+do not align with simulated scenarios.
+2000 2020 2040 2060 2080 2100… …2300
+Global se
+a le
+vel rise (m)Gl
+obal se
+a l
+evel rise (m)Ice shelves do not collapse Simulation scenarios:
+Total sea level rise: 3.61 mm/yearMaximum
+MinimumMedian
+25%75%
+Fig. 1. Antarctica as a dynamic freshwater reservoir. (A) AIS contribution to global SLR for 2006 –2018 compared with contributions from other sources ( 2).
+(B) Observed AIS contribution to SLR for 1992 –2020 ( 201) and projected future contribution to 2100 and 2300 ( 5), amid deep uncertainty ( 6).CREDIT: ADAPTED BY M. HERSHER/ SCIENCE
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 1o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 2 ---
+are acquired at finer scales through new satellite
+missions and fieldwork, we are learning more
+about these processes, moving us closer to being
+able to represent them in models. In this Review,
+we summarize key pieces of the Antarctic sys-
+tem and the advances in our understanding of
+relevant processes, inst abilities, and feedbacks
+since 2020, the epoch of the latest IPCC report
+(21). We highlight opportunities for impactfulfuture research as we approach the Fifth In-
+ternational Polar Year (Box 1).
+Pieces of the Antarctic system
+Antarctica functions like a millennial-scale fresh-water conveyor belt, accumulating snowfall that
+compacts into ice and returning melted fresh-
+w a t e rt ot h eo c e a n .A tt h es a m et i m e ,t h eA I S
+acts as a heat sink, slowing changes in the globalheat content of Earth ’s atmosphere and oceans
+(22). Snowfall and ice accumulate gradually
+across the continent, with the total surface mass
+balance reaching ~2300 billion tonnes (or giga-
+tonnes; Gt) per year ( 23). Being thicker in the in-
+terior, ice flows under the influence of gravity to
+the margins, where it forms floating ice shelves
+( F i g .2 B ) .I c ei st h e nl o s tb yi c e b e r gc a l v i n ga n d
+ocean-driven basal melting (Fig. 3), which pumps
+freshwater into the Southern Ocean either locally
+via meltwater plumes or away from the continent
+as icebergs melt. In steady state, the gains are ba-
+lanced by losses at the margins. How climate
+w a r m i n gw i l la f f e c tf u t u r es n o wa c c u m u l a t i o ni suncertain; however, ther e is a general consensus
+that losses around the edge of the continent will
+increase ( 5) .F u t u r eA I Sm a s sl o s si sc o n t i n g e n t
+on how climate forcings evolve and how this
+triggers key processes around the margin.
+Antarctica ’s subglacial system
+is a basal lubricant
+The speed of AIS ice flow is influenced by basal
+conditions that determine how easily ice slides
+over the bed owing to the presence of liquid
+water and bed deformability. Fastest ice flow
+tends to occur where pressurized water is pre-
+sent at the base ( 24). Subglacial water is gen-
+erated as ice melts from frictional heat caused
+by the glacier flow, geothermal heat flux, and
+pressure melting ( 25). Basal meltwater produc-
+tion rates are low (millimeters per year) but,
+over the vast AIS, the volume is substantial [59 Gt
+per year; ( 26)]. The AIS subglacial system is
+largely insulated from climate; by contrast, in
+Greenland the surface meltwater can reach
+the bed to drive a seasonal ice flow cycle ( 27).
+Observations of seasonal signals have only re-
+cently emerged on the Antarctic Peninsula, which
+are primarily attributed to seasonal modulation
+of ice-ocean-atmosphere interactions, with par-
+ticular sensitivity to glacier terminus change,
+ocean temperatures, and surface water avail-
+ability that may penetrate to the bed ( 28,29).
+Elsewhere, AIS surface melt is mostly confined
+to ice shelves ( 30,31) ,b u ti fi tw e r et om i g r a t e
+above the grounding line (GL; Fig. 3) and thenreach the bed, some AIS outlets could evolve
+toward more seasonally varying flow speeds
+and accelerated ice loss [for example, see ( 32)].
+Subglacial hydrology is rarely observed, and
+so it is either crudely represented in or missing
+from models [for example, see ( 33)]. Our ob-
+servational capability was transformed in the
+mid-2000s by the realization that fluctuations
+in local surface elevation are signatures of sub-
+glacial hydrology ( 34,35), with satellite laser
+altimetry tallying >140 interconnected subgla-
+cial lakes that are continuously filling and drain-
+ing ( 36). Localized ice flow acceleration has
+been observed during periods of subglacial
+lake drainage ( 37–39), but the impact on wider
+ice sheet dynamics remains poorly sampled ( 40).
+Subglacial water follows the hydropotential,
+Grounding
+zone
+Rift
+RidgeLeadMélange
+infill
+Basal
+channelShear
+margin
+Pinning
+point
+Underwater
+mountainSurface
+melt
+Surface
+melt drainageMarine-terminating
+glacier
+CrevassesSuture zone
+MélangeIce cliff
+Iceberg
+Floe
+Bergy bitBasal
+crevasseLandfast
+ice
+Subglacial
+lakeIce sheet Ice shelf
+SeafloorSea iceScales of change
+Shear margins (1 km; year to decade)
+Pinning points (1 km; month to year)Subglacial lakes (1 km; day to decade)Rifting or calving (100 m; hour to decade)Basal channels (100 m; hour to decade)Grounding zones (100 m; hour to decade)Sea ice floes (100 m; week to year) B Antarctic Ice Sheet dynamic marginA
+Antarctic
+Peninsula
+Filchner-Ronne
+Ice Shelf
+Pine Island Glacier
+Thwaites Glacier
+Amundsen
+SeaRoss
+Ice ShelfAurora
+Subglacial Basin
+Wilkes
+Subglacial Basin
+Cook GlacierVanderford Glacier
+T otten GlacierAmery
+Ice Shelf
+Shackleton Ice Shelf
+Conger GlacierEast Antarctic
+Ice Sheet
+rctic
+ WesWeWWWWWWWWWWWWWWWWWWW t An
+ntatr
+et
+ IceceIceIceIcIcIc Sh
+hee0Rate of change of ice thickness in Antarctica (m of ice/year) Sea ice thickness (m)
++1 –7 –6 –5 –3 –4 –2 –1 3 012
+1000 kmNo rate-of-change data owing
+to limit of satellite coverage
+Fig. 2. Antarctica ’s land ice and sea ice. (A) AIS thickness changes for 2003 –2019 from Ice Cloud and
+land Elevation Satellite (ICESat) and ICESat-2 satellite laser altimetry ( 48) as well as sea ice thickness
+for January 2020 from ICESat-2 ( 111) [from ( 203)]. [Credit: Modified from ( 48), (202), and ( 111) CC BY 4.0]
+(B) Features associated with processes acting in AIS ’s dynamic ice margins on a range of spatial and
+temporal scales (table at bottom left).
+CREDIT: ADAPTED BY A. FISHER AND M. HERSHER/ SCIENCE
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 2o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 3 ---
+and, in some regions, subtle thickness changes
+m a yd i v e r tw a t e rf r o mo n ed r a i n a g eb a s i nt o
+another ( 41). Evidence of a deep groundwater
+network beneath a WAIS ice stream ( 42)i n d i -
+cates another source for subglacial water. It has
+been hypothesized that this groundwater inter-action may be crucial on decadal timescales ( 43).
+Identifying the sources, thickness, and pressure
+of subglacial water beneath the ice sheet will
+be critical for understanding its present and
+future controls on ice dynamics ( 44,45).
+Antarctica ’s ice shelves are buttressing dams
+Most AIS outlet glaciers p resently terminate in
+ice shelves. Ice shelf contact with pinning points
+(where the ice base touches seabed highs) and
+lateral shear margins (where ice is in contact
+with rock or slow-moving ice) leads to buttress-
+ing of upstream ice ( 46). Each basin experiences
+drivers of change on different timescales (Fig. 3),
+giving each ice shelf a unique ratio of mass loss
+processes. If mass losses exceed gains, then
+the ice shelf thins and/or the GL retreats, re-
+sulting in reduced basal friction, less drag at
+pinning points and sidewalls, and less buttress-
+ing ( 46,47). As a result, more ice discharges to
+the ocean, increasing S LR. Regions where the
+grounded AIS is losing the most mass are those
+where ice shelves are thinning ( 48). Hence, al-though the net loss of grounded ice determines
+SLR, understanding the role of floating ice is
+crucial to predict change.
+Ice shelf thinning can trigger faster ice flow
+hundreds of kilometers away ( 46,49) and can
+be especially impactful if it occurs upstream ofas t a b l e “safety zone ”(47)o rc a u s e st h ei c et o
+detach from pinning points ( 50,51). Buttress-
+ing can be lost through thinning, unpinning, and
+complete ice shelf disintegration, a phenome-
+non that involves a series of interconnected
+processes such as enhanced calving ( 52,53), in-
+creased basal melting leading to ice shelf thin-
+ning ( 54,55), and, as observed on the Antarctic
+Peninsula, “hydrofracture ”that results from ex-
+cessive surface melt [( 56); Fig. 3A].
+Antarctica ’s sub-ice cavities are the hidden
+link to the ocean
+Sub-ice cavities host a distinctive ocean environ-
+ment where externally driven circulation of heat
+and salt couples with buoyant glacial meltwater
+generated by basal melting. Key factors that
+influence basal melt rates include ice depth
+and basal slope as well as seabed geometry
+(57,58). Ice shelves are often classified as cold
+or warm cavity, with distinct modes of melting
+and circulation (Fig. 3B). In reality, multiple
+modes and combinations of oceanic conditionscan influence a single ice shelf at different times
+and locations ( 57,59). In warm cavities such as
+in the Amundsen Sea, Circumpolar Deep Water
+can exceed the local freezing point temperature
+by 2°C ( 60,61), with models suggesting that it
+would take 3 years to travel to the GL ( 62),
+where it drives melt rates of 10 to 100 m per
+year ( 63). In cold cavities, such as the Amery
+Ice Shelf, melt rates near the deep GL (Fig. 3B)
+are highest because the in situ freezing point
+temperature decreases with pressure ( 64). The
+resulting cold Ice Shelf Water can refreeze as
+marine ice at shallow ice drafts, redistributing
+ice (57,59,63) and stabilizing ice shelves ( 65).
+In both cavity types, rapid melting can occur at
+the ice fronts because of more energetic oceanic
+conditions as well as warmer upper-ocean wa-
+ters in summer ( 66,67).
+Future changes in Southern Ocean temper-
+ature, circulation, and sea ice conditions could
+shift the distribution of basal melting and re-
+freezing ( 68). The complex interplay between
+buoyant intrusions of subglacial meltwater
+(69), ice-base geometry ( 58), and turbulent pro-
+cesses near the ice-ocean boundary leads to the
+emergence of several other melting and freezing
+regimes that are understudied ( 59,70). Substan-
+tially improved knowledg eo ft h ei c es h e l fc a v i t y
+environment, including bed geometry, oceanBox 1. Bridging the gaps in SLR projections.
+The wide range of present Antarctic SLR projections is too broad
+for policy-makers to use effectively. Improving these projections
+requires a better understanding of mass balance processes,
+especially those occurring on short spatial (~100 m to ~1 km) and
+temporal (daily to seasonal) scales, which are presently underrepresented
+in models because observations have been insufficient in space and time.
+Main knowledge gaps
+To reduce uncertainties in Antarctic mass loss and better inform policy decisions
+and adaptation strategies, we must ad vance knowledge of the following:
+•Subglacial hydrology, basal processes, and internal ice deformation
+and structure
+•Ice sheet geometry and the potential for MISI
+•GZ state and variability and the role of buttressing
+•Sub–ice shelf cavity melting, ocean circulation, and ice-ocean
+interactions
+•Fracturing and calving dynamics and the potential for MICI
+•Feedbacks between the ice sheet, sea ice, and other parts of the climate system
+•Interactions between global climate and regional climate at the ice
+sheet margin, includingaccumulation and surface warming
+These knowledge gaps require mapping of the seabed and
+bedrock underlying the ice sheet, determination of the properties under
+the grounded ice and floating ice s helves, enhanced simulation and
+modeling, and stronger interdisciplinary and multinational research
+to investigate feedbacks.
+Essential actions
+•Advance understanding of processe s by monitoring relevant variables
+across a range of space and time scales with airborne and satellitemissions that ensure continuity and i nnovation through high-resolution,
+frequent sampling: Key future missions include the NASA –ISRO Synthetic
+Aperture Radar (NISAR) mission (ice velocity and deformation), the
+European Space Agency ’sC o p e r n i c u sP o l a rI c ea n dS n o wT o p o g r a p h y
+Altimeter (CRISTAL) mission (surface elevation), and the proposed
+Earth Dynamics Geodetic Explorer (EDGE) mission (surface elevation)
+•Perform targeted field observations for evaluation and calibration of remote-
+sensing techniques and to develop field-based understanding of processes
+•Expand field observations beyond WAIS, particularly to at-risk EAIS
+outlet glaciers and ice shelves
+•Develop high-fidelity simulations that exploit progress in closing
+the main knowledge gaps and the reproduction of observed changes
+for future projections with substantially reduced uncertainties, for
+example, Ice Sheet Modeling Intercomparison for the seventh IPCC
+Ice Sheet Model Intercomparison Project for Coupled Model
+Intercomparison Project –Phase 7 (ISMIP7)
+•Educate and inspire the next generation of Antarctic ice sheet
+researchers
+•Provide actionable projections with well-constrained uncertainties that
+inform policy decisions a nd adaptation strategies
+Funding and advocacy
+Strong advocacy for Antarctic rese arch is crucial to secure sustained
+funding and refine projections, which are essential for guiding climate
+policies and global adaptation strategies. This requires enhanced coordination
+among scientific, governmental, pub lic, and private stakeholders, as
+well as increased international collaboration [e.g., coordinated through
+the Climate and Cryosphere (CLiC) project and the Scientific
+Committee on Antarctic Research ’s INStabilities & Thresholds in
+ANTarctica (SCAR INSTANT)
+research program].THE POLAR WORLD
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 3o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 4 ---
+circulation, and mass loss processes, is needed
+to reduce uncertainties in projections of ice
+s h e l fm a s sl o s s( s e eB o x1 ) .
+Antarctica ’s grounding zones are complex
+intertidal estuaries
+Antarctic ice first meets the sub –ice shelf cavity
+at the GL, which can migrate with ocean tides to
+create a grounding zone (GZ; Fig. 4), where theice transitions from being always grounded to
+always floating. Ice flowing across the GL typ-
+ically thins rapidly, as a result of stretching as
+basal friction is removed and high basal melt
+rates ( 63). Underwater surveys have revealed that
+basal melt close to the GL varies down to submeter
+scales as a result of local variations in basal ice
+topography ( 61). Autonomous phase-sensitive
+r a d i oe c h os o u n d i n g( A p R E S )i n s t r u m e n t sh a v erevolutionized the measurement of basal melt
+rates; however, these techniques are difficult to
+apply in flexure zones, regions of crevassing, or
+where firn compaction rates and vertical shear
+profiles are difficult to determine ( 71–73). ApRES-
+derived estimates of melt rates can be combined
+with estimates from satellite-derived ice thickness
+changes ( 63); however, these are undersampled
+in the GZ owing to complex surface topography
+Sea ice
+Ocean Surface
+watersIce shelf
+Basal
+meltBasal
+meltmCDW/CDWBasal
+melt
+From basal
+channel
+Water mixingEddyDSWISW
+Grounding
+lineSlopeContinental
+shelfWeeks
+Cold water Mode 1 Mode 2 Mode 3 Warm waterDecadesCalving MeltingLarsen B Ice ShelfExplosive disintegration
+T urbulence and convection Tides, submesoscale eddies and fronts Cavity-scale circulationThwaites Glacier Ice ShelfSustained calving of icebergs
+Brunt Ice ShelfRifting of tabular icebergsA
+B
+Seconds Decades
+1 cm10 km
+10-100 km
+10 km
+ 10 km
+ 10 km
+Fig. 3. Antarctica ’s mass loss processes and their spatial and temporal scales.
+(A) Calving is an irregular process where i ce breaks off from outlet glaciers and
+ice shelves, ranging from large tabular ic ebergs calved every few decades, to more
+frequent smaller icebergs, to complete disintegration ( 130). [Credit: Modified from ( 130)]
+(B) Basal melting is a continuous process dri ven largely by cavity-scale circulation
+controlled by the cavity geometry (includi ng the ice draft and slope, and the seabedshape) and by long-term changes in ocean conditions seaward of the ice front;
+mesoscale processes (such as eddies, fro nts, and tides) that control how the ocean
+heat enters the cavity; and smaller-scale processes (such as turbulence and
+convection) ( 57,59). [Credit: Modified from ( 59) (bottom left), ( 204)C CB Y3 . 0
+(bottom middle), and ( 59) (bottom right)] CDW, Circumpolar Deep Water; DSW,
+Dense Shelf Water; mCDW, modified Circumpolar Deep Water.
+CREDIT: ADAPTED BY A. FISHER/ SCIENCE
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 4o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 5 ---
+and the breakdown of hydrostatic equilibrium
+(74), creating an observation gap in regions
+where melt rates are the highest.
+Recent studies have shown that seawater
+intrusions driven by ocean tides can penetrate
+the GZ (Fig. 4), causing variations in basal
+melt on short timescales ( 75). Satellite-based
+radar interferometry ( 76–78) and laser altim-
+etry observations ( 79) with high spatial reso-
+lution and frequent temporal sampling reveal
+that the GL can migrate up to 15 km between
+low and high tide, pumpi ng relatively warm,
+salty ocean water further beneath the ice sheet
+every few hours ( 80). Significant long-term GL
+retreat and acceleration in Amundsen Sea gla-
+ciers has been attributed to vigorous ice-ocean
+interactions in their GZs ( 75,81).
+Evidence is also emerging of a link between
+subglacial hydrology and ice shelf basal melt-
+ing (Fig. 4). Injection of freshwater across the
+GZ into the ice cavity can enhance melting that
+reduces ice shelf buttressing, which has been
+proposed as an important mechanism for some
+EAIS glaciers ( 69,82). Models suggest that under
+high greenhouse gas emissions, this effect can
+increase the SLR contribution of a drainage
+basin by up to 30% ( 83). Focused discharge of
+subglacial freshwater across the GL can drive
+the development of large basal channels that
+mechanically weaken the ice shelf ( 75). Some
+studies have observed tens of kilometers of mi-
+gration of seawater underneath the ice sheet,
+along estuaries formed by subglacial hydrology
+i nt h eG Z ,w h e r ew a t e rc a nb et r a p p e df o rw e e k s
+before draining ( 77,80). Some models predict that
+the density difference between fresh subglacial
+discharge and salty o cean water can form a “salt
+wedge ”that permits the diffusion of seawater up
+to several kilometers upstream of the GZ ( 84,85).
+This layered seawater intrusion theory —distinct
+from, yet potentially occurring alongside, the
+tidal intrusion mechanism —remains unobserved
+in Antarctica with present observational capa-
+b i l i t i e s .S u c hi r r e g u l a r ,w i d e s p r e a di n t e r a c t i o n s
+between ice and seawater in the GZ could be
+i m p a c t f u lo nA I Se v o l u t i o n( 85–87), potentially
+doubling future SLR contributions ( 88); there
+is also a suggestion that this may introduce
+new tipping-point behaviors ( 89,90). Explicit
+representations of these GZ melt processes are
+m i s s i n gf r o mm o s ti c es h e e tm o d e l s( 80).
+Another GZ interaction involves sediment
+transfer from the ice sheet to the ocean, which
+can influence the stability of the GZ ( 91,92)
+(Fig. 4). Depositional features can also give in-
+sights into present and past ice dynamics; for
+example, more than 75 “GZ wedges ”have been
+identified on the Antarct ic seafloor, which form
+as sediment is delivered to the GZ during pe-
+riods where the ice margin remains stable for a
+long time ( 93). GZ wedges, which are typically
+<15 km long and 15 to 100 m thick, can act as
+topographic pinning points that can stabilize the
+GL, with evidence that they halted WAIS retreatfor hundreds to thousands of years during the
+last deglaciation ( 94). Smaller amplitude, regular-
+ly spaced corrugation ridges observed offshore of
+Thwaites Glacier and Larsen Inlet are thought to
+record sequential low-tide seafloor sediment
+imprints that may provide evidence of rapid GL
+retreat of hundreds of meters per day during
+the last deglaciation ( 95,96). Similar features in
+Pine Island Bay have been interpreted as the im-
+print of icebergs dragging on the seafloor at tidal
+frequencies ( 97). Although there are few direct
+observations, understanding feedbacks between
+ice dynamics and sediment redistribution in GZs
+is essential for interpreting their past stabilityand projecting future ice sheet retreat.
+Antarctica ’s sea ice regulates global climate and
+ice sheet change
+Antarctica ’s surrounding sea ice (Fig. 2A) covers
+an area of ~18.5 × 106km2(~6% of the global
+ocean) at its winter maximum (September) and
+shrinks to nearly 16% of that in summer ( 98). Sea
+ice is a dynamic, seasonally varying component of
+the Antarctic environment, exerting a strong in-
+f l u e n c eo nt h eo c e a na n dc l i m a t e( 17). Sea ice
+increases Earth ’s albedo, reflecting incoming solar
+radiation, and helps to regulate global tempera-
+ture ( 99). The seasonal formation and melt of sea
+ice modifies ocean salinity and temperature, alter-
+ing stratification and circulation patterns that
+govern the distribution of heat along the conti-
+nental shelf, shaped by regional weather patterns
+and climate feedbacks ( 100). These processes de-
+termine where and how relatively warm waters
+can melt ice shelves, which can influence ice shelf
+stability and future sea level rise [for example, see
+(101,102)]. In turn, changes in ice shelf melting can
+affect sea ice, generating complex climate feed-
+backs ( 103). Sea ice also plays a crucial role in
+marine ecosystem activity ( 104).
+A significant and unpredicted decline in
+Antarctic sea ice extent began in 2016, with par-
+tial recovery in 2019 to 2020 followed by con-
+secutive years of near-historic lows ( 105), leading
+to increased coastal exposure to open water
+(106). The lowest annual sea ice extent was 1.79 ×
+106km2in February 2023, which is ~10% less
+than the 2022 record low that marked the first
+time annual minimum extent dropped below
+2×1 06km2(107). The ongoing decline signals
+a major shift in Southern Ocean conditions
+(105), which has implications for sea ice and its
+i n f l u e n c eo nt h eA I S ,t h eb r o a d e rc l i m a t es y s -
+tem ( 108,109) and ecosystems ( 110). Sea ice
+thickness —a key factor for ice strength, landfast
+ice formation, and summer survival —is challeng-
+ing to measure in Antarctica because of thick
+snow cover, flooding, and difficulty in resolving
+leads to provide relative freeboard assessments
+(111). Accurately mapping sea ice freeboard and
+structure at scales that capture most sea ice floes
+(Fig. 2B) is essential for providing the detailed
+data needed to improve models of sea ice evolu-
+tion ( 112) and explain why change has occurred.Instabilities and feedbacks of the
+Antarctic system
+Geometric instabilities at dynamic ice margins
+Simple relationships predict the potential for two
+geometry-based high-end retreat scenarios, which
+are considered to be possible AIS instabilities: the
+marine ice sheet instability (MISI) and the marine
+ice cliff instability (MICI). MISI is based on the
+u n d e r s t a n d i n gt h a tb e c a u s es e a w a r di c ef l u xi n -
+creases with ice thickness, GLs located on retro-
+grade bed slopes are inherently unstable ( 113,114).
+In such locations, the weakening or loss of ice shelf
+buttressing can trigger a self-sustaining draw-
+down at the ice margins: Initial thinning causesthe GL to retreat into deeper water, where a higher
+s t r a i nr a t ei n c r e a s e sm a s sl o s sf r o mt h ei c es h e e t ,
+leading to further retreat and thinning. Although
+some studies suggest that MISI is underway in
+WAIS ( 81,115), others suggest that present-day
+GL retreat is driven by external climate forcing
+alone ( 116), though continued warming may even-
+tually lead to MISI onset ( 117). Some EAIS outlets
+are also potentially vulnerable to MISI ( 118,119).
+MICI is predicated on simple force balance argu-
+ments that suggest that the stable height to which
+a marine-terminating ice cliff (Fig. 2B) can grow is
+limited by ice strength to ~100 m ( 120). If trig-
+gered, unstable cliff failure can repeatedly expose
+thicker ice upstream, driving rapid ice loss at the
+margin ( 121). As proposed, MICI could contribute
+multimeter SLR on century timescales ( 2).
+MICI remains controversial and has not been
+directly observed in Antarctica, although obser-
+vations of speed-up and enhanced calving at thick
+marine-terminating glaciers after ice shelf loss
+have been noted at Crane Glacier on the Antarctic
+Peninsula ( 122) and in Greenland ( 123). Paleo
+records of iceberg plow ridges in Pine Island Bay
+(124), previously attributed to grounding of float-
+ing ice during breakup ( 97), have been cited as
+indirect evidence for MICI. By contrast, a statis-
+tical analysis of modeling uncertainties ( 125)c o n -
+cluded that MICI is not required to reproduce
+sea level estimates in the geologic past. Process-
+based modeling suggests that slow ice shelf loss
+can mitigate MICI, but outcomes vary widely de-
+pending on assumptions of ice properties and icestrength ( 126). Other models suggest that speed-
+up and dynamic thinning of unbuttressed ice
+fronts can suppress ice cliff calving in the absence
+of ice shelves ( 127,128). An incomplete under-
+standing of the material properties (strength) of
+glacial ice and the processes involved in triggering
+and amplifying ice shelf loss, calving, and cliff re-
+treat ( 129,130) continues to make the role of MICI
+in retreat scenarios difficult to parameterize and
+quantify ( 131,132). Given the potential for MICI
+(and fracture and calving processes in general) to
+contribute to future ice loss, rifting and calving at
+thick ice margins should be further evaluated
+through observations at spatial and temporalscales relevant to processes involved in ice shelf,
+glacier, and ice front stability. Further research on
+the initiation and propagation of fracturing, theTHE POLAR WORLD
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 5o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 6 ---
+role of GL location and flo ating versus grounded
+ice, upstream ice thickness gradients, surface melt,
+bedrock shape, and flow velocities is needed.
+Feedbacks at dynamic ice sheet margins
+Processes at AIS dynamic margins are inter-connected and can compound. For example, ice
+front retreat due to increased iceberg calving
+can increase ocean heat supply to the deep GL
+(133,134). Enhanced basal melting leads to ice
+shelf thinning and the incision of basal chan-nels ( 135), leaving ice shelves more susceptible
+to hydrofracture ( 136). Processes acting in cer-
+tain locations, such as ba sal melting or rifting
+along shear margins or p inning points, can have
+a disproportionate impact, triggering rapid ice
+shelf retreat and flow acceleration ( 137,138). This
+can potentially lead to more crevassing, rifting,
+and ice front retreat. Such feedbacks have been
+implicated in the ongoing retreat and accelera-
+tion of Pine Island Glacier ( 53,139).
+Not all feedbacks at ice sheet margins are posi-
+tive. For example, ice sheet models accounting for
+glacial-isostatic adjustm ent, including the gravi-
+tational, rotational, and deformational response
+of a viscoelastic Earth to changing ice loads
+(140), demonstrate that bedrock uplift and a
+local sea level drop in the vicinity of retreating
+GZs can slow retreat. The effect is strongest in
+West Antarctica, where the mantle has relatively
+low viscosity ( 141), allowing for faster uplift rates.
+This negative feedback could slow both MISI-
+and MICI-driven retreat, although it will weaken
+a st h ep a c eo fA I Si c el o s si n c r e a s e s .Feedbacks between coastal processes and the AIS
+The configuration of the coastal icescape (sea ice,fast ice, and icebergs) affects mass-loss processes
+(Fig. 3) through modification of ocean properties
+(142). Sea ice may enhance buttressing ( 106,143),
+mitigate the impacts of swells ( 144,145)a n dt s u -
+namis ( 146,147) on ice fracture, and reduce fron-
+tal melting and small-scale calving ( 148,149).
+This role is amplified when thick landfast sea
+ice forms, anchored by complex coastlines and
+grounded icebergs ( 150), which affects polynya
+activity, associated abyssal ventilation, and the
+properties of water masses entering the cavity
+(151). Large calving events can greatly reduce
+polynya activity and the production of dense
+water that ventilates the abyssal global oceans
+(152). Poorly constrained calving models, lim-
+ited water depth data, and complex sea ice
+physics hinder projections of changes in the
+coastal icescape.
+AIS response to large-scale climate variability
+Climate variability modes like the Southern An-nular Mode and El Niño –Southern Oscillation
+influence ocean properties on the continental
+shelf ( 153), sea ice extent ( 154), and ice sheet/shelf
+surface mass accumulation ( 155), affecting the
+changing mass balance of WAIS ice shelves ( 156)
+and the grounded AIS ( 157). Modeling studies
+project that some cold-cavity ice shelves could
+transition to warm cavities by 2100 ( 158,159),
+caused in part by feedbacks as initial inflows of
+warm ocean waters drive melting that intensifies
+the cavity overturning circulation, continuing todraw in warmer water. However, these transi-
+tions may be delayed because an initial response
+to climate warming can involve a weakened
+sub-ice circulation and lowered basal melt
+rates ( 160).
+Keeping track of the pieces of the
+Antarctic system
+Antarctica ’s size and remoteness mean that
+changes on a continental scale can be tracked only
+by satellite. Three complementary techniques
+track grounded AIS mass: gravimetry; mass fluxes
+from ice flow rates, ice thickness, and climate
+models; and elevation changes combined witha firn density model. These techniques can then
+be combined ( 3). The net AIS mass budget is
+shaped by snow accumulation and seaward ice
+flow, influenced by complex interactions among
+the atmosphere, ocean, and ice ( 48), which oc-
+cur on multiple scales. Therefore, comprehen-
+sive monitoring should span broad spatial and
+temporal scales, resolving features such as outlet
+glaciers ( 28,161)a n di c es h e l v e s( 63)w h i l ea l s o
+capturing seasonal to annual changes. Only three
+studies have provided a comprehensive assess-
+ment of grounded and floating ice using the
+s a m ed a t ao v e rt h es a m et i m ep e r i o d( 48,162,163)
+(Fig. 2A). Observations at higher spatial and tem-
+poral resolution can inform about processes not
+yet captured in models.
+Broad-scale monitoring
+Between 1992 and 2020, AIS experienced an over-all net mass loss of grounded ice ( 3), dominated
+by trends in WAIS (82 ± 9 Gt per year) and the
+Antarctic Peninsula (13 ± 5 Gt per year). Most
+WAIS changes occur in the Amundsen Sea basins,
+where glaciers have accelerated because of reduced
+ice shelf buttressing and GL retreat ( 46,48,54).
+EAIS is near steady state or in slightly positive
+balance because losses from increased ocean-
+driven melt are offset by gains from increased
+inland snowfall, which is attributed to a warm-
+ing and more moisture-laden atmosphere ( 3,48).
+Between 2003 and 2018, mass gains were con-
+centrated in Queen Maud Land, whereas mass
+loss occurred in several M ISI-susceptible ice out-
+lets draining the Auror a and Wilkes subglacial
+basins ( 48), accompanied by GL retreat ( 164). Flow
+rates have increased in numerous EAIS outlets on
+both grounded ice [e.g., Cook Glacier ( 165)a n d
+Vanderford Glacier ( 166)] and floating ice [e.g.,
+ice shelves of Scott Glacier ( 167), Totten Glacier
+(168), and Denman Glacier ( 169)].
+Snow accumulation across AIS increased sig-
+nificantly between 2019 and 2023 ( 170). In WAIS,
+much of the mass gain was due to short-period
+extreme events, such as atmospheric rivers (ARs)
+(170–172). In 2019 to 2020 alone, this reduced
+WAIS ’s SLR contribution by 60 ± 16 Gt per year
+(170). Record mass gains occurred in 2022 ( 173),
+primarily because of an increase in precipitation
+events over EAIS, including ARs. In March 2022,
+a powerful 3-day AR delivered an estimated
+Ice flowSurface depression
+above basal channel
+Sea level
+changes(e.g., tides)Basal melt Subglacial
+dischargeBasal 
+crevasses
+Subglacial
+lake activitySeawater
+intrusions
+Grounding
+zoneSedimentationOcean mixing
+GL
+lowGLhighIce sheet Ocean Ice shelf
+Basal 
+channel
+Fig. 4. Antarctica ’s grounding zones. Changes in ocean sea level, including from tides, can move the GL by up to
+several kilometers across the GZ (from GL lowto GL high). Processes acting in and around the GZ —driven by interactions
+between ice, bedrock, sediment, sub glacial hydrology, and the ocean —can vary on short spatial and temporal scales. Tides
+can pump relatively warm seawater kilometers inland, enhancing basal melting in and upstream of the GZ. Subglacial water
+flux from the ice sheet bed to the ocean across the GL can al so enhance basal melting in the GZ, which can lead to the
+development of basal channels that are visible in satellite altimetry as surface depressions. Sediment flux into the sub –ice
+shelf cavity can increase GL stability. All of these interactio ns can influence long-term ice dy namics. Figure is not to scale.
+CREDIT: ADAPTED BY A. FISHER/ SCIENCE
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 6o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 7 ---
+306 Gt of precipitation ( 174), accounting for 32%
+of the total AIS precipitation for that month, and
+up to 90% in some parts of EAIS, particularly
+Wilkes Land. AR intensity may be linked to
+interannual climate modes, but both the in-
+tensity and frequency of extreme precipita-
+tion events are expected to rise as the climate
+warms throughout the 21st century ( 172).
+An open question is whether increased snow-
+fall in the AIS interior will be sufficient to
+offset increased melting and calving at the
+margins.
+Process-based understanding
+Recent satellite data s how changes on process-
+relevant spatial and temporal scales. In WAIS,
+Pine Island Glacier Ice Shelf transitioned in 2015
+from a previously quasi-stable cycle of advance
+and retreat at its calving front to a calving regime
+characterized by more frequent calving of tabular
+icebergs (Fig. 3B) and calving front retreat ( 175)
+(Fig. 3B). Portions of the Thwaites ice tongue un-
+derwent an abrupt change from a previously in-
+tact ice shelf into fragmented remnants ( 176,177).
+Studies of ice shelf rifts have suggested that their
+activity may relate to internal formation mechan-
+ics (178)a n dg l a c i o l o g i c a ls t r e s s e sa sw e l la st o
+atmospheric and oceanic forcings, for exam-
+ple, winds ( 179), sea surface slope or wave swell
+(180,181)a n dt s u n a m i s( 147), ocean circulation
+(61), and strength of intrarift mélange ( 182).
+Observations of ice shelves with short calving
+cycles (Fig. 3A) have shown that ocean and at-
+mospheric forcings can lead to ungrounding
+from pinning points, dri ving increased calving
+rates, for example, at Pine Island Glacier around
+2006 ( 133), Thwaites Glacier ( 183), and Thwaites
+Eastern Ice Shelf ( 177,184). At Thwaites, the
+evolving interaction w ith a pinning point after
+the loss of Thwaites Western Ice Tongue in
+2008 likely triggered shearing and fracture
+propagation related to enhanced weakening
+(137,178,185), with another ungrounding anti-
+cipated within the next decade ( 50).
+In East Antarctica, there have been many
+signs of change, for example, recent terminus
+change after sea ice breakout ( 186) and GL
+retreat ( 166,187), but the first observed ice
+shelf disappearance was Conger-Glenzer in
+2022 ( 55), after decades of retreat that began
+in the late 1990s when small calving events
+isolated it from Shackleton Ice Shelf. This was
+followed by phases of retreat, relative stability,
+and ultimate rapid disintegration driven by
+long-term thinning, reduced buttressing effect,
+and ungrounding from a pinning point. The
+evolution of the Shackleton-Denman system
+itself involved structural changes in the floating
+shear margins, rift propagation, and small-scale
+calving ( 167), possibly aided by seawater infil-
+tration in some regions adjacent to Shackleton
+Ice Shelf ( 164,188) that may affect ice rheology
+(189) .T h e s ec o u l da l lb ee a r l ys i g n so fE A I S
+responding to warming.Antarctica as a target for “ice intervention ”
+to mitigate sea level rise
+Intervention to slow ice loss has recently been
+suggested ( 190,191), with two primary strategies.
+Underwater curtains would divert warm water
+from reaching the ice outlets and redirect colder
+water toward them instead, potentially slowing
+i c em e l ta n dG Zr e t r e a t( 192). Whether this will
+actually slow overall AIS mass loss is uncertain
+(193); it might simply reroute warm water to
+other ice shelves ( 194). Drilling and drying strat-
+egies aim to stabilize glaciers by increasing basal
+friction of sliding ice streams by drilling deep
+holes and removing lubr icating water from the
+subglacial drainage system. This idea is based on
+observations of natural processes at Kamb Ice
+Stream. However, most outlets differ markedly
+from Kamb, and the actual impact on glacier slid-
+ing is expected to be highly dependent on poorly
+m a p p e da n dm o d e l e db e da n d basal conditions.
+Because subglacial water is constantly replen-
+ished and may be connected to underlying ground-
+water ( 42), any impact would be short-term,
+and any efforts would need to be sustained.
+Geoengineering in Antarctica faces immense
+challenges owing to its vast scale, technical and
+logistical difficulties, harsh polar conditions, and
+environmental concerns, including impacts on
+marine life and the risk of contaminating sub-
+glacial areas ( 195). Perhaps the greatest risk,
+however, lies in unintended consequences from
+our limited understanding of how ice sheets re-
+spond to climate and human activities. With the
+guiding principle of “first, do no harm, ”it is cru-
+cial that we prioritize improving our knowledge.
+This will help us better assess our options for the
+future and make informed decisions about what
+actions we can responsibly take. Effective meth-
+ods will necessitate substantial, long-term invest-
+ments in research, infrastructure, and ongoing
+monitoring —resources that would be more wise-
+ly allocated to addressing the fundamental deep
+uncertainties instead ( 195).
+Commitment to change
+The AIS is expected to continue losing ice in re-
+sponse to the heat already absorbed by the cli-mate system ( 196). To date, only a small fraction
+of this global heat imbalance has contributed to
+AIS melting ( 22,163). Increased melt rates for
+WAIS may be committed for the next century
+(197) .T h ep a c ea n de x t e n to fA I Se v o l u t i o na r e
+uncertain ( 198,199), influenced by the instabil-
+ities and feedbacks discussed here, and other
+processes that remain underobserved, or un-
+known altogether. Projected rapid ice loss would
+partially offset global warming ( 200)b yc o n -
+verting the heat into ice melt but would still
+cause SLR and alter ocean circulation as a result
+of the cooling and freshening of the oceans.
+Uncertainty remains ov er how much Antarctica
+will warm within the Paris Agreement ’s1 . 5 ° Ct a r g e t ,
+owing to climate model uncertainties and potential
+polar amplification, which could cause Antarcticato warm sooner and exceed the global average.
+Even without the expected amplified warming, a
+global target of 1.5°C may not prevent the AIS from
+crossing tipping points within decades ( 9). The re-
+sponse timescale of the AIS is deeply uncertain,
+but its future contribution to SLR (Fig. 1B) could
+substantially exceed the IPCC medium-confidence
+projections within the next decades to century ( 2,5).
+Summary and outlook
+Antarctica stores a vas ta m o u n to ff r e s h w a t e r ,
+and its future evolution is the largest cause of
+uncertainty in SLR projections. Most of this un-
+certainty stems from insufficient understandingof key processes that affect the marginal ice
+shelves that buttress the ice sheet and the re-
+sponse of grounded ice when ice shelves are lost.
+Present observations are insufficient, in both
+space and time, to constrain the mechanisms
+responsible for abrupt mass loss, leaving them
+only crudely represented or missing entirely from
+ice sheet models. The impact of seasonal to dec-
+adal variations in climate forcing is also uncertain.
+Constraining the uncertainty in AIS evolution
+requires radically improved understanding of
+its mass-loss processes. Adequate sampling and
+tracking of changes can only be achieved through
+cooperative, new, and sustained observations
+from satellites and in situ observations (both on
+ice and in the surrounding ocean), combined
+with high-fidelity modeling to investigate key
+processes related to ice-ocean interactions, sur-
+face melting, and fracture of ice (Box 1).
+Sir Douglas Mawson ’s words about his 1914
+Antarctic expedition, “We had come to probe its
+mystery, we had hoped to reduce it to terms of
+s c i e n c e ,b u tt h e r ew a sa l w a y st h e ‘indefinable ’
+which held aloof, yet riveted our souls, ”remain
+relevant in 2025. Our comprehension may always
+be incomplete, leaving open the likelihood that
+Antarctica ’s complexities surpass our capacity for
+complete understanding. However, societies need
+to understand Antarctica to be able to adapt in
+response to its changes. Yet despite this dire need
+and deep uncertainty, the pace of progress remains
+too slow, underscoring the need for a fundamental
+shift in our approach to polar science as we beginto identify and understand the once-indefinable
+unknowns. As we approach the Fifth Interna-
+t i o n a lP o l a rY e a r( 2 0 3 1 –2033), present limitations
+in observations and models highlight that polar
+science remains underequipped to fully address
+the complexities of Antarctica ’ss y s t e m .W ea r ea ta
+time when a substantial increase in resourcing
+is needed to provide transformative advancements
+in research tools, data collection, and modeling
+capabilities, which are essential to unravel the
+key processes that shape the evolution of Earth ’s
+largest freshwater reservoir and to finally answer
+the critical questions: How much and how fast?
+REFERENCES AND NOTES
+1. M. Morlighem et al.,Nat. Geosci. 13, 132 –137 (2020).
+2. B. Fox-Kemper et al., in Climate Change 2021: The Physical
+Science Basis. Contribution of Working Group I to the SixthTHE POLAR WORLD
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 7o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 8 ---
+Assessment Report of the Intergovernmental Panel on Climate
+Change , V. Masson-Delmotte et al., Eds. (Cambridge Univ.
+Press, 2021), pp. 1211 –1362.
+3. I. N. Otosaka et al.,Earth Syst. Sci. Data 15,1 5 9 7 –1616 (2023).
+4. E. Rignot et al.,P r o c .N a t l .A c a d .S c i .U . S . A . 116,1 0 9 5 –1103 (2019).
+5. M. Oppenheimer et al., in The Ocean and Cryosphere in a
+Changing Climate: Special Report of the Intergovernmental
+Panel on Climate Change , H.-O. Pörtner et al., Eds.
+(Cambridge Univ. Press, 2019), pp. 321 –445.
+6. H. Seroussi et al.,Earths Futur. 12, e2024EF004561 (2024).
+7. S. Sadai, R. A. Spector, R. DeConto, N. Gomez, Earths Futur.
+10, e2022EF002940 (2022).
+8. B. K. Galton-Fenzi et al., inAntarctica and Planet Earth , M. Meredith,
+J. Melbourne-Thomas, M. Raphael, A. Naveira Garabato, Eds.
+(Taylor and Francis Group, 2024), chap. 7.
+9. D. I. Armstrong McKay et al.,Science 377, eabn7950 (2022).
+10. N. S. Diffenbaugh, E. A. Barnes, Proc. Natl. Acad. Sci. U.S.A.
+120, e2207183120 (2023).
+11. C. R. Stokes et al.,Nature 608, 275 –286 (2022).
+12. J. E. Tierney et al.,Science 370, eaay3701 (2020).
+13. A. A. Robel, H. Seroussi, G. H. Roe, Proc. Natl. Acad. Sci. U.S.A.
+116, 14887 –14892 (2019).
+14. D. Li, R. M. DeConto, D. Pollard, Sci. Adv. 9, eadd7082 (2023).
+15. F. Pattyn, M. Morlighem, Science 367, 1331 –1335 (2020).
+16. C.-Y. Tsai, C. E. Forest, D. Pollard, Clim. Dyn. 55,1 8 7 5 –1892 (2020).
+17. L. G. Bennetts et al.,Rev. Geophys. 62, e2022RG000781 (2024).
+18. R. S. W. van de Wal et al.,Earths Future 10, EF002751 (2022).
+19. O. Gagliardini, G. Durand, T. Zwinger, R. C. A. Hindmarsh,
+E. Le Meur, Geophys. Res. Lett. 37, L14501 (2010).
+20. J. L. Bamber, M. Oppenheimer, R. E. Kopp, W. P. Aspinall,
+R. M. Cooke, Earths Future 10, EF002772 (2022).
+21. Intergovernmental Panel on Climate Change (IPCC), Climate
+Change 2023: Synthesis Report. Contribution of Working
+Groups I, II and III to the Sixth Assessment Report of the
+Intergovernmental Panel on Climate Change , Core Writing
+Team, H. Lee, J. Romero, Eds. (IPCC, 2023).
+22. K. von Schuckmann et al.,Earth Syst. Sci. Data 15,
+1675 –1709 (2023).
+23. R. Mottram et al.,Cryosphere 15, 3751 –3784 (2021).
+24. C. R. Stokes, Earth Surf. Process. Landf. 43,8 5–123 (2018).
+25. C. Dow, N. Ross, H. Jeofry, K. Siu, M. Siegert, Nat. Geosci. 15,
+892–898 (2022).
+26. F. Pattyn, Earth Planet. Sci. Lett. 295, 451 –461 (2010).
+27. H. J. Zwally et al.,Science 297, 218 –222 (2002).
+28. K. Boxall, F. D. W. Christie, I. C. Willis, J. Wuite, T. Nagler,
+Cryosphere 16, 3907 –3932 (2022).
+29. B. J. Wallis, A. E. Hogg, J. M. Van Wessem, B. J. Davison,
+M. R. Van Den Broeke, Nat. Geosci. 16, 231 –237 (2023).
+30. L. D. Trusel et al.,Nat. Geosci. 8, 927 –932 (2015).
+31. R. L. Dell, I. C. Willis, N. S. Arnold, A. F. Banwell,
+S. De Roda Husman, Nat. Geosci. 17, 624 –630 (2024).
+32. G. A. Jones et al.,Geophys. Res. Lett. 50, e2023GL103673 (2023).
+33. S. Sun et al.,J. Glaciol. 66, 891 –904 (2020).
+34. D. J. Wingham, M. J. Siegert, A. Shepherd, A. S. Muir, Nature
+440, 1033 –1036 (2006).
+35. H. A. Fricker, T. Scambos, R. Bindschadler, L. Padman,
+Science 315, 1544 –1548 (2007).
+36. S. J. Livingstone et al.,Nat. Rev. Earth Environ. 3,1 0 6 –124 (2022).
+37. L. A. Stearns, B. E. Smith, G. S. Hamilton, Nat. Geosci. 1,
+827–831 (2008).
+38. T. A. Scambos, E. Berthier, C. A. Shuman, Ann. Glaciol. 52,
+74–82 (2011).
+39. M. R. Siegfried, H. A. Fricker, S. P. Carter, S. Tulaczyk,
+Geophys. Res. Lett. 43, 2640 –2648 (2016).
+40. B. I. D. Freer et al.,J. Geophys. Res. Earth Surf. 129,
+e2024JF007724 (2024).
+41. F. S. McCormack et al.,Cryosphere 17, 4549 –4569 (2023).
+42. C. D. Gustafson et al.,Science 376, 640 –644 (2022).
+43. A. A. Robel, S. J. Sim, C. Meyer, M. R. Siegfried,
+C. D. Gustafson, Sci. Adv. 9, eadh3693 (2023).
+44. E. Kazmierczak, S. Sun, V. Coulon, F. Pattyn, Cryosphere 16,
+4537 –4552 (2022).
+45. E. Kazmierczak, T. Gregov, V. Coulon, F. Pattyn, Cryosphere
+18, 5887 –5911 (2024).
+46. G. H. Gudmundsson, F. S. Paolo, S. Adusumilli, H. A. Fricker,
+Geophys. Res. Lett. 46, 13903 –13909 (2019).
+47. J. J. Fürst et al.,Nat. Clim. Chang. 6, 479 –482 (2016).
+48. B. Smith et al.,Science 368, 1239 –1242 (2020).
+49. R. Reese, G. H. Gudmundsson, A. Levermann, R. Winkelmann,
+Nat. Clim. Chang. 8,5 3–57 (2018).
+50. C. T. Wild et al.,Cryosphere 16, 397 –417 (2022).
+51. B. W. J. Miles, R. G. Bingham, Nature 626, 785 –791 (2024).
+52. M. Braun, A. Humbert, A. Moll, Cryosphere 3,4 1–56 (2009).
+53. S. Lhermitte et al.,Proc. Natl. Acad. Sci. U.S.A. 117,
+24735 –24741 (2020).
+54. F. S. Paolo, H. A. Fricker, L. Padman, Science 348,3 2 7 –331 (2015).
+55. C. C. Walker et al.,Nat. Geosci. 17, 1240 –1248 (2024).56. T. Scambos, C. Hulbe, M. Fahnestock, in Antarctic Peninsula
+Climate Variab ility: Historical and Paleoen vironmental Perspectives ,
+E. Domack et al., Eds., Antarctic Research Series, vol. 79
+(American Geophysical Union, 2003), pp. 79 –92.
+57. M. S. Dinniman et al.,Oceanography 29,1 4 4 –153 (2016).
+58. I. Va ňková et al.,Geophys. Res. Lett. 50, e2023GL102960 (2023).
+59. M. G. Rosevear, B. Gayen, C. A. Vreugdenhil,
+B. K. Galton-Fenzi, Annu. Rev. Mar. Sci. 16,1–30 (2024).
+60. A. K. Wåhlin et al.,Sci. Adv. 7, eabd7254 (2021).
+61. B. E. Schmidt et al.,Nature 614, 471 –478 (2023).
+62. A. Dinh, E. Rignot, M. Mazloff, I. Fenty, Geophys. Res. Lett. 51,
+e2024GL110078 (2024).
+63. S. Adusumilli, H. A. Fricker, B. Medley, L. Padman,
+M. R. Siegfried, Nat. Geosci. 13, 616 –620 (2020).
+64. B. K. Galton ‐Fenzi, J. R. Hunter, R. Coleman, S. J. Marsland,
+R. C. Warner, J. Geophys. Res. 117, 2012JC008214 (2012).
+65. B. Kulessa, D. Jansen, A. J. Luckman, E. C. King,
+P. R. Sammonds, Nat. Commun. 5, 3707 (2014).
+66. K. Lindbäck et al.,Cryosphere 13, 2579 –2595 (2019).
+67. C. L. Stewart, P. Christoffersen, K. W. Nicholls, M. J. M. Williams,
+J. A. Dowdeswell, Nat. Geosci. 12,4 3 5 –440 (2019).
+68. K. A. Naughten et al.,J. Clim. 31, 5243 –5261 (2018).
+6 9 . D .E .G w y t h e r ,C .F .D o w ,S .J e n d e r s i e ,N .G o u r m e l e n ,
+B. K. Galton ‐Fenzi, Geophys. Res. Lett. 50, e2023GL103765 (2023).
+70. A. Wåhlin et al.,Sci. Adv. 10, eadn9188 (2024).
+71. K. W. Nicholls et al.,J. Glaciol. 61, 1079 –1087 (2015).
+72. I. Va ňk o v á ,K .W .N i c h o l l s ,H .F .J .C o r r ,K .M a k i n s o n ,P .V .B r e n n a n ,
+J. Geophys. Res. Earth Surf. 125, e2019JF005280 (2020).
+73. S. Cook, K. W. Nicholls, I. Va ňková, S. S. Thompson,
+B. K. Galton-Fenzi, Ann. Glaciol. 63,2 7–32 (2022).
+74. A. M. Chartrand, I. M. Howat, J. Glaciol. 69,1 6 6 3 –1676 (2023).
+75. P. Milillo et al.,Nat. Geosci. 15,4 8–53 (2022).
+76. P. Milillo et al.,Sci. Adv. 5, eaau3433 (2019).
+77. H. Chen, E. Rignot, B. Scheuchl, S. Ehrenfeucht, Geophys.
+Res. Lett. 50, e2022GL102430 (2023).
+78. E. Rignot et al.,Proc. Natl. Acad. Sci. U.S.A. 121, e2404766121 (2024).
+79. B. I. D. Freer, O. J. Marsh, A. E. Hogg, H. A. Fricker, L. Padman,
+Cryosphere 17,4 0 7 9 –4101 (2023).
+80. E. Rignot, Nat. Clim. Chang. 13, 1010 –1013 (2023).
+81. E. Rignot, J. Mouginot, M. Morlighem, H. Seroussi, B. Scheuchl,
+Geophys. Res. Lett. 41,3 5 0 2 –3509 (2014).
+82. T. Pelle, J. S. Greenbaum, C. F. Dow, A. Jenkins, M. Morlighem,
+Sci. Adv. 9, eadi9014 (2023).
+83. T. Pelle, J. S. Greenbaum, S. Ehrenfeucht, C. F. Dow, F. S. McCormack,
+J. Geophys. Res. Earth Surf. 129, e2023JF007513 (2024).
+84. E. A. Wilson, A. J. Wells, I. J. Hewitt, C. Cenedese, J. Fluid
+Mech. 895, A20 (2020).
+85. A. A. Robel, E. Wilson, H. Seroussi, Cryosphere 16,4 5 1–469 (2022).
+86. B. R. Parizek et al.,J. Geophys. Res. Earth Surf. 118,6 3 8 –655 (2013).
+87. R. T. Walker et al.,Earth Planet. Sci. Lett. 361,4 2 2 –428 (2013).
+88. H. Seroussi, M. Morlighem, Cryosphere 12,3 0 8 5 –3096 (2018).
+89. A. T. Bradley, I. J. Hewitt, Nat. Geosci. 17, 631 –637 (2024).
+90. Y. Wang et al.,Cryosphere 18, 5117 –5137 (2024).
+91. K. Christianson et al.,Geophys. Res. Lett. 40,5 4 0 6 –5411 (2013).
+92. L. M. Simkins, S. L. Greenwood, J. B. Anderson, Cryosphere
+12, 2707 –2726 (2018).
+93. C. L. Batchelor, J. A. Dowdeswell, Mar. Geol. 363,6 5–92 (2015).
+94. R. B. Alley, S. Anandakrishnan, T. K. Dupont, B. R. Parizek,
+D. Pollard, Science 315, 1838 –1841 (2007).
+95. A. G. C. Graham et al.,Nat. Geosci. 15, 706 –713 (2022).
+96. C. L. Batchelor et al.,Nature 617, 105 –110 (2023).
+97. M. Jakobsson et al.,Geology 39, 691 –694 (2011).
+98. C. L. Parkinson, D. J. Cavalieri, Cryosphere 6,8 7 1 –880 (2012).
+9 9 . D .K .P e r o v i c h et al.,Geophys. Res. Lett. 34, 2007GL031480 (2007).
+100. S. E. Stammerjohn, D. G. Martinson, R. C. Smith, X. Yuan,
+D. Rind, J. Geophys. Res. Oceans 113, C03S90 (2008).
+101. C. A. Greene, D. A. Young, D. E. Gwyther, B. K. Galton-Fenzi,
+D. D. Blankenship, Cryosphere 12, 2869 –2882 (2018).
+102. M. Haigh, P. R. Holland, Geophys. Res. Lett. 51, e2024GL108406
+(2024).
+103. A. Silvano et al.,Sci. Adv. 4, eaap9467 (2018).
+104. N. S. Steiner et al.,Elementa 9, 00007 (2021).
+105. A. Purich, E. W. Doddridge, Commun. Earth Environ. 4,3 1 4( 2 0 2 3 ) .
+106. P. A. Reid, R. A. Massom, Nat. Commun. 13, 1164 (2022).
+107. E. Gilbert, C. Holmes, Weather 79,4 6–51 (2024).
+108. S. Aoki et al.,Commun. Earth Environ. 3, 142 (2022).
+109. A. Duspayev, M. G. Flanner, A. Riihelä, Geophys. Res. Lett. 51,
+e2024GL109608 (2024).
+110. O. Schofield et al.,Trends Ecol. Evol. 39,1 1 4 1 –1153 (2024).
+111. S. Kacimi, R. Kwok, Cryosphere 14, 4453 –4474 (2020).
+112. M. Ionita, Front. Earth Sci. 12, 1333706 (2024).
+113. J. Weertman, J. Glaciol. 13,3–11 (1974).
+114. C. Schoof, J. Fluid Mech. 573,2 7–55 (2007).
+115. I. Joughin, B. E. Smith, B. Medley, Science 344,7 3 5 –738 (2014).
+116. E. A. Hill et al.,Cryosphere 17, 3739 –3759 (2023).
+117. R. Reese et al.,Cryosphere 17, 3761 –3783 (2023).
+118. M. Mengel, A. Levermann, Nat. Clim. Chang. 4,4 5 1 –455 (2014).119. T. Pelle, M. Morlighem, F. S. McCormack, Geophys. Res. Lett.
+47, e2019GL086821 (2020).
+120. J. N. Bassis, C. C. Walker, Proc. R Soc. A 468,9 1 3 –931 (2011).
+121. R. M. DeConto, D. Pollard, Nature 531, 591 –597 (2016).
+122. C. Needell, N. Holschuh, Geophys. Res. Lett. 50, e2022GL102400
+(2023).
+123. I. Joughin, D. E. Shean, B. E. Smith, D. Floricioiu, Cryosphere
+14, 211 –227 (2020).
+124. M. G. Wise, J. A. Dowdeswell, M. Jakobsson, R. D. Larter,
+Nature 550, 506 –510 (2017).
+125. T. L. Edwards et al.,Nature 566,5 8–64 (2019).
+126. F. Clerc, B. Minchew, M. Behn, Geophys. Res. Lett. 46,
+12108 –12116 (2019).
+127. J. N. Bassis, B. Berg, A. J. Crawford, D. I. Benn, Science 372,
+1342 –1344 (2021).
+128. M. Morlighem et al.,Sci. Adv. 10, eado7794 (2024).
+129. R. B. Alley et al.,A n n u .R e v .E a r t hP l a n e t .S c i . 51,1 8 9 –215
+(2023).
+130. J. N. Bassis et al.,Annu. Rev. Earth Planet. Sci. 52, 221–247 (2024).
+131. B. R. Parizek et al.,Geology 47, 449 –452 (2019).
+132. A. J. Crawford et al.,Nat. Commun. 12, 2701 (2021).
+133. A. T. Bradley, D. T. Bett, P. Dutrieux, J. De Rydt, P. R. Holland,
+J. Geophys. Res. Oceans 127, e2022JC018621 (2022).
+134. M. Poinelli, Y. Nakayama, E. Larour, M. Vizcaino, R. Riva,
+Geophys. Res. Lett. 50, e2023GL104588 (2023).
+135. K. E. Alley, T. A. Scambos, R. B. Alley, Ann. Glaciol. 63,1 8–22 (2022).
+136. C.-Y. Lai et al.,Nature 584, 574 –578 (2020).
+137. J. A. MacGregor, G. A. Catania, M. S. Markowski,
+A. G. Andrews, J. Glaciol. 58, 458 –466 (2012).
+138. S. Wang et al.,J. Geophys. Res. Earth Surf. 127, e2021JF006346
+(2022).
+139. I. Joughin, D. Shapero, B. Smith, P. Dutrieux, M. Barham,
+Sci. Adv. 7, eabg3080 (2021).
+140. N. Gomez et al.,Sci. Adv. 10, eadn1470 (2024).
+141. V. R. Barletta et al.,Science 360, 1335 –1339 (2018).
+142. P. St ‐Laurent, S. E. Stammerjohn, T. Maksym, J. Geophys.
+Res. Oceans 129, e2023JC020467 (2024).
+143. T. Surawy-Stepney et al.,Cryosphere 18, 977 –993 (2024).
+144. R. A. Massom et al.,Nature 558, 383 –389 (2018).
+145. N. J. Teder, L. G. Bennetts, P. A. Reid, R. A. Massom, Environ.
+Res. Lett. 17, 045026 (2022).
+146. K. Brunt, E. Okal, D. MacAyeal, J. Glaciol. 57, 785 –788 (2011).
+147. C. C. Walker, J. N. Bassis, H. A. Fricker, R. J. Czerwinski,
+J. Geophys. Res. Earth Surf. 118, 2354 –2364 (2013).
+148. M. K. Becker et al.,Geophys. Res. Lett. 48, e2020GL091207 (2021).
+149. C. A. Greene, A. S. Gardner, N.-J. Schlegel, A. D. Fraser,
+Nature 609, 948 –953 (2022).
+150. A. D. Fraser et al.,Rev. Geophys. 61, e2022RG000770 (2023).
+151. G. Van Achter et al.,Ocean Model. 169, 101920 (2022).
+152. E. A. Cougnon et al.,Geophys. Res. Lett. 44,1 1 5 1 9 –11527 (2017).
+153. M. F. Huguenin, R. M. Holmes, P. Spence, M. H. England,
+Geophys. Res. Lett. 51, e2023GL104518 (2024).
+154. R. J. Matear, T. J. O ’Kane, J. S. Risbey, M. Chamberlain,
+Nat. Commun. 6, 8656 (2015).
+155. J. M. A. Macha et al.,Geophys. Res. Lett. 51, e2024GL109423 (2024).
+156. F. S. Paolo et al.,Nat. Geosci. 11, 121 –126 (2018).
+157. M. A. King, P. Christoffersen, Geophys. Res. Lett. 51,
+e2024GL108844 (2024).
+158. H. H. Hellmer, F. Kauker, R. Timmermann, T. Hattermann,
+J. Clim. 30, 4337 –4350 (2017).
+1 5 9 . J . J i n ,A .J .P a y n e ,C .Y .S .B u l l ,E G U s p h e r ee g u s p h e r e - 2 0 2 4 - 1 2 8 7
+[Preprint] (2024); https://doi.org /10.5194/egusphere-2024-1287.
+160. K. A. Naughten et al.,Nat. Commun. 12, 1991 (2021).
+161. B. J. Wallis et al.,Nat. Commun. 14, 7535 (2023).
+162. A. Shepherd, H. A. Fricker, S. L. Farrell, Nature 558, 223 –232 (2018).
+163. T. Slater et al.,Cryosphere 15, 233 –246 (2021).
+164. V. Brancato et al.,Geophys. Res. Lett. 47, e2019GL086291 (2020).
+165. B. W. J. Miles, C. R. Stokes, S. S. R. Jamieson, Cryosphere 12,
+3123 –3136 (2018).
+166. H. J. Picton, C. R. Stokes, S. S. R. Jamieson, D. Floricioiu,
+L. Krieger, Cryosphere 17, 3593 –3616 (2023).
+167. S. S. Thompson et al.,Cryosphere 17, 157 –174 (2023).
+168. R. Li et al.,Nat. Commun. 14, 4061 (2023).
+169. B. W. J. Miles et al.,Cryosphere 15, 663 –676 (2021).
+170. B. J. Davison et al.,Nat. Commun. 14, 1479 (2023).
+171. S. Adusumilli, M. A. Fish, H. A. Fricker, B. Medley, Geophys.
+Res. Lett. 48, e2020GL091076 (2021).
+172. L. Barthélemy, F. Codron, V. Favier, J. Wille, Authorea
+171387374.47240076/v1 [Preprint] (2024); https://doi.org/
+10.22541/au.171387374.47240076/v1.
+173. S. Adusumilli, H. A. Fricker, A. S. Gardner, in State of the Climate
+in 2022: Antarctica and the Southern Ocean ,K .R .C l e m ,
+M. N. Raphael, Eds. (American Meteorological Society, 2023).
+174. J. D. Wille et al.,J. Clim. 37, 757 –778 (2024).
+175. S. Jeong, I. M. Howat, J. N. Bassis, Geophys. Res. Lett. 43,
+11,720 –11,725 (2016).
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 8o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
+
+
+--- Page 9 ---
+176. B. W. J. Miles et al.,J. Glaciol. 66, 485 –495 (2020).
+177. K. E. Alley et al.,Cryosphere 15, 5187 –5203 (2021).
+178. J. N. Bassis, H. A. Fricker, R. Coleman, J. B. Minster, J. Glaciol.
+54,1 7–27 (2008).
+179. C. C. Walker, J. N. Bassis, H. A. Fricker, R. J. Czerwinski,
+J. Glaciol. 61, 243 –252 (2015).
+180. B. P. Lipovsky, J. Geophys. Res. Oceans 123,4 0 1 4 –4033 (2018).
+181. D. Francis, K. S. Mattingly, S. Lhermitte, M. Temimi, P. Heil,
+Cryosphere 15,2 1 4 7 –2165 (2021).
+182. E. Larour, E. Rignot, M. Poinelli, B. Scheuchl, Proc. Natl. Acad.
+Sci. U.S.A. 118, e2105080118 (2021).
+183. H. Seroussi et al.,Geophys. Res. Lett. 44, 6191 –6199 (2017).
+184. D. I. Benn et al.,Cryosphere 16, 2545 –2564 (2022).
+185. E. Rignot, P h i l o s .T r a n s .R .S o c .S e r .A 364,1 6 3 7 –1655 (2006).
+186. B. W. J. Miles, C. R. Stokes, S. S. R. Jamieson, Sci. Adv. 2,
+e1501350 (2016).
+187. T. Li, G. J. Dawson, S. J. Chuter, J. L. Bamber, Cryosphere 17,
+1003 –1022 (2023).
+188. N. Ribeiro et al.,J. Geophys. Res. Oceans 128, e2023JC019882
+(2023).
+189. S. Cook, B. K. Galton-Fenzi, S. R. M. Ligtenberg, R. Coleman,
+Cryosphere 12, 3853 –3859 (2018).
+190. R. Minunno, N. Andersson, G. M. Morrison, Earth Sci. Rev.
+241, 104431 (2023).
+191. D. R. Macayeal, K. Mankoff, B. Minchew, J. Moore, M. Wolovick,
+Glacial climate intervention: A research vision, Version 2,
+U.S. Antarctic Program Data Center (USAP-DC) (2024);
+https://doi.org/10.15784/601797.192. B. Keefer, M. Wolovick, J. C. Moore, PNAS Nexus 2, pgad053
+(2023).
+193. A. Alevropoulos-Borrill, N. R. Golledge, S. L. Cornford,
+D. P. Lowry, M. Krapp, Commun. Earth Environ. 5, 150 (2024).
+194. Ö. Gürses, V. Kolatschek, Q. Wang, C. B. Rodehacke,
+Cryosphere 13, 2317 –2324 (2019).
+195. M. Siegert et al. , ResearchGate 10.13140/RG.2.2.13179.94246
+[Preprint] (2024); https://doi.o rg/10.13140/RG.2.2.13179.94246.
+196. A. K. Klose, V. Coulon, F. Pattyn, R. Winkelmann, Cryosphere
+18, 4463 –4492 (2024).
+197. K. A. Naughten, P. R. Holland, J. De Rydt, Nat. Clim. Chang.
+13, 1222 –1228 (2023).
+198. J. Garbe, T. Albrecht, A. Levermann, J. F. Donges, R. Winkelmann,
+Nature 585,5 3 8 –544 (2020).
+199. D. Li, R. M. DeConto, D. Pollard, Y. Hu, Nat. Commun. 15,
+5178 (2024).
+200. S. Sadai, A. Condron, R. DeConto, D. Pollard, Sci. Adv. 6,
+eaaz1169 (2020).
+201. A. Shepherd et al. , Antarctic and Greenland Ice Sheet mass
+balance 1992-2020 for IPCC AR6, Version 1.0, UK Polar Data
+Centre, Natural Environment Research Council, UK Researchand Innovation (2021); https://doi.org/10.5285/77B64C55-
+7166-4A06-9DEF-2E400398E452.
+202. L. A. Magruder et al.,Nat. Rev. Earth Environ. 5,1 2 0 –136 (2024).
+203. J. Kingslake, J. C. Ely, I. Das, R. E. Bell, Nature 544, 349 –352
+(2017).
+204. T. Hattermann, L. H. Smedsrud, O. A. Nøst, J. M. Lilly,
+B. K. Galton-Fenzi, Ocean Model. 82,2 8–44 (2014).ACKNOWLEDGMENTS
+We thank the World Climate Research Programme Climate and
+Cryosphere Project (CliC) for coordinating this special issue, the
+EDGE Science Team for inspiration, and two reviewers whose
+comments substantially improved this paper. Funding: This work was
+funded by Eric and Wendy Schmidt (H.A.F.), NASA Cryospheric
+Sciences grant 80NSSC23K0934 (H.A.F.), the Australian Governmentby the Antarctic Science Collaborati on Initiative Program (ASCI000002)
+(B.K.G.-F.), the Australian Research Council Special Research Initiative,
+the Australian Centre for Excellenc e in Antarctic Science (SR200100008),
+NASA Cryospheric Sciences grant 80NSSC22K0380 (C.C.W.), NASA
+Physical Oceanography grant 80NSSC23K0356 (C.C.W.), the Natural
+Environment Research Council (NERC) Satellite Data in Environmental
+Science (SENSE) Centre for Doctoral Training (NE/T00939X/1)(B.I.D.F.), a Schmidt AI Postdoctoral Fellowship (B.I.D.F.), NASA
+Cryospheric Sciences grants 80NSSC21K0911 and 80NSSC24K1029
+(L.P.), the National Science Foundation (2213875 and 2035080)
+(R.D.), and NASA Cryospheric Sciences grant 80NSSC22K1707 (R.D.).
+Competing interests: The authors declare that they have no
+competing interests. License information: Copyright © 2025 the
+authors, some rights reserved; exclusive licensee American
+Association for the Advancement of Science. No claim to original
+US government works. https://www.science.org/about/science-
+licenses-journal-article-reuse
+Submitted 19 October 2024; accepted 3 January 2025
+10.1126/science.adt9619THE POLAR WORLD
+Fricker et al.,Science 387, 601 –609 (2025) 7 February 2025 9o f9
+Downloaded from https://www.science.org at Massachusetts Institute of Technology on February 24, 2025
