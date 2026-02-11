@@ -1,0 +1,272 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!60!black}
+
+\title{Strategy for Incorporating West Antarctic Mass Loss\\into DOLS Sea Level Projections}
+\author{Working Document}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Motivation}
+
+Our DOLS quadratic model calibrates thermodynamic sea level sensitivity against global mean surface temperature:
+\begin{equation}
+    \frac{dH}{dt} = \frac{d\alpha}{dT}\, T^2 + \alpha_0\, T + \beta,
+\end{equation}
+where $H$ is GMSL, $T$ is GMST anomaly, and $\beta$ is a background trend.  This captures processes that scale with surface warming: thermosteric expansion, glacier mass loss, Greenland surface mass balance, and terrestrial water storage changes.
+
+West Antarctic Ice Sheet (WAIS) mass loss is fundamentally different.  It is driven by intrusion of warm Circumpolar Deep Water (CDW) onto the continental shelf, basal melting of ice shelves, and the resulting dynamical response of marine-terminating glaciers---processes governed by subsurface ocean temperatures and ice-sheet geometry rather than surface air temperature.  The dominant glaciers (Thwaites, Pine Island) sit on retrograde bed slopes, making them susceptible to marine ice sheet instability (MISI), a positive feedback that is largely independent of the surface temperature trajectory once initiated.
+
+WAIS mass loss is therefore not captured by the DOLS $\alpha(T)$ relationship and must be added as a separate, independent component.
+
+\subsection{Why not use IPCC AR6 AIS projections directly?}
+
+The IPCC AR6 FACTS framework projects total Antarctic Ice Sheet (AIS) contributions using an emulator calibrated against a small ensemble of process-based ice sheet models.  These projections are known to carry a \textbf{low-end bias} for several reasons:
+
+\begin{enumerate}
+    \item \textbf{Model structural deficiencies.}  Most ice sheet models in the ISMIP6 ensemble do not resolve or parameterize key processes governing rapid retreat: calving dynamics at marine-terminating margins, ice-cliff instability (MICI), and damage mechanics that weaken ice through fracture and crevassing.
+
+    \item \textbf{Ocean forcing representation.}  Sub-ice-shelf melt rates in projections are typically derived from coarse-resolution ocean models or simple parameterizations that underestimate warm water access to grounding lines in deep troughs.  Observed melt rates beneath Thwaites already exceed most model projections.
+
+    \item \textbf{Committed retreat not captured.}  Observational and modeling evidence suggests that Thwaites Glacier is already in a state of committed, potentially irreversible retreat.  This committed component is poorly represented in models initialized from idealized or smoothed geometries.
+
+    \item \textbf{Nearly SSP-independent median.}  The IPCC AR6 AIS median projection at 2100 is $\sim$110~mm across all SSP scenarios (Table~\ref{tab:ipcc_ais}), reflecting the dominance of ocean dynamics over surface temperature in driving Antarctic mass loss on this timescale.  The scenario dependence lives almost entirely in the upper tail, where structured expert judgment on ice-dynamical feedbacks was applied post hoc.
+
+    \item \textbf{The p-box construction.}  The medium-confidence FACTS projections combine two expert-judgment distributions (pb\_1e and pb\_1f) into a probability box that produces a discontinuity at the median and compresses the upper tail relative to what the observational trend implies.
+\end{enumerate}
+
+Using IPCC AIS projections as the WAIS component would therefore systematically understate the contribution that is most likely to dominate the difference between our DOLS projections and observations.
+
+\begin{table}[h]
+\centering
+\caption{IPCC AR6 total AIS projections at 2100 (medium confidence, relative to 2005).}
+\label{tab:ipcc_ais}
+\begin{tabular}{lccc}
+\toprule
+Scenario & Median (mm) & 5th--95th \% (mm) \\
+\midrule
+SSP1-2.6 & 110 & $-5$ to 419 \\
+SSP2-4.5 & 111 & $-11$ to 461 \\
+SSP5-8.5 & 116 & $-3$ to 569 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section{Observed WAIS Mass Loss: Structural Breaks}
+
+The IMBIE reconciled estimates \citep{Otosaka2023} provide monthly WAIS mass balance from 1992--2020 (Figure~\ref{fig:wais_timeseries}).  We tested for structural breaks in the rate time series using piecewise linear regression, Chow tests, and BIC-optimal segmentation.
+
+\subsection{Key findings}
+
+\begin{itemize}
+    \item \textbf{Statistically significant structural break at $\sim$2010} (Chow test $F=26.4$, $p < 10^{-4}$).  BIC strongly favors one- and two-break models over a single linear trend ($\Delta$BIC $= -26$ and $-34$, respectively).
+
+    \item \textbf{Three regimes} in the mass loss rate:
+    \begin{enumerate}
+        \item 1992--2010: Persistent acceleration at $+0.015$~mm/yr$^2$ (rate increases from $\sim$0.06 to $\sim$0.44~mm/yr).
+        \item 2010--2017: Partial deceleration at $-0.027$~mm/yr$^2$ (rate decreases to $\sim$0.35~mm/yr).
+        \item 2018--2020: High interannual variability (rate swings from 0.44 to 0.09~mm/yr).
+    \end{enumerate}
+
+    \item \textbf{The deceleration is real but does not indicate recovery.}  Mean rates remain elevated throughout: 0.33~mm/yr over 2005--2020 versus 0.10~mm/yr over 1992--2000.  The post-2010 variability is consistent with ocean-circulation-driven fluctuations in CDW access (particularly ENSO and SAM modulation of thermocline depth on the Amundsen Sea continental shelf), superimposed on an underlying positive trend.
+
+    \item \textbf{Quadratic fit to cumulative mass loss} over the full 1992--2020 period yields:
+    \begin{equation}
+        H_\text{WAIS}(t) = \tfrac{1}{2}\ddot{H}\,(t-t_0)^2 + \dot{H}_0\,(t-t_0) + H_0
+    \end{equation}
+    with $\ddot{H} = 0.0153 \pm 0.0010$~mm/yr$^2$, $\dot{H}_0 = 0.224 \pm 0.004$~mm/yr at $t_0 = 2005$, and $H_0 = 1.69$~mm.  The acceleration is highly significant ($F = 240$, $p < 10^{-6}$).
+
+    \item \textbf{Signal emergence:} The cumulative WAIS signal exceeds $2\sigma$ of measurement uncertainty by $\sim$1998 (SNR $> 2$).
+\end{itemize}
+
+
+\subsection{Interpretation}
+
+The structural break at $\sim$2010 reflects interannual-to-decadal variability in ocean forcing, not a change in the underlying instability trajectory.  The glaciers driving WAIS mass loss (Thwaites, Pine Island, Smith, Pope, Kohler) are grounded on retrograde beds hundreds of meters below sea level.  Once retreat initiates on such geometry, the MISI positive feedback (deeper bed $\to$ thicker ice at grounding line $\to$ greater flux $\to$ further retreat) provides a structural commitment to continued mass loss that persists through fluctuations in external forcing.
+
+The observed post-2010 rate variability is therefore \emph{noise on top of a committed signal}, and the long-term acceleration remains the appropriate basis for projection.
+
+
+\section{Recommended Strategy}
+
+\subsection{Model formulation}
+
+Add WAIS as an independent, time-dependent component:
+\begin{equation}
+    H_\text{total}(t) = H_\text{DOLS}(t) + H_\text{WAIS}(t),
+    \label{eq:total}
+\end{equation}
+where $H_\text{DOLS}$ is the existing temperature-driven projection and $H_\text{WAIS}$ is extrapolated from the observational record.  The two terms are physically independent (surface temperature vs.\ subsurface ocean dynamics), so their uncertainties add in quadrature.
+
+\subsection{WAIS projection: acceleration-based extrapolation}
+
+Model the WAIS contribution as a quadratic (constant-acceleration) trajectory anchored to the observational record:
+\begin{equation}
+    H_\text{WAIS}(t) = H_\text{WAIS}(t_\text{ref}) + \dot{H}_\text{ref}\,(t - t_\text{ref}) + \tfrac{1}{2}\,\ddot{H}\,(t - t_\text{ref})^2,
+    \label{eq:wais_quad}
+\end{equation}
+where $t_\text{ref} = 2020$, $H_\text{WAIS}(t_\text{ref}) = 6.6$~mm, $\dot{H}_\text{ref}$ is the rate at $t_\text{ref}$, and $\ddot{H}$ is the sustained acceleration.
+
+\subsubsection{Central estimate}
+
+Use the full-record quadratic fit parameters: $\ddot{H} = 0.015$~mm/yr$^2$.  This gives a rate at 2020 of $\dot{H}_\text{ref} \approx 0.33$~mm/yr (the 2005--2020 mean rate, which smooths through the decadal variability).
+
+\subsubsection{Uncertainty ensemble}
+
+Sample $\ddot{H}$ and $\dot{H}_\text{ref}$ from the fit covariance matrix (Section~2).  The formal fit uncertainties are small ($\sigma_{\ddot{H}} \approx 0.001$~mm/yr$^2$), so the dominant source of projection uncertainty is \emph{structural}: will the observed acceleration persist, intensify, or diminish?
+
+To capture this structural uncertainty, we recommend a three-member acceleration ensemble:
+
+\begin{table}[h]
+\centering
+\caption{WAIS acceleration scenarios for projection ensemble.}
+\label{tab:wais_scenarios}
+\begin{tabular}{llccc}
+\toprule
+Scenario & Physical basis & $\ddot{H}$ (mm/yr$^2$) & Rate at 2100 & $H_\text{WAIS}$(2100) \\
+\midrule
+Low & Partial stabilization & 0.008 & 0.97~mm/yr & 59~mm \\
+Central & Observed trend continues & 0.015 & 1.53~mm/yr & 82~mm \\
+High & Acceleration intensifies & 0.025 & 2.33~mm/yr & 129~mm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Rationale for the scenarios:}
+
+\begin{itemize}
+    \item \textbf{Low ($\ddot{H} = 0.008$~mm/yr$^2$):}  Assumes the post-2010 deceleration reflects a genuine partial stabilization---e.g., ice-shelf pinning points provide temporary buttressing, or CDW intrusions moderate.  This is roughly half the observed full-record acceleration.  Note that even this scenario produces $\sim$60~mm by 2100, consistent with the low end of observationally constrained estimates.
+
+    \item \textbf{Central ($\ddot{H} = 0.015$~mm/yr$^2$):} The observed 1992--2020 acceleration continues.  This is the single best empirical estimate and implies a rate of $\sim$1.5~mm/yr by 2100.  For context, this matches the acceleration needed to reach the IPCC AR6 AIS \emph{median} of $\sim$110~mm when apportioned to WAIS ($\sim$70\% of total AIS).
+
+    \item \textbf{High ($\ddot{H} = 0.025$~mm/yr$^2$):}  Acceleration intensifies as retreat progresses deeper into the interior of the Thwaites basin, where the bed drops to $>$2~km below sea level and the MISI feedback strengthens.  This is plausible if Thwaites's eastern shear margin weakens or the remaining ice shelf collapses within the next 1--2 decades.  It produces $\sim$130~mm by 2100, still well below the IPCC 95th percentile.
+\end{itemize}
+
+\subsection{Physical constraint: rate floor}
+
+Apply a minimum rate constraint:
+\begin{equation}
+    \dot{H}_\text{WAIS}(t) \geq \dot{H}_\text{floor}.
+\end{equation}
+
+The floor should be set at the recent mean rate over the observational period ($\dot{H}_\text{floor} \approx 0.2$~mm/yr), reflecting the committed, largely irreversible nature of ongoing retreat on retrograde bed topography.  This constraint is relevant primarily for the low-acceleration scenario, where the quadratic could theoretically predict declining rates at early times.
+
+\subsection{Implementation}
+
+The implementation requires minimal changes to the existing projection framework:
+
+\begin{enumerate}
+    \item Add a function \texttt{project\_wais\_ensemble()} to \texttt{slr\_analysis.py} that:
+    \begin{itemize}
+        \item Takes the IMBIE-fitted acceleration parameters and their covariance
+        \item Samples from a discrete scenario distribution (low/central/high) or a continuous distribution spanning the range
+        \item Integrates forward from $t_\text{ref} = 2020$
+        \item Applies the rate floor constraint
+    \end{itemize}
+
+    \item In the Monte Carlo projection loop (notebook cells 45--46):
+    \begin{itemize}
+        \item Draw DOLS coefficients $\to$ thermodynamic GMSL path (existing)
+        \item Draw WAIS acceleration independently $\to$ WAIS path (new)
+        \item Sum: $H_\text{total} = H_\text{DOLS} + H_\text{WAIS}$
+    \end{itemize}
+
+    \item Report projections as:
+    \begin{itemize}
+        \item DOLS-only (thermodynamic, as currently shown)
+        \item DOLS + WAIS (total)
+        \item IPCC AR6 FACTS (for comparison, noting its low-end bias)
+    \end{itemize}
+\end{enumerate}
+
+
+\subsection{Double-counting considerations}
+
+The Frederikse GMSL record (1900--2018) used to calibrate the DOLS model includes the total observed Antarctic contribution.  Over the calibration period, WAIS contributed $\sim$6.6~mm cumulatively (1992--2020), while the total Antarctic contribution in Frederikse is comparable through 2018.  However:
+
+\begin{itemize}
+    \item The DOLS fit attributes sea level to temperature via integrated covariation.  WAIS mass loss, which is not temperature-driven, enters the DOLS fit primarily through the background trend $\beta$ and the residuals.  It does not inflate the $\alpha(T)$ coefficients.
+
+    \item The WAIS contribution during the calibration period ($\sim$6~mm total, $\sim$0.3$\times$ the period length $\approx$ 0.05~mm/yr mean rate) is small relative to the DOLS trend term ($\beta = 2.6$~mm/yr).
+
+    \item To be conservative, one could subtract the fitted WAIS quadratic from the Frederikse GMSL before re-calibrating DOLS, which would slightly reduce $\beta$.  However, given the small magnitude, this correction is within the DOLS trend uncertainty ($\sigma_\beta = 0.2$~mm/yr) and can be noted rather than implemented in this first-order analysis.
+\end{itemize}
+
+
+\section{Projected WAIS Contributions}
+
+Table~\ref{tab:wais_proj} summarizes the WAIS mass loss projections under the three acceleration scenarios.
+
+\begin{table}[h]
+\centering
+\caption{Projected WAIS sea level contribution (mm, relative to 1995--2005 baseline) under constant-acceleration scenarios, with $\dot{H}_\text{ref} = 0.33$~mm/yr and $H_\text{WAIS}(2020) = 6.6$~mm.}
+\label{tab:wais_proj}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{2}{c}{2050} & \multicolumn{2}{c}{2075} & \multicolumn{2}{c}{2100} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+Scenario & Rate & Cum.\ & Rate & Cum.\ & Rate & Cum.\ \\
+ & (mm/yr) & (mm) & (mm/yr) & (mm/yr) & (mm/yr) & (mm) \\
+\midrule
+Low ($\ddot{H}=0.008$)  & 0.57 & 20 & 0.77 & 37 & 0.97 & 59 \\
+Central ($\ddot{H}=0.015$) & 0.78 & 23 & 1.16 & 47 & 1.53 & 82 \\
+High ($\ddot{H}=0.025$)    & 1.08 & 28 & 1.71 & 64 & 2.33 & 129 \\
+\midrule
+Const.\ rate (no accel.)   & 0.33 & 17 & 0.33 & 25 & 0.33 & 33 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Under the central scenario, WAIS adds $\sim$80~mm by 2100---comparable in magnitude to the spread between SSP scenarios in the DOLS thermodynamic projection and larger than the DOLS trend extrapolation uncertainty.  This underscores that \textbf{WAIS is not a minor correction; it is a leading-order term in the total projection by end-of-century}.
+
+
+\section{Summary}
+
+\begin{enumerate}
+    \item The IMBIE WAIS record shows a statistically significant acceleration ($\ddot{H} = 0.015$~mm/yr$^2$) with a structural break at $\sim$2010 that reflects ocean variability, not a change in the instability trajectory.
+
+    \item WAIS mass loss should be added to the DOLS projections as an independent, non-temperature-driven component (Eq.~\ref{eq:total}).
+
+    \item The projection uses a constant-acceleration model (Eq.~\ref{eq:wais_quad}) with three scenarios spanning the plausible range of sustained acceleration, bounded below by a committed-rate floor.
+
+    \item IPCC AR6 AIS projections are not used as the primary WAIS estimate because of their known low-end bias, but are shown for comparison.
+
+    \item Implementation requires one new function and minor modifications to the existing Monte Carlo ensemble loop.
+\end{enumerate}
+
+
+\bibliographystyle{apalike}
+\begin{thebibliography}{9}
+
+\bibitem[Otosaka et al., 2023]{Otosaka2023}
+Otosaka, I.~N., et al. (2023).
+\newblock Mass balance of the {Greenland} and {Antarctic} ice sheets from 1992 to 2020.
+\newblock \emph{Earth System Science Data}, 15, 1597--1616.
+\newblock \href{https://doi.org/10.5194/essd-15-1597-2023}{doi:10.5194/essd-15-1597-2023}.
+
+\bibitem[Fox-Kemper et al., 2021]{FoxKemper2021}
+Fox-Kemper, B., et al. (2021).
+\newblock Ocean, Cryosphere and Sea Level Change.
+\newblock In \emph{Climate Change 2021: The Physical Science Basis} (pp.\ 1211--1362).
+\newblock Cambridge University Press.
+\newblock \href{https://doi.org/10.1017/9781009157896.011}{doi:10.1017/9781009157896.011}.
+
+\bibitem[Frederikse et al., 2020]{Frederikse2020}
+Frederikse, T., et al. (2020).
+\newblock The causes of sea-level rise since 1900.
+\newblock \emph{Nature}, 584(7821), 393--397.
+\newblock \href{https://doi.org/10.1038/s41586-020-2591-3}{doi:10.1038/s41586-020-2591-3}.
+
+\end{thebibliography}
+
+\end{document}
