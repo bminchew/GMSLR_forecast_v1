@@ -46,7 +46,7 @@ import numpy as np
 import pandas as pd
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 
 # =============================================================================
@@ -102,6 +102,477 @@ def datetime_to_decimal_year(dt: datetime) -> float:
     base = datetime(year, 1, 1)
     next_year = datetime(year + 1, 1, 1)
     return year + (dt - base).total_seconds() / (next_year - base).total_seconds()
+
+
+# =============================================================================
+# UNIT CONVERSION
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Unit registry — maps unit strings to their physical dimension and a
+# conversion factor to the base unit of that dimension.
+#
+# Base units:  length → meters,  time → years
+# Temperature is special (affine, not multiplicative) and handled separately.
+# ---------------------------------------------------------------------------
+_UNIT_REGISTRY = {
+    # Length  (base = meters)
+    'm':   {'dimension': 'length', 'to_base': 1.0},
+    'mm':  {'dimension': 'length', 'to_base': 0.001},
+    'cm':  {'dimension': 'length', 'to_base': 0.01},
+    'ft':  {'dimension': 'length', 'to_base': 0.3048},
+    'in':  {'dimension': 'length', 'to_base': 0.0254},
+    # Temperature  (affine — factors handled in _convert_temperature)
+    'degC': {'dimension': 'temperature'},
+    'degF': {'dimension': 'temperature'},
+    'K':    {'dimension': 'temperature'},
+    # Time  (base = years)
+    'yr':    {'dimension': 'time', 'to_base': 1.0},
+    'day':   {'dimension': 'time', 'to_base': 1.0 / 365.25},
+    'month': {'dimension': 'time', 'to_base': 1.0 / 12.0},
+    's':     {'dimension': 'time', 'to_base': 1.0 / 31557600.0},
+}
+
+# Standard unit for each dimension  (target of convert_to_standard_units)
+_STANDARD_UNITS = {'length': 'm', 'temperature': 'degC', 'time': 'yr'}
+
+
+def _get_dimension(unit_str: str) -> str:
+    """Return the physical dimension of a *simple* (non-compound) unit string.
+
+    Parameters
+    ----------
+    unit_str : str
+        A unit string such as ``'m'``, ``'degC'``, ``'yr'``.
+
+    Returns
+    -------
+    str
+        One of ``'length'``, ``'temperature'``, ``'time'``.
+
+    Raises
+    ------
+    ValueError
+        If *unit_str* is not in the registry.
+    """
+    entry = _UNIT_REGISTRY.get(unit_str)
+    if entry is None:
+        raise ValueError(
+            f"Unknown unit '{unit_str}'. "
+            f"Supported units: {sorted(_UNIT_REGISTRY.keys())}"
+        )
+    return entry['dimension']
+
+
+def _is_delta_column(col_name: str) -> bool:
+    """Heuristic: True if column represents a *difference* quantity.
+
+    Uncertainty, sigma, and standard-error columns are deltas — when
+    converting temperature they should use the scale factor only (no
+    additive offset).
+    """
+    _delta_tokens = ('sigma', 'unc', '_se', '_sd', 'lower', 'upper',
+                     '_p05', '_p10', '_p17', '_p25', '_p75', '_p83',
+                     '_p90', '_p95', 'gmsl_05', 'gmsl_17', 'gmsl_83',
+                     'gmsl_95')
+    cl = col_name.lower()
+    return any(tok in cl for tok in _delta_tokens)
+
+
+def _convert_temperature(value, from_unit: str, to_unit: str,
+                         is_delta: bool = False):
+    """Convert temperature values between degC, degF, and K.
+
+    Parameters
+    ----------
+    value : float or array-like
+        Temperature value(s).
+    from_unit, to_unit : str
+        Source and target unit (``'degC'``, ``'degF'``, ``'K'``).
+    is_delta : bool
+        If True, treat *value* as a temperature *difference* (no offset).
+    """
+    if from_unit == to_unit:
+        return value
+
+    # Delta conversions — only scale, no offset
+    if is_delta:
+        _delta_scale = {
+            ('degC', 'degF'): 9.0 / 5.0,
+            ('degF', 'degC'): 5.0 / 9.0,
+            ('degC', 'K'):    1.0,
+            ('K', 'degC'):    1.0,
+            ('degF', 'K'):    5.0 / 9.0,
+            ('K', 'degF'):    9.0 / 5.0,
+        }
+        return value * _delta_scale[(from_unit, to_unit)]
+
+    # Absolute conversions — first to degC, then to target
+    if from_unit == 'degC':
+        val_c = value
+    elif from_unit == 'K':
+        val_c = value - 273.15
+    elif from_unit == 'degF':
+        val_c = (value - 32.0) * 5.0 / 9.0
+    else:
+        raise ValueError(f"Unknown temperature unit: {from_unit}")
+
+    if to_unit == 'degC':
+        return val_c
+    elif to_unit == 'K':
+        return val_c + 273.15
+    elif to_unit == 'degF':
+        return val_c * 9.0 / 5.0 + 32.0
+    else:
+        raise ValueError(f"Unknown temperature unit: {to_unit}")
+
+
+def _convert_simple(value, from_unit: str, to_unit: str,
+                    is_delta: bool = False):
+    """Convert *value* between two units of the same dimension.
+
+    For length and time the conversion is purely multiplicative
+    (via the base unit).  For temperature ``_convert_temperature``
+    is used.
+
+    Parameters
+    ----------
+    value : float or array-like
+    from_unit, to_unit : str
+    is_delta : bool
+        Relevant only for temperature; ignored for other dimensions.
+    """
+    if from_unit == to_unit:
+        return value
+
+    dim_from = _get_dimension(from_unit)
+    dim_to   = _get_dimension(to_unit)
+    if dim_from != dim_to:
+        raise ValueError(
+            f"Cannot convert '{from_unit}' ({dim_from}) to "
+            f"'{to_unit}' ({dim_to}): different dimensions."
+        )
+
+    if dim_from == 'temperature':
+        return _convert_temperature(value, from_unit, to_unit,
+                                    is_delta=is_delta)
+
+    # Multiplicative dimensions (length, time): from → base → to
+    factor = (_UNIT_REGISTRY[from_unit]['to_base']
+              / _UNIT_REGISTRY[to_unit]['to_base'])
+    return value * factor
+
+
+def _standard_unit_for(unit_str: str) -> str:
+    """Return the standard unit string for the dimension of *unit_str*.
+
+    Handles compound (rate) units like ``'mm/yr'`` → ``'m/yr'``.
+    """
+    if '/' in unit_str:
+        parts = unit_str.split('/')
+        return '/'.join(_standard_unit_for(p) for p in parts)
+    dim = _get_dimension(unit_str)
+    return _STANDARD_UNITS[dim]
+
+
+def _check_units_are_standard(current_units: dict) -> bool:
+    """Return True if every unit in *current_units* matches the standard."""
+    for col, unit in current_units.items():
+        try:
+            if unit != _standard_unit_for(unit):
+                return False
+        except ValueError:
+            # Unknown unit — not standard
+            return False
+    return True
+
+
+# ---- public API -----------------------------------------------------------
+
+def convert_to_standard_units(
+    data: Union[pd.DataFrame, dict],
+    inplace: bool = False,
+    verbose: bool = True,
+) -> Union[pd.DataFrame, dict]:
+    """
+    Convert DataFrame(s) to standard units: meters, Celsius, years.
+
+    Reads ``df.attrs['current_units']`` to determine what conversions are
+    needed, then applies them.  After conversion the attrs are updated and
+    ``df.attrs['units_standard']`` is set to ``True``.
+
+    Standard units
+    --------------
+    - Length / sea level: meters (m)
+    - Temperature: degrees Celsius (degC)
+    - Time: years (yr)
+    - Rates: m/yr, degC/yr, etc.
+
+    Parameters
+    ----------
+    data : pd.DataFrame or dict of pd.DataFrame
+        Data with ``attrs['current_units']`` metadata (set by reader
+        functions).  If *dict* (from projection readers), each value
+        DataFrame is converted independently.
+    inplace : bool, default False
+        If True, modify the DataFrame(s) in place.
+    verbose : bool, default True
+        Print a one-line summary per DataFrame showing what was converted.
+
+    Returns
+    -------
+    pd.DataFrame or dict of pd.DataFrame
+        Converted data with updated ``attrs['current_units']`` and
+        ``attrs['units_standard'] = True``.
+
+    Raises
+    ------
+    ValueError
+        If *data* lacks the required ``attrs['current_units']`` metadata.
+    """
+    # --- dict path: recurse on each value ---
+    if isinstance(data, dict):
+        result = {}
+        for key, df in data.items():
+            result[key] = convert_to_standard_units(
+                df, inplace=inplace, verbose=verbose,
+            )
+        return result
+
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError(f"Expected DataFrame or dict, got {type(data)}")
+
+    if 'current_units' not in data.attrs:
+        raise ValueError(
+            "DataFrame lacks attrs['current_units'] metadata. "
+            "Use reader functions from slr_data_readers to load data."
+        )
+
+    if data.attrs.get('units_standard', False):
+        if verbose:
+            dataset = data.attrs.get('dataset', '?')
+            print(f"  {dataset}: already in standard units, skipping")
+        return data if inplace else data.copy()
+
+    df = data if inplace else data.copy()
+    units = df.attrs['current_units'].copy()
+    conversions = []
+
+    for col, unit in list(units.items()):
+        std = _standard_unit_for(unit)
+        if unit != std:
+            is_delta = _is_delta_column(col)
+            if '/' in unit:
+                # Rate: convert numerator and denominator independently.
+                # For X num/denom, numerator converts normally but
+                # denominator factor is inverted (per-yr → per-day
+                # means *dividing* by 365.25, not multiplying).
+                from_parts = unit.split('/')
+                to_parts   = std.split('/')
+                factor = 1.0
+                for idx, (fp, tp) in enumerate(zip(from_parts, to_parts)):
+                    dim = _get_dimension(fp)
+                    if dim == 'temperature':
+                        f = _convert_temperature(
+                            1.0, fp, tp, is_delta=True,
+                        )
+                    else:
+                        f = (_UNIT_REGISTRY[fp]['to_base']
+                             / _UNIT_REGISTRY[tp]['to_base'])
+                    # Denominator parts (idx > 0) get inverted
+                    factor *= f if idx == 0 else (1.0 / f)
+                df[col] = df[col] * factor
+            else:
+                df[col] = _convert_simple(df[col], unit, std,
+                                          is_delta=is_delta)
+            conversions.append(f"{col}: {unit} -> {std}")
+            units[col] = std
+
+    # Update attrs
+    df.attrs['current_units'] = units
+    df.attrs['units_standard'] = True
+
+    if verbose:
+        dataset = df.attrs.get('dataset', 'unknown')
+        if conversions:
+            print(f"  {dataset}: {', '.join(conversions)}")
+        else:
+            print(f"  {dataset}: already in standard units")
+
+    return df
+
+
+def convert_units(
+    data: Union[pd.DataFrame, dict],
+    target_units: dict,
+    inplace: bool = False,
+    verbose: bool = True,
+) -> Union[pd.DataFrame, dict]:
+    """
+    Convert DataFrame column(s) to user-specified units.
+
+    Reads ``df.attrs['current_units']`` to determine what each column is
+    currently in, converts the requested columns to the target units,
+    and updates ``attrs['current_units']``.  The ``units_standard`` flag
+    is set to ``True`` only if the resulting units match the standard
+    (meters, Celsius, years); otherwise it is set to ``False``.
+
+    Supported units
+    ---------------
+    - Length: ``'m'``, ``'mm'``, ``'cm'``, ``'ft'``, ``'in'``
+    - Temperature: ``'degC'``, ``'degF'``, ``'K'``
+    - Time: ``'yr'``, ``'day'``, ``'month'``, ``'s'``
+    - Rates: any compound like ``'mm/yr'``, ``'ft/day'``, ``'m/s'``, etc.
+
+    Parameters
+    ----------
+    data : pd.DataFrame or dict of pd.DataFrame
+        Data with ``attrs['current_units']`` metadata.
+    target_units : dict
+        Mapping of column names to desired unit strings.  Use the
+        special key ``'_all'`` to convert every column whose current
+        unit is in the same physical dimension as the target.
+
+        Examples::
+
+            # Specific columns
+            convert_units(df, {'gmsl': 'ft', 'steric': 'mm'})
+
+            # All length columns to feet
+            convert_units(df, {'_all': 'ft'})
+
+            # Temperature to Fahrenheit
+            convert_units(df, {'temperature': 'degF'})
+
+            # Rate conversion
+            convert_units(df, {'mass_balance_rate': 'mm/day'})
+    inplace : bool, default False
+        If True, modify the DataFrame(s) in place.
+    verbose : bool, default True
+        Print a one-line summary showing what was converted.
+
+    Returns
+    -------
+    pd.DataFrame or dict of pd.DataFrame
+        Converted data.  ``attrs['units_standard']`` is ``True`` if all
+        units match standard units; ``False`` otherwise.
+
+    Raises
+    ------
+    ValueError
+        If a requested conversion crosses dimensions (e.g. degC → m),
+        or if *data* lacks ``attrs['current_units']`` metadata.
+    """
+    # --- dict path: recurse on each value ---
+    if isinstance(data, dict):
+        result = {}
+        for key, df in data.items():
+            result[key] = convert_units(
+                df, target_units=target_units,
+                inplace=inplace, verbose=verbose,
+            )
+        return result
+
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError(f"Expected DataFrame or dict, got {type(data)}")
+
+    if 'current_units' not in data.attrs:
+        raise ValueError(
+            "DataFrame lacks attrs['current_units'] metadata. "
+            "Use reader functions from slr_data_readers to load data."
+        )
+
+    df = data if inplace else data.copy()
+    units = df.attrs['current_units'].copy()
+    conversions = []
+
+    # Expand the '_all' key: apply target to every column in the same
+    # dimension as the target unit.
+    col_targets = {}
+    if '_all' in target_units:
+        target_str = target_units['_all']
+        # Determine the target dimension (handle compound units)
+        if '/' in target_str:
+            tgt_dim = _get_dimension(target_str.split('/')[0])
+        else:
+            tgt_dim = _get_dimension(target_str)
+
+        for col, cur_unit in units.items():
+            # Determine dimension of current column
+            if '/' in cur_unit:
+                cur_dim = _get_dimension(cur_unit.split('/')[0])
+            else:
+                cur_dim = _get_dimension(cur_unit)
+            if cur_dim == tgt_dim:
+                col_targets[col] = target_str
+
+    # Explicit per-column targets override _all
+    for col, tgt in target_units.items():
+        if col != '_all':
+            col_targets[col] = tgt
+
+    for col, target_str in col_targets.items():
+        if col not in units:
+            continue  # column not in DataFrame — skip silently
+
+        cur_unit = units[col]
+        if cur_unit == target_str:
+            continue  # already in target unit
+
+        is_delta = _is_delta_column(col)
+
+        if '/' in cur_unit or '/' in target_str:
+            # --- rate / compound unit ---
+            from_parts = cur_unit.split('/')
+            to_parts   = target_str.split('/')
+
+            if len(from_parts) != len(to_parts):
+                raise ValueError(
+                    f"Cannot convert '{cur_unit}' to '{target_str}': "
+                    f"different compound structure."
+                )
+
+            factor = 1.0
+            for idx, (fp, tp) in enumerate(zip(from_parts, to_parts)):
+                dim_fp = _get_dimension(fp)
+                dim_tp = _get_dimension(tp)
+                if dim_fp != dim_tp:
+                    raise ValueError(
+                        f"Cannot convert '{cur_unit}' to '{target_str}': "
+                        f"component '{fp}' ({dim_fp}) vs '{tp}' ({dim_tp})."
+                    )
+                if dim_fp == 'temperature':
+                    f = _convert_temperature(
+                        1.0, fp, tp, is_delta=True,
+                    )
+                else:
+                    f = (_UNIT_REGISTRY[fp]['to_base']
+                         / _UNIT_REGISTRY[tp]['to_base'])
+                # Denominator parts (idx > 0) get inverted
+                factor *= f if idx == 0 else (1.0 / f)
+
+            df[col] = df[col] * factor
+
+        else:
+            # --- simple unit ---
+            df[col] = _convert_simple(df[col], cur_unit, target_str,
+                                      is_delta=is_delta)
+
+        conversions.append(f"{col}: {cur_unit} -> {target_str}")
+        units[col] = target_str
+
+    # Update attrs
+    df.attrs['current_units'] = units
+    df.attrs['units_standard'] = _check_units_are_standard(units)
+
+    if verbose:
+        dataset = df.attrs.get('dataset', 'unknown')
+        if conversions:
+            print(f"  {dataset}: {', '.join(conversions)}")
+        else:
+            print(f"  {dataset}: no conversions needed")
+
+    return df
 
 
 # =============================================================================
@@ -191,7 +662,22 @@ def read_nasa_gmsl(filepath: str, convert_to_meters: bool = True) -> pd.DataFram
     if convert_to_meters:
         for col in ['gmsl', 'gmsl_sigma', 'gmsl_smoothed', 'gmsl_nogia']:
             df[col] = df[col] / 1000.0
-    
+
+    # Attach unit metadata
+    cu = 'm' if convert_to_meters else 'mm'
+    _val_cols = ['gmsl', 'gmsl_sigma', 'gmsl_smoothed', 'gmsl_nogia']
+    df.attrs = {
+        'dataset': 'nasa_gmsl',
+        'reference': 'Beckley et al. (2017)',
+        'doi': None,
+        'data_doi': '10.5067/GMSLM-TJ152',
+        'native_units': {c: 'mm' for c in _val_cols},
+        'current_units': {**{c: cu for c in _val_cols}, 'decimal_year': 'yr'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'sub-monthly',
+    }
+
     return df
 
 
@@ -292,8 +778,24 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
     if convert_to_meters:
         value_cols = [c for c in df.columns if c not in ['year', 'decimal_year']]
         df[value_cols] = df[value_cols] / 1000.0
-    
+
+    # Attach unit metadata
+    cu = 'm' if convert_to_meters else 'mm'
+    _vcols = [c for c in df.columns if c not in ['year', 'decimal_year']]
+    df.attrs = {
+        'dataset': 'frederikse2020',
+        'reference': 'Frederikse et al. (2020)',
+        'doi': '10.1038/s41586-020-2591-3',
+        'data_doi': '10.5281/zenodo.3862995',
+        'native_units': {c: 'mm' for c in _vcols},
+        'current_units': {**{c: cu for c in _vcols}, 'year': 'yr'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+    }
+
     return df
+
 
 def read_dangendorf2024(filepath: str) -> pd.DataFrame:
     """
@@ -404,7 +906,21 @@ def read_dangendorf2024(filepath: str) -> pd.DataFrame:
     empty_fields = [col for col in df.columns if col != 'decimal_year' and df[col].isna().all()]
     if empty_fields:
         print(f"Note: The following fields are empty in {filepath}: {empty_fields}")
-    
+
+    # Attach unit metadata
+    _vcols = [c for c in df.columns if c != 'decimal_year']
+    df.attrs = {
+        'dataset': 'dangendorf2024',
+        'reference': 'Dangendorf et al. (2024)',
+        'doi': '10.5194/essd-16-3471-2024',
+        'data_doi': '10.5281/zenodo.10621070',
+        'native_units': {c: 'm' for c in _vcols},
+        'current_units': {**{c: 'm' for c in _vcols}, 'decimal_year': 'yr'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+    }
+
     return df
 
 
@@ -557,6 +1073,20 @@ def read_dangendorf2024_fields(
 
     df.index.name = 'time'
 
+    # Attach unit metadata
+    _vcols = [c for c in df.columns if c != 'decimal_year']
+    df.attrs = {
+        'dataset': 'dangendorf2024_fields',
+        'reference': 'Dangendorf et al. (2024)',
+        'doi': '10.5194/essd-16-3471-2024',
+        'data_doi': '10.5281/zenodo.10621070',
+        'native_units': {c: 'm' for c in _vcols},
+        'current_units': {**{c: 'm' for c in _vcols}, 'decimal_year': 'yr'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+    }
+
     return df
 
 
@@ -697,7 +1227,22 @@ def read_horwath2022(filepath: str, convert_to_meters: bool = True) -> pd.DataFr
     if convert_to_meters:
         value_cols = [c for c in df.columns if c != 'decimal_year']
         df[value_cols] = df[value_cols] / 1000.0
-    
+
+    # Attach unit metadata
+    cu = 'm' if convert_to_meters else 'mm'
+    _vcols = [c for c in df.columns if c != 'decimal_year']
+    df.attrs = {
+        'dataset': 'horwath2022',
+        'reference': 'Horwath et al. (2022)',
+        'doi': '10.5194/essd-14-411-2022',
+        'data_doi': '10.5285/17c2ce31784048de93996275ee976fff',
+        'native_units': {c: 'mm' for c in _vcols},
+        'current_units': {**{c: cu for c in _vcols}, 'decimal_year': 'yr'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'monthly',
+    }
+
     return df
 
 
@@ -763,8 +1308,26 @@ def read_ipcc_ar6_observed_gmsl(filepath: str, convert_to_meters: bool = True) -
     
     # Add decimal year for convenience
     df['decimal_year'] = df['year'].astype(float) + 0.5
-    
+
+    # Attach unit metadata
+    _sl_cols = ['gmsl', 'gmsl_lower', 'gmsl_upper', 'gmsl_sigma']
+    df.attrs = {
+        'dataset': 'ipcc_ar6_observed_gmsl',
+        'reference': 'Fox-Kemper et al. (2021)',
+        'doi': '10.1017/9781009157896.011',
+        'data_doi': None,
+        'native_units': {c: 'm' for c in _sl_cols},
+        'current_units': {
+            **{c: 'm' for c in _sl_cols},
+            'year': 'yr', 'decimal_year': 'yr',
+        },
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+    }
+
     return df
+
 
 def read_imbie_west_antarctica(filepath: str, convert_to_meters: bool = True) -> pd.DataFrame:
     """
@@ -836,6 +1399,28 @@ def read_imbie_west_antarctica(filepath: str, convert_to_meters: bool = True) ->
         value_cols = [c for c in df.columns if c != 'decimal_year']
         df[value_cols] = df[value_cols] / 1000.0
 
+    # Attach unit metadata — mixed units: rates vs cumulative
+    _len = 'm' if convert_to_meters else 'mm'
+    _rate = f'{_len}/yr'
+    df.attrs = {
+        'dataset': 'imbie_west_antarctica',
+        'reference': 'Otosaka et al. (2023)',
+        'doi': '10.5194/essd-15-1597-2023',
+        'data_doi': '10.5285/77B64C55-7166-4A06-9DEF-2E400398E452',
+        'native_units': {
+            'mass_balance_rate': 'mm/yr', 'mass_balance_rate_sigma': 'mm/yr',
+            'cumulative_mass_balance': 'mm', 'cumulative_mass_balance_sigma': 'mm',
+        },
+        'current_units': {
+            'mass_balance_rate': _rate, 'mass_balance_rate_sigma': _rate,
+            'cumulative_mass_balance': _len, 'cumulative_mass_balance_sigma': _len,
+            'decimal_year': 'yr',
+        },
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'monthly',
+    }
+
     return df
 
 # =============================================================================
@@ -896,7 +1481,27 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     df.index.name = 'time'
 
     df['temperature_sigma'] = df['temperature_unc']/1.645
-    
+
+    # Attach unit metadata
+    df.attrs = {
+        'dataset': 'berkeley_earth',
+        'reference': 'Rohde & Hausfather (2020)',
+        'doi': '10.5194/essd-12-3469-2020',
+        'data_doi': '10.5281/zenodo.3634713',
+        'native_units': {
+            'temperature': 'degC', 'temperature_unc': 'degC',
+            'temperature_sigma': 'degC',
+        },
+        'current_units': {
+            'temperature': 'degC', 'temperature_unc': 'degC',
+            'temperature_sigma': 'degC',
+        },
+        'units_standard': False,
+        'quantity': 'temperature',
+        'temperature_baseline': '1951-1980',
+        'native_time_resolution': 'monthly',
+    }
+
     return df
 
 
@@ -935,8 +1540,24 @@ def read_hadcrut5(filepath: str) -> pd.DataFrame:
         'Upper confidence limit (97.5%)': 'temperature_upper'
     })
     df['temperature_unc'] = (df['temperature_upper'] - df['temperature_lower']) / 2
-    
+
     df.index.name = 'time'
+
+    # Attach unit metadata
+    _tcols = ['temperature', 'temperature_unc', 'temperature_lower', 'temperature_upper']
+    df.attrs = {
+        'dataset': 'hadcrut5',
+        'reference': 'Morice et al. (2021)',
+        'doi': '10.1029/2019JD032361',
+        'data_doi': None,
+        'native_units': {c: 'degC' for c in _tcols},
+        'current_units': {c: 'degC' for c in _tcols},
+        'units_standard': False,
+        'quantity': 'temperature',
+        'temperature_baseline': '1961-1990',
+        'native_time_resolution': 'monthly',
+    }
+
     return df[['temperature', 'temperature_unc', 'temperature_lower', 'temperature_upper']]
 
 
@@ -978,8 +1599,23 @@ def read_nasa_gistemp(filepath: str) -> pd.DataFrame:
     
     df_long = df_long.set_index('time').sort_index()[['temperature']]
     df_long.index.name = 'time'
-    
+
+    # Attach unit metadata
+    df_long.attrs = {
+        'dataset': 'nasa_gistemp',
+        'reference': 'Lenssen et al. (2019)',
+        'doi': '10.1029/2018JD029522',
+        'data_doi': None,
+        'native_units': {'temperature': 'degC'},
+        'current_units': {'temperature': 'degC'},
+        'units_standard': False,
+        'quantity': 'temperature',
+        'temperature_baseline': '1951-1980',
+        'native_time_resolution': 'monthly',
+    }
+
     return df_long
+
 
 def read_noaa_globaltemp(filepath: str) -> pd.DataFrame:
     """
@@ -1027,7 +1663,21 @@ def read_noaa_globaltemp(filepath: str) -> pd.DataFrame:
     df['time'] = pd.to_datetime(df['year'].astype(str) + '-07-01')
     df = df.set_index('time')[['temperature']]
     df.index.name = 'time'
-    
+
+    # Attach unit metadata
+    df.attrs = {
+        'dataset': 'noaa_globaltemp',
+        'reference': 'Vose et al. (2021)',
+        'doi': '10.1029/2020GL090873',
+        'data_doi': '10.25921/2tj4-0e21',
+        'native_units': {'temperature': 'degC'},
+        'current_units': {'temperature': 'degC'},
+        'units_standard': False,
+        'quantity': 'temperature',
+        'temperature_baseline': '1901-2000',
+        'native_time_resolution': 'annual',
+    }
+
     return df
 
 
@@ -1126,88 +1776,43 @@ def read_ipcc_ar6_projected_temperature(
             (df['temperature_upper'] - df['temperature_lower']) / (2 * 1.645)
         )
 
+        # Attach unit metadata to each scenario DataFrame
+        _tcols = ['temperature', 'temperature_lower', 'temperature_upper',
+                  'temperature_sigma']
+        df.attrs = {
+            'dataset': 'ipcc_ar6_projected_temperature',
+            'scenario': scenario,
+            'reference': 'Lee et al. (2021)',
+            'doi': '10.1017/9781009157896.006',
+            'data_doi': None,
+            'native_units': {c: 'degC' for c in _tcols},
+            'current_units': {**{c: 'degC' for c in _tcols}, 'decimal_year': 'yr'},
+            'units_standard': False,
+            'quantity': 'temperature',
+            'temperature_baseline': '1850-1900',
+            'native_time_resolution': 'annual',
+        }
+
         result[scenario] = df
 
     return result
 
 
-def read_ipcc_ar6_projected_gmsl(
+def _read_ipcc_ar6_projected_gmsl_impl(
     data_dir: str,
+    confidence: str,
     convert_to_meters: bool = True,
 ) -> dict:
-    """
-    Read IPCC AR6 projected global mean sea level (medium confidence) from FACTS.
-
-    Reads the medium-confidence NetCDF output files from the IPCC AR6 FACTS
-    framework (Garner et al., 2021). Each scenario directory contains per-component
-    NetCDF files with full quantile distributions of projected sea level change.
+    """Internal implementation for reading IPCC AR6 FACTS projected GMSL.
 
     Parameters
     ----------
     data_dir : str
-        Path to the medium-confidence directory, e.g.,
-        ``data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files/medium_confidence``.
-        Expected structure::
-
-            medium_confidence/
-                ssp119/
-                    total_ssp119_medium_confidence_values.nc
-                    oceandynamics_ssp119_medium_confidence_values.nc
-                    ...
-                ssp126/
-                    ...
-                tlim1.5win0.25/
-                    ...
-
-    convert_to_meters : bool, default True
+        Path to the confidence-level directory.
+    confidence : str
+        ``'medium'`` or ``'low'``.
+    convert_to_meters : bool
         If True, convert from native mm to meters.
-
-    Returns
-    -------
-    dict of pd.DataFrame
-        Dictionary keyed by scenario name (e.g., 'ssp119', 'ssp245',
-        'tlim2.0win0.25'). Each DataFrame has a datetime index (decadal,
-        Jan 1) and columns:
-
-        - gmsl: Median (50th percentile) total projected GMSL (m or mm)
-        - gmsl_lower: 5th percentile
-        - gmsl_upper: 95th percentile
-        - gmsl_17: 17th percentile ("likely" lower bound)
-        - gmsl_83: 83rd percentile ("likely" upper bound)
-        - oceandynamics: Median ocean dynamics component
-        - AIS: Median Antarctic Ice Sheet component
-        - GIS: Median Greenland Ice Sheet component
-        - glaciers: Median glacier component
-        - landwaterstorage: Median land water storage component
-        - decimal_year: Year values
-
-        Components are interpolated to the ``total`` year grid where their
-        native year grids differ (e.g., oceandynamics extends to 2300).
-
-    Note
-    ----
-    - All values are sea level change relative to a 2005 baseline, consistent
-      with IPCC AR6 WG1 Chapter 9.
-    - The quantile axis contains 107 values from 0.0 to 1.0. This function
-      extracts the 5th, 17th, 50th, 83rd, and 95th percentiles for the total,
-      and the 50th percentile for each component.
-    - The 17%–83% range corresponds to the IPCC "likely" range (66% CI).
-    - Medium confidence projections combine the p-box from structured expert
-      judgment on ice sheet processes (pb_1f, pb_1e).
-    - Scenarios include SSPs (ssp119, ssp126, ssp245, ssp370, ssp585) and
-      temperature-limited scenarios (tlim1.5win0.25, etc.).
-
-    Requires: pip install xarray netCDF4
-
-    Reference
-    ---------
-    Fox-Kemper, B., et al. (2021). Ocean, Cryosphere and Sea Level Change.
-    In Climate Change 2021: The Physical Science Basis (pp. 1211-1362).
-    Cambridge University Press. https://doi.org/10.1017/9781009157896.011
-
-    Garner, G. G., et al. (2021). IPCC AR6 Sea-Level Rise Projections.
-    Version 20210809. PO.DAAC, CA, USA.
-    https://podaac.jpl.nasa.gov/announcements/2021-08-09-Sea-level-projections-from-the-IPCC-6th-Assessment-Report
     """
     try:
         import xarray as xr
@@ -1218,6 +1823,7 @@ def read_ipcc_ar6_projected_gmsl(
         )
 
     result = {}
+    conf_tag = f'{confidence}_confidence'
 
     # Discover scenario directories
     scenario_dirs = sorted([
@@ -1239,7 +1845,7 @@ def read_ipcc_ar6_projected_gmsl(
         # --- Read total ---
         total_file = os.path.join(
             scenario_path,
-            f'total_{scenario}_medium_confidence_values.nc'
+            f'total_{scenario}_{conf_tag}_values.nc'
         )
         if not os.path.exists(total_file):
             continue
@@ -1248,6 +1854,11 @@ def read_ipcc_ar6_projected_gmsl(
         sl = ds_total['sea_level_change'].values[:, :, 0]  # (quantiles, years)
         quantiles = ds_total['quantiles'].values
         years = ds_total['years'].values
+
+        # Truncate to years <= 2260 to avoid pandas Timestamp overflow
+        yr_mask = years <= 2260
+        sl = sl[:, yr_mask]
+        years = years[yr_mask]
 
         # Find target quantile indices
         def _find_q(q_target):
@@ -1276,7 +1887,7 @@ def read_ipcc_ar6_projected_gmsl(
         for comp in components:
             comp_file = os.path.join(
                 scenario_path,
-                f'{comp}_{scenario}_medium_confidence_values.nc'
+                f'{comp}_{scenario}_{conf_tag}_values.nc'
             )
             if not os.path.exists(comp_file):
                 data[comp] = np.full(len(years), np.nan)
@@ -1307,9 +1918,118 @@ def read_ipcc_ar6_projected_gmsl(
         df = pd.DataFrame(data, index=time_index)
         df.index.name = 'time'
 
+        # Attach unit metadata
+        unit = 'm' if convert_to_meters else 'mm'
+        _sl_cols = ['gmsl', 'gmsl_lower', 'gmsl_upper', 'gmsl_17', 'gmsl_83']
+        _comp_cols = [c for c in components if c in data]
+        df.attrs = {
+            'dataset': 'ipcc_ar6_projected_gmsl',
+            'confidence': confidence,
+            'scenario': scenario,
+            'reference': 'Fox-Kemper et al. (2021)',
+            'doi': '10.1017/9781009157896.011',
+            'data_doi': '10.5281/zenodo.5914709',
+            'native_units': {c: 'mm' for c in _sl_cols + _comp_cols},
+            'current_units': {
+                **{c: unit for c in _sl_cols + _comp_cols},
+                'decimal_year': 'yr',
+            },
+            'units_standard': False,
+            'quantity': 'sea_level',
+            'native_time_resolution': 'decadal',
+        }
+
         result[scenario] = df
 
     return result
+
+
+def read_ipcc_ar6_projected_gmsl(
+    data_dir: str,
+    convert_to_meters: bool = True,
+) -> dict:
+    """
+    Read IPCC AR6 projected global mean sea level (medium confidence) from FACTS.
+
+    Reads the medium-confidence NetCDF output files from the IPCC AR6 FACTS
+    framework (Garner et al., 2021). Each scenario directory contains per-component
+    NetCDF files with full quantile distributions of projected sea level change.
+
+    Parameters
+    ----------
+    data_dir : str
+        Path to the medium-confidence directory, e.g.,
+        ``data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files/medium_confidence``.
+        Expected structure::
+
+            medium_confidence/
+                ssp119/
+                    total_ssp119_medium_confidence_values.nc
+                    ...
+
+    convert_to_meters : bool, default True
+        If True, convert from native mm to meters.
+
+    Returns
+    -------
+    dict of pd.DataFrame
+        Dictionary keyed by scenario name. Each DataFrame has a datetime
+        index (decadal, Jan 1) and columns: gmsl, gmsl_lower, gmsl_upper,
+        gmsl_17, gmsl_83, oceandynamics, AIS, GIS, glaciers,
+        landwaterstorage, decimal_year.
+
+    Note
+    ----
+    - All values are sea level change relative to a 2005 baseline.
+    - The 17%–83% range corresponds to the IPCC "likely" range (66% CI).
+
+    Reference
+    ---------
+    Fox-Kemper, B., et al. (2021). https://doi.org/10.1017/9781009157896.011
+    Garner, G. G., et al. (2023). https://doi.org/10.5194/gmd-16-7461-2023
+    """
+    return _read_ipcc_ar6_projected_gmsl_impl(
+        data_dir, confidence='medium', convert_to_meters=convert_to_meters,
+    )
+
+
+def read_ipcc_ar6_projected_gmsl_low_confidence(
+    data_dir: str,
+    convert_to_meters: bool = True,
+) -> dict:
+    """
+    Read IPCC AR6 projected GMSL (low confidence) from FACTS.
+
+    Low-confidence projections include structured expert judgment on ice sheet
+    processes that allows for higher tail risks than medium confidence.
+
+    Parameters
+    ----------
+    data_dir : str
+        Path to the low-confidence directory, e.g.,
+        ``data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files/low_confidence``.
+    convert_to_meters : bool, default True
+        If True, convert from native mm to meters.
+
+    Returns
+    -------
+    dict of pd.DataFrame
+        Structure identical to ``read_ipcc_ar6_projected_gmsl()`` but with
+        low-confidence quantiles (wider tails, especially at p95).
+
+    Note
+    ----
+    - Low confidence typically available for ssp126, ssp245, ssp585 only.
+    - Low confidence has substantially higher p95 values, reflecting
+      ice-sheet process uncertainty.
+
+    See Also
+    --------
+    read_ipcc_ar6_projected_gmsl : Medium confidence projections (default).
+    """
+    return _read_ipcc_ar6_projected_gmsl_impl(
+        data_dir, confidence='low', convert_to_meters=convert_to_meters,
+    )
 
 
 # =============================================================================
@@ -1381,10 +2101,22 @@ def read_noaa_thermosteric(zip_path, start_year=1955):
     col_name = f'tsl_{depth_range.replace("-", "_")}_mm'
     df = pd.DataFrame({col_name: values * 10.0}, index=dates)
     df.index.name = 'date'
-    
-    return df.dropna()
 
-    
+    # Attach unit metadata
+    df.attrs = {
+        'dataset': 'noaa_thermosteric',
+        'reference': 'Levitus et al. (2012)',
+        'doi': '10.1029/2012GL051106',
+        'data_doi': '10.7289/V53F4MVP',
+        'depth_range': depth_range,
+        'native_units': {col_name: 'cm'},
+        'current_units': {col_name: 'mm'},
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'quarterly',
+    }
+
+    return df.dropna()
 
 
 # =============================================================================
@@ -1411,8 +2143,12 @@ __all__ = [
     # Projection readers
     'read_ipcc_ar6_projected_temperature',
     'read_ipcc_ar6_projected_gmsl',
+    'read_ipcc_ar6_projected_gmsl_low_confidence',
     # Other readers
     'read_noaa_thermosteric',
+    # Unit conversion
+    'convert_to_standard_units',
+    'convert_units',
 ]
 
 if __name__ == "__main__":

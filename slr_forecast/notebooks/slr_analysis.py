@@ -617,10 +617,12 @@ def align_to_baseline(
     baseline_mean = df.loc[mask, value_col].mean()
     df[value_col] = df[value_col] - baseline_mean
     
-    # Store metadata
-    df.attrs['baseline_period'] = (start_year, end_year)
-    df.attrs['baseline_mean_removed'] = baseline_mean
-    
+    # Store metadata (preserve existing attrs from reader functions)
+    existing = df.attrs.copy()
+    existing['baseline_period'] = (start_year, end_year)
+    existing['baseline_mean_removed'] = baseline_mean
+    df.attrs = existing
+
     return df
 
 
@@ -661,7 +663,13 @@ def harmonize_baseline(
         target_col = value_col + suffix
         if target_col in df.columns:
             df[target_col] = df[target_col] - baseline_mean
-    
+
+    # Store metadata (preserve existing attrs from reader functions)
+    existing = df.attrs.copy()
+    existing['harmonized_baseline'] = new_baseline
+    existing['harmonized_baseline_mean'] = float(baseline_mean)
+    df.attrs = existing
+
     return df
 
 
