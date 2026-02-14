@@ -2120,6 +2120,136 @@ def read_noaa_thermosteric(zip_path, start_year=1955):
 
 
 # =============================================================================
+# SAOD (STRATOSPHERIC AEROSOL OPTICAL DEPTH) READERS
+# =============================================================================
+
+def read_glossac(filepath, wavelength=525):
+    """
+    Read GloSSAC stratospheric aerosol optical depth from NetCDF.
+
+    Computes a cos(lat)-weighted global-mean SAOD at the requested wavelength
+    from the ``Glossac_Aerosol_Optical_Depth`` variable.
+
+    Parameters
+    ----------
+    filepath : str or Path
+        Path to ``GloSSAC_V2.23_NC4.nc`` (or compatible version).
+    wavelength : int, default 525
+        Wavelength in nm.  Available: 386, 452, 525, 1020.
+        386 and 452 are all-NaN in v2.23; use 525 (mid-visible) or 1020.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (datetime index) with column ``saod``.
+        Key values: background ~0.005–0.008; Pinatubo peak ~0.127 (525 nm).
+
+    References
+    ----------
+    Thomason, L. W., et al. (2018). A new SAGE-based stratospheric aerosol
+    climatology, *ESSD*, 10, 469–492, doi:10.5194/essd-10-469-2018.
+    """
+    import xarray as xr
+
+    ds = xr.open_dataset(str(filepath))
+    aod = ds['Glossac_Aerosol_Optical_Depth']       # (time, lat, wavelengths_glossac)
+    lat = ds['lat'].values                            # 32 bins, -77.5 to 77.5
+    time_ym = ds['time'].values                       # YYYYMM integers
+    wl_values = ds['wavelengths_glossac'].values      # [386, 452, 525, 1020]
+
+    # Select wavelength
+    wl_idx = int(np.where(wl_values == wavelength)[0][0])
+    aod_slice = aod.values[:, :, wl_idx]             # (n_time, n_lat)
+
+    # Cos-latitude weighting
+    cos_lat = np.cos(np.radians(lat))
+    global_mean = np.zeros(len(time_ym))
+    for i in range(len(time_ym)):
+        valid = ~np.isnan(aod_slice[i])
+        if valid.any():
+            w = cos_lat[valid]
+            global_mean[i] = np.average(aod_slice[i, valid], weights=w)
+        else:
+            global_mean[i] = np.nan
+
+    # Build datetime index from YYYYMM
+    dates = pd.to_datetime([
+        f'{int(ym // 100)}-{int(ym % 100):02d}-15' for ym in time_ym
+    ])
+
+    df = pd.DataFrame({'saod': global_mean}, index=dates)
+    df.index.name = 'time'
+
+    ds.close()
+
+    df.attrs = {
+        'dataset': 'glossac_v2.23',
+        'reference': 'Thomason et al. (2018)',
+        'doi': '10.5194/essd-10-469-2018',
+        'data_doi': '10.5067/GloSSAC-L3-V2.2',
+        'native_units': {'saod': 'unitless'},
+        'current_units': {'saod': 'unitless'},
+        'units_standard': True,
+        'quantity': 'aerosol_optical_depth',
+        'native_time_resolution': 'monthly',
+        'wavelength_nm': wavelength,
+    }
+    return df
+
+
+def read_mauna_loa_transmission(filepath):
+    """
+    Read Mauna Loa Observatory apparent atmospheric transmission.
+
+    Derives a SAOD proxy as ``-ln(transmission)`` from the morning monthly-mean
+    apparent solar transmission ratio.  This record extends back to 1958,
+    predating the satellite era covered by GloSSAC (1979).
+
+    Parameters
+    ----------
+    filepath : str or Path
+        Path to ``maunaLoa_transmission.txt``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (datetime index) with columns:
+        - ``transmission`` : apparent solar transmission ratio (0–1)
+        - ``saod`` : -ln(transmission), a proxy for aerosol optical depth
+
+    Notes
+    -----
+    Major eruptions visible: Agung (~1963), El Chichón (~1982), Pinatubo (~1991).
+    """
+    raw = pd.read_csv(
+        str(filepath),
+        skiprows=2,
+        sep=r'\s+',
+        names=['date_label', 'decimal_year', 'transmission'],
+    )
+
+    # Build datetime index from decimal_year
+    dates = [decimal_year_to_datetime(dy) for dy in raw['decimal_year']]
+    df = pd.DataFrame({
+        'transmission': raw['transmission'].values,
+        'saod': -np.log(raw['transmission'].values),
+    }, index=pd.DatetimeIndex(dates, name='time'))
+
+    df.attrs = {
+        'dataset': 'mauna_loa_transmission',
+        'reference': 'NOAA Global Monitoring Laboratory',
+        'doi': '',
+        'data_doi': '',
+        'native_units': {'transmission': 'unitless', 'saod': 'unitless'},
+        'current_units': {'transmission': 'unitless', 'saod': 'unitless'},
+        'units_standard': True,
+        'quantity': 'aerosol_optical_depth',
+        'native_time_resolution': 'monthly',
+    }
+    return df
+
+
+# =============================================================================
 # MODULE EXPORTS
 # =============================================================================
 
@@ -2146,6 +2276,9 @@ __all__ = [
     'read_ipcc_ar6_projected_gmsl_low_confidence',
     # Other readers
     'read_noaa_thermosteric',
+    # SAOD readers
+    'read_glossac',
+    'read_mauna_loa_transmission',
     # Unit conversion
     'convert_to_standard_units',
     'convert_units',
@@ -2172,3 +2305,6 @@ if __name__ == "__main__":
     print("  - read_ipcc_ar6_projected_gmsl()")
     print("\nOther Readers:")
     print("  - read_noaa_thermosteric()")
+    print("\nSAOD Readers:")
+    print("  - read_glossac()")
+    print("  - read_mauna_loa_transmission()")

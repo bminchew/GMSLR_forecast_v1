@@ -131,178 +131,172 @@ class KinematicsResult:
 @dataclass
 class DOLSResult:
     """
-    Container for Dynamic OLS calibration results.
-    
+    Unified container for Dynamic OLS calibration results.
+
+    Supports linear (order=1), quadratic (order=2), and cubic (order=3)
+    models, with an optional SAOD (volcanic) forcing term.
+
+    Physical parameters are stored in **rate-model** form so that the
+    covariance matrix is already transformed and ready for use in
+    projections — no manual ``diag([2,1,1])`` transform is needed.
+
+    Rate model (order=2 example):
+        dH/dt = dα/dT × T² + α₀ × T + trend  (+ γ_saod × SAOD if included)
+
     Attributes
     ----------
-    alpha : float
-        Estimated climate sensitivity parameter.
-        Units: [sea_level_units]/year/[temperature_units] (e.g., mm/yr/K)
-    alpha_se : float
-        HAC-robust standard error of alpha.
-    alpha_ci : Tuple[float, float]
-        95% confidence interval for alpha.
-    equilibrium_temp : float
-        Implied equilibrium/baseline temperature (intercept term).
-    trend : float
-        Background linear trend coefficient.
-        Units: [sea_level_units]/year (e.g., mm/yr)
+    order : int
+        Polynomial order (1, 2, or 3).
+    physical_coefficients : np.ndarray
+        Rate-model coefficients [a_n, …, a_1, trend].
+        order=1: [alpha0, trend]
+        order=2: [dalpha_dT, alpha0, trend]
+        order=3: [d2alpha_dT2, dalpha_dT, alpha0, trend]
+    physical_covariance : np.ndarray
+        Covariance matrix of ``physical_coefficients``.
+    physical_se : np.ndarray
+        Standard errors (sqrt of diagonal of ``physical_covariance``).
+    gamma_saod, gamma_saod_se : float or None
+        SAOD coefficient and its SE (None if SAOD not included).
+    alpha0, alpha0_se : float
+        Linear sensitivity and SE (always present).
+    dalpha_dT, dalpha_dT_se : float or None
+        Quadratic sensitivity and SE (order ≥ 2).
+    d2alpha_dT2, d2alpha_dT2_se : float or None
+        Cubic sensitivity and SE (order ≥ 3).
+    trend, trend_se : float
+        Background linear trend and SE.
+    regression_coefficients, regression_covariance : np.ndarray
+        Raw regression-level parameters and HAC covariance.
+    r2, r2_adj : float
+        R² and adjusted R².
+    aic, bic : float
+        Information criteria.
+    n_obs, n_lags : int
+        Number of observations and lead/lag terms.
+    has_saod : bool
+        Whether SAOD was included as a regressor.
+    residuals, fitted, time : np.ndarray
+        Regression diagnostics arrays.
     model : object
         Full statsmodels RegressionResults object.
-    diagnostics : Dict
-        Model diagnostics including R², AIC, BIC, Durbin-Watson, etc.
-    n_lags : int
-        Number of leads/lags used in DOLS specification.
     """
-    alpha: float
-    alpha_se: float
-    alpha_ci: Tuple[float, float]
-    equilibrium_temp: float
-    trend: float
-    model: object
-    diagnostics: Dict
-    n_lags: int
-    
-    def __repr__(self) -> str:
-        return (
-            f"DOLSResult(\n"
-            f"  alpha: {self.alpha:.3f} ± {self.alpha_se:.3f} "
-            f"[{self.alpha_ci[0]:.3f}, {self.alpha_ci[1]:.3f}]\n"
-            f"  trend: {self.trend:.4f}\n"
-            f"  R²: {self.diagnostics['r_squared']:.4f}\n"
-            f"  n_obs: {self.diagnostics['n_observations']}\n"
-            f"  n_lags: {self.n_lags}\n"
-            f")"
-        )
-
-@dataclass
-class DOLSQuadraticResult:
-    """
-    Results from quadratic Dynamic OLS calibration.
-    
-    Model: H(t) = α₀×∫T(τ)dτ + (1/2)(dα/dT)×∫T²(τ)dτ + β×t + Σγᵢ×ΔT(t+i) + ε
-    
-    Attributes
-    ----------
-    alpha0 : float
-        Linear sensitivity coefficient (sea level rise per °C)
-    alpha0_se : float
-        Standard error of alpha0
-    dalpha_dT : float
-        Quadratic sensitivity coefficient (change in sensitivity per °C)
-    dalpha_dT_se : float
-        Standard error of dalpha_dT
-    trend : float
-        Linear trend coefficient (non-temperature-driven SLR)
-    trend_se : float
-        Standard error of trend
-    coefficients : np.ndarray
-        All regression coefficients [dalpha_dT/2, alpha0, trend, gamma_lags...]
-    covariance : np.ndarray
-        Full covariance matrix of coefficients
-    r2 : float
-        Coefficient of determination
-    r2_adj : float
-        Adjusted R²
-    aic : float
-        Akaike Information Criterion
-    bic : float
-        Bayesian Information Criterion
-    n_obs : int
-        Number of observations used
-    n_lags : int
-        Number of lead/lag terms
-    residuals : np.ndarray
-        Model residuals
-    fitted : np.ndarray
-        Fitted values
-    time : np.ndarray
-        Time values used
-    """
+    order: int
+    physical_coefficients: np.ndarray
+    physical_covariance: np.ndarray
+    physical_se: np.ndarray
+    # SAOD
+    gamma_saod: Optional[float]
+    gamma_saod_se: Optional[float]
+    # Named accessors
     alpha0: float
     alpha0_se: float
-    dalpha_dT: float
-    dalpha_dT_se: float
+    dalpha_dT: Optional[float]
+    dalpha_dT_se: Optional[float]
+    d2alpha_dT2: Optional[float]
+    d2alpha_dT2_se: Optional[float]
     trend: float
     trend_se: float
-    coefficients: np.ndarray
-    covariance: np.ndarray
+    # Regression level
+    regression_coefficients: np.ndarray
+    regression_covariance: np.ndarray
+    # Fit statistics
     r2: float
     r2_adj: float
     aic: float
     bic: float
     n_obs: int
     n_lags: int
+    has_saod: bool
+    # Arrays
     residuals: np.ndarray
     fitted: np.ndarray
     time: np.ndarray
-    
+    model: object
+
+    # ----- backward-compat alias (old DOLSQuadraticResult stored raw) -----
+    @property
+    def covariance(self) -> np.ndarray:
+        """Alias for regression_covariance (backward compatibility)."""
+        return self.regression_covariance
+
+    @property
+    def coefficients(self) -> np.ndarray:
+        """Alias for regression_coefficients (backward compatibility)."""
+        return self.regression_coefficients
+
     def __repr__(self) -> str:
-        return (
-            f"DOLSQuadraticResult(\n"
-            f"  α₀ = {self.alpha0:.3f} ± {self.alpha0_se:.3f} (linear sensitivity)\n"
-            f"  dα/dT = {self.dalpha_dT:.3f} ± {self.dalpha_dT_se:.3f} (quadratic sensitivity)\n"
-            f"  trend = {self.trend:.4f} ± {self.trend_se:.4f}\n"
-            f"  R² = {self.r2:.3f}, R²_adj = {self.r2_adj:.3f}\n"
-            f"  AIC = {self.aic:.1f}, BIC = {self.bic:.1f}\n"
-            f"  n_obs = {self.n_obs}, n_lags = {self.n_lags}\n"
-            f")"
+        lines = [f"DOLSResult(order={self.order}, saod={self.has_saod})"]
+        if self.order >= 3:
+            lines.append(
+                f"  d²α/dT² = {self.d2alpha_dT2:.6f} ± {self.d2alpha_dT2_se:.6f}"
+            )
+        if self.order >= 2:
+            lines.append(
+                f"  dα/dT   = {self.dalpha_dT:.6f} ± {self.dalpha_dT_se:.6f}"
+            )
+        lines.append(f"  α₀      = {self.alpha0:.6f} ± {self.alpha0_se:.6f}")
+        lines.append(f"  trend   = {self.trend:.6f} ± {self.trend_se:.6f}")
+        if self.has_saod:
+            lines.append(
+                f"  γ_saod  = {self.gamma_saod:.6f} ± {self.gamma_saod_se:.6f}"
+            )
+        lines.append(
+            f"  R² = {self.r2:.4f}, R²_adj = {self.r2_adj:.4f}"
         )
-    
+        lines.append(
+            f"  AIC = {self.aic:.1f}, BIC = {self.bic:.1f}"
+        )
+        lines.append(f"  n_obs = {self.n_obs}, n_lags = {self.n_lags}")
+        return "\n".join(lines)
+
     def predict_rate(self, temperature: np.ndarray) -> np.ndarray:
         """
-        Predict GMSL rate for given temperature.
-        
-        rate = dα/dT × T² + α₀ × T + trend
+        Predict SLR rate at given temperatures.
+
+        rate = a_n × T^n + … + a_1 × T + trend
+
+        Does **not** include the SAOD term (which requires an SAOD value).
         """
-        return self.dalpha_dT * temperature**2 + self.alpha0 * temperature + self.trend
-    
-    def predict_rate_ci(self, temperature: np.ndarray, 
-                        confidence: float = 0.95) -> Tuple[np.ndarray, np.ndarray]:
+        temperature = np.asarray(temperature, dtype=np.float64)
+        rate = np.full_like(temperature, self.trend)
+        # physical_coefficients = [a_n, …, a_1, trend]
+        # iterate from highest power down to linear
+        poly_coeffs = self.physical_coefficients[:-1]  # exclude trend
+        n_poly = len(poly_coeffs)
+        for i, a in enumerate(poly_coeffs):
+            power = n_poly - i
+            rate = rate + a * temperature ** power
+        return rate
+
+    def predict_rate_ci(
+        self, temperature: np.ndarray, confidence: float = 0.95
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Predict GMSL rate with confidence interval.
-        
-        Returns (lower, upper) bounds.
+        Predict SLR rate with confidence interval.
+
+        Returns (lower, upper) bounds using the delta method.
         """
         from scipy import stats
-        
+
+        temperature = np.asarray(temperature, dtype=np.float64)
         rate = self.predict_rate(temperature)
-        
-        # Gradient of rate w.r.t. [dalpha_dT/2, alpha0, trend]: [T², T, 1]
-        # Note: coefficient is dalpha_dT/2, so gradient for dalpha_dT is T²/2... 
-        # Actually we store dalpha_dT directly, need to be careful here
-        # The covariance is for [coeff of ∫T², coeff of ∫T, trend, ...]
-        # coeff of ∫T² = dalpha_dT/2, so var(dalpha_dT) = 4*var(coeff)
-        
-        # For prediction: rate = dalpha_dT*T² + alpha0*T + trend
-        # Jacobian w.r.t. [dalpha_dT, alpha0, trend] = [T², T, 1]
-        
-        # Build Jacobian for each temperature point
-        n = len(temperature)
-        J = np.column_stack([temperature**2, temperature, np.ones(n)])
-        
-        # Extract 3x3 covariance for [dalpha_dT, alpha0, trend]
-        # Need to transform from coefficient covariance
-        # cov[0,0] is var(dalpha_dT/2), so var(dalpha_dT) = 4*cov[0,0]
-        cov_params = np.zeros((3, 3))
-        cov_params[0, 0] = 4 * self.covariance[0, 0]  # var(dalpha_dT)
-        cov_params[0, 1] = 2 * self.covariance[0, 1]  # cov(dalpha_dT, alpha0)
-        cov_params[0, 2] = 2 * self.covariance[0, 2]  # cov(dalpha_dT, trend)
-        cov_params[1, 0] = cov_params[0, 1]
-        cov_params[1, 1] = self.covariance[1, 1]  # var(alpha0)
-        cov_params[1, 2] = self.covariance[1, 2]  # cov(alpha0, trend)
-        cov_params[2, 0] = cov_params[0, 2]
-        cov_params[2, 1] = cov_params[1, 2]
-        cov_params[2, 2] = self.covariance[2, 2]  # var(trend)
-        
-        # Prediction variance: var(rate) = J @ cov @ J.T (diagonal elements)
-        var_rate = np.sum((J @ cov_params) * J, axis=1)
-        se_rate = np.sqrt(var_rate)
-        
-        # Critical value
-        alpha = 1 - confidence
-        z = stats.norm.ppf(1 - alpha / 2)
-        
+
+        # Jacobian: d(rate)/d(physical_coefficients)
+        # physical_coefficients = [a_n, …, a_1, trend]
+        n_phys = len(self.physical_coefficients)
+        n_poly = n_phys - 1  # exclude trend
+        n_pts = len(temperature)
+        J = np.ones((n_pts, n_phys))
+        for i in range(n_poly):
+            power = n_poly - i
+            J[:, i] = temperature ** power
+        # J[:, -1] = 1 (trend, already set)
+
+        var_rate = np.sum((J @ self.physical_covariance) * J, axis=1)
+        se_rate = np.sqrt(np.maximum(var_rate, 0.0))
+
+        z = stats.norm.ppf(1 - (1 - confidence) / 2)
         return rate - z * se_rate, rate + z * se_rate
 
 
@@ -962,6 +956,284 @@ def compute_kinematics_multibandwidth(
 # SECTION 3: SEMI-EMPIRICAL CALIBRATION (DOLS)
 # =============================================================================
 
+def calibrate_dols(
+    sea_level: pd.Series,
+    temperature: pd.Series,
+    gmsl_sigma: Optional[pd.Series] = None,
+    saod: Optional[pd.Series] = None,
+    order: int = 2,
+    n_lags: int = 2,
+    hac_maxlags: Optional[int] = None,
+) -> DOLSResult:
+    """
+    Estimate sea-level sensitivity using Dynamic Ordinary Least Squares.
+
+    Fits a polynomial relationship between sea level and integrated
+    temperature, with optional SAOD (volcanic) forcing:
+
+        H(t) = Σₖ cₖ × ∫Tᵏ(τ)dτ / k!  +  β×t  [+ γ×∫SAOD(τ)dτ]
+               + Σᵢ δᵢ ΔT(t+i)  [+ Σᵢ ηᵢ ΔSAOD(t+i)]  + const + ε
+
+    This implies a rate model:
+
+        dH/dt = aₙ Tⁿ + … + a₁ T + trend  [+ γ_saod × SAOD]
+
+    The function addresses cointegration between non-stationary sea-level
+    and temperature series by augmenting the regression with leads and lags
+    of ΔT (and ΔSAOD when applicable).  HAC (Newey–West) standard errors
+    account for residual autocorrelation.
+
+    Parameters
+    ----------
+    sea_level : pd.Series
+        Sea level with datetime index (e.g. metres).
+    temperature : pd.Series
+        Temperature anomaly with datetime index (°C).
+    gmsl_sigma : pd.Series, optional
+        1-σ uncertainty of sea level.  When provided, WLS weights
+        ``1 / sigma²`` are used; otherwise OLS (uniform weights).
+    saod : pd.Series, optional
+        Stratospheric aerosol optical depth with datetime index.
+        When provided, adds ∫SAOD + SAOD leads/lags to the model.
+    order : int, default 2
+        Polynomial order: 1 (linear), 2 (quadratic), or 3 (cubic).
+    n_lags : int, default 2
+        Number of leads **and** lags of ΔT (total 2×n_lags + 1).
+    hac_maxlags : int, optional
+        Maximum lags for HAC covariance.  If None, uses the Newey–West
+        automatic selection ``floor(4 × (n/100)^(2/9))``.
+
+    Returns
+    -------
+    DOLSResult
+        Unified result dataclass with physical coefficients already
+        transformed to rate-model form plus HAC covariance.
+
+    Examples
+    --------
+    >>> result = calibrate_dols(sl, temp, gmsl_sigma=sigma, order=2)
+    >>> print(result)
+    >>> coeffs = result.physical_coefficients  # [dalpha_dT, alpha0, trend]
+    >>> cov    = result.physical_covariance     # 3×3, already transformed
+
+    References
+    ----------
+    Stock, J. H. & Watson, M. W. (1993). Econometrica 61(4), 783–820.
+    """
+    from math import factorial
+
+    if order not in (1, 2, 3):
+        raise ValueError(f"order must be 1, 2, or 3, got {order}")
+
+    # ---- 1. Align series on common datetime index ----
+    # Normalise all indices to month-start so that series with different
+    # day-of-month conventions (e.g. 1st vs 15th) can be matched.
+    def _to_month_start(s: pd.Series) -> pd.Series:
+        """Snap datetime index to the first of each month."""
+        new_idx = s.index.to_period('M').to_timestamp()
+        out = s.copy()
+        out.index = new_idx
+        # Drop any duplicates that arise from snapping (keep first)
+        return out[~out.index.duplicated(keep='first')]
+
+    sl_ms   = _to_month_start(sea_level)
+    temp_ms = _to_month_start(temperature)
+    saod_ms = _to_month_start(saod) if saod is not None else None
+
+    common = sl_ms.index.intersection(temp_ms.index)
+    if saod_ms is not None:
+        common = common.intersection(saod_ms.index)
+    common = common.sort_values()
+
+    H = sl_ms.loc[common].values.astype(np.float64)
+    T = temp_ms.loc[common].values.astype(np.float64)
+    S = saod_ms.loc[common].values.astype(np.float64) if saod_ms is not None else None
+
+    has_sigma = gmsl_sigma is not None
+    if has_sigma:
+        sig_ms = _to_month_start(gmsl_sigma)
+        sigma = sig_ms.reindex(common).values.astype(np.float64)
+        # Fill any NaN sigma with the median (don't let a few gaps kill WLS)
+        nan_sig = np.isnan(sigma)
+        if nan_sig.any():
+            sigma[nan_sig] = np.nanmedian(sigma)
+    else:
+        sigma = None
+
+    # ---- 2. Decimal-year time vector ----
+    time_years = np.array([
+        t.year + (t.month - 1) / 12 + (t.day - 1) / 365.25
+        for t in common
+    ])
+    n = len(H)
+    dt = np.median(np.diff(time_years))
+
+    # ---- 3. Trapezoidal integrals ∫Tᵏ / k! ----
+    integrals = []  # will contain [∫T^order/order!, …, ∫T/1!]
+    for k in range(order, 0, -1):
+        Tk = T ** k
+        integral_Tk = np.zeros(n)
+        for i in range(1, n):
+            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt
+        integrals.append(integral_Tk / factorial(k))
+
+    # ---- 4. Optional: ∫SAOD ----
+    if S is not None:
+        integral_S = np.zeros(n)
+        for i in range(1, n):
+            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt
+
+    # ---- 5. ΔT (and ΔSAOD) for leads / lags ----
+    delta_T = np.diff(T, prepend=T[0])
+    if S is not None:
+        delta_S = np.diff(S, prepend=S[0])
+
+    # ---- 6. Build design matrix ----
+    # Column order: [∫T^order/order!, …, ∫T, time_trend, ∫SAOD?, ΔT_lags, ΔSAOD_lags?]
+    cols = list(integrals)  # polynomial integrals (high → low)
+    cols.append(time_years - time_years[0])  # trend
+    n_phys = len(cols)  # number of physical parameters (order + 1)
+
+    if S is not None:
+        cols.append(integral_S)
+        idx_saod = len(cols) - 1
+    else:
+        idx_saod = None
+
+    # Temperature leads/lags
+    for lag in range(-n_lags, n_lags + 1):
+        if lag < 0:
+            shifted = np.concatenate([np.full(-lag, np.nan), delta_T[:lag]])
+        elif lag > 0:
+            shifted = np.concatenate([delta_T[lag:], np.full(lag, np.nan)])
+        else:
+            shifted = delta_T.copy()
+        cols.append(shifted)
+
+    # SAOD leads/lags
+    if S is not None:
+        for lag in range(-n_lags, n_lags + 1):
+            if lag < 0:
+                shifted = np.concatenate([np.full(-lag, np.nan), delta_S[:lag]])
+            elif lag > 0:
+                shifted = np.concatenate([delta_S[lag:], np.full(lag, np.nan)])
+            else:
+                shifted = delta_S.copy()
+            cols.append(shifted)
+
+    X = np.column_stack(cols)
+
+    # ---- 7. Drop NaN rows (from leads/lags) ----
+    valid = ~np.any(np.isnan(X), axis=1) & ~np.isnan(H)
+    if has_sigma:
+        valid = valid & ~np.isnan(sigma)
+    X_v = X[valid]
+    H_v = H[valid]
+    time_v = time_years[valid]
+    n_valid = int(valid.sum())
+
+    # Add constant (intercept)
+    X_v = sm.add_constant(X_v, prepend=False)  # constant is last column
+
+    # ---- 8. Fit with WLS/OLS + HAC ----
+    if hac_maxlags is None:
+        hac_maxlags = int(np.floor(4 * (n_valid / 100) ** (2 / 9)))
+
+    if has_sigma:
+        weights = 1.0 / sigma[valid] ** 2
+        model = sm.WLS(H_v, X_v, weights=weights).fit(
+            cov_type='HAC', cov_kwds={'maxlags': hac_maxlags}
+        )
+    else:
+        model = sm.OLS(H_v, X_v).fit(
+            cov_type='HAC', cov_kwds={'maxlags': hac_maxlags}
+        )
+
+    reg_coeffs = model.params
+    reg_cov = model.cov_params()
+    reg_se = model.bse
+
+    # ---- 9. Transform to physical (rate-model) parameters ----
+    # Regression params for polynomial: [coeff(∫T^order/order!), …, coeff(∫T), coeff(trend)]
+    # Physical params: [a_order, …, a_1, trend]
+    # a_k = k! × regression_coeff_k  (since regressor = ∫T^k / k!)
+    D_diag = [factorial(order - i) for i in range(order)] + [1]  # trend factor = 1
+    D = np.diag(D_diag).astype(np.float64)
+
+    phys_coeffs = D @ reg_coeffs[:n_phys]
+    phys_cov = D @ reg_cov[:n_phys, :n_phys] @ D.T
+    phys_se = np.sqrt(np.diag(phys_cov))
+
+    # ---- 10. SAOD coefficient ----
+    if idx_saod is not None:
+        gamma_saod = float(reg_coeffs[idx_saod])
+        gamma_saod_se = float(reg_se[idx_saod])
+    else:
+        gamma_saod = None
+        gamma_saod_se = None
+
+    # ---- 11. Named accessors ----
+    # phys_coeffs = [a_order, …, a_1, trend]
+    trend_val = float(phys_coeffs[-1])
+    trend_se_val = float(phys_se[-1])
+    alpha0_val = float(phys_coeffs[-2])
+    alpha0_se_val = float(phys_se[-2])
+    dalpha_dT_val = float(phys_coeffs[-3]) if order >= 2 else None
+    dalpha_dT_se_val = float(phys_se[-3]) if order >= 2 else None
+    d2alpha_dT2_val = float(phys_coeffs[-4]) if order >= 3 else None
+    d2alpha_dT2_se_val = float(phys_se[-4]) if order >= 3 else None
+
+    return DOLSResult(
+        order=order,
+        physical_coefficients=phys_coeffs,
+        physical_covariance=phys_cov,
+        physical_se=phys_se,
+        gamma_saod=gamma_saod,
+        gamma_saod_se=gamma_saod_se,
+        alpha0=alpha0_val,
+        alpha0_se=alpha0_se_val,
+        dalpha_dT=dalpha_dT_val,
+        dalpha_dT_se=dalpha_dT_se_val,
+        d2alpha_dT2=d2alpha_dT2_val,
+        d2alpha_dT2_se=d2alpha_dT2_se_val,
+        trend=trend_val,
+        trend_se=trend_se_val,
+        regression_coefficients=reg_coeffs,
+        regression_covariance=reg_cov,
+        r2=model.rsquared,
+        r2_adj=model.rsquared_adj,
+        aic=model.aic,
+        bic=model.bic,
+        n_obs=n_valid,
+        n_lags=n_lags,
+        has_saod=(saod is not None),
+        residuals=model.resid,
+        fitted=model.fittedvalues,
+        time=time_v,
+        model=model,
+    )
+
+
+# ---- Backward-compatibility wrappers (deprecated) ----
+
+DOLSQuadraticResult = DOLSResult  # type alias
+
+def calibrate_alpha_dols_quadratic(
+    sea_level: pd.Series,
+    temperature: pd.Series,
+    n_lags: int = 2,
+    **kwargs,
+) -> DOLSResult:
+    """Deprecated — use ``calibrate_dols(order=2)``."""
+    warnings.warn(
+        "calibrate_alpha_dols_quadratic is deprecated. "
+        "Use calibrate_dols(order=2) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return calibrate_dols(sea_level, temperature, order=2, n_lags=n_lags)
+
+
 def calibrate_alpha_dols(
     time: np.ndarray,
     gmsl: np.ndarray,
@@ -969,369 +1241,25 @@ def calibrate_alpha_dols(
     temperature: np.ndarray,
     n_lags: int = 2,
     include_trend: bool = True,
-    hac_maxlags: int = 24
+    hac_maxlags: int = 24,
 ) -> DOLSResult:
-    """
-    Estimate climate sensitivity (α) using Dynamic Least Squares.
-    
-    SEMI-EMPIRICAL MODEL
-    --------------------
-    The relationship between sea level and temperature is modeled as:
-    
-        H(t) = H₀ + α × ∫T(τ)dτ + β×t + ε(t)
-    
-    where:
-        H(t) = sea level at time t [mm]
-        T(t) = temperature anomaly [K or °C]
-        α = climate sensitivity [mm/yr/K]
-        β = background trend [mm/yr]
-        H₀ = reference sea level
-    
-    DOLS METHODOLOGY
-    ----------------
-    Dynamic LS addresses cointegration between non-stationary series by
-    augmenting the regression with leads and lags of ΔT:
-    
-        H(t) = α × ∫T(τ)dτ + β×t + Σᵢ γᵢ × ΔT(t+i) + ε(t)
-    
-    Yields consistent, asymptotically efficient estimates even when
-    H and ∫T are I(1) cointegrated processes.
-
-    Uses HAC (Newey-West) standard errors to account for residual autocorrelation
-    
-    Parameters
-    ----------
-    time : np.ndarray
-        Time values (decimal years).
-    gmsl : np.ndarray
-        Global mean sea level anomaly [mm].
-    gmsl_sigma : np.ndarray
-        GMSL uncertainty [mm]. Used for WLS weighting.
-    temperature : np.ndarray
-        Temperature anomaly [K or °C].
-    n_lags : int, default 2
-        Number of leads AND lags of ΔT. Total terms = 2×n_lags + 1.
-    include_trend : bool, default True
-        Include linear time trend.
-    hac_maxlags : int, default 24
-        Maximum lags for HAC (Newey-West) standard errors.
-    
-    Returns
-    -------
-    DOLSResult
-        Dataclass containing alpha, standard error, confidence interval,
-        trend, full model, and diagnostics.
-    
-    Examples
-    --------
-    >>> result = calibrate_alpha_dols(
-    ...     time=decimal_years,
-    ...     gmsl=gmsl_mm,
-    ...     gmsl_sigma=gmsl_sigma,
-    ...     temperature=temperature_anomaly
-    ... )
-    >>> print(f"α = {result.alpha:.2f} ± {result.alpha_se:.2f} mm/yr/K")
-    
-    References
-    ----------
-    Stock, J. H., & Watson, M. W. (1993). A Simple Estimator of Cointegrating
-        Vectors in Higher Order Integrated Systems. Econometrica, 61(4), 783-820.
-    
-    Vermeer, M., & Rahmstorf, S. (2009). Global sea level linked to global
-        temperature. PNAS, 106(51), 21527-21532.
-    """
-    # Input validation
-    time = np.asarray(time, dtype=np.float64)
-    gmsl = np.asarray(gmsl, dtype=np.float64)
-    gmsl_sigma = np.asarray(gmsl_sigma, dtype=np.float64)
-    temperature = np.asarray(temperature, dtype=np.float64)
-    
-    n = len(time)
-    if not all(len(x) == n for x in [gmsl, gmsl_sigma, temperature]):
-        raise ValueError("All inputs must have the same length")
-    
-    if np.any(gmsl_sigma <= 0):
-        raise ValueError("All gmsl_sigma values must be positive")
-    
-    # Construct regressors
-    dt = np.gradient(time)
-    integrated_T = np.cumsum(temperature * dt)
-    delta_T = np.gradient(temperature)
-    
-    # Build design matrix
-    regressors = {'intercept': np.ones(n), 'integrated_T': integrated_T}
-    
-    if include_trend:
-        regressors['trend'] = time - time.mean()
-    
-    # Add leads and lags
-    delta_T_series = pd.Series(delta_T)
-    for lag in range(-n_lags, n_lags + 1):
-        regressors[f'delta_T_lag{lag:+d}'] = delta_T_series.shift(-lag).values
-    
-    X = pd.DataFrame(regressors)
-    y = gmsl
-    w = 1.0 / (gmsl_sigma ** 2)
-    
-    # Remove NaN rows
-    valid = X.notna().all(axis=1) & ~np.isnan(y) & ~np.isnan(w)
-    n_valid = valid.sum()
-    
-    if n_valid < len(regressors) + 10:
-        raise ValueError(f"Insufficient observations ({n_valid}) for {len(regressors)} parameters")
-    
-    if n - n_valid > 0:
-        warnings.warn(f"Dropped {n - n_valid} observations due to NaN")
-    
-    # Fit model with HAC (Newey-West) standard errors to account for residual autocorrelation
-    model = sm.WLS(y[valid], X.loc[valid].values, weights=w[valid]).fit(
-        cov_type='HAC',
-        cov_kwds={'maxlags': hac_maxlags}
+    """Deprecated — use ``calibrate_dols(order=1)``."""
+    warnings.warn(
+        "calibrate_alpha_dols is deprecated. "
+        "Use calibrate_dols(order=1) instead.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    
-    # Extract results
-    param_names = list(regressors.keys())
-    idx_alpha = param_names.index('integrated_T')
-    idx_intercept = param_names.index('intercept')
-    idx_trend = param_names.index('trend') if include_trend else None
-    
-    alpha = model.params[idx_alpha]
-    alpha_se = model.bse[idx_alpha]
-    alpha_ci = tuple(model.conf_int()[idx_alpha])
-    
-    diagnostics = {
-        'r_squared': model.rsquared,
-        'r_squared_adj': model.rsquared_adj,
-        'n_observations': n_valid,
-        'n_parameters': len(regressors),
-        'residual_std': np.std(model.resid),
-        'durbin_watson': sm.stats.durbin_watson(model.resid),
-        'aic': model.aic,
-        'bic': model.bic
-    }
-    
-    return DOLSResult(
-        alpha=alpha,
-        alpha_se=alpha_se,
-        alpha_ci=alpha_ci,
-        equilibrium_temp=model.params[idx_intercept],
-        trend=model.params[idx_trend] if include_trend else 0.0,
-        model=model,
-        diagnostics=diagnostics,
-        n_lags=n_lags
-    )
-
-def calibrate_alpha_dols_quadratic(
-    sea_level: pd.Series,
-    temperature: pd.Series,
-    n_lags: int = 2,
-    time_unit: str = 'year',
-    hac_kernel: str = 'bartlett',
-    hac_bandwidth: int = None
-) -> DOLSQuadraticResult:
-    """
-    Calibrate quadratic sea level sensitivity using Dynamic OLS.
-    
-    Estimates the relationship:
-        H(t) = (dα/dT)/2 × ∫T²(τ)dτ + α₀ × ∫T(τ)dτ + β×t + Σγᵢ×ΔT(t+i) + ε
-    
-    where:
-        - H(t) is sea level at time t
-        - T(t) is temperature anomaly
-        - α₀ is the linear sensitivity (SLR per °C)
-        - dα/dT is how sensitivity changes with temperature
-        - β is a linear trend (non-temperature SLR)
-        - γᵢ are lead/lag coefficients for ΔT
-    
-    This implies a rate model:
-        dH/dt = (dα/dT) × T² + α₀ × T + β
-    
-    Parameters
-    ----------
-    sea_level : pd.Series
-        Sea level time series with datetime index
-    temperature : pd.Series
-        Temperature anomaly time series with datetime index
-    n_lags : int, default 2
-        Number of lead and lag terms for ΔT (total 2*n_lags + 1 terms)
-    time_unit : str, default 'year'
-        Time unit for integration ('year' or 'month')
-    hac_kernel : str, default 'bartlett'
-        Kernel for HAC standard errors ('bartlett', 'parzen', 'quadratic')
-    hac_bandwidth : int, optional
-        Bandwidth for HAC. If None, uses Newey-West automatic selection.
-        
-    Returns
-    -------
-    DOLSQuadraticResult
-        Dataclass containing estimates, uncertainties, and diagnostics
-        
-    Example
-    -------
-    >>> result = calibrate_alpha_dols_quadratic(df['gmsl'], df['temperature'])
-    >>> print(f"α₀ = {result.alpha0:.2f} ± {result.alpha0_se:.2f}")
-    >>> print(f"dα/dT = {result.dalpha_dT:.2f} ± {result.dalpha_dT_se:.2f}")
-    
-    Notes
-    -----
-    The quadratic term captures accelerating sensitivity as temperatures rise,
-    consistent with nonlinear ice sheet dynamics and thermal expansion.
-    
-    HAC (Heteroskedasticity and Autocorrelation Consistent) standard errors
-    are used to account for residual autocorrelation.
-    
-    References
-    ----------
-    Stock, J. H., & Watson, M. W. (1993). A simple estimator of cointegrating
-    vectors in higher order integrated systems. Econometrica, 61(4), 783-820.
-    """
-    # Align series
-    common_index = sea_level.index.intersection(temperature.index)
-    H = sea_level.loc[common_index].values.astype(float)
-    T = temperature.loc[common_index].values.astype(float)
-    
-    # Convert index to decimal years
-    time_years = np.array([
-        t.year + (t.month - 1) / 12 + (t.day - 1) / 365.25
-        for t in common_index
+    # Convert numpy arrays to pd.Series for the new API
+    dates = pd.to_datetime([
+        _decimal_year_to_datetime(t) for t in time
     ])
-    
-    # Time step
-    if time_unit == 'year':
-        dt = np.median(np.diff(time_years))
-    else:  # month
-        dt = 1 / 12
-    
-    n = len(H)
-    
-    # Compute cumulative integrals using trapezoidal rule
-    # ∫T(τ)dτ and ∫T²(τ)dτ
-    integral_T = np.zeros(n)
-    integral_T2 = np.zeros(n)
-    for i in range(1, n):
-        integral_T[i] = integral_T[i-1] + 0.5 * (T[i] + T[i-1]) * dt
-        integral_T2[i] = integral_T2[i-1] + 0.5 * (T[i]**2 + T[i-1]**2) * dt
-    
-    # Compute ΔT for leads and lags
-    delta_T = np.diff(T, prepend=T[0])
-    
-    # Build regressor matrix
-    # [∫T², ∫T, t, ΔT_{t-n_lags}, ..., ΔT_{t}, ..., ΔT_{t+n_lags}]
-    regressors = [integral_T2, integral_T, time_years - time_years[0]]
-    
-    for lag in range(-n_lags, n_lags + 1):
-        if lag < 0:
-            shifted = np.concatenate([np.full(-lag, np.nan), delta_T[:lag]])
-        elif lag > 0:
-            shifted = np.concatenate([delta_T[lag:], np.full(lag, np.nan)])
-        else:
-            shifted = delta_T
-        regressors.append(shifted)
-    
-    X = np.column_stack(regressors)
-    
-    # Remove rows with NaN (from leads/lags)
-    valid = ~np.any(np.isnan(X), axis=1)
-    X_valid = X[valid]
-    H_valid = H[valid]
-    time_valid = time_years[valid]
-    n_valid = len(H_valid)
-    
-    # Add constant
-    X_valid = np.column_stack([X_valid, np.ones(n_valid)])
-    
-    # OLS estimation
-    XtX = X_valid.T @ X_valid
-    XtX_inv = np.linalg.inv(XtX)
-    coeffs = XtX_inv @ (X_valid.T @ H_valid)
-    
-    # Fitted values and residuals
-    fitted = X_valid @ coeffs
-    residuals = H_valid - fitted
-    
-    # HAC covariance estimation
-    if hac_bandwidth is None:
-        # Newey-West automatic bandwidth selection
-        hac_bandwidth = int(np.floor(4 * (n_valid / 100) ** (2/9)))
-    
-    # Compute kernel weights
-    if hac_kernel == 'bartlett':
-        kernel_weights = lambda j: 1 - j / (hac_bandwidth + 1) if j <= hac_bandwidth else 0
-    elif hac_kernel == 'parzen':
-        def kernel_weights(j):
-            z = j / (hac_bandwidth + 1)
-            if z <= 0.5:
-                return 1 - 6*z**2 + 6*z**3
-            elif z <= 1:
-                return 2 * (1 - z)**3
-            else:
-                return 0
-    else:  # quadratic spectral
-        def kernel_weights(j):
-            z = j / (hac_bandwidth + 1)
-            if z == 0:
-                return 1
-            return 3 * (np.sin(np.pi*z)/(np.pi*z) - np.cos(np.pi*z)) / (np.pi*z)**2
-    
-    # HAC sandwich estimator
-    k = X_valid.shape[1]
-    S = np.zeros((k, k))
-    
-    for j in range(hac_bandwidth + 1):
-        weight = kernel_weights(j)
-        if j == 0:
-            Gamma_j = sum(residuals[t] * residuals[t] * np.outer(X_valid[t], X_valid[t]) 
-                         for t in range(n_valid)) / n_valid
-            S += weight * Gamma_j
-        else:
-            Gamma_j = sum(residuals[t] * residuals[t-j] * np.outer(X_valid[t], X_valid[t-j]) 
-                         for t in range(j, n_valid)) / n_valid
-            S += weight * (Gamma_j + Gamma_j.T)
-    
-    # HAC covariance matrix
-    cov_hac = n_valid * XtX_inv @ S @ XtX_inv
-    se = np.sqrt(np.diag(cov_hac))
-    
-    # Extract key parameters
-    # coeffs[0] = coefficient on ∫T² = (dα/dT)/2
-    # coeffs[1] = coefficient on ∫T = α₀
-    # coeffs[2] = trend coefficient
-    dalpha_dT = 2 * coeffs[0]
-    dalpha_dT_se = 2 * se[0]
-    alpha0 = coeffs[1]
-    alpha0_se = se[1]
-    trend = coeffs[2]
-    trend_se = se[2]
-    
-    # Model fit statistics
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((H_valid - np.mean(H_valid))**2)
-    r2 = 1 - ss_res / ss_tot
-    r2_adj = 1 - (1 - r2) * (n_valid - 1) / (n_valid - k)
-    
-    # Information criteria
-    log_likelihood = -n_valid/2 * (np.log(2*np.pi) + np.log(ss_res/n_valid) + 1)
-    aic = -2 * log_likelihood + 2 * k
-    bic = -2 * log_likelihood + k * np.log(n_valid)
-    
-    return DOLSQuadraticResult(
-        alpha0=alpha0,
-        alpha0_se=alpha0_se,
-        dalpha_dT=dalpha_dT,
-        dalpha_dT_se=dalpha_dT_se,
-        trend=trend,
-        trend_se=trend_se,
-        coefficients=coeffs,
-        covariance=cov_hac,
-        r2=r2,
-        r2_adj=r2_adj,
-        aic=aic,
-        bic=bic,
-        n_obs=n_valid,
-        n_lags=n_lags,
-        residuals=residuals,
-        fitted=fitted,
-        time=time_valid
+    sl = pd.Series(gmsl, index=dates)
+    temp = pd.Series(temperature, index=dates)
+    sig = pd.Series(gmsl_sigma, index=dates)
+    return calibrate_dols(
+        sl, temp, gmsl_sigma=sig, order=1,
+        n_lags=n_lags, hac_maxlags=hac_maxlags,
     )
 
 
@@ -1343,212 +1271,341 @@ def test_rate_temperature_nonlinearity(
     alpha: float = 0.05
 ) -> dict:
     """
-    Test whether a quadratic model (rate vs temperature) is significantly
-    better than a linear model.
-    
-    Fits two models:
+    Test whether polynomial rate–temperature models of increasing order
+    significantly improve fit.
+
+    Fits three models:
         Linear:    rate = b₁×T + b₀
         Quadratic: rate = a₂×T² + a₁×T + a₀
-    
+        Cubic:     rate = c₃×T³ + c₂×T² + c₁×T + c₀
+
     Parameters
     ----------
     rate : np.ndarray
-        GMSL rate (e.g., from compute_kinematics)
+        GMSL rate (e.g. from compute_kinematics).
     temperature : np.ndarray
-        Temperature anomaly (must be same length as rate)
+        Temperature anomaly (same length as rate).
     rate_sigma : np.ndarray, optional
-        Uncertainty in rate estimates. If provided, uses weighted least squares.
+        1-σ uncertainty in rate.  If provided, uses WLS.
     alpha : float, default 0.05
-        Significance level for hypothesis tests
-        
+        Significance level for hypothesis tests.
+
     Returns
     -------
-    dict with keys:
-        'linear': dict with 'coeffs', 'se', 'r2', 'aic', 'bic', 'residuals'
-        'quadratic': dict with 'coeffs', 'se', 'r2', 'aic', 'bic', 'residuals'
-        'f_test': dict with 'f_stat', 'p_value', 'significant'
-        'aic_comparison': dict with 'delta_aic', 'preferred_model'
-        'bic_comparison': dict with 'delta_bic', 'preferred_model'
-        'recommendation': str summarizing results
-        
-    Example
-    -------
-    >>> result = test_rate_temperature_nonlinearity(rate, temperature)
-    >>> print(result['recommendation'])
-    >>> print(f"F-test p-value: {result['f_test']['p_value']:.4f}")
-    
-    Notes
-    -----
-    - F-test: Tests H₀: quadratic term = 0. Significant p-value suggests nonlinearity.
-    - AIC/BIC: Lower is better. ΔAIC > 2 suggests meaningful improvement.
-    - For autocorrelated residuals (likely with time series), p-values may be 
-      anti-conservative. Consider this a screening test.
+    dict
+        Keys: 'linear', 'quadratic', 'cubic' (each with coeffs, se, r2,
+        aic, bic, residuals, predictions), 'f_tests' (pairwise),
+        'f_test' (backward-compat alias → linear_vs_quadratic),
+        'aic_comparison', 'bic_comparison', 'recommendation'.
     """
     from scipy import stats
-    
-    # Remove NaN values
+
+    # --- Helpers ---
+    def _fit(X, y, w, n):
+        k = X.shape[1]
+        W = np.diag(w)
+        XtWX = X.T @ W @ X
+        coeffs = np.linalg.solve(XtWX, X.T @ W @ y)
+        pred = X @ coeffs
+        resid = y - pred
+        ssr = np.sum(w * resid ** 2)
+        sst_val = np.sum(w * (y - np.average(y, weights=w)) ** 2)
+        r2 = 1 - ssr / sst_val
+        mse = ssr / (n - k)
+        cov = mse * np.linalg.inv(XtWX)
+        se = np.sqrt(np.diag(cov))
+        aic = n * np.log(ssr / n) + 2 * k
+        bic = n * np.log(ssr / n) + k * np.log(n)
+        return {
+            'coeffs': coeffs, 'se': se, 'r2': r2, 'aic': aic, 'bic': bic,
+            'residuals': resid, 'predictions': pred, 'ssr': ssr, 'k': k,
+        }
+
+    def _f_test(res_reduced, res_full, n, alpha_val):
+        ssr_r, k_r = res_reduced['ssr'], res_reduced['k']
+        ssr_f, k_f = res_full['ssr'], res_full['k']
+        df_r, df_f = n - k_r, n - k_f
+        f_stat = ((ssr_r - ssr_f) / (df_r - df_f)) / (ssr_f / df_f)
+        p = 1 - stats.f.cdf(f_stat, df_r - df_f, df_f)
+        return {'f_stat': f_stat, 'p_value': p,
+                'df1': df_r - df_f, 'df2': df_f,
+                'significant': p < alpha_val}
+
+    # --- Data prep ---
     valid = ~(np.isnan(rate) | np.isnan(temperature))
     rate = rate[valid]
     temperature = temperature[valid]
     n = len(rate)
-    
+
     if rate_sigma is not None:
         rate_sigma = rate_sigma[valid]
-        weights = 1.0 / rate_sigma**2
+        weights = 1.0 / rate_sigma ** 2
     else:
         weights = np.ones(n)
-    
-    # Normalize weights
     weights = weights / weights.sum() * n
-    
-    # --- Linear fit: rate = b₁×T + b₀ ---
-    X_lin = np.column_stack([temperature, np.ones(n)])
-    W = np.diag(weights)
-    
-    # Weighted least squares: (X'WX)^(-1) X'Wy
-    XtWX_lin = X_lin.T @ W @ X_lin
-    XtWy_lin = X_lin.T @ W @ rate
-    coeffs_lin = np.linalg.solve(XtWX_lin, XtWy_lin)
-    
-    # Predictions and residuals
-    pred_lin = X_lin @ coeffs_lin
-    resid_lin = rate - pred_lin
-    
-    # Weighted SSR and SST
-    ssr_lin = np.sum(weights * resid_lin**2)
-    sst = np.sum(weights * (rate - np.average(rate, weights=weights))**2)
-    r2_lin = 1 - ssr_lin / sst
-    
-    # Standard errors
-    k_lin = 2  # number of parameters
-    mse_lin = ssr_lin / (n - k_lin)
-    cov_lin = mse_lin * np.linalg.inv(XtWX_lin)
-    se_lin = np.sqrt(np.diag(cov_lin))
-    
-    # AIC and BIC (using RSS, assuming Gaussian errors)
-    # AIC = n*log(RSS/n) + 2k
-    # BIC = n*log(RSS/n) + k*log(n)
-    aic_lin = n * np.log(ssr_lin / n) + 2 * k_lin
-    bic_lin = n * np.log(ssr_lin / n) + k_lin * np.log(n)
-    
-    # --- Quadratic fit: rate = a₂×T² + a₁×T + a₀ ---
-    X_quad = np.column_stack([temperature**2, temperature, np.ones(n)])
-    
-    XtWX_quad = X_quad.T @ W @ X_quad
-    XtWy_quad = X_quad.T @ W @ rate
-    coeffs_quad = np.linalg.solve(XtWX_quad, XtWy_quad)
-    
-    # Predictions and residuals
-    pred_quad = X_quad @ coeffs_quad
-    resid_quad = rate - pred_quad
-    
-    # Weighted SSR
-    ssr_quad = np.sum(weights * resid_quad**2)
-    r2_quad = 1 - ssr_quad / sst
-    
-    # Standard errors
-    k_quad = 3
-    mse_quad = ssr_quad / (n - k_quad)
-    cov_quad = mse_quad * np.linalg.inv(XtWX_quad)
-    se_quad = np.sqrt(np.diag(cov_quad))
-    
-    # AIC and BIC
-    aic_quad = n * np.log(ssr_quad / n) + 2 * k_quad
-    bic_quad = n * np.log(ssr_quad / n) + k_quad * np.log(n)
-    
-    # --- F-test for nested models ---
-    # H₀: quadratic coefficient = 0 (linear model is sufficient)
-    # F = [(SSR_reduced - SSR_full) / (df_reduced - df_full)] / [SSR_full / df_full]
-    df_lin = n - k_lin
-    df_quad = n - k_quad
-    
-    f_stat = ((ssr_lin - ssr_quad) / (df_lin - df_quad)) / (ssr_quad / df_quad)
-    p_value = 1 - stats.f.cdf(f_stat, df_lin - df_quad, df_quad)
-    
-    # --- T-test on quadratic coefficient ---
-    t_stat_quad = coeffs_quad[0] / se_quad[0]
-    p_value_t = 2 * (1 - stats.t.cdf(np.abs(t_stat_quad), df_quad))
-    
-    # --- AIC/BIC comparison ---
-    delta_aic = aic_lin - aic_quad  # positive = quadratic is better
-    delta_bic = bic_lin - bic_quad
-    
-    # --- Build recommendation ---
+
+    T = temperature
+
+    # --- Fit models ---
+    X_lin  = np.column_stack([T,    np.ones(n)])
+    X_quad = np.column_stack([T**2, T, np.ones(n)])
+    X_cub  = np.column_stack([T**3, T**2, T, np.ones(n)])
+
+    res_lin  = _fit(X_lin,  rate, weights, n)
+    res_quad = _fit(X_quad, rate, weights, n)
+    res_cub  = _fit(X_cub,  rate, weights, n)
+
+    # t-tests on highest-order coefficient
+    df_quad = n - res_quad['k']
+    t_stat_quad = res_quad['coeffs'][0] / res_quad['se'][0]
+    p_t_quad = 2 * (1 - stats.t.cdf(np.abs(t_stat_quad), df_quad))
+    res_quad['t_stat'] = t_stat_quad
+    res_quad['p_value_t'] = p_t_quad
+
+    df_cub = n - res_cub['k']
+    t_stat_cub = res_cub['coeffs'][0] / res_cub['se'][0]
+    p_t_cub = 2 * (1 - stats.t.cdf(np.abs(t_stat_cub), df_cub))
+    res_cub['t_stat'] = t_stat_cub
+    res_cub['p_value_t'] = p_t_cub
+
+    # --- F-tests ---
+    f_lq = _f_test(res_lin, res_quad, n, alpha)
+    f_qc = _f_test(res_quad, res_cub, n, alpha)
+    f_lc = _f_test(res_lin, res_cub, n, alpha)
+
+    # --- AIC / BIC comparison ---
+    aic_vals = {'linear': res_lin['aic'], 'quadratic': res_quad['aic'], 'cubic': res_cub['aic']}
+    bic_vals = {'linear': res_lin['bic'], 'quadratic': res_quad['bic'], 'cubic': res_cub['bic']}
+
+    best_aic = min(aic_vals, key=aic_vals.get)
+    best_bic = min(bic_vals, key=bic_vals.get)
+    delta_aic = {m: aic_vals[m] - aic_vals[best_aic] for m in aic_vals}
+    delta_bic = {m: bic_vals[m] - bic_vals[best_bic] for m in bic_vals}
+
+    # --- Recommendation ---
     reasons = []
-    prefer_quadratic = 0
-    
+    scores = {'linear': 0, 'quadratic': 0, 'cubic': 0}
+
+    if f_lq['significant']:
+        reasons.append(f"F lin→quad significant (p={f_lq['p_value']:.4f})")
+        scores['quadratic'] += 1
+    else:
+        reasons.append(f"F lin→quad not significant (p={f_lq['p_value']:.4f})")
+        scores['linear'] += 1
+
+    if f_qc['significant']:
+        reasons.append(f"F quad→cub significant (p={f_qc['p_value']:.4f})")
+        scores['cubic'] += 1
+    else:
+        reasons.append(f"F quad→cub not significant (p={f_qc['p_value']:.4f})")
+
+    reasons.append(f"AIC best: {best_aic} (Δ={delta_aic})")
+    scores[best_aic] += 1
+    reasons.append(f"BIC best: {best_bic} (Δ={delta_bic})")
+    scores[best_bic] += 1
+
+    reasons.append(
+        f"R²: lin={res_lin['r2']:.3f}, quad={res_quad['r2']:.3f}, cub={res_cub['r2']:.3f}"
+    )
+
+    best = max(scores, key=scores.get)
+    if scores[best] >= 2:
+        recommendation = f"{best.upper()} model preferred. " + "; ".join(reasons)
+    else:
+        recommendation = "INCONCLUSIVE — consider additional diagnostics. " + "; ".join(reasons)
+
+    # Remove internal helper keys before returning
+    for res in (res_lin, res_quad, res_cub):
+        res.pop('ssr', None)
+        res.pop('k', None)
+
+    return {
+        'linear': res_lin,
+        'quadratic': res_quad,
+        'cubic': res_cub,
+        'f_tests': {
+            'linear_vs_quadratic': f_lq,
+            'quadratic_vs_cubic': f_qc,
+            'linear_vs_cubic': f_lc,
+        },
+        'f_test': f_lq,  # backward compatibility
+        'aic_comparison': {
+            'values': aic_vals,
+            'best_model': best_aic,
+            'delta_aic': delta_aic,
+            # backward-compat scalar
+            'delta_aic_lq': aic_vals['linear'] - aic_vals['quadratic'],
+            'preferred_model': best_aic,
+        },
+        'bic_comparison': {
+            'values': bic_vals,
+            'best_model': best_bic,
+            'delta_bic': delta_bic,
+            'delta_bic_lq': bic_vals['linear'] - bic_vals['quadratic'],
+            'preferred_model': best_bic,
+        },
+        'n_observations': n,
+        'recommendation': recommendation,
+    }
+
+
+def test_saod_ic(
+    sea_level: pd.Series,
+    temperature: pd.Series,
+    saod: pd.Series,
+    gmsl_sigma: Optional[pd.Series] = None,
+    order: int = 2,
+    n_lags: int = 2,
+    alpha: float = 0.05,
+) -> dict:
+    """
+    Test whether adding SAOD improves the DOLS model.
+
+    Compares:
+        Model A: DOLS without SAOD
+        Model B: DOLS with SAOD
+
+    Uses AIC, BIC, and an F-test (nested models, 1 extra parameter
+    for ∫SAOD plus 2×n_lags+1 extra ΔSAOD lag terms).
+
+    Parameters
+    ----------
+    sea_level, temperature, saod : pd.Series
+        Input series with datetime index.
+    gmsl_sigma : pd.Series, optional
+        Sea-level uncertainty for WLS.
+    order : int, default 2
+        Polynomial order.
+    n_lags : int, default 2
+        Number of leads/lags.
+    alpha : float, default 0.05
+        Significance level.
+
+    Returns
+    -------
+    dict
+        Keys: 'without_saod', 'with_saod' (summaries), 'f_test',
+        'aic_comparison', 'bic_comparison', 'recommendation'.
+    """
+    from scipy import stats
+
+    # Both models must be calibrated on the SAME time range.
+    # Normalise to month-start so different day-of-month conventions match.
+    def _to_month_start(s: pd.Series) -> pd.Series:
+        new_idx = s.index.to_period('M').to_timestamp()
+        out = s.copy()
+        out.index = new_idx
+        return out[~out.index.duplicated(keep='first')]
+
+    sl_ms   = _to_month_start(sea_level)
+    temp_ms = _to_month_start(temperature)
+    saod_ms = _to_month_start(saod)
+
+    common = sl_ms.index.intersection(temp_ms.index).intersection(saod_ms.index)
+    sl_c   = sl_ms.loc[common]
+    temp_c = temp_ms.loc[common]
+    saod_c = saod_ms.loc[common]
+    sig_c  = _to_month_start(gmsl_sigma).reindex(common) if gmsl_sigma is not None else None
+
+    res_a = calibrate_dols(sl_c, temp_c, gmsl_sigma=sig_c, saod=None,
+                           order=order, n_lags=n_lags)
+    res_b = calibrate_dols(sl_c, temp_c, gmsl_sigma=sig_c, saod=saod_c,
+                           order=order, n_lags=n_lags)
+
+    # F-test for nested models
+    ssr_a = float(np.sum(res_a.residuals ** 2))
+    ssr_b = float(np.sum(res_b.residuals ** 2))
+    k_a = len(res_a.regression_coefficients)
+    k_b = len(res_b.regression_coefficients)
+    df_extra = k_b - k_a  # number of extra SAOD parameters
+    df_b = res_b.n_obs - k_b
+
+    f_stat = ((ssr_a - ssr_b) / df_extra) / (ssr_b / df_b)
+    p_value = 1 - stats.f.cdf(f_stat, df_extra, df_b)
+
+    # SAOD coefficient t-test
+    gamma = res_b.gamma_saod
+    gamma_se = res_b.gamma_saod_se
+    t_saod = gamma / gamma_se if gamma_se > 0 else np.inf
+    p_saod = 2 * (1 - stats.t.cdf(np.abs(t_saod), df_b))
+
+    # AIC / BIC
+    d_aic = res_a.aic - res_b.aic  # positive → SAOD model better
+    d_bic = res_a.bic - res_b.bic
+
+    # Recommendation
+    reasons = []
+    score_saod = 0
     if p_value < alpha:
         reasons.append(f"F-test significant (p={p_value:.4f})")
-        prefer_quadratic += 1
+        score_saod += 1
     else:
         reasons.append(f"F-test not significant (p={p_value:.4f})")
-    
-    if delta_aic > 2:
-        reasons.append(f"AIC favors quadratic (ΔAIC={delta_aic:.1f})")
-        prefer_quadratic += 1
-    elif delta_aic < -2:
-        reasons.append(f"AIC favors linear (ΔAIC={delta_aic:.1f})")
+    if d_aic > 2:
+        reasons.append(f"AIC favors SAOD (ΔAIC={d_aic:.1f})")
+        score_saod += 1
+    elif d_aic < -2:
+        reasons.append(f"AIC favors no-SAOD (ΔAIC={d_aic:.1f})")
     else:
-        reasons.append(f"AIC inconclusive (ΔAIC={delta_aic:.1f})")
-    
-    if delta_bic > 2:
-        reasons.append(f"BIC favors quadratic (ΔBIC={delta_bic:.1f})")
-        prefer_quadratic += 1
-    elif delta_bic < -2:
-        reasons.append(f"BIC favors linear (ΔBIC={delta_bic:.1f})")
+        reasons.append(f"AIC inconclusive (ΔAIC={d_aic:.1f})")
+    if d_bic > 2:
+        reasons.append(f"BIC favors SAOD (ΔBIC={d_bic:.1f})")
+        score_saod += 1
+    elif d_bic < -2:
+        reasons.append(f"BIC favors no-SAOD (ΔBIC={d_bic:.1f})")
     else:
-        reasons.append(f"BIC inconclusive (ΔBIC={delta_bic:.1f})")
-    
-    r2_improvement = r2_quad - r2_lin
-    reasons.append(f"R² improvement: {r2_improvement:.4f} ({r2_lin:.3f} → {r2_quad:.3f})")
-    
-    if prefer_quadratic >= 2:
-        recommendation = "QUADRATIC model preferred. " + "; ".join(reasons)
-    elif prefer_quadratic == 0:
-        recommendation = "LINEAR model preferred. " + "; ".join(reasons)
+        reasons.append(f"BIC inconclusive (ΔBIC={d_bic:.1f})")
+
+    reasons.append(
+        f"γ_saod = {gamma:.6f} ± {gamma_se:.6f} (t={t_saod:.2f}, p={p_saod:.4f})"
+    )
+    reasons.append(
+        f"R² without={res_a.r2:.4f}, with={res_b.r2:.4f}"
+    )
+
+    if score_saod >= 2:
+        rec = "INCLUDE SAOD. " + "; ".join(reasons)
+    elif score_saod == 0:
+        rec = "EXCLUDE SAOD. " + "; ".join(reasons)
     else:
-        recommendation = "INCONCLUSIVE - consider additional diagnostics. " + "; ".join(reasons)
-    
+        rec = "INCONCLUSIVE. " + "; ".join(reasons)
+
     return {
-        'linear': {
-            'coeffs': coeffs_lin,  # [b₁, b₀]
-            'se': se_lin,
-            'r2': r2_lin,
-            'aic': aic_lin,
-            'bic': bic_lin,
-            'residuals': resid_lin,
-            'predictions': pred_lin
+        'without_saod': {
+            'r2': res_a.r2, 'aic': res_a.aic, 'bic': res_a.bic,
+            'n_params': k_a,
+            'physical_coefficients': res_a.physical_coefficients,
         },
-        'quadratic': {
-            'coeffs': coeffs_quad,  # [a₂, a₁, a₀]
-            'se': se_quad,
-            'r2': r2_quad,
-            'aic': aic_quad,
-            'bic': bic_quad,
-            'residuals': resid_quad,
-            'predictions': pred_quad,
-            't_stat': t_stat_quad,
-            'p_value_t': p_value_t
+        'with_saod': {
+            'r2': res_b.r2, 'aic': res_b.aic, 'bic': res_b.bic,
+            'n_params': k_b,
+            'physical_coefficients': res_b.physical_coefficients,
+            'gamma_saod': gamma,
+            'gamma_saod_se': gamma_se,
+            'gamma_saod_t': t_saod,
+            'gamma_saod_pvalue': p_saod,
         },
         'f_test': {
             'f_stat': f_stat,
             'p_value': p_value,
-            'df1': df_lin - df_quad,
-            'df2': df_quad,
-            'significant': p_value < alpha
+            'df1': df_extra,
+            'df2': df_b,
+            'significant': p_value < alpha,
         },
         'aic_comparison': {
-            'delta_aic': delta_aic,
-            'preferred_model': 'quadratic' if delta_aic > 2 else ('linear' if delta_aic < -2 else 'inconclusive')
+            'delta_aic': d_aic,
+            'preferred_model': 'with_saod' if d_aic > 2 else (
+                'without_saod' if d_aic < -2 else 'inconclusive'),
         },
         'bic_comparison': {
-            'delta_bic': delta_bic,
-            'preferred_model': 'quadratic' if delta_bic > 2 else ('linear' if delta_bic < -2 else 'inconclusive')
+            'delta_bic': d_bic,
+            'preferred_model': 'with_saod' if d_bic > 2 else (
+                'without_saod' if d_bic < -2 else 'inconclusive'),
         },
-        'n_observations': n,
-        'recommendation': recommendation
+        'recommendation': rec,
     }
-    
+
+
 # =============================================================================
 # MODULE INFO
 # =============================================================================
@@ -1559,7 +1616,7 @@ __all__ = [
     'DOLSResult',
     # Preprocessing
     'resample_to_monthly',
-    'merge_multiresolution_data', 
+    'merge_multiresolution_data',
     'align_to_baseline',
     'harmonize_baseline',
     'compute_thermodynamic_signal',
@@ -1567,8 +1624,9 @@ __all__ = [
     'compute_kinematics',
     'compute_kinematics_multibandwidth',
     # Calibration
+    'calibrate_dols',
     'test_rate_temperature_nonlinearity',
-    'calibrate_alpha_dols',
+    'test_saod_ic',
 ]
 
 if __name__ == "__main__":
@@ -1584,5 +1642,6 @@ if __name__ == "__main__":
     print("  - compute_kinematics()")
     print("  - compute_kinematics_multibandwidth()")
     print("\nCalibration:")
-    print("  - test_rate_temperature_nonlinearity")
-    print("  - calibrate_alpha_dols()")
+    print("  - calibrate_dols()")
+    print("  - test_rate_temperature_nonlinearity()")
+    print("  - test_saod_ic()")

@@ -10,7 +10,8 @@
       "Bash(pdflatex:*)",
       "Bash(ls:*)",
       "Bash(xargs:*)",
-      "Bash(brew install:*)"
+      "Bash(brew install:*)",
+      "Bash(ncdump:*)"
     ]
   }
 }
