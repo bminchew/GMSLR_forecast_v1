@@ -971,12 +971,12 @@ def calibrate_dols(
     Fits a polynomial relationship between sea level and integrated
     temperature, with optional SAOD (volcanic) forcing:
 
-        H(t) = Σₖ cₖ × ∫Tᵏ(τ)dτ / k!  +  β×t  [+ γ×∫SAOD(τ)dτ]
+        H(t) = Σₖ aₖ × ∫Tᵏ(τ)dτ  +  β×t  [+ γ×∫SAOD(τ)dτ]
                + Σᵢ δᵢ ΔT(t+i)  [+ Σᵢ ηᵢ ΔSAOD(t+i)]  + const + ε
 
     This implies a rate model:
 
-        dH/dt = aₙ Tⁿ + … + a₁ T + trend  [+ γ_saod × SAOD]
+        dH/dt = aₙ Tⁿ + … + a₁ T + β  [+ γ × SAOD]
 
     The function addresses cointegration between non-stationary sea-level
     and temperature series by augmenting the regression with leads and lags
@@ -1020,7 +1020,6 @@ def calibrate_dols(
     ----------
     Stock, J. H. & Watson, M. W. (1993). Econometrica 61(4), 783–820.
     """
-    from math import factorial
 
     if order not in (1, 2, 3):
         raise ValueError(f"order must be 1, 2, or 3, got {order}")
@@ -1068,14 +1067,17 @@ def calibrate_dols(
     n = len(H)
     dt = np.median(np.diff(time_years))
 
-    # ---- 3. Trapezoidal integrals ∫Tᵏ / k! ----
-    integrals = []  # will contain [∫T^order/order!, …, ∫T/1!]
+    # ---- 3. Trapezoidal integrals ∫Tᵏ ----
+    # Use raw integrals (no factorial scaling) so that the regression
+    # coefficient c_k directly equals the physical rate coefficient a_k:
+    #   H(t) = c_k × ∫T^k  →  dH/dt = c_k × T^k  →  a_k = c_k
+    integrals = []  # will contain [∫T^order, …, ∫T]
     for k in range(order, 0, -1):
         Tk = T ** k
         integral_Tk = np.zeros(n)
         for i in range(1, n):
             integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt
-        integrals.append(integral_Tk / factorial(k))
+        integrals.append(integral_Tk)
 
     # ---- 4. Optional: ∫SAOD ----
     if S is not None:
@@ -1089,7 +1091,7 @@ def calibrate_dols(
         delta_S = np.diff(S, prepend=S[0])
 
     # ---- 6. Build design matrix ----
-    # Column order: [∫T^order/order!, …, ∫T, time_trend, ∫SAOD?, ΔT_lags, ΔSAOD_lags?]
+    # Column order: [∫T^order, …, ∫T, time_trend, ∫SAOD?, ΔT_lags, ΔSAOD_lags?]
     cols = list(integrals)  # polynomial integrals (high → low)
     cols.append(time_years - time_years[0])  # trend
     n_phys = len(cols)  # number of physical parameters (order + 1)
@@ -1153,15 +1155,13 @@ def calibrate_dols(
     reg_cov = model.cov_params()
     reg_se = model.bse
 
-    # ---- 9. Transform to physical (rate-model) parameters ----
-    # Regression params for polynomial: [coeff(∫T^order/order!), …, coeff(∫T), coeff(trend)]
-    # Physical params: [a_order, …, a_1, trend]
-    # a_k = k! × regression_coeff_k  (since regressor = ∫T^k / k!)
-    D_diag = [factorial(order - i) for i in range(order)] + [1]  # trend factor = 1
-    D = np.diag(D_diag).astype(np.float64)
-
-    phys_coeffs = D @ reg_coeffs[:n_phys]
-    phys_cov = D @ reg_cov[:n_phys, :n_phys] @ D.T
+    # ---- 9. Physical (rate-model) parameters ----
+    # Regressors are raw integrals [∫T^order, …, ∫T, trend], so the
+    # regression coefficients **directly** equal the physical rate-model
+    # coefficients:  H = c_k × ∫T^k  →  dH/dt = c_k × T^k  →  a_k = c_k
+    # No factorial transform needed.
+    phys_coeffs = reg_coeffs[:n_phys].copy()
+    phys_cov = reg_cov[:n_phys, :n_phys].copy()
     phys_se = np.sqrt(np.diag(phys_cov))
 
     # ---- 10. SAOD coefficient ----
