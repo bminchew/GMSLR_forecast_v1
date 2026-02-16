@@ -28,7 +28,7 @@
 \maketitle
 
 \begin{abstract}
-The IPCC AR6 Antarctic Ice Sheet (AIS) projections likely understate the true range of West Antarctic Ice Sheet (WAIS) uncertainty due to three identified systematic biases: (1) the near-universal use of Glen's flow law with stress exponent $n=3$ despite evidence supporting $n=4$; (2) the omission of irreducible stochastic amplification from marine ice-sheet instability (MISI); and (3) the absence of key physical processes from most contributing models. We develop four complementary, literature-grounded approaches to construct a physics-informed $\sigice$ for use in hierarchical sea-level rise forecasting. The approaches converge on $\sigice \approx$ 320--491~mm at 2100, compared to $\sim$150~mm (medium confidence) and $\sim$290~mm (low confidence) from IPCC AR6. Our recommended approach---combining restructured scenario weighting, quantile-dependent rheology correction, and stochastic amplification during marine ice-sheet instability---yields $\sigice \approx 491$~mm. The physics-informed corrections increase the ice-sheet fraction of total variance at 2100 from 7\% to 8--18\%, with more dramatic changes at mid-century horizons where ice-sheet uncertainty becomes the dominant source.
+The IPCC AR6 Antarctic Ice Sheet (AIS) projections likely understate the true range of West Antarctic Ice Sheet (WAIS) uncertainty due to three identified systematic biases: (1) the near-universal use of Glen's flow law with stress exponent $n=3$ despite evidence supporting $n=4$; (2) the omission of irreducible stochastic amplification from marine ice-sheet instability (MISI); and (3) the absence of key physical processes from most contributing models. We develop four complementary approaches to construct a physics-informed $\sigice$ for use in hierarchical sea-level rise forecasting. The approaches converge on $\sigice \approx$ 320--491~mm at 2100, compared to $\sim$150~mm (medium confidence) and $\sim$290~mm (low confidence) from IPCC AR6. The approach combining restructured scenario weighting, quantile-dependent rheology correction, and stochastic amplification during marine ice-sheet instability---yields $\sigice \approx 491$~mm from WAIS alone. This uncertainty is largely decoupled from atmospheric CO2 concentrations, meaning these contributions uncertainties add to the largely ``direct'' thermodynamic SLR contributions and uncertainties from thermosteric effects, Greenland, and glaciers not in the ice sheets. This should provide a pretty clean separation between the predictable (everything but WAIS) and (currently) unpredictable (WAIS) contributions \textbf{and} a separation in quantified uncertainties between those uncertainties that are dominated by societal choices (future emissions and other `geoengineering' schemes) -- which is everything but WAIS -- and those uncertainties that are dominated by internal processes and feedbacks (WAIS). This is one way for us to quantify and articulate the uniqueness and value of our mission in the broader set of climate mitigation, adaptation, and intervention. %The physics-informed corrections increase the ice-sheet fraction of total variance at 2100 from 7\% to 8--18\%, with more dramatic changes at mid-century horizons where ice-sheet uncertainty becomes the dominant source.
 \end{abstract}
 
 
@@ -326,6 +326,146 @@ Approach~4 substantially increases the spread ($\sigice = 491$ vs.\ 320~mm) thro
 This non-Gaussian shape has practical implications: a Gaussian approximation to $\sigice$ underestimates the probability of outcomes in the upper tail.
 
 
+\section{Emergent Thermodynamic Sensitivity: DOLS vs.\ IPCC Process Models}
+\label{sec:emergent_sensitivity}
+
+A key assumption of the hierarchical framework (\cref{eq:decomposition}) is that the DOLS rate--temperature relationship, calibrated on $\sim$120~years of observations, captures the thermodynamic response (steric expansion + glaciers + Greenland) that governs $\sigconst$.  If IPCC AR6 process models produce a fundamentally different thermodynamic sensitivity, either the DOLS calibration or the process models contain systematic error.  We test this by fitting the rate--temperature relationship directly to the IPCC AR6 component projections.
+
+\subsection{Method}
+
+For each SSP (1-1.9 through 5-8.5), we construct the \emph{thermodynamic} sea level signal from IPCC AR6 FACTS output as the sum of ocean dynamics (thermosteric), glacier, and Greenland components---the IPCC analogue of the observational DOLS target, which uses GMSL minus terrestrial water storage.  Antarctica is excluded because it is not a significant thermodynamic contributor within the calibration record and is dominated by marine ice-sheet dynamics (treated separately as $\sigice$).
+
+We compute finite-difference rates from the decadal IPCC projections (2020--2100; 8 rate estimates from 9 time points) and fit linear and quadratic models to the rate--temperature relationship using \texttt{np.polyfit}, comparing them via AIC, BIC, $F$-test, and the $p$-value on the quadratic coefficient.  DOLS (\texttt{calibrate\_dols}, $n_{\text{lags}}=0$) is run as a consistency check.
+
+\subsection{Results}
+
+\textbf{All five SSPs unanimously prefer a linear rate--temperature relationship} (4/4 model selection criteria for SSP1-2.6 through SSP5-8.5; 2/4 for SSP1-1.9 where the temperature range is too narrow for discrimination).  The linear sensitivity $\alpha_0$ from the higher-forcing SSPs is $\sim$1.9--2.5~mm/yr/${}^{\circ}$C, compared with the observational DOLS value of $\sim$5.3~mm/yr/${}^{\circ}$C---lower by roughly a factor of two.  No SSP produces a statistically significant quadratic term ($p > 0.2$ for all).
+
+A statistical power analysis confirms that the absence of quadratic detection is not merely a sample-size artifact for the higher-forcing SSPs.  For SSP2-4.5, SSP3-7.0, and SSP5-8.5, the standard error on the quadratic coefficient is $\sim$0.1--0.9~mm/yr/${}^{\circ}$C$^2$, and the minimum detectable effect at 80\% power is $\sim$0.4--2.5~mm/yr/${}^{\circ}$C$^2$---well below the observational value of $\sim$5.1~mm/yr/${}^{\circ}$C$^2$.  The observational quadratic falls \emph{outside} the IPCC 95\% confidence intervals for these SSPs.  The IPCC thermodynamic component is genuinely more linear than what observations suggest.
+
+\subsection{Consistency with the literature}
+\label{sec:emergent_lit}
+
+This discrepancy is consistent with a growing body of literature documenting that IPCC process-based projections underestimate the observed thermodynamic sensitivity:
+
+\begin{itemize}
+  \item \citet{grinsted2021transient} defined the ``Transient Sea Level Sensitivity'' (TSLS) and showed that IPCC projections fall below what the observational record would predict, proposing the TSLS as an emergent constraint.
+
+  \item \citet{jevrejeva2021thermosteric} found that the CMIP6 ensemble-mean thermosteric rate over 1940--2005 ($\sim$0.2~mm/yr) is less than half the observed rate ($\sim$0.5~mm/yr)---a systematic offset of $\sim$10~cm per century per degree of warming.
+
+  \item \citet{grinsted2022transient} extended the TSLS framework to individual components in CMIP6, finding that glacier sensitivity is strongly time-dependent ($\sim$2.8~mm/yr/K before 2050 vs.\ $\sim$0.7~mm/yr/K after) and that total GMSL projections may underestimate the observational relationship.
+
+  \item \citet{rahmstorf2012comparing} compared IPCC projections to satellite-era observations and found that observed sea level rise exceeded the IPCC best estimate by $\sim$60\%, despite temperature projections tracking observations well.
+
+  \item \citet{tornqvist2025evaluating} showed that the accurate net IPCC projection over 30 years was ``somewhat fortuitous,'' arising from compensating errors: overestimated thermal expansion offset by underestimated ice-sheet contributions.
+\end{itemize}
+
+A physical mechanism for this discrepancy has been proposed by \citet{kuhlbrodt2012ocean}: CMIP-class models may have ocean stratification that is too weak, causing them to absorb heat too efficiently into the deep ocean rather than manifesting it as near-surface thermal expansion.  This would suppress the transient thermosteric sensitivity while preserving the equilibrium sensitivity---consistent with our finding that IPCC process models produce a lower $\alpha_0$ than observations over centennial timescales.
+
+\subsection{Implications for the framework}
+
+These findings have two implications for the hierarchical framework.  First, they validate the DOLS approach: by calibrating directly on observations, the DOLS model captures the realized thermodynamic sensitivity rather than the model-dependent sensitivity embedded in IPCC process-model output.  The systematic underestimation by IPCC process models means that using their thermodynamic projections directly would understate $\sigconst$.
+
+Second, the discrepancy reinforces the importance of separating the ice-sheet term.  The IPCC's accurate \emph{total} GMSL projection (despite component-level biases) arises partly from compensating errors between thermodynamic and cryospheric components \citep{tornqvist2025evaluating}.  The hierarchical framework avoids this by calibrating the thermodynamic response independently (via DOLS) and treating ice-sheet uncertainty separately (via $\sigice$).
+
+Multi-centennial projections from \citet{turner2023illustrative}, which extend the IPCC AR6 component-resolved framework to 2500 under SSP1-2.6 and SSP2-4.5, could provide the longer thermal lever arm needed to test whether the observational quadratic sensitivity eventually emerges in process models over multi-century timescales where the temperature signal is much larger.
+
+
+\section{Multi-Dataset Robustness of the DOLS Calibration}
+\label{sec:robustness}
+
+A potential criticism of the DOLS framework is that the calibrated sensitivities $\alpha_0$ and $d\alpha/dT$ depend on the particular choice of GMSL reconstruction and GMST product.  To address this, we run DOLS on every combination of available GMSL and GMST datasets, producing a coefficient matrix that quantifies the sensitivity of the results to observational data choice.
+
+\subsection{Datasets}
+
+Seven GMSL records are used:
+\begin{enumerate}
+  \item \textbf{Frederikse (total)}: 1900--2018, full budget reconstruction with component decomposition \citep{frederikse2020causes};
+  \item \textbf{Frederikse thermodynamic}: GMSL minus terrestrial water storage (TWS), isolating the temperature-driven signal;
+  \item \textbf{Dangendorf (total)}: 1900--2021, an independent tide-gauge-based reconstruction \citep{dangendorf2019persistent};
+  \item \textbf{Dangendorf sterodynamic}: the ocean thermal expansion plus dynamic sea-level component only---not equivalent to GMSL$-$TWS since it excludes all land-ice contributions;
+  \item \textbf{IPCC observed (total)}: 1950--2020, the AR6 observational composite;
+  \item \textbf{IPCC observed thermodynamic}: IPCC GMSL minus Frederikse TWS (interpolated to IPCC years over the 1950--2018 overlap);
+  \item \textbf{Horwath}: 1993--2016 monthly budget \citep{horwath2022global}, annualized---excluded from ensemble statistics due to its short record (24~yr produces unstable quadratic estimates with $n_{\text{lags}}=2$).
+\end{enumerate}
+
+Four GMST products are used: Berkeley Earth \citep{rohde2020berkeley}, GISTEMP, HadCRUT5, and NOAA GlobalTemp.  All are annualized over their common period starting at 1950 (the beginning of the IPCC observed GMSL record).
+
+\subsection{Results}
+
+The $6\times4 = 24$ valid DOLS fits (excluding Horwath) are summarized in \Cref{tab:robustness_matrix}.  Two key patterns emerge:
+
+\begin{enumerate}
+  \item \textbf{GMST choice has modest impact}: For a given GMSL dataset, $\alpha_0$ varies by $\lesssim$1~mm/yr/${}^{\circ}$C across GMST products, and $d\alpha/dT$ by $\lesssim$1~mm/yr/${}^{\circ}$C$^2$.  The four GMST products are sufficiently similar over the post-1950 period that they do not materially affect the DOLS calibration.
+
+  \item \textbf{GMSL choice dominates the spread}: The largest differences arise between total GMSL and thermodynamic (GMSL$-$TWS) variants.  Total GMSL datasets yield higher $\alpha_0$ ($\sim$2--4~mm/yr/${}^{\circ}$C) because they include ice-sheet and TWS contributions that add to the background acceleration.  Thermodynamic variants yield lower $\alpha_0$ ($\sim$0--1.3~mm/yr/${}^{\circ}$C) but higher $d\alpha/dT$ ($\sim$2--3.3~mm/yr/${}^{\circ}$C$^2$), consistent with the quadratic acceleration arising primarily from the temperature-sensitive components.
+\end{enumerate}
+
+Dangendorf sterodynamic is a notable outlier: it shows $d\alpha/dT \approx 0$ across all GMST products.  This is expected because the sterodynamic component isolates ocean thermal expansion and dynamics, excluding glacier and ice-sheet mass loss---the components that drive the observed acceleration.  This result confirms that the quadratic term in DOLS captures the accelerating cryospheric contribution to sea level, not a nonlinearity in ocean thermal expansion alone.
+
+\begin{table}[h]
+\centering
+\caption{Ensemble DOLS coefficients from the multi-dataset robustness matrix (order=2, $n_{\text{lags}}=2$, start$\geq$1950).  Horwath excluded ($n=20$, unstable estimates).}
+\label{tab:robustness_matrix}
+\begin{tabular}{lcc}
+\toprule
+Ensemble & $\alpha_0$ (mm/yr/${}^{\circ}$C) & $d\alpha/dT$ (mm/yr/${}^{\circ}$C$^2$) \\
+\midrule
+Thermodynamic only (12 pairs) & $0.70 \pm 0.57$ & $1.90 \pm 1.38$ \\
+All datasets (24 pairs) & $1.73 \pm 1.21$ & $1.83 \pm 1.09$ \\
+\midrule
+\multicolumn{3}{l}{\textit{By GMSL dataset (mean across 4 GMST products):}} \\
+\quad Frederikse (total) & $3.33 \pm 0.44$ & $1.09 \pm 0.60$ \\
+\quad Frederikse thermo & $0.76 \pm 0.32$ & $2.65 \pm 0.42$ \\
+\quad Dangendorf (total) & $2.78 \pm 0.41$ & $1.99 \pm 0.57$ \\
+\quad Dangendorf sterodynamic & $1.12 \pm 0.10$ & $0.01 \pm 0.15$ \\
+\quad IPCC observed (total) & $2.06 \pm 0.40$ & $2.22 \pm 0.53$ \\
+\quad IPCC obs thermo & $-0.04 \pm 0.30$ & $3.05 \pm 0.25$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Implications for the framework}
+
+The robustness matrix demonstrates that the positive quadratic sensitivity ($d\alpha/dT > 0$) is a robust feature of observational sea-level records---it is present across all GMSL datasets except the Dangendorf sterodynamic component (which by construction excludes the accelerating cryospheric signal).  The thermodynamic ensemble mean $d\alpha/dT = 1.90 \pm 1.38$~mm/yr/${}^{\circ}$C$^2$ provides a conservative multi-dataset estimate that is lower than the single-dataset WLS calibration (Frederikse thermo $\times$ Berkeley: $d\alpha/dT \approx 5.1$~mm/yr/${}^{\circ}$C$^2$) but remains positive and significant.
+
+The spread across datasets also provides a natural estimate of structural uncertainty in the DOLS calibration---an uncertainty component that is not captured by the within-model HAC standard errors.  We recommend reporting coefficients as the WLS point estimate (which optimally weights the highest-quality data) with the multi-dataset spread as a supplementary robustness check.
+
+\subsection{Sensitivity to start date}
+\label{sec:start_date}
+
+The results in \Cref{tab:robustness_matrix} use a common start year of 1950, matching the beginning of the IPCC observational GMSL record.  Several datasets extend substantially earlier: Frederikse to 1900 and Dangendorf to 1900.  Extending the calibration window to include the early 20th century reveals a striking sensitivity of the DOLS coefficients to the choice of start date (\Cref{tab:start_date_sensitivity}).
+
+\begin{table}[h]
+\centering
+\caption{DOLS coefficients (mean $\pm$ 1$\sigma$ across 4 GMST products) for 1950-start vs.\ native-start calibrations.  IPCC datasets are unchanged (native start is 1950).}
+\label{tab:start_date_sensitivity}
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{$\alpha_0$ (mm/yr/${}^{\circ}$C)} & \multicolumn{2}{c}{$d\alpha/dT$ (mm/yr/${}^{\circ}$C$^2$)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+GMSL dataset & 1950-start & Native start & 1950-start & Native start \\
+\midrule
+Frederikse (total)         & $3.33 \pm 0.44$ & $0.45 \pm 0.17$ & $1.09 \pm 0.60$ & $3.27 \pm 0.21$ \\
+Frederikse thermo          & $0.76 \pm 0.32$ & $1.01 \pm 0.19$ & $2.65 \pm 0.42$ & $0.19 \pm 0.21$ \\
+Dangendorf (total)         & $2.78 \pm 0.41$ & $-0.30 \pm 0.14$ & $1.99 \pm 0.57$ & $5.18 \pm 0.17$ \\
+Dangendorf sterodynamic    & $1.12 \pm 0.10$ & $1.87 \pm 0.08$ & $0.01 \pm 0.15$ & $-0.53 \pm 0.10$ \\
+\midrule
+Thermo ensemble            & $0.70 \pm 0.57$ & $0.92 \pm 0.80$ & $1.90 \pm 1.38$ & $0.90 \pm 1.55$ \\
+All-dataset ensemble       & $1.73 \pm 1.21$ & $0.82 \pm 0.93$ & $1.83 \pm 1.09$ & $2.23 \pm 1.94$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two patterns are noteworthy.  First, $\alpha_0$ and $d\alpha/dT$ trade off against one another: extending the record to 1900 substantially changes the partition between a constant linear sensitivity ($\alpha_0$) and an accelerating sensitivity ($d\alpha/dT$), while the overall rate--temperature relationship remains well-fit.  For Frederikse thermodynamic, $d\alpha/dT$ drops from $2.65$ to $0.19$~mm/yr/${}^{\circ}$C$^2$ when the early century is included, while for Dangendorf total it \emph{rises} from $1.98$ to $5.18$.  The quadratic and linear coefficients are absorbing each other's signal in a manner that depends on which epoch dominates the fit.
+
+Second, the across-dataset spread increases substantially with native start dates: the thermodynamic ensemble $d\alpha/dT$ coefficient of variation rises from 0.73 to 1.72, and the all-dataset ensemble from 0.60 to 0.87.  The additional half-century of early 20th-century data---where observational uncertainty is larger and potential non-stationarity in the rate--temperature relationship is strongest---amplifies inter-dataset disagreement.
+
+This epoch dependence has important implications.  It suggests that the DOLS rate--temperature relationship may itself be \emph{time-varying}: the effective $\alpha_0$ and $d\alpha/dT$ evolve as the climate system traverses different regimes of ocean heat uptake, glacier response, and ice-sheet dynamics.  If so, a single static quadratic calibrated over the entire record conflates different dynamical epochs, and the specific coefficient values depend on which epoch receives the most statistical weight.
+
+This motivates exploring the sliding-window DOLS analysis described in \S\ref{sec:future_work}---the ``Dynamic'' in DOLS---where a kernel-weighted window is moved through the record to estimate $\alpha_0(t)$ and $d\alpha/dT(t)$ as functions of time.  Such an analysis would directly reveal whether the temperature sensitivity is stationary or evolving, and would help distinguish genuine nonstationarity from the aliasing of different observational biases across epochs.
+
+
 \section{Caveats and Limitations}
 
 \begin{enumerate}
@@ -341,7 +481,8 @@ This non-Gaussian shape has practical implications: a Gaussian approximation to 
 \end{enumerate}
 
 
-\section{Recommendations}
+\section{Recommendations and Future Work}
+\label{sec:future_work}
 
 For use in the hierarchical SLR forecasting framework, we recommend:
 
@@ -351,6 +492,8 @@ For use in the hierarchical SLR forecasting framework, we recommend:
   \item \textbf{Approach~2 as a parametric comparison}: The purely parametric correction ($\sigice \approx 426$~mm, $f_{\text{ice}} \approx 14\%$) does not depend on subjective scenario weights and provides a useful comparison. That A4 ($\sigice = 491$~mm) exceeds A2 ($\sigice = 426$~mm) reflects the additional structural uncertainty captured by the scenario mixture that is absent from the parametric approach.
 
   \item \textbf{Report results at four levels}: IPCC low confidence (baseline), Approach~3 (scenario structure without rheology correction), Approach~2 (parametric rheology + stochastic), and Approach~4 (recommended: full framework), allowing readers to assess sensitivity to each component of the uncertainty treatment.
+
+  \item \textbf{Sliding-window DOLS (``Dynamic OLS'')}: The epoch sensitivity revealed in \Cref{tab:start_date_sensitivity} motivates revisiting the ``Dynamic'' aspect of the DOLS framework, in which a kernel-weighted window (default: tri-cube, bandwidth $h = 30$--$60$~yr) is slid through the observational record to produce time-varying coefficient estimates $\alpha_0(t)$ and $d\alpha/dT(t)$.  This analysis would: (a)~reveal whether the rate--temperature relationship is stationary or evolving; (b)~determine the effective epoch over which a static DOLS calibration is valid; and (c)~provide a natural diagnostic for distinguishing genuine physical nonstationarity from observational inhomogeneity in the early record.  The existing infrastructure for kernel-weighted local polynomial regression (\texttt{compute\_kinematics}) can be adapted to produce kernel-weighted DOLS fits at each time center.
 \end{enumerate}
 
 
@@ -401,6 +544,61 @@ Minchew, B.~M. and Meyer, C.~R. (2020).
 Robel, A.~A., Seroussi, H., and Roe, G.~H. (2019).
 \newblock Marine ice sheet instability amplifies and skews uncertainty in projections of future sea-level rise.
 \newblock \textit{Proceedings of the National Academy of Sciences}, 116(30):14887--14892.
+
+\bibitem[Grinsted and Christensen(2021)]{grinsted2021transient}
+Grinsted, A. and Christensen, J.~H. (2021).
+\newblock The transient sensitivity of sea level rise.
+\newblock \textit{Ocean Science}, 17:181--186.
+
+\bibitem[Grinsted et~al.(2022)]{grinsted2022transient}
+Grinsted, A., Bamber, J.~L., Bingham, R.~J., et~al. (2022).
+\newblock The Transient Sea Level Response to External Forcing in {CMIP6} Models.
+\newblock \textit{Earth's Future}, 10:e2022EF002696.
+
+\bibitem[Jevrejeva et~al.(2021)]{jevrejeva2021thermosteric}
+Jevrejeva, S., Palanisamy, H., and Jackson, L.~P. (2021).
+\newblock Global mean thermosteric sea level projections by 2100 in {CMIP6} climate models.
+\newblock \textit{Environmental Research Letters}, 16:014028.
+
+\bibitem[Kuhlbrodt and Gregory(2012)]{kuhlbrodt2012ocean}
+Kuhlbrodt, T. and Gregory, J.~M. (2012).
+\newblock Ocean heat uptake and its consequences for the magnitude of sea level rise and climate change.
+\newblock \textit{Geophysical Research Letters}, 39:L18608.
+
+\bibitem[Rahmstorf et~al.(2012)]{rahmstorf2012comparing}
+Rahmstorf, S., Foster, G., and Cazenave, A. (2012).
+\newblock Comparing climate projections to observations up to 2011.
+\newblock \textit{Environmental Research Letters}, 7:044035.
+
+\bibitem[T{\"o}rnqvist et~al.(2025)]{tornqvist2025evaluating}
+T{\"o}rnqvist, T.~E., Conrad, C.~P., Dangendorf, S., and Hamlington, B.~D. (2025).
+\newblock Evaluating {IPCC} Projections of Global Sea-Level Change From the Pre-Satellite Era.
+\newblock \textit{Earth's Future}, 13:e2025EF006533.
+
+\bibitem[Turner et~al.(2023)]{turner2023illustrative}
+Turner, F.~E., Malagon~Santos, V., Edwards, T.~L., Slangen, A.~B.~A., Nicholls, R.~J., Le~Cozannet, G., O'Neill, J., and Adhikari, M. (2023).
+\newblock Illustrative Multi-Centennial Projections of Global Mean Sea-Level Rise and Their Application.
+\newblock \textit{Earth's Future}, 11(12):e2023EF003550.
+
+\bibitem[Frederikse et~al.(2020)]{frederikse2020causes}
+Frederikse, T., Landerer, F., Caron, L., et~al. (2020).
+\newblock The causes of sea-level rise since 1900.
+\newblock \textit{Nature}, 584:393--397.
+
+\bibitem[Dangendorf et~al.(2019)]{dangendorf2019persistent}
+Dangendorf, S., Hay, C., Calafat, F.~M., et~al. (2019).
+\newblock Persistent acceleration in global sea-level rise since the 1960s.
+\newblock \textit{Nature Climate Change}, 9:705--710.
+
+\bibitem[Horwath et~al.(2022)]{horwath2022global}
+Horwath, M., Gutknecht, B.~D., Cazenave, A., et~al. (2022).
+\newblock Global sea-level budget and ocean-mass budget, with a focus on advanced data products and uncertainty characterisation.
+\newblock \textit{Earth System Science Data}, 14:411--447.
+
+\bibitem[Rohde and Hausfather(2020)]{rohde2020berkeley}
+Rohde, R.~A. and Hausfather, Z. (2020).
+\newblock The {Berkeley Earth} Land/Ocean Temperature Record.
+\newblock \textit{Earth System Science Data}, 12:3469--3479.
 
 \end{thebibliography}
 

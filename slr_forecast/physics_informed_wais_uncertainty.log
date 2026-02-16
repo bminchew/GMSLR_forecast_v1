@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2022.1.23)  10 FEB 2026 21:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2021) (preloaded format=pdflatex 2022.1.23)  16 FEB 2026 17:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -458,11 +458,7 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 59.
 
-[2]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-[3]
+[2] [3]
 Overfull \hbox (75.40666pt too wide) in paragraph at lines 192--203
  [][] 
  []
@@ -489,19 +485,25 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 282.
 
-[7] [8] [9] (./physics_informed_wais_uncertainty.aux)
+[7] [8] [9] [10] [11]
+Overfull \hbox (0.53381pt too wide) in paragraph at lines 464--465
+[]\OT1/cmr/m/n/10.95 This epoch de-pen-dence has im-por-tant im-pli-ca-tions. I
+t sug-gests that the DOLS rate--temperature
+ []
+
+[12] [13] [14] [15] (./physics_informed_wais_uncertainty.aux)
 Package rerunfilecheck Info: File `physics_informed_wais_uncertainty.out' has n
 ot changed.
-(rerunfilecheck)             Checksum: 2C8E9394DF41AF7EE784525B8D64F805;3822.
+(rerunfilecheck)             Checksum: 03E04BC7E064AEC4F70404DB819A8204;5816.
  ) 
 Here is how much of TeX's memory you used:
- 11927 strings out of 478994
- 184652 string characters out of 5858184
+ 12028 strings out of 478994
+ 186681 string characters out of 5858184
  518330 words of memory out of 5000000
- 29201 multiletter control sequences out of 15000+600000
- 415704 words of font info for 74 fonts, out of 8000000 for 9000
+ 29262 multiletter control sequences out of 15000+600000
+ 415872 words of font info for 75 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 71i,13n,74p,1259b,420s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 71i,13n,74p,2126b,463s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2021/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 }</usr/local/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb>
 </usr/local/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb><
@@ -519,12 +521,14 @@ ve/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/
 1/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2021
 /texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/local/texlive/2021/t
 exmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texlive/2021/te
-xmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
-Output written on physics_informed_wais_uncertainty.pdf (9 pages, 229299 bytes)
-.
+xmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/local/texlive/2021/tex
+mf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/local/texlive/2021
+/texmf-dist/fonts/type1/public/cm-super/sfrm1095.pfb>
+Output written on physics_informed_wais_uncertainty.pdf (15 pages, 277290 bytes
+).
 PDF statistics:
- 296 PDF objects out of 1000 (max. 8388607)
- 265 compressed objects within 3 object streams
- 73 named destinations out of 1000 (max. 500000)
- 177 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 431 PDF objects out of 1000 (max. 8388607)
+ 391 compressed objects within 4 object streams
+ 112 named destinations out of 1000 (max. 500000)
+ 257 words of extra memory for PDF output out of 10000 (max. 10000000)
 
