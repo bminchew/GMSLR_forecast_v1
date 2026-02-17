@@ -42,6 +42,9 @@ papers/*.pdf
 # Legacy notebook figures (canonical figures are in slr_forecast/figures/)
 slr_forecast/notebooks/figures/
 
+# Private working notes (not for collaborators)
+slr_forecast/PubStrategiesClaude.md
+
 # Claude Code local settings
 .claude/
 
