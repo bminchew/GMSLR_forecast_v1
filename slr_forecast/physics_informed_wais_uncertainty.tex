@@ -68,7 +68,7 @@ where $A$ is a temperature-dependent rate factor and $n$ is the stress exponent.
 
 \begin{itemize}
   \item Laboratory experiments at Antarctic temperatures and stress levels \citep{goldsby2001superplastic}
-  \item Field inversions from Antarctic ice streams show effective $n > 3$ \citep{minchew2019kinematics}
+  \item Remotely sensed observations of Antarctic ice shelves yield $n = 4.1 \pm 0.4$ in fast-flowing extensional regimes \citep{millstein2022ice}
   \item The inversion procedure using $n=3$ compensates through a viscosity multiplier $\phi$ that masks the rheological error
 \end{itemize}
 
@@ -216,7 +216,7 @@ The scenario weights are assessed as follows:
 
   \item \textbf{S2 ($P = 0.20$)}: MISI is triggered for Thwaites and/or Pine Island Glacier, but with the standard $n=3$ rheology used in IPCC contributing models. This is consistent with the median IPCC low-confidence AIS projection. It receives lower weight than S3 because the evidence for $n=3$ is weak: it originates from early laboratory experiments at stress and temperature conditions unrepresentative of Antarctic ice streams, and the inversion procedure compensates for the rheological error through a viscosity multiplier $\phi$ that masks the bias \citep{martin2025wrongn}.
 
-  \item \textbf{S3 ($P = 0.35$)}: Same dynamical scenario as S2 but with corrected rheology ($n=4$). This is the highest-weighted scenario because it combines the most likely dynamical regime (MISI triggered) with the best-supported rheology. Laboratory experiments at Antarctic-relevant conditions \citep{goldsby2001superplastic}, field inversions \citep{minchew2019kinematics}, and two independent modeling studies \citep{martin2025wrongn, getraer2025increasing} all support $n \geq 4$.
+  \item \textbf{S3 ($P = 0.35$)}: Same dynamical scenario as S2 but with corrected rheology ($n=4$). This is the highest-weighted scenario because it combines the most likely dynamical regime (MISI triggered) with the best-supported rheology. Laboratory experiments at Antarctic-relevant conditions \citep{goldsby2001superplastic}, remotely sensed inversions of Antarctic ice shelves \citep{millstein2022ice}, and two independent modeling studies \citep{martin2025wrongn, getraer2025increasing} all support $n \geq 4$.
 
   \item \textbf{S4 ($P = 0.25$)}: MISI with additional process amplifiers identified by \citet{fricker2025antarctica}: grounding-zone tidal pumping (which can double melt rates), subglacial hydrology coupling ($\sim$30\% amplification), and cold-to-warm ocean cavity transitions. This receives substantial weight because each of these processes is physically documented and observed, even though their combined quantitative impact remains poorly constrained. The fact that \emph{none} of these processes are represented in the models contributing to IPCC AR6 means the current projections systematically omit known amplifying feedbacks.
 
@@ -405,13 +405,13 @@ Dangendorf sterodynamic is a notable outlier: it shows $d\alpha/dT \approx 0$ ac
 
 \begin{table}[h]
 \centering
-\caption{Ensemble DOLS coefficients from the multi-dataset robustness matrix (order=2, $n_{\text{lags}}=2$, start$\geq$1950).  Horwath excluded ($n=20$, unstable estimates).}
+\caption{Ensemble DOLS coefficients from the multi-dataset robustness matrix (order=2, $n_{\text{lags}}=2$, start$\geq$1950).  Horwath excluded ($n=20$, unstable estimates); Dangendorf sterodynamic excluded from thermodynamic ensemble (see text).}
 \label{tab:robustness_matrix}
 \begin{tabular}{lcc}
 \toprule
 Ensemble & $\alpha_0$ (mm/yr/${}^{\circ}$C) & $d\alpha/dT$ (mm/yr/${}^{\circ}$C$^2$) \\
 \midrule
-Thermodynamic only (12 pairs) & $0.70 \pm 0.57$ & $1.90 \pm 1.38$ \\
+Thermodynamic only (8 pairs) & $0.49 \pm 0.58$ & $2.85 \pm 0.38$ \\
 All datasets (24 pairs) & $1.73 \pm 1.21$ & $1.83 \pm 1.09$ \\
 \midrule
 \multicolumn{3}{l}{\textit{By GMSL dataset (mean across 4 GMST products):}} \\
@@ -427,7 +427,7 @@ All datasets (24 pairs) & $1.73 \pm 1.21$ & $1.83 \pm 1.09$ \\
 
 \subsection{Implications for the framework}
 
-The robustness matrix demonstrates that the positive quadratic sensitivity ($d\alpha/dT > 0$) is a robust feature of observational sea-level records---it is present across all GMSL datasets except the Dangendorf sterodynamic component (which by construction excludes the accelerating cryospheric signal).  The thermodynamic ensemble mean $d\alpha/dT = 1.90 \pm 1.38$~mm/yr/${}^{\circ}$C$^2$ provides a conservative multi-dataset estimate that is lower than the single-dataset WLS calibration (Frederikse thermo $\times$ Berkeley: $d\alpha/dT \approx 5.1$~mm/yr/${}^{\circ}$C$^2$) but remains positive and significant.
+The robustness matrix demonstrates that the positive quadratic sensitivity ($d\alpha/dT > 0$) is a robust feature of observational sea-level records---it is present across all GMSL datasets except the Dangendorf sterodynamic component (which by construction excludes the accelerating cryospheric signal).  Dangendorf sterodynamic is excluded from the thermodynamic ensemble because it isolates only ocean thermal expansion and dynamics, whereas the other ``thermodynamic'' variants (GMSL$-$TWS) retain glacier and ice-sheet contributions that respond to temperature.  With this exclusion, the thermodynamic ensemble tightens substantially: $d\alpha/dT = 2.85 \pm 0.38$~mm/yr/${}^{\circ}$C$^2$ (8 pairs), compared with $1.90 \pm 1.38$ when Dangendorf sterodynamic was included (12 pairs).  This provides a robust multi-dataset estimate that is consistent with, though somewhat lower than, the single-dataset WLS calibration (Frederikse thermo $\times$ Berkeley: $d\alpha/dT \approx 5.1$~mm/yr/${}^{\circ}$C$^2$).
 
 The spread across datasets also provides a natural estimate of structural uncertainty in the DOLS calibration---an uncertainty component that is not captured by the within-model HAC standard errors.  We recommend reporting coefficients as the WLS point estimate (which optimally weights the highest-quality data) with the multi-dataset spread as a supplementary robustness check.
 
@@ -466,6 +466,30 @@ This epoch dependence has important implications.  It suggests that the DOLS rat
 This motivates exploring the sliding-window DOLS analysis described in \S\ref{sec:future_work}---the ``Dynamic'' in DOLS---where a kernel-weighted window is moved through the record to estimate $\alpha_0(t)$ and $d\alpha/dT(t)$ as functions of time.  Such an analysis would directly reveal whether the temperature sensitivity is stationary or evolving, and would help distinguish genuine nonstationarity from the aliasing of different observational biases across epochs.
 
 
+\subsection{Sliding-window DOLS: time-varying sensitivity}
+\label{sec:sliding_window}
+
+The epoch dependence revealed in \Cref{tab:start_date_sensitivity} motivates a direct test: rather than choosing a single start date, we slide a kernel-weighted window through the observational record and estimate $\alpha_0(t)$ and $d\alpha/dT(t)$ at each center year.  This ``Dynamic'' OLS approach uses a tri-cube kernel with bandwidth $h$ (the half-width of the compact support), producing kernel-weighted WLS fits at each center time $t_0$:
+\begin{equation}
+  w_i = K\!\left(\frac{t_i - t_0}{h}\right) \times \frac{1}{\sigma_i^2}
+\end{equation}
+where $K$ is the tri-cube kernel and $\sigma_i$ is the GMSL measurement uncertainty (WLS weights).
+
+\subsubsection{Coefficient evolution}
+
+Running multi-bandwidth sliding-window DOLS ($h = 30$, 40, 50, 60~yr) on Frederikse thermodynamic $\times$ Berkeley Earth reveals a smooth evolution of both coefficients.  At the narrowest bandwidth ($h = 30$~yr), $d\alpha/dT$ increases from $\sim$0--1~mm/yr/${}^{\circ}$C$^2$ for windows centered on the early-to-mid 20th century to $\sim$3--5~mm/yr/${}^{\circ}$C$^2$ for late-century windows.  Simultaneously, $\alpha_0$ decreases, confirming the tradeoff identified in the start-date analysis: the quadratic and linear coefficients exchange signal in an epoch-dependent manner.
+
+Different GMSL datasets agree on the qualitative structure of this evolution---$d\alpha/dT$ increasing and $\alpha_0$ decreasing toward the present---though they differ in absolute magnitudes.  This cross-dataset agreement suggests the temporal structure is physical rather than an artifact of any single reconstruction.
+
+\subsubsection{SAOD reconsideration}
+
+The static DOLS calibration found that stratospheric aerosol optical depth (SAOD) is not statistically significant ($\gamma_{\text{saod}}$ $t$-statistic $= 0.26$; \S2a).  However, the sliding-window analysis reveals a more nuanced picture.
+
+When Mauna Loa Observatory (MLO) transmission-derived SAOD is included in the sliding-window DOLS, $\gamma_{\text{saod}}$ achieves statistical significance ($|t| > 2$) in approximately 50\% of center years.  Significance is concentrated in windows centered before $\sim$1980, where the fit window encompasses the major 1963 Agung and 1982 El Chich\'{o}n eruptions.  By contrast, GloSSAC satellite-derived SAOD (available only from 1979) is significant in only 2--5\% of windows, because its shorter record excludes the pre-satellite volcanic events that drive the MLO signal.
+
+This finding does not contradict the static-DOLS conclusion that SAOD can be omitted from the baseline model---which uses the full record where the volcanic signal averages out---but it does indicate that epoch-specific calibrations (e.g., for hindcast validation over specific time periods) may benefit from including volcanic forcing.  The fact that $\alpha_0$ and $d\alpha/dT$ shift only modestly when SAOD is added ($<$0.3~pooled SE on average) confirms that volcanic forcing does not materially alias into the temperature sensitivity coefficients, even at the local level.
+
+
 \section{Caveats and Limitations}
 
 \begin{enumerate}
@@ -493,7 +517,7 @@ For use in the hierarchical SLR forecasting framework, we recommend:
 
   \item \textbf{Report results at four levels}: IPCC low confidence (baseline), Approach~3 (scenario structure without rheology correction), Approach~2 (parametric rheology + stochastic), and Approach~4 (recommended: full framework), allowing readers to assess sensitivity to each component of the uncertainty treatment.
 
-  \item \textbf{Sliding-window DOLS (``Dynamic OLS'')}: The epoch sensitivity revealed in \Cref{tab:start_date_sensitivity} motivates revisiting the ``Dynamic'' aspect of the DOLS framework, in which a kernel-weighted window (default: tri-cube, bandwidth $h = 30$--$60$~yr) is slid through the observational record to produce time-varying coefficient estimates $\alpha_0(t)$ and $d\alpha/dT(t)$.  This analysis would: (a)~reveal whether the rate--temperature relationship is stationary or evolving; (b)~determine the effective epoch over which a static DOLS calibration is valid; and (c)~provide a natural diagnostic for distinguishing genuine physical nonstationarity from observational inhomogeneity in the early record.  The existing infrastructure for kernel-weighted local polynomial regression (\texttt{compute\_kinematics}) can be adapted to produce kernel-weighted DOLS fits at each time center.
+  \item \textbf{Sliding-window DOLS (``Dynamic OLS'')}: The epoch sensitivity revealed in \Cref{tab:start_date_sensitivity} motivated the sliding-window DOLS analysis described in \S\ref{sec:sliding_window}.  This analysis confirms that the rate--temperature relationship evolves over time: $d\alpha/dT$ increases toward the present while $\alpha_0$ decreases, and the SAOD volcanic term becomes significant in $\sim$50\% of epoch-specific windows.  Future work should investigate whether this evolution reflects genuine physical nonstationarity (e.g., changing ocean heat uptake efficiency, emerging ice-sheet acceleration) or observational inhomogeneity in the early record.
 \end{enumerate}
 
 
@@ -535,10 +559,10 @@ Martin, D.~F., Kachuck, S.~B., Trevers, K., Millstein, J.~D., Cornford, S.~L., a
 \newblock Impact of the stress exponent on ice sheet simulations.
 \newblock \textit{AGU Advances}.
 
-\bibitem[Minchew and Meyer(2020)]{minchew2019kinematics}
-Minchew, B.~M. and Meyer, C.~R. (2020).
-\newblock Dilation of subglacial sediment governs incipient surge motion in glaciers with deformable beds.
-\newblock \textit{Proceedings of the Royal Society A}, 476:20200033.
+\bibitem[Millstein et~al.(2022)]{millstein2022ice}
+Millstein, J.~D., Minchew, B.~M., and Pegler, S.~S. (2022).
+\newblock Ice viscosity is more sensitive to stress than commonly assumed.
+\newblock \textit{Communications Earth \& Environment}, 3:57.
 
 \bibitem[Robel et~al.(2019)]{robel2019marine}
 Robel, A.~A., Seroussi, H., and Roe, G.~H. (2019).

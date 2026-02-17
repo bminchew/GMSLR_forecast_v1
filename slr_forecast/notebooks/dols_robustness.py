@@ -463,8 +463,10 @@ def compute_combined_dols(robustness_results, thermodynamic_only=True,
     order = robustness_results["order"]
 
     # Define which GMSL datasets are "thermodynamic"
-    thermo_names = ["Frederikse thermo", "Dangendorf sterodynamic",
-                    "Horwath thermo", "IPCC obs thermo"]
+    # NOTE: Dangendorf sterodynamic is EXCLUDED — it isolates only ocean
+    # thermal expansion + dynamics, excluding all land-ice contributions,
+    # so it is not equivalent to GMSL − TWS and shows near-zero dα/dT.
+    thermo_names = ["Frederikse thermo", "Horwath thermo", "IPCC obs thermo"]
     total_names = ["Frederikse", "Dangendorf", "IPCC observed"]
 
     alpha0_vals = []
@@ -715,9 +717,9 @@ def plot_coefficient_forest(robustness_results, combined_thermo=None,
     gmsl_colors = {name: cmap(i / max(len(gmsl_unique) - 1, 1))
                    for i, name in enumerate(gmsl_unique)}
 
-    # Identify thermodynamic datasets
-    thermo_names = {"Frederikse thermo", "Dangendorf sterodynamic",
-                    "Horwath thermo", "IPCC obs thermo"}
+    # Identify thermodynamic datasets (Dangendorf sterodynamic excluded —
+    # it isolates ocean dynamics only, not the full GMSL − TWS signal)
+    thermo_names = {"Frederikse thermo", "Horwath thermo", "IPCC obs thermo"}
 
     labels = [e["label"] for e in entries]
     y_pos = np.arange(n)
@@ -880,7 +882,7 @@ def run_analysis(start_year=1950.0, order=2, n_lags=2,
     dict with all results, combined statistics, and figure objects
     """
     if exclude_from_figures is None:
-        exclude_from_figures = ["Horwath thermo"]
+        exclude_from_figures = ["Horwath thermo", "Dangendorf sterodynamic"]
 
     # Step 1: Run the robustness matrix
     rob = run_robustness_matrix(

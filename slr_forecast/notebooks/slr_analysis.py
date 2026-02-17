@@ -1214,6 +1214,428 @@ def calibrate_dols(
     )
 
 
+# =============================================================================
+# SLIDING-WINDOW DOLS  (the "Dynamic" in Dynamic OLS)
+# =============================================================================
+
+@dataclass
+class SlidingDOLSResult:
+    """
+    Container for sliding-window (kernel-weighted) DOLS results.
+
+    At each center year t₀, a kernel-weighted DOLS is fit, producing
+    time-varying coefficient estimates α₀(t) and dα/dT(t).
+
+    Attributes
+    ----------
+    time : np.ndarray
+        Center years for each sliding-window fit.
+    alpha0 : np.ndarray
+        Linear sensitivity α₀(t) at each center year (native units, e.g. m/yr/°C).
+    alpha0_se : np.ndarray
+        Standard error of α₀(t).
+    dalpha_dT : np.ndarray or None
+        Quadratic sensitivity dα/dT(t) (None if order=1).
+    dalpha_dT_se : np.ndarray or None
+        Standard error of dα/dT(t).
+    trend : np.ndarray
+        Background trend at each center year.
+    trend_se : np.ndarray
+        Standard error of trend.
+    r2 : np.ndarray
+        R² for each local fit.
+    n_effective : np.ndarray
+        Effective number of observations (sum of kernel weights) at each center.
+    gamma_saod : np.ndarray or None
+        SAOD coefficient at each center year (None if SAOD not included).
+    gamma_saod_se : np.ndarray or None
+        Standard error of SAOD coefficient.
+    span_years : float
+        Bandwidth (half-width) of the kernel in years.
+    kernel : str
+        Kernel function name.
+    order : int
+        Polynomial order.
+    n_lags : int
+        Number of leads/lags used.
+    """
+    time: np.ndarray
+    alpha0: np.ndarray
+    alpha0_se: np.ndarray
+    dalpha_dT: Optional[np.ndarray]
+    dalpha_dT_se: Optional[np.ndarray]
+    trend: np.ndarray
+    trend_se: np.ndarray
+    r2: np.ndarray
+    n_effective: np.ndarray
+    gamma_saod: Optional[np.ndarray]
+    gamma_saod_se: Optional[np.ndarray]
+    span_years: float
+    kernel: str
+    order: int
+    n_lags: int
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert to pandas DataFrame with decimal-year index."""
+        data = {
+            'alpha0': self.alpha0,
+            'alpha0_se': self.alpha0_se,
+            'trend': self.trend,
+            'trend_se': self.trend_se,
+            'r2': self.r2,
+            'n_effective': self.n_effective,
+        }
+        if self.dalpha_dT is not None:
+            data['dalpha_dT'] = self.dalpha_dT
+            data['dalpha_dT_se'] = self.dalpha_dT_se
+        if self.gamma_saod is not None:
+            data['gamma_saod'] = self.gamma_saod
+            data['gamma_saod_se'] = self.gamma_saod_se
+        return pd.DataFrame(data, index=pd.Index(self.time, name='year'))
+
+    def __repr__(self) -> str:
+        valid = ~np.isnan(self.alpha0)
+        lines = [
+            f"SlidingDOLSResult(order={self.order}, span={self.span_years} yr, "
+            f"kernel='{self.kernel}')",
+            f"  time range: {self.time.min():.0f}–{self.time.max():.0f}",
+            f"  valid fits: {valid.sum()} / {len(self.time)}",
+        ]
+        if valid.any():
+            lines.append(
+                f"  α₀ range: [{np.nanmin(self.alpha0):.6f}, "
+                f"{np.nanmax(self.alpha0):.6f}]"
+            )
+            if self.dalpha_dT is not None:
+                lines.append(
+                    f"  dα/dT range: [{np.nanmin(self.dalpha_dT):.6f}, "
+                    f"{np.nanmax(self.dalpha_dT):.6f}]"
+                )
+            if self.gamma_saod is not None:
+                lines.append(
+                    f"  γ_saod range: [{np.nanmin(self.gamma_saod):.6f}, "
+                    f"{np.nanmax(self.gamma_saod):.6f}]"
+                )
+        return "\n".join(lines)
+
+
+def calibrate_dols_sliding(
+    sea_level: pd.Series,
+    temperature: pd.Series,
+    gmsl_sigma: Optional[pd.Series] = None,
+    saod: Optional[pd.Series] = None,
+    order: int = 2,
+    n_lags: int = 2,
+    span_years: float = 40.0,
+    kernel: str = 'tricube',
+    min_effective_obs: int = 30,
+    hac_maxlags: Optional[int] = None,
+) -> SlidingDOLSResult:
+    """
+    Sliding-window DOLS: estimate time-varying α₀(t) and dα/dT(t).
+
+    At each center year t₀, fits the DOLS integral-space model with
+    kernel-weighted WLS, where the kernel weights give more influence
+    to observations near t₀.  This is the "Dynamic" in Dynamic OLS.
+
+    The kernel weight for observation at time t_i centered at t₀ is:
+
+        w_kernel(i) = K((t_i - t₀) / h)
+
+    where K is the kernel function and h = span_years.  These kernel
+    weights are multiplied with optional WLS weights (1/σ²) to form
+    the final regression weights.
+
+    METHODOLOGY
+    -----------
+    For each center year t₀ in the record:
+    1. Compute kernel weights for all observations
+    2. Build the full DOLS design matrix (integrals, trend, leads/lags)
+    3. Fit WLS with combined kernel × data-uncertainty weights
+    4. Extract physical coefficients with HAC standard errors
+
+    Parameters
+    ----------
+    sea_level : pd.Series
+        Sea level with datetime index (e.g. metres).
+    temperature : pd.Series
+        Temperature anomaly with datetime index (°C).
+    gmsl_sigma : pd.Series, optional
+        1-σ sea-level uncertainty for WLS.
+    saod : pd.Series, optional
+        Stratospheric aerosol optical depth.
+    order : int, default 2
+        Polynomial order (1=linear, 2=quadratic).
+    n_lags : int, default 2
+        Number of leads and lags of ΔT.
+    span_years : float, default 40.0
+        Kernel bandwidth in years.  Determines the effective window
+        width.  For tricube (compact support), the window is ±h.
+        For Gaussian, 95% of weight is within ±2h.
+    kernel : str, default 'tricube'
+        Kernel function: 'tricube', 'gaussian', 'epanechnikov'.
+    min_effective_obs : int, default 30
+        Minimum effective observations for a valid fit.
+    hac_maxlags : int, optional
+        HAC covariance max lags.  If None, auto-selected.
+
+    Returns
+    -------
+    SlidingDOLSResult
+        Dataclass with time-varying coefficients and standard errors.
+
+    Notes
+    -----
+    - Edge effects: Estimates within span_years of record boundaries
+      have asymmetric kernel support, leading to larger standard errors.
+    - For span_years = 40 with tricube kernel, the effective window is
+      ±40 years (80 years total).  Records starting at 1900 can produce
+      estimates from ~1940 onward.
+    - The design matrix (integrals, leads/lags) is constructed once from
+      the full record, then subsetted and reweighted at each center year.
+    """
+    if order not in (1, 2, 3):
+        raise ValueError(f"order must be 1, 2, or 3, got {order}")
+
+    # ---- Kernel functions ----
+    kernels = {
+        'tricube': lambda u: np.where(np.abs(u) <= 1,
+                                       (1 - np.abs(u)**3)**3, 0),
+        'gaussian': lambda u: np.exp(-0.5 * u**2),
+        'epanechnikov': lambda u: np.where(np.abs(u) <= 1,
+                                            0.75 * (1 - u**2), 0),
+    }
+    if kernel not in kernels:
+        raise ValueError(f"Unknown kernel '{kernel}'. "
+                         f"Options: {list(kernels.keys())}")
+    kernel_func = kernels[kernel]
+
+    # ---- 1. Align series on common datetime index ----
+    def _to_month_start(s: pd.Series) -> pd.Series:
+        new_idx = s.index.to_period('M').to_timestamp()
+        out = s.copy()
+        out.index = new_idx
+        return out[~out.index.duplicated(keep='first')]
+
+    sl_ms   = _to_month_start(sea_level)
+    temp_ms = _to_month_start(temperature)
+    saod_ms = _to_month_start(saod) if saod is not None else None
+
+    common = sl_ms.index.intersection(temp_ms.index)
+    if saod_ms is not None:
+        common = common.intersection(saod_ms.index)
+    common = common.sort_values()
+
+    H = sl_ms.loc[common].values.astype(np.float64)
+    T = temp_ms.loc[common].values.astype(np.float64)
+    S = saod_ms.loc[common].values.astype(np.float64) if saod_ms is not None else None
+
+    has_sigma = gmsl_sigma is not None
+    if has_sigma:
+        sig_ms = _to_month_start(gmsl_sigma)
+        sigma = sig_ms.reindex(common).values.astype(np.float64)
+        nan_sig = np.isnan(sigma)
+        if nan_sig.any():
+            sigma[nan_sig] = np.nanmedian(sigma)
+    else:
+        sigma = None
+
+    # ---- 2. Decimal-year time vector ----
+    time_years = np.array([
+        t.year + (t.month - 1) / 12 + (t.day - 1) / 365.25
+        for t in common
+    ])
+    n = len(H)
+    dt = np.median(np.diff(time_years))
+
+    # ---- 3. Build full design matrix (same as calibrate_dols) ----
+    # Trapezoidal integrals ∫T^k
+    integrals = []
+    for k in range(order, 0, -1):
+        Tk = T ** k
+        integral_Tk = np.zeros(n)
+        for i in range(1, n):
+            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt
+        integrals.append(integral_Tk)
+
+    # Optional ∫SAOD
+    if S is not None:
+        integral_S = np.zeros(n)
+        for i in range(1, n):
+            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt
+
+    # ΔT (and ΔSAOD)
+    delta_T = np.diff(T, prepend=T[0])
+    if S is not None:
+        delta_S = np.diff(S, prepend=S[0])
+
+    # Column order: [∫T^order, …, ∫T, trend, ∫SAOD?, ΔT_lags, ΔSAOD_lags?]
+    cols = list(integrals)
+    cols.append(time_years - time_years[0])  # trend
+    n_phys = len(cols)
+
+    if S is not None:
+        cols.append(integral_S)
+        idx_saod = len(cols) - 1
+    else:
+        idx_saod = None
+
+    # Temperature leads/lags
+    for lag in range(-n_lags, n_lags + 1):
+        if lag < 0:
+            shifted = np.concatenate([np.full(-lag, np.nan), delta_T[:lag]])
+        elif lag > 0:
+            shifted = np.concatenate([delta_T[lag:], np.full(lag, np.nan)])
+        else:
+            shifted = delta_T.copy()
+        cols.append(shifted)
+
+    # SAOD leads/lags
+    if S is not None:
+        for lag in range(-n_lags, n_lags + 1):
+            if lag < 0:
+                shifted = np.concatenate([np.full(-lag, np.nan), delta_S[:lag]])
+            elif lag > 0:
+                shifted = np.concatenate([delta_S[lag:], np.full(lag, np.nan)])
+            else:
+                shifted = delta_S.copy()
+            cols.append(shifted)
+
+    X_full = np.column_stack(cols)
+
+    # Identify rows valid for leads/lags (no NaN in design matrix)
+    valid_full = ~np.any(np.isnan(X_full), axis=1) & ~np.isnan(H)
+    if has_sigma:
+        valid_full = valid_full & ~np.isnan(sigma)
+
+    # ---- 4. Sliding window: fit at each center year ----
+    out_time = time_years.copy()
+    out_alpha0 = np.full(n, np.nan)
+    out_alpha0_se = np.full(n, np.nan)
+    out_dalpha = np.full(n, np.nan) if order >= 2 else None
+    out_dalpha_se = np.full(n, np.nan) if order >= 2 else None
+    out_trend = np.full(n, np.nan)
+    out_trend_se = np.full(n, np.nan)
+    out_r2 = np.full(n, np.nan)
+    out_n_eff = np.full(n, np.nan)
+    out_gamma = np.full(n, np.nan) if S is not None else None
+    out_gamma_se = np.full(n, np.nan) if S is not None else None
+
+    for i in range(n):
+        t0 = time_years[i]
+
+        # Kernel weights
+        u = (time_years - t0) / span_years
+        k_weights = kernel_func(u)
+
+        # Combined: kernel × valid × (optional WLS)
+        combined_w = k_weights.copy()
+        combined_w[~valid_full] = 0.0
+
+        if has_sigma:
+            # Multiply by 1/σ² where valid
+            nonzero = combined_w > 0
+            combined_w[nonzero] *= 1.0 / sigma[nonzero] ** 2
+
+        # Count effective observations
+        n_eff = np.sum(combined_w > 1e-12)
+        out_n_eff[i] = n_eff
+
+        if n_eff < min_effective_obs:
+            continue
+
+        # Subset to non-zero weight observations
+        mask = combined_w > 1e-12
+        X_loc = X_full[mask]
+        H_loc = H[mask]
+        w_loc = combined_w[mask]
+
+        # Add constant (intercept)
+        X_loc_c = sm.add_constant(X_loc, prepend=False)
+
+        # HAC max lags
+        if hac_maxlags is None:
+            hac_ml = int(np.floor(4 * (int(n_eff) / 100) ** (2 / 9)))
+        else:
+            hac_ml = hac_maxlags
+
+        try:
+            model = sm.WLS(H_loc, X_loc_c, weights=w_loc).fit(
+                cov_type='HAC', cov_kwds={'maxlags': max(hac_ml, 1)}
+            )
+        except (np.linalg.LinAlgError, ValueError):
+            continue
+
+        # Extract physical coefficients
+        phys_coeffs = model.params[:n_phys]
+        phys_se = model.bse[:n_phys]
+
+        out_alpha0[i] = float(phys_coeffs[-2])  # α₀ (linear T)
+        out_alpha0_se[i] = float(phys_se[-2])
+        out_trend[i] = float(phys_coeffs[-1])
+        out_trend_se[i] = float(phys_se[-1])
+        out_r2[i] = model.rsquared
+
+        if order >= 2 and out_dalpha is not None:
+            out_dalpha[i] = float(phys_coeffs[-3])
+            out_dalpha_se[i] = float(phys_se[-3])
+
+        if idx_saod is not None and out_gamma is not None:
+            out_gamma[i] = float(model.params[idx_saod])
+            out_gamma_se[i] = float(model.bse[idx_saod])
+
+    return SlidingDOLSResult(
+        time=out_time,
+        alpha0=out_alpha0,
+        alpha0_se=out_alpha0_se,
+        dalpha_dT=out_dalpha,
+        dalpha_dT_se=out_dalpha_se,
+        trend=out_trend,
+        trend_se=out_trend_se,
+        r2=out_r2,
+        n_effective=out_n_eff,
+        gamma_saod=out_gamma,
+        gamma_saod_se=out_gamma_se,
+        span_years=span_years,
+        kernel=kernel,
+        order=order,
+        n_lags=n_lags,
+    )
+
+
+def calibrate_dols_sliding_multibandwidth(
+    sea_level: pd.Series,
+    temperature: pd.Series,
+    bandwidths: List[float] = [30, 40, 50, 60],
+    **kwargs,
+) -> Dict[float, SlidingDOLSResult]:
+    """
+    Run sliding-window DOLS for multiple bandwidths.
+
+    Convenience wrapper around ``calibrate_dols_sliding`` for
+    systematic bandwidth sensitivity analysis.
+
+    Parameters
+    ----------
+    sea_level, temperature : pd.Series
+        As in ``calibrate_dols_sliding``.
+    bandwidths : list of float
+        Kernel bandwidths in years.
+    **kwargs
+        Additional keyword arguments passed to ``calibrate_dols_sliding``.
+
+    Returns
+    -------
+    dict of {bandwidth: SlidingDOLSResult}
+    """
+    results = {}
+    for bw in bandwidths:
+        results[bw] = calibrate_dols_sliding(
+            sea_level, temperature, span_years=bw, **kwargs,
+        )
+    return results
+
+
 # ---- Backward-compatibility wrappers (deprecated) ----
 
 DOLSQuadraticResult = DOLSResult  # type alias
@@ -1614,6 +2036,7 @@ __all__ = [
     # Data structures
     'KinematicsResult',
     'DOLSResult',
+    'SlidingDOLSResult',
     # Preprocessing
     'resample_to_monthly',
     'merge_multiresolution_data',
@@ -1625,6 +2048,8 @@ __all__ = [
     'compute_kinematics_multibandwidth',
     # Calibration
     'calibrate_dols',
+    'calibrate_dols_sliding',
+    'calibrate_dols_sliding_multibandwidth',
     'test_rate_temperature_nonlinearity',
     'test_saod_ic',
 ]
@@ -1643,5 +2068,7 @@ if __name__ == "__main__":
     print("  - compute_kinematics_multibandwidth()")
     print("\nCalibration:")
     print("  - calibrate_dols()")
+    print("  - calibrate_dols_sliding()")
+    print("  - calibrate_dols_sliding_multibandwidth()")
     print("  - test_rate_temperature_nonlinearity()")
     print("  - test_saod_ic()")

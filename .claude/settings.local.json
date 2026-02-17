@@ -15,7 +15,12 @@
       "WebFetch(domain:agupubs.onlinelibrary.wiley.com)",
       "WebFetch(domain:brgm.hal.science)",
       "WebFetch(domain:ueaeprints.uea.ac.uk)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(find:*)",
+      "Bash(du:*)",
+      "Bash(pip show:*)",
+      "Bash(sysctl:*)",
+      "Bash(pip uninstall:*)"
     ]
   }
 }

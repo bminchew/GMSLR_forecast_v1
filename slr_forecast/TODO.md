@@ -1,6 +1,6 @@
 # SLR Forecasting — Post-Vacation TODO
 
-*Last updated: 2026-02-16*
+*Last updated: 2026-02-17*
 *Context: MEMORY.md, predictability_analysis.ipynb (48 cells), slr_analysis.py, slr_data_readers.py, slr_projections.py, test_dols.py (19 tests)*
 
 ---
@@ -102,10 +102,10 @@
 - [x] Figures: `dols_robustness_heatmap.png`, `dols_robustness_forest.png`, `dols_robustness_ensemble.png`
 
 ### Key findings (start_year=1950, order=2, n_lags=2)
-- **Thermodynamic ensemble (12 pairs, excl. Horwath):** α₀ = 0.70 ± 0.57 mm/yr/°C, dα/dT = 1.90 ± 1.38 mm/yr/°C²
+- **Thermodynamic ensemble (8 pairs, excl. Horwath + Dangendorf sterodynamic):** α₀ = 0.49 ± 0.58 mm/yr/°C, dα/dT = 2.85 ± 0.38 mm/yr/°C²
 - **All-dataset ensemble (24 pairs, excl. Horwath):** α₀ = 1.73 ± 1.21 mm/yr/°C, dα/dT = 1.83 ± 1.09 mm/yr/°C²
 - GMST choice has modest impact (within ±0.5 mm/yr/°C for α₀); GMSL choice dominates spread
-- Dangendorf `sterodynamic` shows near-zero dα/dT (~0 ± 0.2), confirming it isolates only the ocean dynamic component (no ice/glacier acceleration signal)
+- Dangendorf `sterodynamic` shows near-zero dα/dT (~0 ± 0.2), confirming it isolates only the ocean dynamic component (no ice/glacier acceleration signal) — **excluded from thermodynamic ensemble** (see Notes)
 - IPCC observed thermodynamic (GMSL − Frederikse TWS) agrees well with Frederikse thermodynamic (dα/dT ≈ 3 mm/yr/°C² for both)
 - Horwath (1993–2016, 24 yr) produces wildly unstable estimates; excluded from ensemble statistics
 
@@ -116,65 +116,32 @@
 
 ---
 
-## 2c. Sliding-Window DOLS — Epoch Sensitivity of α₀ and dα/dT
+## ~~2c. Sliding-Window DOLS — Epoch Sensitivity of α₀ and dα/dT~~ — DONE
 
-**Goal:** Revive the "Dynamic" in DOLS by sliding a kernel-weighted window through the observational record to estimate time-varying coefficients α₀(t) and dα/dT(t). This directly addresses the start-date sensitivity discovered in 2b (§8.4 of LaTeX): coefficients trade off dramatically depending on which epoch dominates the fit.
+**Completed 2026-02-17.** Implemented `calibrate_dols_sliding()` in `slr_analysis.py` and created `dols_sliding_window.py` standalone analysis script.
 
-### Motivation
-- Start-date comparison (§8.4) revealed that Frederikse thermo dα/dT drops from 2.65 (1950+) to 0.19 (1900+), while Dangendorf total's dα/dT jumps from 1.98 to 5.18 — the α₀ and dα/dT coefficients are absorbing each other's signal in an epoch-dependent way
-- A single static DOLS calibration conflates potentially different dynamical regimes (early vs late 20th century)
-- The sliding-window approach diagnoses whether this is genuine physical nonstationarity or an artifact of observational inhomogeneity
-- The infrastructure already exists: `compute_kinematics()` in `slr_analysis.py` implements tri-cube kernel-weighted local polynomial regression with bandwidth selection — this just needs to be adapted for the DOLS rate-temperature regression instead of a rate-time regression
+- [x] `SlidingDOLSResult` dataclass with time-varying coefficients, standard errors, R², n_effective, optional gamma_saod
+- [x] `calibrate_dols_sliding(sea_level, temperature, gmsl_sigma=None, saod=None, order=2, n_lags=2, span_years=40, kernel='tricube', min_effective_obs=30, hac_maxlags=None)` — kernel-weighted WLS at each center year
+- [x] `calibrate_dols_sliding_multibandwidth()` — convenience wrapper for multiple bandwidths
+- [x] Multi-bandwidth analysis: h = 30, 40, 50, 60 years
+- [x] Cross-dataset comparison at h=40 yr for Frederikse total/thermo, Dangendorf total, IPCC observed total/thermo
+- [x] α₀ vs dα/dT tradeoff scatterplot (colored by center year)
+- [x] SAOD reconsideration: MLO vs GloSSAC significance in sliding windows
+- [x] 8 figures generated in `figures/`
 
-### Method: Kernel-Weighted DOLS
-At each center time t₀, fit the standard DOLS model:
-```
-∫H(t) = (dα/dT) × ∫T²(t) + α₀ × ∫T(t) + trend × t + const + Σ leads/lags + ε
-```
-but with kernel weights:
-```
-w_i = K((t_i - t₀) / h)  ×  (1/σ_i²)  [optional WLS]
-```
-where K is the tri-cube kernel (or Gaussian/Epanechnikov) and h is the bandwidth in years.
+### Key findings
+- **α₀–dα/dT tradeoff confirmed**: Quadratic and linear coefficients trade off in a smooth, epoch-dependent manner. The start-date sensitivity from §8.4 is not a statistical artifact — it reflects genuine epoch dependence in the rate-temperature relationship
+- **MLO SAOD significant in ~50% of sliding windows** (vs 0% in static DOLS): Volcanic forcing matters for epoch-specific fits, particularly for windows centered on the pre-1980 era that include the major 1963 (Agung) and 1982 (El Chichón) eruptions
+- **GloSSAC SAOD significant in only 2–5% of windows**: The shorter GloSSAC record (1979+) limits its coverage to windows that miss the pre-satellite volcanic events
+- **Coefficients show secular evolution**: dα/dT increases from ~0–1 in early-century windows to ~3–5 in late-century windows, consistent with accelerating ice-sheet contributions emerging in the thermodynamic signal
+- **Cross-dataset agreement**: Different GMSL datasets agree on the temporal structure of coefficient evolution, though absolute values differ
 
-This produces α₀(t₀) and dα/dT(t₀) at each center year, with standard errors from the weighted regression.
-
-### What needs to be done
-- [ ] **Implement `calibrate_dols_sliding()`** in `slr_analysis.py`:
-  - Signature: `calibrate_dols_sliding(sea_level, temperature, gmsl_sigma=None, order=2, n_lags=2, span_years=40, kernel='tricube', min_effective_obs=30)`
-  - At each center year t₀, construct kernel weights, run `sm.WLS` on the integral-space design matrix, extract coefficients
-  - Return a dataclass (or DataFrame) with time-varying α₀(t), dα/dT(t), trend(t), R²(t), each with standard errors
-  - Reuse kernel functions from `compute_kinematics()`
-- [ ] **Run on all GMSL × GMST combinations** from the robustness matrix:
-  - Frederikse total/thermo × Berkeley Earth (primary)
-  - Dangendorf total/sterodynamic × Berkeley Earth (comparison)
-  - Full matrix for completeness
-- [ ] **Multi-bandwidth analysis**: Run with h = 30, 40, 50, 60 years to assess the bias-variance tradeoff. Smaller bandwidths reveal more temporal structure but are noisier; larger bandwidths smooth toward the static-DOLS result
-- [ ] **Key diagnostic figures**:
-  - Fig A: α₀(t) vs year for multiple bandwidths, with ±1σ envelope — does α₀ evolve or remain constant?
-  - Fig B: dα/dT(t) vs year, same format — is the quadratic sensitivity stationary?
-  - Fig C: Comparison across GMSL datasets at a fixed bandwidth (h=40 yr) — do they agree on the temporal structure?
-  - Fig D: α₀ vs dα/dT scatterplot colored by center year — visualize the tradeoff discovered in §8.4
-- [ ] **Interpret results**:
-  - If α₀(t) and dα/dT(t) are approximately constant: the static DOLS is valid; start-date sensitivity is a statistical artifact of the quadratic-linear tradeoff
-  - If coefficients show a secular trend: the rate-temperature relationship is evolving, possibly due to changing ice-sheet dynamics, ocean heat uptake efficiency, or observational homogeneity
-  - If coefficients show a step change around ~1950-1970: suggests the pre-satellite era has genuinely different dynamics or data quality
-- [ ] **Add results to LaTeX document** (new §8.5 or extend §8.4)
-- [ ] **Update `dols_robustness.py`** with the sliding-window analysis or create a new script `dols_sliding_window.py`
-
-### Implementation notes
-- The kernel-weighted WLS is essentially `calibrate_dols()` but with additional time-varying weights multiplied into the existing WLS weights
-- For n_lags=2, each local DOLS fit needs at least ~20-25 years of data, so bandwidth h ≥ 30 yr is a practical minimum for order=2
-- For bandwidth h=40 yr with tri-cube kernel, the effective window is ±40 yr (80 yr total) since tri-cube has compact support at |u|=1
-- Records starting at 1900 can produce estimates from ~1940 to ~present with h=40 yr (edge effects before 1940)
-- Consider whether n_lags should be reduced (n_lags=1 or 0) for smaller bandwidths to preserve degrees of freedom
-- The `compute_kinematics_multibandwidth()` pattern (dict of bandwidth → results) is a useful template
-
-### Connections
-- Extends §8 (Multi-Dataset Robustness) of the LaTeX document
-- Directly explains the §8.4 start-date sensitivity finding
-- The sliding-window pattern applies equally to the IPCC emergent sensitivity (§7) — could test whether the IPCC α₀ is epoch-dependent across the projection period
-- May inform the choice of calibration window for the "production" DOLS fit used in projections
+### Scripts and figures
+- `notebooks/dols_sliding_window.py` — standalone analysis script
+- `figures/dols_sliding_multibw_frederikse.png`, `..._frederikse_thermo.png`, `..._dangendorf.png`, `..._ipcc_observed.png`, `..._ipcc_obs_thermo.png`
+- `figures/dols_sliding_cross_dataset.png`
+- `figures/dols_sliding_alpha_tradeoff.png`
+- `figures/dols_sliding_saod_comparison.png`
 
 ---
 
@@ -323,7 +290,7 @@ This produces α₀(t₀) and dα/dT(t₀) at each center year, with standard er
 | ~~1~~ | ~~Volcanic SAOD in DOLS~~ | **DONE** | None | ~~1-2 days~~ |
 | ~~2~~ | ~~DOLS on IPCC projections~~ | **DONE** | IPCC GMST per SSP | ~~1 day~~ |
 | ~~2b~~ | ~~DOLS robustness matrix~~ | **DONE** | Item 2 | ~~0.5 day~~ |
-| **2c** | **Sliding-window DOLS** | **Pending** | Item 2b | 1-2 days |
+| ~~2c~~ | ~~Sliding-window DOLS~~ | **DONE** | Item 2b | ~~1-2 days~~ |
 | 3 | Dangendorf thermodynamic | Pending | None (data loaded) | 0.5-1 day |
 | 4 | Stress-test WAIS | Pending | None (code exists) | 1-2 days |
 | 5a | Greenland regional warming | Pending | New data acquisition | 2-3 days |
@@ -334,6 +301,15 @@ This produces α₀(t₀) and dα/dT(t₀) at each center year, with standard er
 ---
 
 ## Recent Completed Work (for context)
+
+**2026-02-17 — Sliding-window DOLS, Dangendorf exclusion, README, notebook documentation:**
+- Excluded Dangendorf sterodynamic from thermodynamic ensemble in `dols_robustness.py` — thermodynamic ensemble tightened from dα/dT = 1.90 ± 1.38 to **2.85 ± 0.38** mm/yr/°C²
+- Implemented `calibrate_dols_sliding()` and `SlidingDOLSResult` dataclass in `slr_analysis.py` — kernel-weighted WLS (tricube/Gaussian/Epanechnikov) at each center year
+- Created `notebooks/dols_sliding_window.py` — standalone analysis script with multi-bandwidth, cross-dataset, and SAOD comparison analyses; 8 figures generated
+- Key SAOD finding: MLO SAOD significant in ~50% of sliding windows (vs 0% in static DOLS); GloSSAC only significant in 2–5%
+- Created comprehensive `README.md` for GitHub sharing
+- Updated all three Jupyter notebooks with descriptive markdown cells: `predictability_analysis.ipynb` (now 56 cells), `read_process_datafiles.ipynb` (53 cells), `slr_analysis_notebook.ipynb` (28 cells)
+- Moved 5 deprecated files to `notebooks/archive/`: `old.slr_semiempirical.py`, `unitconv.slr_data_readers.py`, `save.slr_analysis_notebook.ipynb`, `slr_analysis_notebook_executed.ipynb`, `01_data_alignment_and_kinematics.ipynb`
 
 **2026-02-14 — Factorial transform bug fix + verification suite:**
 - Found and fixed critical bug in `calibrate_dols()`: integral regressors were divided by `k!` AND regression coefficients multiplied by `k!`, resulting in `(k!)²` inflation. For quadratic (`k=2`), `dalpha_dT` was inflated by **4×**.
