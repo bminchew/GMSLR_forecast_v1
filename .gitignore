@@ -19,8 +19,31 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Data (large files - adjust as needed)
+# Data (large files)
 slr_forecast/data/raw/
+slr_forecast/data/processed/*.h5
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+
+# Reference PDFs (not source code)
+papers/*.pdf
+
+# Legacy notebook figures (canonical figures are in slr_forecast/figures/)
+slr_forecast/notebooks/figures/
+
+# Claude Code local settings
+.claude/
 
 # IDE
 .idea/
