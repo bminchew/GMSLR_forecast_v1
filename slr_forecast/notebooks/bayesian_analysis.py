@@ -38,6 +38,7 @@ from bayesian_dols import (
     build_dols_design_matrix, fit_bayesian_dols,
     fit_bayesian_dlm, fit_hierarchical_dols,
     BayesianDOLSResult, BayesianDLMResult, HierarchicalDOLSResult,
+    check_convergence,
 )
 
 # Paths
@@ -55,10 +56,9 @@ M_TO_MM = 1000.0
 
 def load_primary_dataset():
     """Load Frederikse GMSL + Berkeley Earth temperature with DatetimeIndex."""
-    store = pd.HDFStore(H5_PATH, mode="r")
-    df_fred = store["/raw/df_frederikse"]
-    df_berk = store["/raw/df_berkeley"]
-    store.close()
+    with pd.HDFStore(H5_PATH, mode="r") as store:
+        df_fred = store["/raw/df_frederikse"]
+        df_berk = store["/raw/df_berkeley"]
 
     sl = df_fred["gmsl"]
     sl_sigma = df_fred.get("gmsl_sigma", None)
@@ -490,7 +490,8 @@ def main():
 
         # Fixed-Q comparison using posterior median
         print("\n   DLM (fixed Q = posterior median)...")
-        Q_fixed_val = np.median(Q_med) if Q_med is not None else 1e-6
+        # Pass the per-coefficient Q vector directly (not a scalar median)
+        Q_fixed_val = Q_med if Q_med is not None else 1e-6
         dlm_fixed = fit_bayesian_dlm(
             sl, temp, gmsl_sigma=sl_sigma, order=2, n_lags=2,
             Q_fixed=Q_fixed_val, progress=False

@@ -768,11 +768,13 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
     }
     df = df.rename(columns=rename_map)
     
-    # Calculate symmetric uncertainties (sigma = half the 90% CI width)
+    # Calculate 1-sigma uncertainties from 90% CI bounds
+    # Frederikse lower/upper are 5th/95th percentiles (90% CI),
+    # so half-width = 1.645 * sigma for a normal distribution.
     for var in ['gmsl', 'steric', 'glaciers', 'greenland', 'antarctica', 'tws',
                 'sum_contributors', 'reservoir', 'groundwater', 'tws_natural', 'altimetry']:
         if f'{var}_lower' in df.columns and f'{var}_upper' in df.columns:
-            df[f'{var}_sigma'] = (df[f'{var}_upper'] - df[f'{var}_lower']) / 2
+            df[f'{var}_sigma'] = (df[f'{var}_upper'] - df[f'{var}_lower']) / (2 * 1.645)
     
     # Convert mm to meters if requested
     if convert_to_meters:
@@ -1539,12 +1541,16 @@ def read_hadcrut5(filepath: str) -> pd.DataFrame:
         'Lower confidence limit (2.5%)': 'temperature_lower',
         'Upper confidence limit (97.5%)': 'temperature_upper'
     })
+    # temperature_unc = half-width of the 95% CI (2.5%–97.5% bounds)
     df['temperature_unc'] = (df['temperature_upper'] - df['temperature_lower']) / 2
+    # Convert to 1-sigma: 95% CI half-width = 1.96 * sigma
+    df['temperature_sigma'] = df['temperature_unc'] / 1.96
 
     df.index.name = 'time'
 
     # Attach unit metadata
-    _tcols = ['temperature', 'temperature_unc', 'temperature_lower', 'temperature_upper']
+    _tcols = ['temperature', 'temperature_unc', 'temperature_sigma',
+              'temperature_lower', 'temperature_upper']
     df.attrs = {
         'dataset': 'hadcrut5',
         'reference': 'Morice et al. (2021)',
@@ -1558,7 +1564,8 @@ def read_hadcrut5(filepath: str) -> pd.DataFrame:
         'native_time_resolution': 'monthly',
     }
 
-    return df[['temperature', 'temperature_unc', 'temperature_lower', 'temperature_upper']]
+    return df[['temperature', 'temperature_unc', 'temperature_sigma',
+               'temperature_lower', 'temperature_upper']]
 
 
 def read_nasa_gistemp(filepath: str) -> pd.DataFrame:
@@ -2089,10 +2096,14 @@ def read_noaa_thermosteric(zip_path, start_year=1955):
     values[values == -999.999] = np.nan
     
     # 5. Construct Quarterly DatetimeIndex (Feb, May, Aug, Nov)
+    #    Guard against year overflow (raw data may have trailing values)
     num_entries = len(values)
     dates = []
     for i in range(num_entries):
         year = start_year + (i // 4)
+        if year > 2100:
+            values = values[:i]   # truncate to valid range
+            break
         month = [2, 5, 8, 11][i % 4]
         dates.append(pd.Timestamp(year=year, month=month, day=15))
         
@@ -2250,6 +2261,927 @@ def read_mauna_loa_transmission(filepath):
 
 
 # =============================================================================
+# COMPONENT DECOMPOSITION READERS
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Generic IMBIE reader  (Gt-format CSV files)
+# ---------------------------------------------------------------------------
+
+def _read_imbie_gt(filepath: str, dataset_name: str, region_label: str,
+                   convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Internal helper to read any IMBIE Gt-format CSV file.
+
+    All IMBIE 2021 Gt files share the same 5-column layout:
+        Year, Mass balance (Gt/yr), uncertainty, Cumulative (Gt), uncertainty
+
+    Parameters
+    ----------
+    filepath : str
+        Path to CSV file.
+    dataset_name : str
+        Value for ``df.attrs['dataset']`` (e.g. ``'imbie_greenland'``).
+    region_label : str
+        Human-readable region (e.g. ``'Greenland Ice Sheet'``).
+    convert_to_sle : bool, default True
+        Convert Gt to mm SLE (÷ 362.5) then to meters (÷ 1000).
+        If False, keep native Gt and Gt/yr.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    df = pd.read_csv(filepath)
+
+    # Rename to standard column names
+    df = df.rename(columns={
+        'Year': 'decimal_year',
+        'Mass balance (Gt/yr)': 'mass_balance_rate',
+        'Mass balance uncertainty (Gt/yr)': 'mass_balance_rate_sigma',
+        'Cumulative mass balance (Gt)': 'cumulative_mass_balance',
+        'Cumulative mass balance uncertainty (Gt)': 'cumulative_mass_balance_sigma',
+    })
+
+    # Datetime index
+    df['time'] = pd.to_datetime(
+        [decimal_year_to_datetime(y) for y in df['decimal_year']]
+    )
+    df = df.set_index('time')
+    df.index.name = 'time'
+
+    # Unit conversion: Gt → mm SLE (÷ 362.5) → m SLE (÷ 1000)
+    value_cols = [c for c in df.columns if c != 'decimal_year']
+    if convert_to_sle:
+        df[value_cols] = df[value_cols] / 362.5 / 1000.0   # Gt → m SLE
+        _len = 'm'
+        _rate = 'm/yr'
+    else:
+        _len = 'Gt'
+        _rate = 'Gt/yr'
+
+    df.attrs = {
+        'dataset': dataset_name,
+        'region': region_label,
+        'reference': 'Otosaka et al. (2023)',
+        'doi': '10.5194/essd-15-1597-2023',
+        'data_doi': '10.5285/77B64C55-7166-4A06-9DEF-2E400398E452',
+        'native_units': {
+            'mass_balance_rate': 'Gt/yr',
+            'mass_balance_rate_sigma': 'Gt/yr',
+            'cumulative_mass_balance': 'Gt',
+            'cumulative_mass_balance_sigma': 'Gt',
+        },
+        'current_units': {
+            'mass_balance_rate': _rate,
+            'mass_balance_rate_sigma': _rate,
+            'cumulative_mass_balance': _len,
+            'cumulative_mass_balance_sigma': _len,
+            'decimal_year': 'yr',
+        },
+        'units_standard': convert_to_sle,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'monthly',
+    }
+    return df
+
+
+def read_imbie_greenland(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read IMBIE Greenland Ice Sheet mass balance (Gt-format CSV).
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``imbie_greenland_2021_Gt.csv``.
+    convert_to_sle : bool, default True
+        If True, convert from Gt to meters sea-level equivalent
+        (1 Gt = 1/362.5 mm SLE).
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (1992–2020) with columns:
+        mass_balance_rate, mass_balance_rate_sigma,
+        cumulative_mass_balance, cumulative_mass_balance_sigma,
+        decimal_year.
+
+    Notes
+    -----
+    - Total GrIS mass balance (SMB + discharge combined).
+    - Positive rate → mass loss → sea level rise.
+    - IMBIE GrIS includes peripheral glaciers.
+
+    Reference
+    ---------
+    Otosaka et al. (2023) Earth Syst. Sci. Data, 15, 1597–1616.
+    https://doi.org/10.5194/essd-15-1597-2023
+    """
+    return _read_imbie_gt(filepath, 'imbie_greenland', 'Greenland Ice Sheet',
+                          convert_to_sle=convert_to_sle)
+
+
+def read_imbie_east_antarctica(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read IMBIE East Antarctic Ice Sheet mass balance (Gt-format CSV).
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``imbie_east_antarctica_2021_Gt.csv``.
+    convert_to_sle : bool, default True
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (1992–2020).
+
+    Notes
+    -----
+    - EAIS is largely stable; near mass balance or slight gain from increased snowfall.
+    - Contains marine sectors (Totten, Aurora, Wilkes) but none show imminent instability.
+
+    Reference
+    ---------
+    Otosaka et al. (2023) https://doi.org/10.5194/essd-15-1597-2023
+    """
+    return _read_imbie_gt(filepath, 'imbie_east_antarctica',
+                          'East Antarctic Ice Sheet', convert_to_sle=convert_to_sle)
+
+
+def read_imbie_antarctic_peninsula(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read IMBIE Antarctic Peninsula mass balance (Gt-format CSV).
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``imbie_antarctic_peninsula_2021_Gt.csv``.
+    convert_to_sle : bool, default True
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (1992–2020).
+
+    Notes
+    -----
+    - The Peninsula behaves like a collection of mountain glaciers
+      responding primarily to warming air temperature.
+    - Larsen A (1995) and Larsen B (2002) ice shelf collapses drove
+      significant glacier acceleration.
+
+    Reference
+    ---------
+    Otosaka et al. (2023) https://doi.org/10.5194/essd-15-1597-2023
+    """
+    return _read_imbie_gt(filepath, 'imbie_antarctic_peninsula',
+                          'Antarctic Peninsula', convert_to_sle=convert_to_sle)
+
+
+def read_imbie_antarctica(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read IMBIE total Antarctica mass balance (Gt-format CSV).
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``imbie_antarctica_2021_Gt.csv``.
+    convert_to_sle : bool, default True
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (1992–2020).
+
+    Notes
+    -----
+    Total AIS = WAIS + EAIS + Peninsula.  Useful for budget validation:
+    IMBIE total should equal the sum of the three sub-components.
+
+    Reference
+    ---------
+    Otosaka et al. (2023) https://doi.org/10.5194/essd-15-1597-2023
+    """
+    return _read_imbie_gt(filepath, 'imbie_antarctica',
+                          'Antarctic Ice Sheet (total)', convert_to_sle=convert_to_sle)
+
+
+def read_imbie_all(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read IMBIE all ice sheets combined (Greenland + Antarctica) mass balance.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``imbie_all_2021_Gt.csv``.
+    convert_to_sle : bool, default True
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (1992–2020).
+
+    Reference
+    ---------
+    Otosaka et al. (2023) https://doi.org/10.5194/essd-15-1597-2023
+    """
+    return _read_imbie_gt(filepath, 'imbie_all',
+                          'All ice sheets (GrIS + AIS)', convert_to_sle=convert_to_sle)
+
+
+# ---------------------------------------------------------------------------
+# GlaMBIE glacier readers
+# ---------------------------------------------------------------------------
+
+_GLAMBIE_REGIONS = {
+    0: 'global',
+    1: 'alaska',
+    2: 'western_canada_us',
+    3: 'arctic_canada_north',
+    4: 'arctic_canada_south',
+    5: 'greenland_periphery',
+    6: 'iceland',
+    7: 'svalbard',
+    8: 'scandinavia',
+    9: 'russian_arctic',
+    10: 'north_asia',
+    11: 'central_europe',
+    12: 'caucasus_middle_east',
+    13: 'central_asia',
+    14: 'south_asia_west',
+    15: 'south_asia_east',
+    16: 'low_latitudes',
+    17: 'southern_andes',
+    18: 'new_zealand',
+    19: 'antarctic_and_subantarctic',
+}
+
+
+def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read GlaMBIE global glacier consensus mass balance.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``0_global_glambie_consensus.csv``.
+    convert_to_sle : bool, default True
+        Convert Gt to meters sea-level equivalent.
+
+    Returns
+    -------
+    pd.DataFrame
+        Annual DataFrame (2000–2023) with columns:
+        mass_balance (Gt or m SLE), mass_balance_sigma,
+        mass_balance_mwe (m.w.e.), mass_balance_mwe_sigma,
+        glacier_area (km²), decimal_year.
+
+    Notes
+    -----
+    - Positive mass_balance in the raw file = mass gain (opposite sign to SLR);
+      this reader flips sign so that positive = sea level contribution.
+    - 1 Gt water = 1/362.5 mm SLE.
+    - GlaMBIE excludes ice-sheet peripheral glaciers by default, but
+      Region 5 (Greenland periphery) and Region 19 (Antarctic & Subantarctic)
+      overlap with IMBIE boundaries.  Check before combining with ice-sheet data.
+
+    Reference
+    ---------
+    Zemp, M. et al. (2024). GlaMBIE: Global Glacier Mass Balance
+    Intercomparison Exercise. World Glacier Monitoring Service (WGMS).
+    https://doi.org/10.5904/wgms-glambie-2024-07
+    """
+    df = pd.read_csv(filepath)
+
+    # Mid-year time coordinate
+    mid_year = (df['start_dates'] + df['end_dates']) / 2.0
+    df['decimal_year'] = mid_year
+    df['time'] = pd.to_datetime(
+        [decimal_year_to_datetime(y) for y in mid_year]
+    )
+    df = df.set_index('time')
+    df.index.name = 'time'
+
+    # Rename and sign-flip: GlaMBIE negative = mass loss, but we want
+    # positive = sea level contribution
+    df = df.rename(columns={
+        'combined_gt': 'mass_balance',
+        'combined_gt_errors': 'mass_balance_sigma',
+        'combined_mwe': 'mass_balance_mwe',
+        'combined_mwe_errors': 'mass_balance_mwe_sigma',
+        'glacier_area': 'glacier_area',
+    })
+    # Flip sign: negative Gt = mass loss → positive SLR contribution
+    df['mass_balance'] = -df['mass_balance']
+    df['mass_balance_mwe'] = -df['mass_balance_mwe']
+
+    # Drop 'region', 'start_dates', 'end_dates' columns
+    df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
+
+    if convert_to_sle:
+        # Gt → m SLE (÷ 362.5 ÷ 1000)
+        for col in ['mass_balance', 'mass_balance_sigma']:
+            df[col] = df[col] / 362.5 / 1000.0
+        _unit = 'm/yr'
+    else:
+        _unit = 'Gt/yr'
+
+    df.attrs = {
+        'dataset': 'glambie_global',
+        'reference': 'Zemp et al. (2024)',
+        'doi': '10.5904/wgms-glambie-2024-07',
+        'data_doi': '10.5904/wgms-glambie-2024-07',
+        'native_units': {
+            'mass_balance': 'Gt/yr', 'mass_balance_sigma': 'Gt/yr',
+            'mass_balance_mwe': 'm.w.e./yr', 'mass_balance_mwe_sigma': 'm.w.e./yr',
+            'glacier_area': 'km^2',
+        },
+        'current_units': {
+            'mass_balance': _unit, 'mass_balance_sigma': _unit,
+            'mass_balance_mwe': 'm.w.e./yr', 'mass_balance_mwe_sigma': 'm.w.e./yr',
+            'glacier_area': 'km^2', 'decimal_year': 'yr',
+        },
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+        'sign_convention': 'positive = sea level contribution (mass loss)',
+    }
+    return df
+
+
+def read_glambie_regional(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read a GlaMBIE regional glacier mass balance CSV.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to a regional CSV file, e.g.
+        ``glambie_results_20240716/calendar_years/1_alaska.csv``.
+    convert_to_sle : bool, default True
+
+    Returns
+    -------
+    pd.DataFrame
+        Same structure as ``read_glambie_global()``.
+
+    Notes
+    -----
+    Regional files have the same column layout as the global file.
+    The region name is extracted from the 'region' column.
+    """
+    df = pd.read_csv(filepath)
+
+    region_name = df['region'].iloc[0] if 'region' in df.columns else 'unknown'
+
+    mid_year = (df['start_dates'] + df['end_dates']) / 2.0
+    df['decimal_year'] = mid_year
+    df['time'] = pd.to_datetime(
+        [decimal_year_to_datetime(y) for y in mid_year]
+    )
+    df = df.set_index('time')
+    df.index.name = 'time'
+
+    df = df.rename(columns={
+        'combined_gt': 'mass_balance',
+        'combined_gt_errors': 'mass_balance_sigma',
+        'combined_mwe': 'mass_balance_mwe',
+        'combined_mwe_errors': 'mass_balance_mwe_sigma',
+    })
+    # Flip sign: negative Gt = mass loss → positive SLR contribution
+    df['mass_balance'] = -df['mass_balance']
+    df['mass_balance_mwe'] = -df['mass_balance_mwe']
+
+    df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
+
+    if convert_to_sle:
+        for col in ['mass_balance', 'mass_balance_sigma']:
+            df[col] = df[col] / 362.5 / 1000.0
+        _unit = 'm/yr'
+    else:
+        _unit = 'Gt/yr'
+
+    df.attrs = {
+        'dataset': f'glambie_{region_name}',
+        'region': region_name,
+        'reference': 'Zemp et al. (2024)',
+        'doi': '10.5904/wgms-glambie-2024-07',
+        'data_doi': '10.5904/wgms-glambie-2024-07',
+        'native_units': {
+            'mass_balance': 'Gt/yr', 'mass_balance_sigma': 'Gt/yr',
+            'mass_balance_mwe': 'm.w.e./yr', 'mass_balance_mwe_sigma': 'm.w.e./yr',
+            'glacier_area': 'km^2',
+        },
+        'current_units': {
+            'mass_balance': _unit, 'mass_balance_sigma': _unit,
+            'mass_balance_mwe': 'm.w.e./yr', 'mass_balance_mwe_sigma': 'm.w.e./yr',
+            'glacier_area': 'km^2', 'decimal_year': 'yr',
+        },
+        'units_standard': False,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'annual',
+        'sign_convention': 'positive = sea level contribution (mass loss)',
+    }
+    return df
+
+
+# ---------------------------------------------------------------------------
+# IPCC AR6 FACTS Component Reader (generic)
+# ---------------------------------------------------------------------------
+
+def read_ipcc_ar6_component(
+    component_dir: str,
+    component_type: str,
+    sub_component: Optional[str] = None,
+    model: Optional[str] = None,
+    scenario: str = 'ssp245',
+    convert_to_meters: bool = True,
+) -> pd.DataFrame:
+    """
+    Read an IPCC AR6 FACTS component-level projection from NetCDF.
+
+    Generic reader for the ``dist_components/`` directory containing
+    per-component, per-scenario projection distributions.
+
+    Parameters
+    ----------
+    component_dir : str
+        Path to the ``dist_components/`` directory containing all
+        component NetCDF files.
+    component_type : str
+        One of: ``'glaciers'``, ``'icesheets'``, ``'landwaterstorage'``,
+        ``'oceandynamics'``.
+    sub_component : str, optional
+        Ice-sheet sub-region: ``'GIS'``, ``'AIS'``, ``'WAIS'``, ``'EAIS'``,
+        ``'PEN'``.  Required for ``component_type='icesheets'``.
+        Ignored for other component types.
+    model : str, optional
+        Model identifier to disambiguate when multiple models exist.
+        E.g. ``'ar5'``, ``'ipccar6-ismipemuicesheet'``, ``'FittedISMIP'``,
+        ``'ipccar6-larmipicesheet'``, ``'ipccar6-bambericesheet'``,
+        ``'dp20'``.  If None, auto-selects: prefers ``'ipccar6-'`` models
+        when available.
+    scenario : str, default 'ssp245'
+        SSP or temperature-limit scenario (e.g. ``'ssp585'``,
+        ``'tlim2.0win0.25'``).
+    convert_to_meters : bool, default True
+        Convert from native mm to meters.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with integer year index and columns:
+        ``median``, ``p5``, ``p17``, ``p50``, ``p83``, ``p95``,
+        ``mean``, ``std``.  All in mm or m depending on
+        ``convert_to_meters``.
+
+    Notes
+    -----
+    - FACTS projections are relative to a 2005 baseline.
+    - Native units in the NetCDF files are mm.
+    - The 107 quantiles in each file span 0.000–1.000.
+
+    Reference
+    ---------
+    Garner, G. G., et al. (2023). https://doi.org/10.5194/gmd-16-7461-2023
+    """
+    import glob as globmod
+
+    # Build filename pattern
+    # Filename convention: {type_prefix}-{model}-{scenario}[_{sub}]_globalsl.nc
+    #   glaciers-ar5-glaciersgmip2-ssp245_globalsl.nc
+    #   icesheets-ar5-icesheets-ssp245_WAIS_globalsl.nc
+    #   landwaterstorage-ssp-landwaterstorage-ssp245_globalsl.nc
+    #   oceandynamics-tlm-oceandynamics-ssp245_globalsl.nc
+
+    if sub_component:
+        pattern = os.path.join(
+            component_dir,
+            f'{component_type}-*-{scenario}_{sub_component}_globalsl.nc'
+        )
+    else:
+        pattern = os.path.join(
+            component_dir,
+            f'{component_type}-*-{scenario}_globalsl.nc'
+        )
+
+    matches = sorted(globmod.glob(pattern))
+
+    if not matches:
+        raise FileNotFoundError(
+            f"No FACTS files found for component_type='{component_type}', "
+            f"sub_component='{sub_component}', scenario='{scenario}' "
+            f"in {component_dir}.\nPattern: {pattern}"
+        )
+
+    # Model selection
+    if model is not None:
+        filtered = [m for m in matches if model in os.path.basename(m)]
+        if not filtered:
+            available = [os.path.basename(m) for m in matches]
+            raise FileNotFoundError(
+                f"Model '{model}' not found. Available files: {available}"
+            )
+        matches = filtered
+
+    if len(matches) > 1:
+        # Prefer ipccar6 models
+        ipccar6 = [m for m in matches if 'ipccar6' in os.path.basename(m)]
+        if ipccar6:
+            matches = ipccar6
+        # If still multiple, prefer the first alphabetically
+        if len(matches) > 1:
+            pass  # Take first
+
+    nc_path = matches[0]
+
+    # Read NetCDF
+    import xarray as xr
+    ds = xr.open_dataset(nc_path)
+
+    years = ds['years'].values
+    quantiles = ds['quantiles'].values
+    # sea_level_change: (quantiles, years, locations=1)
+    slc = ds['sea_level_change'].values[:, :, 0]  # (quantiles, years)
+    ds.close()
+
+    # Extract key quantiles
+    def _get_q(q_val):
+        idx = np.argmin(np.abs(quantiles - q_val))
+        return slc[idx, :]
+
+    df = pd.DataFrame({
+        'p5': _get_q(0.05),
+        'p17': _get_q(0.17),
+        'median': _get_q(0.50),
+        'p83': _get_q(0.83),
+        'p95': _get_q(0.95),
+        'mean': np.nanmean(slc, axis=0),
+        'std': np.nanstd(slc, axis=0),
+    }, index=years)
+    df.index.name = 'year'
+
+    if convert_to_meters:
+        for col in df.columns:
+            df[col] = df[col] / 1000.0
+        _unit = 'm'
+    else:
+        _unit = 'mm'
+
+    model_used = os.path.basename(nc_path).split(f'-{scenario}')[0]
+
+    df.attrs = {
+        'dataset': f'ipcc_ar6_{component_type}',
+        'component': component_type,
+        'sub_component': sub_component or 'total',
+        'model': model_used,
+        'scenario': scenario,
+        'source_file': os.path.basename(nc_path),
+        'reference': 'Garner et al. (2023)',
+        'doi': '10.5194/gmd-16-7461-2023',
+        'native_units': 'mm',
+        'current_units': _unit,
+        'units_standard': convert_to_meters,
+        'quantity': 'sea_level',
+        'baseline': 2005,
+    }
+    return df
+
+
+def list_ipcc_ar6_components(component_dir: str) -> pd.DataFrame:
+    """
+    List all available IPCC AR6 FACTS component files.
+
+    Parameters
+    ----------
+    component_dir : str
+        Path to ``dist_components/`` directory.
+
+    Returns
+    -------
+    pd.DataFrame
+        Table with columns: filename, component_type, model,
+        scenario, sub_component.
+    """
+    import glob as globmod
+
+    files = sorted(globmod.glob(os.path.join(component_dir, '*.nc')))
+    records = []
+    for f in files:
+        fname = os.path.basename(f)
+        # Parse: {component_type}-{model_parts}-{scenario}[_{sub}]_globalsl.nc
+        parts = fname.replace('_globalsl.nc', '').split('-')
+        comp_type = parts[0]
+
+        # Find scenario (starts with 'ssp' or 'tlim')
+        scenario_idx = None
+        for i, p in enumerate(parts):
+            if p.startswith('ssp') or p.startswith('tlim'):
+                scenario_idx = i
+                break
+
+        if scenario_idx is None:
+            continue
+
+        model_str = '-'.join(parts[1:scenario_idx])
+        scenario_sub = parts[scenario_idx]
+
+        # Check for sub-component (after underscore in scenario part)
+        if '_' in scenario_sub:
+            scenario, sub = scenario_sub.split('_', 1)
+        else:
+            scenario = scenario_sub
+            sub = None
+
+        records.append({
+            'filename': fname,
+            'component_type': comp_type,
+            'model': model_str,
+            'scenario': scenario,
+            'sub_component': sub,
+        })
+
+    return pd.DataFrame(records)
+
+
+# ---------------------------------------------------------------------------
+# GRACE mascon reader  (JPL RL06.3, global gridded → land-integrated TWS)
+# ---------------------------------------------------------------------------
+
+def read_grace_tws_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
+    """
+    Read GRACE/GRACE-FO JPL mascon and compute global land TWS anomaly.
+
+    Integrates gridded liquid-water-equivalent (LWE) thickness over land
+    (excluding Greenland and Antarctica) to produce a global terrestrial
+    water storage anomaly time series in mm SLE or meters SLE.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``GRCTellus.JPL.*.GLO.RL06.3M.MSCNv04CRI.nc``.
+    convert_to_sle : bool, default True
+        If True, convert cm LWE to meters SLE.
+        If False, return integrated LWE in Gt.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame (2002–present) with columns:
+        tws_anomaly, tws_anomaly_sigma, decimal_year.
+
+    Notes
+    -----
+    - LWE thickness is in cm. Each 0.5°×0.5° grid cell contributes
+      area × lwe_thickness × water_density to the mass anomaly.
+    - Land mask from the file excludes ocean cells.
+    - Greenland (lat > 60°N, lon 295–350°E) and Antarctica (lat < -60°S)
+      are excluded so TWS does not double-count ice-sheet mass changes.
+    - GRACE has a gap 2017-06 to 2018-05 (between GRACE and GRACE-FO).
+    - 1 Gt water = 1/362.5 mm SLE.
+
+    Reference
+    ---------
+    Watkins, M. M. et al. (2015). Improved methods for observing Earth's
+    time variable mass distribution with GRACE. J. Geophys. Res., 120,
+    2648–2671. https://doi.org/10.1002/2014JB011547
+    """
+    import xarray as xr
+
+    ds = xr.open_dataset(filepath)
+    lwe = ds['lwe_thickness']         # (time, lat, lon), cm
+    unc = ds['uncertainty']           # (time, lat, lon), cm
+    land_mask = ds['land_mask']       # (lat, lon) — 1 = land, 0 = ocean
+    lat = ds['lat'].values            # degrees_north
+    lon = ds['lon'].values            # degrees_east
+    time_vals = ds['time'].values
+
+    # Compute cell areas (km²) using cos(lat) weighting
+    R_earth = 6371.0  # km
+    dlat = np.abs(np.diff(lat).mean())  # ~0.5°
+    dlon = np.abs(np.diff(lon).mean())  # ~0.5°
+    lat_rad = np.deg2rad(lat)
+    cell_area = (R_earth ** 2) * np.deg2rad(dlat) * np.deg2rad(dlon) * np.cos(lat_rad)
+    # cell_area shape: (lat,) — broadcast over lon
+    area_grid = np.outer(cell_area, np.ones(len(lon)))  # (lat, lon), km²
+
+    # Build mask: land, excluding Greenland and Antarctica
+    mask_2d = land_mask.values.copy()  # (lat, lon)
+    # Exclude Antarctica: lat < -60
+    mask_2d[lat < -60, :] = 0
+    # Exclude Greenland: lat > 60 AND lon in [295, 350] (= [-65, -10] in 0–360)
+    for i, la in enumerate(lat):
+        if la > 60:
+            for j, lo in enumerate(lon):
+                lo360 = lo % 360
+                if 295 <= lo360 <= 350:
+                    mask_2d[i, j] = 0
+
+    # Integrate: sum(lwe_cm × area_km² × mask) → total volume in cm·km²
+    # Convert to Gt: 1 cm·km² = 1e-5 km³ water = 1e-5 × 1e9 tonnes = 1e4 tonnes = 0.01 Gt
+    # Actually: 1 cm = 0.01 m; area in km² = 1e6 m²; volume = 0.01 × 1e6 = 1e4 m³
+    # 1 m³ water = 1 tonne; 1 Gt = 1e12 kg = 1e9 tonnes
+    # So 1e4 m³ = 1e4 tonnes = 1e4/1e9 Gt = 1e-5 Gt per cell
+    # Total: sum(lwe_cm × area_km²) × 1e-5 = Gt
+    # More precisely: cm_to_m = 0.01; km2_to_m2 = 1e6; rho_w = 1000 kg/m³
+    # mass_kg = lwe_cm × 0.01 × area_km² × 1e6 × 1000
+    #         = lwe_cm × area_km² × 1e7
+    # mass_Gt = lwe_cm × area_km² × 1e7 / 1e12 = lwe_cm × area_km² × 1e-5
+
+    lwe_vals = lwe.values   # (time, lat, lon)
+    unc_vals = unc.values   # (time, lat, lon)
+
+    n_time = lwe_vals.shape[0]
+    tws_gt = np.full(n_time, np.nan)
+    tws_gt_sigma = np.full(n_time, np.nan)
+
+    masked_area = area_grid * mask_2d  # (lat, lon)
+
+    for t in range(n_time):
+        lwe_t = lwe_vals[t]
+        unc_t = unc_vals[t]
+        valid = ~np.isnan(lwe_t) & (mask_2d > 0)
+        if valid.sum() > 0:
+            tws_gt[t] = np.nansum(lwe_t * masked_area * valid) * 1e-5
+            # Uncertainty: sum in quadrature (assumes spatially uncorrelated)
+            tws_gt_sigma[t] = np.sqrt(
+                np.nansum((unc_t * masked_area * valid) ** 2)
+            ) * 1e-5
+
+    ds.close()
+
+    # Build DataFrame
+    time_dt = pd.to_datetime(time_vals)
+    df = pd.DataFrame({
+        'tws_anomaly': tws_gt,
+        'tws_anomaly_sigma': tws_gt_sigma,
+    }, index=time_dt)
+    df.index.name = 'time'
+
+    # Add decimal year
+    df['decimal_year'] = [datetime_to_decimal_year(t.to_pydatetime()) for t in df.index]
+
+    if convert_to_sle:
+        # Gt → m SLE: ÷ 362.5 ÷ 1000
+        for col in ['tws_anomaly', 'tws_anomaly_sigma']:
+            df[col] = df[col] / 362.5 / 1000.0
+        _unit = 'm'
+    else:
+        _unit = 'Gt'
+
+    df.attrs = {
+        'dataset': 'grace_tws_global',
+        'reference': 'Watkins et al. (2015)',
+        'doi': '10.1002/2014JB011547',
+        'data_doi': '10.5067/TEMSC-3JC63',
+        'native_units': {'lwe_thickness': 'cm'},
+        'current_units': {'tws_anomaly': _unit, 'tws_anomaly_sigma': _unit},
+        'units_standard': convert_to_sle,
+        'quantity': 'terrestrial_water_storage',
+        'native_time_resolution': 'monthly',
+        'excluded_regions': 'Greenland (lat>60, lon 295-350), Antarctica (lat<-60)',
+        'sign_convention': 'positive = increased land storage (sea level drop)',
+    }
+    return df
+
+
+# ---------------------------------------------------------------------------
+# ENSO index readers
+# ---------------------------------------------------------------------------
+
+def read_noaa_oni(filepath: str) -> pd.DataFrame:
+    """
+    Read NOAA Oceanic Niño Index (ONI) from CPC.
+
+    The ONI is a 3-month running mean of SST anomalies in the Niño 3.4
+    region (5°N–5°S, 120°–170°W). El Niño: ONI ≥ +0.5 °C for ≥5
+    consecutive months; La Niña: ONI ≤ −0.5 °C for ≥5 months.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``noaa_oni_index.csv`` (or similar).
+        Expected: Date column + ONI value.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame with column ``oni`` (°C anomaly).
+
+    Reference
+    ---------
+    NOAA Climate Prediction Center.
+    https://psl.noaa.gov/data/timeseries/monthly/ONI/
+    """
+    # Format: first row is header "Date,  ONI from CPC  missing value -99.9 ..."
+    # then rows: "1950-01-01,   -1.530"
+    df = pd.read_csv(filepath, skiprows=0)
+
+    # The header line may be messy — rename
+    cols = list(df.columns)
+    df = df.rename(columns={cols[0]: 'date', cols[1]: 'oni'})
+
+    df['time'] = pd.to_datetime(df['date'].str.strip())
+    df = df.set_index('time')
+    df.index.name = 'time'
+
+    df['oni'] = pd.to_numeric(df['oni'], errors='coerce')
+    df.loc[df['oni'] <= -99, 'oni'] = np.nan
+
+    df = df[['oni']].copy()
+
+    df.attrs = {
+        'dataset': 'noaa_oni',
+        'reference': 'NOAA Climate Prediction Center',
+        'doi': '',
+        'data_doi': '',
+        'native_units': {'oni': 'degC'},
+        'current_units': {'oni': 'degC'},
+        'units_standard': True,
+        'quantity': 'enso_index',
+        'native_time_resolution': 'monthly',
+        'description': 'Oceanic Niño Index (3-month running mean SST anomaly, Niño 3.4)',
+    }
+    return df
+
+
+def read_noaa_mei(filepath: str) -> pd.DataFrame:
+    """
+    Read NOAA Multivariate ENSO Index (MEI.v2).
+
+    The MEI combines five variables (SLP, SST, surface zonal/meridional
+    winds, OLR) into a single bimonthly index via EOF analysis.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``noaa_mei_index.txt``.
+        Fixed-width format: YEAR followed by 12 monthly values.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame with column ``mei`` (dimensionless).
+
+    Reference
+    ---------
+    Wolter, K. & Timlin, M. S. (2011). El Niño/Southern Oscillation
+    behaviour since 1871. Int. J. Climatol., 31, 1074–1087.
+    https://psl.noaa.gov/enso/mei/
+    """
+    # Fixed-width: first row = "YEAR  start  end"
+    # subsequent rows = "1979  0.46  0.29  ..."
+    # First line contains year range info
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+
+    # First line: "1979     2025" — metadata; footer has text lines
+    records = []
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 13:
+            continue
+        try:
+            year = int(parts[0])
+        except ValueError:
+            continue   # skip footer text lines
+        for month_idx, val_str in enumerate(parts[1:13], start=1):
+            try:
+                val = float(val_str)
+            except ValueError:
+                val = np.nan
+            records.append({
+                'year': year, 'month': month_idx, 'mei': val
+            })
+
+    df = pd.DataFrame(records)
+    df['time'] = pd.to_datetime(
+        df['year'].astype(str) + '-' + df['month'].astype(str).str.zfill(2) + '-15'
+    )
+    df = df.set_index('time')
+    df.index.name = 'time'
+    df = df[['mei']].copy()
+
+    # Replace missing values
+    df.loc[df['mei'] <= -999, 'mei'] = np.nan
+
+    df.attrs = {
+        'dataset': 'noaa_mei',
+        'reference': 'Wolter & Timlin (2011)',
+        'doi': '',
+        'data_doi': '',
+        'native_units': {'mei': 'dimensionless'},
+        'current_units': {'mei': 'dimensionless'},
+        'units_standard': True,
+        'quantity': 'enso_index',
+        'native_time_resolution': 'monthly',
+        'description': 'Multivariate ENSO Index v2 (bimonthly EOF-based)',
+    }
+    return df
+
+
+# =============================================================================
 # MODULE EXPORTS
 # =============================================================================
 
@@ -2279,6 +3211,19 @@ __all__ = [
     # SAOD readers
     'read_glossac',
     'read_mauna_loa_transmission',
+    # Component decomposition readers
+    'read_imbie_greenland',
+    'read_imbie_east_antarctica',
+    'read_imbie_antarctic_peninsula',
+    'read_imbie_antarctica',
+    'read_imbie_all',
+    'read_glambie_global',
+    'read_glambie_regional',
+    'read_ipcc_ar6_component',
+    'list_ipcc_ar6_components',
+    'read_grace_tws_global',
+    'read_noaa_oni',
+    'read_noaa_mei',
     # Unit conversion
     'convert_to_standard_units',
     'convert_units',

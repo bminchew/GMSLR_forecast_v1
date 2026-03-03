@@ -41,7 +41,7 @@ from slr_analysis import calibrate_dols, DOLSResult, test_rate_temperature_nonli
 # Paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 H5_PATH = os.path.join(DATA_DIR, "processed", "slr_processed_data.h5")
-FIG_DIR = os.path.join(os.path.dirname(__file__), "figures")
+FIG_DIR = os.path.join(os.path.dirname(__file__), "..", "figures")
 os.makedirs(FIG_DIR, exist_ok=True)
 
 # SSP mapping between temperature keys and SLR keys
@@ -84,24 +84,23 @@ def load_ipcc_data():
     ipcc_temp : dict of pd.DataFrame keyed by SSP code (e.g. 'SSP2_4_5')
     hist_temp : pd.DataFrame for Historical period
     """
-    store = pd.HDFStore(H5_PATH, mode="r")
+    with pd.HDFStore(H5_PATH, mode="r") as store:
 
-    ipcc_gmsl = {}
-    for ssp in SSP_MAP:
-        key = f"/projections/gmsl/{ssp}"
-        if key in store:
-            ipcc_gmsl[ssp] = store[key]
+        ipcc_gmsl = {}
+        for ssp in SSP_MAP:
+            key = f"/projections/gmsl/{ssp}"
+            if key in store:
+                ipcc_gmsl[ssp] = store[key]
 
-    ipcc_temp = {}
-    for ssp_slr, ssp_temp in SSP_MAP.items():
-        key = f"/projections/temp/{ssp_temp}"
-        if key in store:
-            ipcc_temp[ssp_slr] = store[key]
+        ipcc_temp = {}
+        for ssp_slr, ssp_temp in SSP_MAP.items():
+            key = f"/projections/temp/{ssp_temp}"
+            if key in store:
+                ipcc_temp[ssp_slr] = store[key]
 
-    key_hist = "/projections/temp/Historical"
-    hist_temp = store[key_hist] if key_hist in store else None
+        key_hist = "/projections/temp/Historical"
+        hist_temp = store[key_hist] if key_hist in store else None
 
-    store.close()
     return ipcc_gmsl, ipcc_temp, hist_temp
 
 
@@ -210,6 +209,14 @@ def polyfit_model_selection(years, gmsl, temperature, label=""):
 
     Rates are computed by finite differences on the (smooth, decadal)
     IPCC projections.
+
+    **Caveat**: Finite-difference rates from cumulative GMSL share
+    endpoints between adjacent intervals, inducing positive serial
+    correlation.  The F-tests and t-tests assume independent errors
+    and are therefore anti-conservative (p-values are too optimistic).
+    With only ~8 rate points, the effective degrees of freedom are
+    further reduced.  Interpret p-values as approximate guidance, not
+    rigorous hypothesis tests.
 
     Parameters
     ----------
@@ -649,9 +656,19 @@ def test_cross_ssp_consistency(polyfit_results):
 #  9. STATISTICAL POWER ANALYSIS
 # =====================================================================
 
-# Observational DOLS calibration (from results_summary.json)
-OBS_DALPHA_DT_MM = 5.086   # mm/yr/°C²
-OBS_DALPHA_DT_SE_MM = 0.563  # mm/yr/°C²
+# Observational DOLS calibration — load from results_summary.json if available,
+# fall back to hardcoded defaults otherwise.
+_RESULTS_JSON = os.path.join(DATA_DIR, "processed", "results_summary.json")
+OBS_DALPHA_DT_MM = 5.086   # default (mm/yr/°C²)
+OBS_DALPHA_DT_SE_MM = 0.563  # default (mm/yr/°C²)
+try:
+    import json
+    with open(_RESULTS_JSON) as _f:
+        _rsj = json.load(_f)
+    OBS_DALPHA_DT_MM = _rsj["dols_calibration"]["dalpha_dT_mm"]
+    OBS_DALPHA_DT_SE_MM = _rsj["dols_calibration"]["dalpha_dT_se_mm"]
+except (FileNotFoundError, KeyError, json.JSONDecodeError):
+    pass  # use defaults
 
 
 def compute_power_analysis(polyfit_results, obs_dalpha_dT=OBS_DALPHA_DT_MM,
@@ -681,6 +698,8 @@ def compute_power_analysis(polyfit_results, obs_dalpha_dT=OBS_DALPHA_DT_MM,
         ssp_code -> dict with 'se_a', 'mde_80', 'obs_within_2sigma',
                     'obs_within_ci', 'power_at_obs'
     """
+    # Use t-distribution for small samples (n-k degrees of freedom)
+    # instead of normal approximation
     z_alpha = stats.norm.ppf(1 - alpha / 2)  # two-tailed critical value
     z_beta80 = stats.norm.ppf(0.80)  # 80% power
 
@@ -700,10 +719,12 @@ def compute_power_analysis(polyfit_results, obs_dalpha_dT=OBS_DALPHA_DT_MM,
         obs_within_ci = ci_lo <= obs_dalpha_dT <= ci_hi
 
         # Power to detect the observational effect size
-        # power = P(reject H0 | true a = obs_dalpha_dT)
-        #       = Φ((|obs| / SE) - z_alpha)
+        # Use t-distribution with df = n - k_quad for small-sample accuracy
+        df_quad = n - 3  # 3 params in quadratic fit
+        t_crit = stats.t.ppf(1 - alpha / 2, df_quad) if df_quad > 0 else z_alpha
         noncentrality = abs(obs_dalpha_dT) / se_a if se_a > 0 else np.inf
-        power_at_obs = stats.norm.cdf(noncentrality - z_alpha)
+        power_at_obs = 1.0 - stats.t.cdf(t_crit - noncentrality, df_quad) if df_quad > 0 \
+            else stats.norm.cdf(noncentrality - z_alpha)
 
         power_results[ssp_code] = {
             "n_rates": n,

@@ -61,6 +61,18 @@ import statsmodels.api as sm
 
 
 # =============================================================================
+# SHARED HELPERS
+# =============================================================================
+
+def _to_month_start(s: pd.Series) -> pd.Series:
+    """Snap datetime index to the first of each month."""
+    new_idx = s.index.to_period('M').to_timestamp()
+    out = s.copy()
+    out.index = new_idx
+    return out[~out.index.duplicated(keep='first')]
+
+
+# =============================================================================
 # DATA STRUCTURES
 # =============================================================================
 
@@ -1027,14 +1039,6 @@ def calibrate_dols(
     # ---- 1. Align series on common datetime index ----
     # Normalise all indices to month-start so that series with different
     # day-of-month conventions (e.g. 1st vs 15th) can be matched.
-    def _to_month_start(s: pd.Series) -> pd.Series:
-        """Snap datetime index to the first of each month."""
-        new_idx = s.index.to_period('M').to_timestamp()
-        out = s.copy()
-        out.index = new_idx
-        # Drop any duplicates that arise from snapping (keep first)
-        return out[~out.index.duplicated(keep='first')]
-
     sl_ms   = _to_month_start(sea_level)
     temp_ms = _to_month_start(temperature)
     saod_ms = _to_month_start(saod) if saod is not None else None
@@ -1065,7 +1069,7 @@ def calibrate_dols(
         for t in common
     ])
     n = len(H)
-    dt = np.median(np.diff(time_years))
+    dt_steps = np.diff(time_years)  # per-step dt for accurate integration
 
     # ---- 3. Trapezoidal integrals ∫Tᵏ ----
     # Use raw integrals (no factorial scaling) so that the regression
@@ -1076,14 +1080,14 @@ def calibrate_dols(
         Tk = T ** k
         integral_Tk = np.zeros(n)
         for i in range(1, n):
-            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt
+            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt_steps[i - 1]
         integrals.append(integral_Tk)
 
     # ---- 4. Optional: ∫SAOD ----
     if S is not None:
         integral_S = np.zeros(n)
         for i in range(1, n):
-            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt
+            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt_steps[i - 1]
 
     # ---- 5. ΔT (and ΔSAOD) for leads / lags ----
     delta_T = np.diff(T, prepend=T[0])
@@ -1411,12 +1415,6 @@ def calibrate_dols_sliding(
     kernel_func = kernels[kernel]
 
     # ---- 1. Align series on common datetime index ----
-    def _to_month_start(s: pd.Series) -> pd.Series:
-        new_idx = s.index.to_period('M').to_timestamp()
-        out = s.copy()
-        out.index = new_idx
-        return out[~out.index.duplicated(keep='first')]
-
     sl_ms   = _to_month_start(sea_level)
     temp_ms = _to_month_start(temperature)
     saod_ms = _to_month_start(saod) if saod is not None else None
@@ -1446,7 +1444,7 @@ def calibrate_dols_sliding(
         for t in common
     ])
     n = len(H)
-    dt = np.median(np.diff(time_years))
+    dt_steps = np.diff(time_years)  # per-step dt for accurate integration
 
     # ---- 3. Build full design matrix (same as calibrate_dols) ----
     # Trapezoidal integrals ∫T^k
@@ -1455,14 +1453,14 @@ def calibrate_dols_sliding(
         Tk = T ** k
         integral_Tk = np.zeros(n)
         for i in range(1, n):
-            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt
+            integral_Tk[i] = integral_Tk[i - 1] + 0.5 * (Tk[i] + Tk[i - 1]) * dt_steps[i - 1]
         integrals.append(integral_Tk)
 
     # Optional ∫SAOD
     if S is not None:
         integral_S = np.zeros(n)
         for i in range(1, n):
-            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt
+            integral_S[i] = integral_S[i - 1] + 0.5 * (S[i] + S[i - 1]) * dt_steps[i - 1]
 
     # ΔT (and ΔSAOD)
     delta_T = np.diff(T, prepend=T[0])
@@ -1537,8 +1535,9 @@ def calibrate_dols_sliding(
             nonzero = combined_w > 0
             combined_w[nonzero] *= 1.0 / sigma[nonzero] ** 2
 
-        # Count effective observations
-        n_eff = np.sum(combined_w > 1e-12)
+        # Effective sample size: Kish's formula (sum(w))^2 / sum(w^2)
+        w_pos = combined_w[combined_w > 1e-12]
+        n_eff = (np.sum(w_pos) ** 2) / np.sum(w_pos ** 2) if len(w_pos) > 0 else 0.0
         out_n_eff[i] = n_eff
 
         if n_eff < min_effective_obs:
@@ -1724,20 +1723,20 @@ def test_rate_temperature_nonlinearity(
 
     # --- Helpers ---
     def _fit(X, y, w, n):
+        """Fit WLS with HAC standard errors for autocorrelation-robust inference."""
         k = X.shape[1]
-        W = np.diag(w)
-        XtWX = X.T @ W @ X
-        coeffs = np.linalg.solve(XtWX, X.T @ W @ y)
-        pred = X @ coeffs
-        resid = y - pred
-        ssr = np.sum(w * resid ** 2)
-        sst_val = np.sum(w * (y - np.average(y, weights=w)) ** 2)
-        r2 = 1 - ssr / sst_val
-        mse = ssr / (n - k)
-        cov = mse * np.linalg.inv(XtWX)
-        se = np.sqrt(np.diag(cov))
-        aic = n * np.log(ssr / n) + 2 * k
-        bic = n * np.log(ssr / n) + k * np.log(n)
+        hac_maxlags = int(np.floor(4 * (n / 100) ** (2 / 9)))
+        model = sm.WLS(y, X, weights=w).fit(
+            cov_type='HAC', cov_kwds={'maxlags': max(hac_maxlags, 1)}
+        )
+        coeffs = model.params
+        se = model.bse
+        pred = model.fittedvalues
+        resid = model.resid
+        ssr = float(model.ssr)
+        r2 = model.rsquared
+        aic = model.aic
+        bic = model.bic
         return {
             'coeffs': coeffs, 'se': se, 'r2': r2, 'aic': aic, 'bic': bic,
             'residuals': resid, 'predictions': pred, 'ssr': ssr, 'k': k,
@@ -1768,10 +1767,10 @@ def test_rate_temperature_nonlinearity(
 
     T = temperature
 
-    # --- Fit models ---
-    X_lin  = np.column_stack([T,    np.ones(n)])
-    X_quad = np.column_stack([T**2, T, np.ones(n)])
-    X_cub  = np.column_stack([T**3, T**2, T, np.ones(n)])
+    # --- Fit models (constant added via sm.add_constant for HAC compatibility) ---
+    X_lin  = sm.add_constant(np.column_stack([T]), prepend=False)
+    X_quad = sm.add_constant(np.column_stack([T**2, T]), prepend=False)
+    X_cub  = sm.add_constant(np.column_stack([T**3, T**2, T]), prepend=False)
 
     res_lin  = _fit(X_lin,  rate, weights, n)
     res_quad = _fit(X_quad, rate, weights, n)
@@ -1912,13 +1911,6 @@ def test_saod_ic(
     from scipy import stats
 
     # Both models must be calibrated on the SAME time range.
-    # Normalise to month-start so different day-of-month conventions match.
-    def _to_month_start(s: pd.Series) -> pd.Series:
-        new_idx = s.index.to_period('M').to_timestamp()
-        out = s.copy()
-        out.index = new_idx
-        return out[~out.index.duplicated(keep='first')]
-
     sl_ms   = _to_month_start(sea_level)
     temp_ms = _to_month_start(temperature)
     saod_ms = _to_month_start(saod)
@@ -1934,9 +1926,9 @@ def test_saod_ic(
     res_b = calibrate_dols(sl_c, temp_c, gmsl_sigma=sig_c, saod=saod_c,
                            order=order, n_lags=n_lags)
 
-    # F-test for nested models
-    ssr_a = float(np.sum(res_a.residuals ** 2))
-    ssr_b = float(np.sum(res_b.residuals ** 2))
+    # F-test for nested models — use model SSR (weighted if WLS)
+    ssr_a = float(res_a.model.ssr)
+    ssr_b = float(res_b.model.ssr)
     k_a = len(res_a.regression_coefficients)
     k_b = len(res_b.regression_coefficients)
     df_extra = k_b - k_a  # number of extra SAOD parameters

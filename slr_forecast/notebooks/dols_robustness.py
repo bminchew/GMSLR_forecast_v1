@@ -107,80 +107,78 @@ def load_all_gmsl(start_year=1950.0):
     gmsl_datasets : dict of {name: pd.Series}
         Each series has a float index (decimal year) and values in metres.
     """
-    store = pd.HDFStore(H5_PATH, mode="r")
+    with pd.HDFStore(H5_PATH, mode="r") as store:
 
-    datasets = {}
+        datasets = {}
 
-    # --- Frederikse total GMSL ---
-    df = store["/raw/df_frederikse"]
-    fred_dec = _datetime_to_decimal_year(df.index)
-    s = pd.Series(df["gmsl"].values, index=fred_dec, name="gmsl")
-    s = _rebase_to_baseline(s)
-    datasets["Frederikse"] = s
-
-    # --- Frederikse thermodynamic (GMSL - TWS) ---
-    df_th = store["/derived/df_frederikse_thermo"]
-    fred_th_dec = _datetime_to_decimal_year(df_th.index)
-    s = pd.Series(df_th["thermodynamic_gmsl"].values,
-                  index=fred_th_dec, name="thermo_gmsl")
-    s = _rebase_to_baseline(s)
-    datasets["Frederikse thermo"] = s
-
-    # --- Dangendorf total GMSL ---
-    df = store["/raw/df_dangendorf"]
-    if "decimal_year" in df.columns:
-        dang_dec = df["decimal_year"].values
-    else:
-        dang_dec = _datetime_to_decimal_year(df.index)
-    s = pd.Series(df["gmsl"].values, index=dang_dec, name="gmsl")
-    s = _rebase_to_baseline(s)
-    datasets["Dangendorf"] = s
-
-    # --- Dangendorf sterodynamic (thermodynamic analog) ---
-    s = pd.Series(df["sterodynamic"].values, index=dang_dec, name="sterodynamic")
-    s = _rebase_to_baseline(s)
-    datasets["Dangendorf sterodynamic"] = s
-
-    # --- Horwath thermodynamic (GMSL - TWS, monthly → annual) ---
-    df = store["/raw/df_horwath"]
-    # Compute thermodynamic: gmsl - tws
-    if "gmsl" in df.columns and "tws" in df.columns:
-        thermo = df["gmsl"] - df["tws"]
-        # Annualize
-        thermo_annual = thermo.groupby(thermo.index.year).mean()
-        thermo_annual.index = thermo_annual.index.astype(float) + 0.5
-        s = pd.Series(thermo_annual.values, index=thermo_annual.index, name="thermo_gmsl")
+        # --- Frederikse total GMSL ---
+        df = store["/raw/df_frederikse"]
+        fred_dec = _datetime_to_decimal_year(df.index)
+        s = pd.Series(df["gmsl"].values, index=fred_dec, name="gmsl")
         s = _rebase_to_baseline(s)
-        datasets["Horwath thermo"] = s
+        datasets["Frederikse"] = s
 
-    # --- IPCC observed total GMSL ---
-    df = store["/raw/df_ipcc_observed_gmsl"]
-    if "decimal_year" in df.columns:
-        ipcc_dec = df["decimal_year"].values
-    else:
-        ipcc_dec = _datetime_to_decimal_year(df.index)
-    s = pd.Series(df["gmsl"].values, index=ipcc_dec, name="gmsl")
-    s = _rebase_to_baseline(s)
-    datasets["IPCC observed"] = s
+        # --- Frederikse thermodynamic (GMSL - TWS) ---
+        df_th = store["/derived/df_frederikse_thermo"]
+        fred_th_dec = _datetime_to_decimal_year(df_th.index)
+        s = pd.Series(df_th["thermodynamic_gmsl"].values,
+                      index=fred_th_dec, name="thermo_gmsl")
+        s = _rebase_to_baseline(s)
+        datasets["Frederikse thermo"] = s
 
-    # --- IPCC observed thermodynamic (subtract Frederikse TWS) ---
-    # Only over the overlap period (1950-2018)
-    df_fred_th = store["/derived/df_frederikse_thermo"]
-    fred_th_dec2 = _datetime_to_decimal_year(df_fred_th.index)
-    fred_tws = pd.Series(df_fred_th["tws"].values,
-                         index=fred_th_dec2, name="tws")
-    ipcc_idx = ipcc_dec
-    ipcc_gmsl = df["gmsl"].values
-    # Interpolate TWS to IPCC years
-    tws_at_ipcc = np.interp(ipcc_idx, fred_tws.index.values, fred_tws.values,
-                            left=np.nan, right=np.nan)
-    ipcc_thermo = ipcc_gmsl - tws_at_ipcc
-    valid = np.isfinite(ipcc_thermo)
-    s = pd.Series(ipcc_thermo[valid], index=ipcc_idx[valid], name="thermo_gmsl")
-    s = _rebase_to_baseline(s)
-    datasets["IPCC obs thermo"] = s
+        # --- Dangendorf total GMSL ---
+        df = store["/raw/df_dangendorf"]
+        if "decimal_year" in df.columns:
+            dang_dec = df["decimal_year"].values
+        else:
+            dang_dec = _datetime_to_decimal_year(df.index)
+        s = pd.Series(df["gmsl"].values, index=dang_dec, name="gmsl")
+        s = _rebase_to_baseline(s)
+        datasets["Dangendorf"] = s
 
-    store.close()
+        # --- Dangendorf sterodynamic (thermodynamic analog) ---
+        s = pd.Series(df["sterodynamic"].values, index=dang_dec, name="sterodynamic")
+        s = _rebase_to_baseline(s)
+        datasets["Dangendorf sterodynamic"] = s
+
+        # --- Horwath thermodynamic (GMSL - TWS, monthly → annual) ---
+        df = store["/raw/df_horwath"]
+        # Compute thermodynamic: gmsl - tws
+        if "gmsl" in df.columns and "tws" in df.columns:
+            thermo = df["gmsl"] - df["tws"]
+            # Annualize
+            thermo_annual = thermo.groupby(thermo.index.year).mean()
+            thermo_annual.index = thermo_annual.index.astype(float) + 0.5
+            s = pd.Series(thermo_annual.values, index=thermo_annual.index, name="thermo_gmsl")
+            s = _rebase_to_baseline(s)
+            datasets["Horwath thermo"] = s
+
+        # --- IPCC observed total GMSL ---
+        df = store["/raw/df_ipcc_observed_gmsl"]
+        if "decimal_year" in df.columns:
+            ipcc_dec = df["decimal_year"].values
+        else:
+            ipcc_dec = _datetime_to_decimal_year(df.index)
+        s = pd.Series(df["gmsl"].values, index=ipcc_dec, name="gmsl")
+        s = _rebase_to_baseline(s)
+        datasets["IPCC observed"] = s
+
+        # --- IPCC observed thermodynamic (subtract Frederikse TWS) ---
+        # Only over the overlap period (1950-2018)
+        df_fred_th = store["/derived/df_frederikse_thermo"]
+        fred_th_dec2 = _datetime_to_decimal_year(df_fred_th.index)
+        fred_tws = pd.Series(df_fred_th["tws"].values,
+                             index=fred_th_dec2, name="tws")
+        ipcc_idx = ipcc_dec
+        ipcc_gmsl = df["gmsl"].values
+        # Interpolate TWS to IPCC years
+        tws_at_ipcc = np.interp(ipcc_idx, fred_tws.index.values, fred_tws.values,
+                                left=np.nan, right=np.nan)
+        ipcc_thermo = ipcc_gmsl - tws_at_ipcc
+        valid = np.isfinite(ipcc_thermo)
+        s = pd.Series(ipcc_thermo[valid], index=ipcc_idx[valid], name="thermo_gmsl")
+        s = _rebase_to_baseline(s)
+        datasets["IPCC obs thermo"] = s
 
     # Truncate all to start_year
     truncated = {}
@@ -203,35 +201,33 @@ def load_all_gmst(start_year=1950.0):
     gmst_datasets : dict of {name: pd.Series}
         Each series has float index (decimal year) and temperature in °C.
     """
-    store = pd.HDFStore(H5_PATH, mode="r")
+    with pd.HDFStore(H5_PATH, mode="r") as store:
 
-    datasets = {}
+        datasets = {}
 
-    # Berkeley Earth (monthly)
-    df = store["/raw/df_berkeley"]
-    annual = _annualize_monthly(df, "temperature")
-    s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
-    datasets["Berkeley"] = s
+        # Berkeley Earth (monthly)
+        df = store["/raw/df_berkeley"]
+        annual = _annualize_monthly(df, "temperature")
+        s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
+        datasets["Berkeley"] = s
 
-    # GISTEMP (monthly)
-    df = store["/raw/df_gistemp"]
-    annual = _annualize_monthly(df, "temperature")
-    s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
-    datasets["GISTEMP"] = s
+        # GISTEMP (monthly)
+        df = store["/raw/df_gistemp"]
+        annual = _annualize_monthly(df, "temperature")
+        s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
+        datasets["GISTEMP"] = s
 
-    # HadCRUT5 (monthly)
-    df = store["/raw/df_hadcrut"]
-    annual = _annualize_monthly(df, "temperature")
-    s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
-    datasets["HadCRUT"] = s
+        # HadCRUT5 (monthly)
+        df = store["/raw/df_hadcrut"]
+        annual = _annualize_monthly(df, "temperature")
+        s = pd.Series(annual["temperature"].values, index=annual.index, name="temperature")
+        datasets["HadCRUT"] = s
 
-    # NOAA GlobalTemp (already annual — one value per year)
-    df = store["/raw/df_noaa"]
-    noaa_dec = _datetime_to_decimal_year(df.index)
-    s = pd.Series(df["temperature"].values, index=noaa_dec, name="temperature")
-    datasets["NOAA"] = s
-
-    store.close()
+        # NOAA GlobalTemp (already annual — one value per year)
+        df = store["/raw/df_noaa"]
+        noaa_dec = _datetime_to_decimal_year(df.index)
+        s = pd.Series(df["temperature"].values, index=noaa_dec, name="temperature")
+        datasets["NOAA"] = s
 
     # Truncate to start_year
     truncated = {}

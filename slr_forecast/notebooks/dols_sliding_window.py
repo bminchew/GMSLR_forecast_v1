@@ -128,32 +128,31 @@ def load_saod_data():
     glossac : pd.Series with float index (decimal year), annual SAOD
     mlo : pd.Series with float index (decimal year), annual SAOD
     """
-    store = pd.HDFStore(H5_PATH, mode="r")
-    saod_data = {}
+    with pd.HDFStore(H5_PATH, mode="r") as store:
+        saod_data = {}
 
-    # GloSSAC v2.23 (satellite era, 1979+)
-    if "/raw/df_glossac" in store:
-        df = store["/raw/df_glossac"]
-        col = [c for c in df.columns if 'saod' in c.lower()
-               or 'optical' in c.lower()]
-        if not col:
-            col = [df.columns[0]]
-        annual = _annualize_monthly(df, col[0])
-        s = pd.Series(annual[col[0]].values, index=annual.index, name="saod")
-        saod_data["GloSSAC"] = s
+        # GloSSAC v2.23 (satellite era, 1979+)
+        if "/raw/df_glossac" in store:
+            df = store["/raw/df_glossac"]
+            col = [c for c in df.columns if 'saod' in c.lower()
+                   or 'optical' in c.lower()]
+            if not col:
+                col = [df.columns[0]]
+            annual = _annualize_monthly(df, col[0])
+            s = pd.Series(annual[col[0]].values, index=annual.index, name="saod")
+            saod_data["GloSSAC"] = s
 
-    # Mauna Loa transmission → SAOD proxy
-    if "/raw/df_mlo_transmission" in store:
-        df = store["/raw/df_mlo_transmission"]
-        col = [c for c in df.columns if 'saod' in c.lower()
-               or 'transmission' in c.lower() or 'optical' in c.lower()]
-        if not col:
-            col = [df.columns[0]]
-        annual = _annualize_monthly(df, col[0])
-        s = pd.Series(annual[col[0]].values, index=annual.index, name="saod")
-        saod_data["MLO"] = s
+        # Mauna Loa transmission → SAOD proxy
+        if "/raw/df_mlo_transmission" in store:
+            df = store["/raw/df_mlo_transmission"]
+            col = [c for c in df.columns if 'saod' in c.lower()
+                   or 'transmission' in c.lower() or 'optical' in c.lower()]
+            if not col:
+                col = [df.columns[0]]
+            annual = _annualize_monthly(df, col[0])
+            s = pd.Series(annual[col[0]].values, index=annual.index, name="saod")
+            saod_data["MLO"] = s
 
-    store.close()
     return saod_data
 
 
