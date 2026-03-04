@@ -1,0 +1,373 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc, fit, backgrounds}
+
+% Custom commands
+\newcommand{\sigextra}{\sigma_{\text{extra}}}
+\newcommand{\daT}{\mathrm{d}\alpha/\mathrm{d}T}
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+\newcommand{\CDW}{\text{CDW}}
+\newcommand{\ENSO}{\text{ENSO}}
+
+\title{A Hierarchical Bayesian Framework for\\
+  Self-Consistent Sea Level Rise Forecasting:\\
+  From Global Constraints to Local Projections}
+
+\author{Framework Document — Working Draft}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+No single approach to sea level rise (SLR) projection is sufficient.  Process models lack systematic parameter exploration and diverge from observations; purely statistical models cannot resolve component-specific dynamics; expert assessments lack formal self-consistency.  We outline a hierarchical Bayesian framework that fuses observational constraints, statistical models, and process-model structural information into a single, self-consistent probabilistic forecast.  The framework operates across four levels: (0)~global temperature forcing, (1)~total GMSL constrained by the observational record, (2)~component-level decomposition with component-specific data and models, and (3)~deep-uncertainty modules for ice-sheet processes.  At each level, posteriors from one analysis become informed priors for the next, and a global budget constraint ensures that components sum to the observed total.  The framework is designed to be built incrementally: it is self-consistent at every stage of completeness, with unresolved components absorbed into a residual term.
+\end{abstract}
+
+
+% ====================================================================
+\section{Motivation}
+% ====================================================================
+
+Current approaches to SLR projection fall into three broad categories, each with fundamental limitations:
+
+\begin{enumerate}
+  \item \textbf{Process models} (e.g., ISMIP6, GlacierMIP): Simulate ice-sheet and glacier dynamics from first principles, but lack systematic parameter exploration, use heuristic parameterisations for key processes (calving, sub-shelf melting), and produce ensembles that immediately diverge from observations after initialisation \citep{fricker2025antarctica}.  Under 4\textdegree C of warming, IPCC AR6 process-model projections show less SLR by 2100 than a simple extrapolation of observed satellite-era trends --- a physically implausible result that reflects structural model deficiencies rather than true uncertainty.
+
+  \item \textbf{Semi-empirical / statistical models} (e.g., Vermeer \& Rahmstorf 2009, this work): Calibrate a rate--temperature relationship against observations, providing strong constraints on the historical period but limited ability to resolve component-specific dynamics or capture nonlinear threshold behaviour (e.g., marine ice-sheet instability).
+
+  \item \textbf{Expert elicitation and structured assessments} (e.g., IPCC AR6, Bamber et al.\ 2019): Synthesise multiple lines of evidence but lack formal probabilistic self-consistency between components and total.
+\end{enumerate}
+
+The framework described here aims to combine the strengths of all three approaches while providing formal self-consistency through Bayesian hierarchical modelling.  The central principle is:
+
+\begin{quote}
+\emph{Observations constrain the total; component models and data inform the decomposition; the budget ensures consistency; deep-uncertainty modules handle what observations alone cannot resolve.}
+\end{quote}
+
+
+% ====================================================================
+\section{Framework Architecture}
+% ====================================================================
+
+The framework operates across four levels, connected by Bayesian conditioning and a budget constraint (\cref{fig:dag}).
+
+\subsection{Level 0: External forcing}
+
+Temperature forcing $T(t)$ is treated as an external input, drawn from CMIP6 / IPCC assessed ranges for each SSP scenario.  The across-scenario spread contributes $\sigma_{\text{scenario}}^2$ to the total projection uncertainty.  Temperature is not a free parameter of the SLR model; it is conditioned upon.
+
+\subsection{Level 1: Global GMSL constraint}
+
+The polynomial rate--temperature model
+\begin{equation}
+  \text{rate}(t) = a\,T(t)^2 + b\,T(t) + c, \qquad
+  H(t) = H_0 + \int_0^t \text{rate}(\tau)\,\mathrm{d}\tau
+  \label{eq:rate-model}
+\end{equation}
+is calibrated against the full $\sim$119-year GMSL record using a Bayesian level-space approach (companion document).  An Exponential (PC) prior on~$a$ provides genuine shrinkage toward the order-1 model, letting the data determine whether quadratic acceleration is supported.  A rate-and-state extension with relaxation time~$\tau$ captures lagged response from slow ocean and ice-sheet processes.
+
+The Level~1 posterior provides:
+\begin{itemize}
+  \item A calibrated total rate at any temperature, with uncertainty;
+  \item A total GMSL projection envelope $\sigma_{\text{constrained}}^2$;
+  \item A \emph{budget}: the sum of all component rates must equal the Level~1 total within posterior uncertainty.
+\end{itemize}
+
+\subsection{Level 2: Component decomposition}
+
+The total rate is decomposed into contributions from distinct physical processes:
+\begin{equation}
+  \text{rate}_{\text{total}}(t) = \text{rate}_{\text{thermo}}(t)
+    + \text{rate}_{\text{glaciers}}(t)
+    + \text{rate}_{\text{GrIS}}(t)
+    + \text{rate}_{\text{AIS}}(t)
+    + \text{rate}_{\text{TWS}}(t)
+  \label{eq:budget}
+\end{equation}
+Each component has its own rate--temperature (or rate--forcing) model, calibrated against component-specific observations.  Crucially, the component parameters are linked to the global parameters through the budget:
+\begin{equation}
+  a = \sum_i a_i, \qquad b = \sum_i b_i, \qquad c = \sum_i c_i
+  \label{eq:coefficient-budget}
+\end{equation}
+where $i$ indexes components.  This budget acts as both a \emph{regulariser} (preventing components from drifting to implausible values) and a \emph{cross-component constraint} (well-observed components tighten the posteriors on poorly observed ones).
+
+\subsection{Level 3: Deep-uncertainty modules}
+
+For components where observational constraints are insufficient to characterise the tails of the distribution --- principally the Antarctic Ice Sheet --- structured deep-uncertainty modules extend the projection envelope.  The A4 scenario-mixture framework (companion document) provides a physically motivated, discrete mixture of ice-sheet futures:
+\begin{itemize}
+  \item S1: Status quo (no marine ice-sheet instability);
+  \item S2: Marine ice-sheet instability (MISI);
+  \item S3: MISI with amplifying feedbacks;
+  \item S4: MISI with marine ice-cliff instability (MICI).
+\end{itemize}
+Each scenario has its own within-scenario distribution; the mixture weights encode expert assessment of scenario plausibility.  The resulting $\sigma_{\text{ice}}^2$ is added in quadrature to the Level~1 uncertainty, as the deep-uncertainty tail is independent of (and not constrained by) the 1900--2018 calibration.
+
+
+% ====================================================================
+\section{Component Models and Informed Priors}
+\label{sec:components}
+% ====================================================================
+
+Each component analysis provides a marginal posterior on its own $(a_i, b_i, c_i)$, which serves as an \emph{informed prior} when incorporated into the joint hierarchical model.  The strength of the prior reflects the quality and length of the component-specific observational record.
+
+\subsection{Thermosteric expansion}
+\label{sec:thermo}
+
+\paragraph{Data.}  Argo float array (2005--present, global coverage below 2000~m); ocean reanalysis products (1950--present, declining coverage with depth and time); XBT profiles (1960s--present, upper 700~m, with known fall-rate biases).
+
+\paragraph{Model.}  Thermal expansion is well-understood from first principles: $\text{rate}_{\text{thermo}}(T) \approx b_{\text{thermo}} \cdot T + c_{\text{thermo}}$.  The response is expected to be nearly linear in global mean temperature because the thermal expansion coefficient varies slowly over the relevant temperature range.  Thus $a_{\text{thermo}} \approx 0$, and the thermosteric analysis contributes primarily to the prior on~$b$.
+
+\paragraph{Prior contribution.}  Because thermal expansion is the best-constrained component, the prior on $b_{\text{thermo}}$ will be tight: approximately Normal($\mu_{\text{thermo}}, \sigma_{\text{thermo}}$) with $\sigma_{\text{thermo}}$ determined by the Argo-era uncertainty.  This tight prior propagates through the budget to constrain other components' $b_i$.
+
+\subsection{Glaciers and ice caps}
+\label{sec:glaciers}
+
+\paragraph{Data.}  Randolph Glacier Inventory (RGI); geodetic mass balance estimates; GRACE/GRACE-FO (2002--present); regional temperature and precipitation records.
+
+\paragraph{Model.}  Glacier mass balance responds to both temperature (melt) and precipitation (accumulation).  The temperature sensitivity may be nonlinear because: (a)~small glaciers disappear entirely, reducing the total glacier area; (b)~the elevation--temperature feedback amplifies warming at glacier surfaces.  A model of the form $\text{rate}_{\text{glaciers}}(T) = a_{\text{glaciers}} \cdot T^2 + b_{\text{glaciers}} \cdot T + c_{\text{glaciers}}$ may be appropriate, with $a_{\text{glaciers}} > 0$ reflecting the accelerating loss as glacier area shrinks.
+
+\paragraph{Prior contribution.}  Moderate constraint on $b_{\text{glaciers}}$ from the geodetic record; weak constraint on $a_{\text{glaciers}}$ from the relatively short satellite era.  The key question is whether the observed glacier acceleration is separable from ice-sheet acceleration in the GRACE record.
+
+\subsection{Greenland Ice Sheet}
+\label{sec:gris}
+
+\paragraph{Data.}  GRACE/GRACE-FO; SMB models (RACMO, MAR); ice discharge estimates from satellite velocity and thickness.
+
+\paragraph{Model.}  Greenland mass loss has two distinct channels: surface mass balance (SMB, strongly temperature-dependent) and ice discharge (weakly temperature-dependent, driven by ocean--ice interaction).  A two-component model:
+\begin{equation}
+  \text{rate}_{\text{GrIS}}(T) = b_{\text{SMB}} \cdot T + c_{\text{SMB}} + \text{rate}_{\text{discharge}}(t)
+\end{equation}
+where the discharge term may be treated as a time series or parameterised separately.
+
+\paragraph{Prior contribution.}  The SMB component provides an informed prior on $b_{\text{GrIS}}$; the discharge component contributes to $c_{\text{GrIS}}$ or to a separate non-temperature-dependent term.
+
+\subsection{Antarctic Ice Sheet}
+\label{sec:ais}
+
+\paragraph{Data.}  GRACE/GRACE-FO; altimetry (CryoSat-2, ICESat-2); InSAR-derived ice velocities; ocean temperature observations on the continental shelf.
+
+\paragraph{Model.}  The AIS contribution is the least constrained and most consequential for high-end projections.  The historical contribution ($\sim$0.3~mm/yr, $\sim$8--9\% of the total GMSL rate) is small relative to the observational uncertainty, and the future trajectory depends on poorly constrained processes (marine ice-sheet instability, ice-cliff failure, sub-shelf melting parameterisation).
+
+In the hierarchical framework, the AIS operates at two levels:
+\begin{itemize}
+  \item \textbf{Budget-constrained estimate}: The Level~1 total minus the sum of better-constrained components yields a \emph{residual} that bounds the historical AIS contribution.  This is an indirect but powerful constraint.
+  \item \textbf{Deep-uncertainty extension}: The A4 scenario-mixture module (Level~3) extends the projection envelope beyond what the historical record can constrain.
+\end{itemize}
+
+\paragraph{Prior contribution.}  Weak prior on $(a_{\text{AIS}}, b_{\text{AIS}}, c_{\text{AIS}})$ from GRACE era; the budget constraint is the primary source of information.  The state variable ($\tau$) in the rate-and-state model may partially capture the ice-sheet response timescale, providing a handle for ice-sheet-specific relaxation.
+
+\subsection{Terrestrial water storage}
+\label{sec:tws}
+
+\paragraph{Data.}  GRACE/GRACE-FO; dam construction records; groundwater depletion estimates; land hydrology models.
+
+\paragraph{Model.}  TWS is often treated as a purely non-climatic contribution (dam impoundment, groundwater extraction), contributing only to the background rate~$c$.  This is an oversimplification.  TWS has both secular and climate-driven components:
+\begin{equation}
+  \text{rate}_{\text{TWS}}(t) = c_{\text{TWS,secular}} + \text{rate}_{\text{TWS,climate}}(t)
+  \label{eq:tws}
+\end{equation}
+
+\paragraph{Climate-driven TWS and the ENSO--WAIS teleconnection.}
+
+The climate-driven component of TWS is substantial and coupled to modes of climate variability, particularly the El Ni\~no--Southern Oscillation (ENSO).  ENSO drives large interannual fluctuations in terrestrial water storage through shifts in precipitation patterns, river discharge, and soil moisture.  These fluctuations are visible in both the GRACE TWS record and in GMSL residuals after removing the secular trend.
+
+Critically, ENSO also modulates the delivery of warm Circumpolar Deep Water (\CDW) to the Antarctic continental shelf \citep{steig2012tropical, paolo2018response}.  During El Ni\~no events, anomalous atmospheric circulation patterns (transmitted via the Pacific--South American teleconnection) weaken the westerlies along the Amundsen Sea coast, altering the thermocline depth and allowing warm \CDW{} to reach the grounding zones of Thwaites and Pine Island glaciers.  This drives enhanced basal melting, grounding-line retreat, and --- if sustained --- potentially irreversible marine ice-sheet instability.
+
+The implication for the hierarchical framework is that TWS and AIS are \emph{not independent components}.  The same climate mode (ENSO) that drives short-timescale TWS variability also modulates the ocean forcing that controls WAIS stability on longer timescales.  This coupling operates across timescales:
+
+\begin{itemize}
+  \item \textbf{Interannual ($\sim$2--7 yr):} ENSO-driven TWS fluctuations and ENSO-driven \CDW{} intrusions are essentially simultaneous, driven by the same atmospheric teleconnection.  On these timescales, the TWS and AIS signals may partially cancel in the GMSL budget (land water storage increases during La Ni\~na, when \CDW{} intrusions are weaker).
+
+  \item \textbf{Decadal ($\sim$10--30 yr):} Sustained periods of El Ni\~no--like conditions (e.g., the positive phase of the Interdecadal Pacific Oscillation) can drive cumulative grounding-line retreat that crosses irreversibility thresholds.  The TWS signal integrates to near zero over these timescales, but the ice-sheet response is path-dependent and potentially irreversible.
+
+  \item \textbf{Centennial ($\sim$100+ yr):} If anthropogenic warming shifts the mean state of the tropical Pacific toward more frequent or intense El Ni\~no conditions \citep{cai2014increasing}, the time-mean \CDW{} delivery to the Amundsen Sea increases, loading the dice for MISI even in the absence of extreme individual events.
+\end{itemize}
+
+\paragraph{Implications for the framework.}
+
+The ENSO--TWS--WAIS coupling has three consequences for the hierarchical model:
+
+\begin{enumerate}
+  \item \textbf{Cross-component covariance:} The component decomposition (\cref{eq:budget}) must allow for non-zero covariance between $\text{rate}_{\text{TWS}}$ and $\text{rate}_{\text{AIS}}$ at interannual timescales.  A diagonal error model (independent components) would underestimate the total uncertainty on short timescales and overestimate it on long timescales.
+
+  \item \textbf{State-dependent AIS forcing:} The rate-and-state model's relaxation time $\tau$ may need to be conditioned on ENSO state or its long-term statistics, rather than treated as a fixed parameter.  A regime-dependent $\tau$ (fast response during El Ni\~no, slow during La Ni\~na) could capture the asymmetric forcing.
+
+  \item \textbf{Irreversibility and path dependence:} The A4 scenario-mixture weights (Level~3) should be informed by the projected evolution of ENSO statistics under warming.  If climate models project more frequent El Ni\~no conditions, the probability weight on S2--S4 (MISI scenarios) should increase, because the cumulative \CDW{} forcing is more likely to trigger irreversible retreat.
+\end{enumerate}
+
+\paragraph{Prior contribution.}  TWS contributes an informed prior on $c_{\text{TWS,secular}}$ from dam and groundwater records.  The climate-driven component is better treated as a covariate (conditioned on ENSO indices) rather than as a separate $b_{\text{TWS}}$ term, because the TWS--temperature relationship is mediated by ENSO rather than by direct thermodynamic forcing.
+
+
+% ====================================================================
+\section{Bayesian Mechanics of the Hierarchy}
+\label{sec:mechanics}
+% ====================================================================
+
+\subsection{Joint model}
+
+The full hierarchical model has the following structure.  Let $\boldsymbol{\theta}_i = (a_i, b_i, c_i)$ denote the rate--temperature parameters for component~$i$, and $\boldsymbol{\theta}_{\text{global}} = (a, b, c)$ the global parameters.  The joint posterior is:
+\begin{equation}
+  p(\boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K, \boldsymbol{\eta} \mid \mathbf{H}_{\text{obs}}, \mathbf{D}_1, \ldots, \mathbf{D}_K)
+  \propto
+  \underbrace{p(\mathbf{H}_{\text{obs}} \mid \boldsymbol{\theta}_{\text{global}}, \boldsymbol{\eta})}_{\text{GMSL likelihood}}
+  \prod_{i=1}^{K} \underbrace{p(\mathbf{D}_i \mid \boldsymbol{\theta}_i)}_{\text{component likelihoods}}
+  \prod_{i=1}^{K} \underbrace{p(\boldsymbol{\theta}_i)}_{\text{component priors}}
+  \cdot \underbrace{p(\boldsymbol{\eta})}_{\text{nuisance priors}}
+  \label{eq:joint-posterior}
+\end{equation}
+subject to the deterministic budget constraint
+\begin{equation}
+  \boldsymbol{\theta}_{\text{global}} = \sum_{i=1}^{K} \boldsymbol{\theta}_i
+  \label{eq:budget-constraint}
+\end{equation}
+where $\boldsymbol{\eta}$ collects nuisance parameters ($\sigextra$, $H_0$, $\tau$, etc.) and $\mathbf{D}_i$ is the component-specific dataset.
+
+\subsection{Information flow}
+
+Information flows in both directions through the hierarchy:
+
+\paragraph{Bottom-up (component priors $\to$ global posterior).}  Each component prior $p(\boldsymbol{\theta}_i)$ constrains the global parameters through the budget.  Well-constrained components (thermosteric, glaciers) provide tight priors that effectively narrow the global posterior, even if the global GMSL record alone cannot distinguish the components.
+
+\paragraph{Top-down (global likelihood $\to$ component posteriors).}  The GMSL likelihood constrains the \emph{sum} of all components.  Components that are poorly observed directly (e.g., AIS) receive indirect constraint from the budget: if the well-observed components account for most of the observed signal, the residual tightly bounds the poorly observed component.
+
+\paragraph{Cross-component (budget $\to$ pairwise constraints).}  Even without direct observations of a component, the budget and the priors on other components provide information.  For example, if thermosteric + glaciers + GrIS + TWS account for $X \pm \sigma_X$ mm/yr, and the total is $Y \pm \sigma_Y$ mm/yr, then the AIS contribution is constrained to $Y - X \pm \sqrt{\sigma_Y^2 + \sigma_X^2}$ --- an \emph{observationally derived} estimate of the AIS contribution that requires no ice-sheet model.
+
+\subsection{Staged implementation}
+
+The framework is designed to be built incrementally.  At any stage, unresolved components are absorbed into a residual:
+\begin{equation}
+  \text{rate}_{\text{residual}}(t) = \text{rate}_{\text{total}}(t) - \sum_{i \in \text{resolved}} \text{rate}_i(t)
+\end{equation}
+
+\begin{enumerate}
+  \item \textbf{Stage 0 (current):} Global GMSL constraint only.  All components are in the residual.  The PC prior on~$a$ and the rate-and-state extension provide the forecasting model.
+
+  \item \textbf{Stage 1:} Add thermosteric decomposition.  This is the best-constrained component and provides the strongest budget constraint on the remaining (primarily cryospheric) residual.
+
+  \item \textbf{Stage 2:} Add glaciers and Greenland.  These are moderately well-observed and further tighten the residual, which now primarily reflects AIS + TWS.
+
+  \item \textbf{Stage 3:} Add TWS (secular and climate-driven components) and the ENSO covariate structure.  The residual now isolates the AIS contribution.
+
+  \item \textbf{Stage 4:} Add AIS with the A4 deep-uncertainty module and the ENSO--\CDW{} coupling.  The framework is now complete.
+\end{enumerate}
+
+At each stage, the framework is \emph{self-consistent}: the budget holds, the posteriors are valid, and projections can be made.  Adding a new component \emph{refines} the projections but does not invalidate the previous stage.
+
+
+% ====================================================================
+\section{Variance Decomposition and Total Uncertainty}
+\label{sec:variance}
+% ====================================================================
+
+The total projection variance at any future time~$t$ decomposes as:
+\begin{equation}
+  \sigma_{\text{total}}^2(t) = \sigma_{\text{constrained}}^2(t)
+    + \sigma_{\text{scenario}}^2(t)
+    + \sigma_{\text{ice}}^2(t)
+    + \sigma_{\text{cross}}^2(t)
+  \label{eq:variance-decomp}
+\end{equation}
+where:
+\begin{itemize}
+  \item $\sigma_{\text{constrained}}^2$: Posterior uncertainty from the Level~1 calibration (parameter uncertainty + model inadequacy $\sigextra$).  Grows with time as extrapolation extends beyond the calibration period.
+  \item $\sigma_{\text{scenario}}^2$: Across-scenario spread from different SSP temperature pathways.  Dominates at long lead times ($> 2050$).
+  \item $\sigma_{\text{ice}}^2$: Deep uncertainty from the A4 module (Level~3).  Captures tail risk from ice-sheet processes not constrained by the historical record.  Independent of the calibration.
+  \item $\sigma_{\text{cross}}^2$: Cross-component covariance, primarily from the ENSO--TWS--AIS coupling (\cref{sec:tws}).  This term can be negative (partial cancellation on short timescales) or positive (correlated amplification on long timescales).
+\end{itemize}
+
+As the framework matures through the staged implementation, $\sigma_{\text{constrained}}^2$ decreases (tighter priors from component decomposition), while $\sigma_{\text{ice}}^2$ and $\sigma_{\text{cross}}^2$ become better characterised.
+
+
+% ====================================================================
+\section{Connection to Process Models}
+\label{sec:process-models}
+% ====================================================================
+
+The framework provides a principled interface to process models that avoids treating their outputs as ground truth:
+
+\begin{enumerate}
+  \item \textbf{Structural information $\to$ priors:} Process models (ISMIP6, GlacierMIP) inform the \emph{shape} of component priors: the sign constraints, the expected functional form (linear vs.\ nonlinear), the approximate magnitude.  They do \emph{not} determine the prior location or width, which come from observations.
+
+  \item \textbf{Budget as reality check:} If a process model predicts $a_{\text{AIS}} \in [0, 2]$~mm/yr/\textdegree C$^2$ but the budget-constrained residual implies $a_{\text{AIS}} \in [0.5, 3]$, the tension is informative: either the process model is missing physics that accelerates ice loss, or the statistical decomposition is misattributing acceleration.
+
+  \item \textbf{Scenario weights from process understanding:} The A4 mixture weights (Level~3) are informed by process-model ensembles and expert assessment, not by the historical calibration.  This is appropriate because the deep-uncertainty scenarios represent futures that have not yet been observed.
+
+  \item \textbf{Forecast skill evaluation:} The framework provides a natural basis for evaluating process-model forecasting skill.  A process model that predicts component rates inconsistent with the budget-constrained posterior (after accounting for known biases) demonstrates a lack of forecasting skill for that component.
+\end{enumerate}
+
+
+% ====================================================================
+\section{Relation to Existing Work}
+\label{sec:existing}
+% ====================================================================
+
+\paragraph{Semi-empirical models.}  The Vermeer \& Rahmstorf (2009) model $\text{rate} = a \cdot T + b \cdot \mathrm{d}T/\mathrm{d}t$ is a special case of the rate-and-state formulation (companion document shows $b_{\text{VR09}} = -d\tau$ in the small-$\tau$ limit).  The hierarchical framework generalises this by decomposing the global relationship into physically distinct components.
+
+\paragraph{IPCC AR6.}  The AR6 assessed likely ranges are derived from process-model ensembles with expert adjustment.  Our framework can incorporate these ranges as informative priors on component contributions, while using the observational budget as an independent consistency check.  Where the AR6 ranges are inconsistent with the budget, the framework quantifies the tension.
+
+\paragraph{Kopp et al.\ (2014, 2017) and related frameworks.}  The localised probabilistic projections of \citet{kopp2014probabilistic} use a similar component decomposition but without the global budget constraint from a rate--temperature calibration.  Our framework adds this top-level constraint, which provides cross-component regularisation that purely bottom-up approaches lack.
+
+
+% ====================================================================
+\section{Implementation Roadmap}
+\label{sec:roadmap}
+% ====================================================================
+
+\begin{table}[ht]
+\centering
+\caption{Staged implementation of the hierarchical framework.}
+\label{tab:roadmap}
+\begin{tabular}{clll}
+\toprule
+Stage & Component added & Key data & Status \\
+\midrule
+0 & Global GMSL--GMST constraint & Frederikse GMSL, Berkeley T & Complete \\
+  & \quad + PC prior on $a$, rate-and-state & & Complete \\
+  & \quad + A4 deep-uncertainty module & IPCC, expert assessment & Complete \\
+1 & Thermosteric decomposition & Argo, ocean reanalysis & Planned \\
+2 & Glaciers + Greenland & RGI, GRACE, SMB models & Planned \\
+3 & TWS (secular + ENSO-driven) & GRACE, dam/GW records, SOI & Planned \\
+4 & AIS + ENSO--\CDW{} coupling & GRACE, altimetry, ocean T & Planned \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% ====================================================================
+\section{Summary}
+\label{sec:summary}
+% ====================================================================
+
+The hierarchical framework provides:
+
+\begin{enumerate}
+  \item \textbf{Self-consistency:} The budget constraint (\cref{eq:budget}) ensures that component contributions sum to the observed total, at every stage of implementation.
+
+  \item \textbf{Principled uncertainty:} Bayesian priors encode physical knowledge (sign constraints, PC shrinkage, component-specific data), and the posterior honestly reflects what the observations support.
+
+  \item \textbf{Incremental refinement:} Each new component tightens the projections without invalidating previous work.  The residual term absorbs unresolved components.
+
+  \item \textbf{Process-model interface:} Process models inform priors and scenario weights but are not treated as ground truth.  The budget provides an independent reality check.
+
+  \item \textbf{Cross-component coupling:} The ENSO--TWS--WAIS teleconnection is explicitly represented, rather than assumed away by a diagonal error model.
+
+  \item \textbf{Transparent prior sensitivity:} The PC prior on~$a$ and the prior predictive checking ensure that the influence of the prior on projections is visible and quantifiable.
+\end{enumerate}
+
+The framework is designed not to produce a single ``best estimate'' of future SLR, but to provide a \emph{defensible probabilistic envelope} that honestly reflects what is known, what is uncertain, and what is deeply uncertain --- and to do so in a way that is formally self-consistent across scales, components, and methodological approaches.
+
+
+\bibliographystyle{apalike}
+% \bibliography{references}  % uncomment when .bib is available
+
+\end{document}

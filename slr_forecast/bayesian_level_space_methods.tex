@@ -1,0 +1,478 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+% Custom commands
+\newcommand{\sigextra}{\sigma_{\text{extra}}}
+\newcommand{\sigobs}{\sigma_{\text{obs}}}
+\newcommand{\siggmsl}{\sigma_{\text{gmsl}}}
+\newcommand{\sigtws}{\sigma_{\text{TWS}}}
+\newcommand{\daT}{\mathrm{d}\alpha/\mathrm{d}T}
+
+\title{Self-Consistent Bayesian Level-Space Calibration of the\\
+  Polynomial Rate--Temperature Model for GMSL}
+
+\author{Methods Document}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We develop a fully self-consistent Bayesian calibration of the polynomial rate--temperature relationship for global mean sea level rise (GMSL).  The forward model integrates $\text{rate}(t) = a\,T(t)^2 + b\,T(t) + c$ against observed monthly temperature to predict cumulative sea level, comparing directly to annual observations with time-varying uncertainty.  This avoids three problems inherent to previous approaches: (1)~the need for intermediate kinematic rate estimates and their serial correlation structure; (2)~ad hoc corrections for error scale mismatch (FGLS) and numerical ill-conditioning (nuggets); and (3)~the strong collinearity between integrated temperature regressors in frequentist level-space estimation (DOLS).  Half-normal priors on $a$ and $b$ enforce the physical requirement that warming sensitivity is non-negative, while a learned model-inadequacy term $\sigextra$ absorbs unmodeled interannual variability.  The model is implemented via the \texttt{emcee} affine-invariant ensemble sampler.
+\end{abstract}
+
+
+\section{Introduction}
+
+The polynomial rate--temperature model posits that the rate of global mean sea level rise depends quadratically on global mean surface temperature anomaly~$T(t)$:
+\begin{equation}
+  \text{rate}(t) = a\,T(t)^2 + b\,T(t) + c
+  \label{eq:rate}
+\end{equation}
+where $a = \daT$ is the temperature sensitivity of the sea-level acceleration, $b = \alpha_0$ is the linear warming sensitivity, and $c$ is the background rate at $T = 0$ (baseline-dependent).
+
+Three previous calibration approaches each had fundamental limitations:
+
+\begin{enumerate}
+  \item \textbf{DOLS (frequentist level-space):} The integrated regressors $\int T^2\,\mathrm{d}\tau$ and $\int T\,\mathrm{d}\tau$ are nearly perfectly collinear ($\rho \approx -0.993$), leading to large $a \leftrightarrow b$ trade-offs and unstable point estimates that lie on a narrow ridge in parameter space.
+
+  \item \textbf{WLS rate-space:} Working with kinematic rate estimates from kernel-smoothed derivatives yields well-identified coefficients, but the $\sim$119 rate estimates (from overlapping kernels) have effective sample size $n_{\text{eff}} \approx 3.5$, with severe serial correlation that standard WLS ignores.
+
+  \item \textbf{Bayesian rate-space with correlated errors:} Properly accounting for kernel-overlap correlation requires: (a)~estimating the full $119 \times 119$ correlation matrix; (b)~replacing the kinematic standard errors (which are ${\sim}10\times$ too small) with an FGLS estimate; and (c)~adding a nugget for numerical conditioning.  The resulting multi-step procedure is fragile and ad hoc.
+\end{enumerate}
+
+Our solution is a single-step Bayesian model that operates directly on the cumulative sea-level observations, embedding the physics (temperature integration) in the forward model and letting the half-normal priors constrain the posterior to the physically meaningful region of the collinearity ridge.
+
+
+\section{Generative Model}
+
+The generative model has four components:
+
+\begin{align}
+  \text{rate}(t) &= a\,T(t)^2 + b\,T(t) + c
+  \label{eq:gen_rate} \\
+  H(t) &= H_0 + \int_{t_0}^{t} \text{rate}(\tau)\,\mathrm{d}\tau
+  \label{eq:gen_level} \\
+  H_{\text{obs}}(t_i) &\sim \mathcal{N}\bigl(H(t_i),\; \sigma(t_i)^2\bigr)
+  \label{eq:gen_obs} \\
+  \sigma(t_i)^2 &= \siggmsl(t_i)^2 + \sigtws(t_i)^2 + \sigextra^2
+  \label{eq:gen_sigma}
+\end{align}
+
+Here $H_0$ is the sea level at the first observation time $t_0$, and $\sigma(t_i)$ combines known time-varying uncertainty with a learned model-inadequacy term.
+
+\subsection{Linear-in-parameters formulation}
+
+Because the forward model is linear in the parameters $(a, b, c, H_0)$, we pre-compute three design vectors on the monthly temperature grid using trapezoidal integration:
+\begin{align}
+  I_2(t) &= \int_{t_0}^{t} T(\tau)^2\,\mathrm{d}\tau \\
+  I_1(t) &= \int_{t_0}^{t} T(\tau)\,\mathrm{d}\tau \\
+  I_0(t) &= t - t_0
+\end{align}
+so that the predicted sea level is:
+\begin{equation}
+  H_{\text{model}}(t_i) = a \cdot I_2(t_i) + b \cdot I_1(t_i) + c \cdot I_0(t_i) + H_0
+  \label{eq:linear}
+\end{equation}
+
+The integrals are computed on the monthly Berkeley Earth temperature grid ($\sim$1400 points) and extracted at the 119 annual observation times by nearest-neighbor index matching.  This makes each MCMC log-probability evaluation $O(119)$ rather than $O(1400)$.
+
+
+\section{Observation Uncertainty}
+
+\subsection{Components}
+
+The total observation uncertainty at each time $t_i$ combines three independent contributions (\cref{eq:gen_sigma}):
+
+\begin{itemize}
+  \item $\siggmsl(t_i)$: Formal GMSL reconstruction uncertainty from \citet{frederikse2020causes}, declining from $\sim$19~mm in 1900 to $\sim$5~mm in 2018 as tide gauge coverage improves.
+
+  \item $\sigtws(t_i)$: Structural terrestrial water storage uncertainty.  This starts with the time-varying $\sigma_{\text{TWS}}$ from the Frederikse reconstruction (which declines from $\sim$5.8~mm pre-GRACE to $\sim$0.1~mm in the satellite era), augmented by a dam-filling structural term:
+  \begin{equation}
+    \sigma_{\text{TWS,structural}}(t) = A_{\text{dam}} \exp\!\left[-\frac{(t - 1970)^2}{2 \times 25^2}\right]
+    \label{eq:dam}
+  \end{equation}
+  with $A_{\text{dam}} = 3$~mm.  This Gaussian hump centered on 1970 with 25-year width accounts for the large reservoir impoundment during the dam-filling era ($\sim$1950--2000), during which hydrological models used to estimate TWS have significant structural uncertainty not captured by formal error budgets.
+
+  \item $\sigextra$: A scalar parameter sampled within the MCMC, representing model inadequacy from unmodeled processes (ENSO, volcanic aerosol effects on steric height, internal climate modes, and any other sources of interannual GMSL variability not captured by the temperature-driven model).
+\end{itemize}
+
+\subsection{Time-varying weighting}
+
+The combined fixed uncertainty $\sigobs(t_i) = \sqrt{\siggmsl(t_i)^2 + \sigtws(t_i)^2}$ ranges from $\sim$20~mm in 1900 to $\sim$5~mm in 2018.  This naturally down-weights early observations (which are less reliable) relative to the altimetry-era measurements, without requiring arbitrary epoch-based weighting schemes.
+
+
+\section{Prior Specification}
+
+The model has five parameters.  \Cref{tab:priors} summarizes the prior distributions and their physical motivation.
+
+\begin{table}[ht]
+\centering
+\caption{Prior distributions for the Bayesian level-space model.}
+\label{tab:priors}
+\begin{tabular}{lllp{7cm}}
+\toprule
+Parameter & Symbol & Prior & Rationale \\
+\midrule
+Temperature sensitivity of acceleration & $a$ ($\daT$) & Exponential(mean $= 2.2$~mm/yr/\textdegree C$^2$) & PC prior: mode at $a = 0$, shrinks toward order-1; calibrated via $P(a > 5) = 0.10$ \\
+Linear warming sensitivity & $b$ ($\alpha_0$) & HalfNormal($\sigma = 10$~mm/yr/\textdegree C) & Warming should raise sea level ($b \geq 0$); weakly informative \\
+Background rate & $c$ (trend) & Normal($2.0, 5.0$~mm/yr) & Rate at $T = 0$; baseline-dependent, no physical sign constraint \\
+Model inadequacy & $\sigextra$ & HalfCauchy($0, 5$~mm) & Heavy tail allows large model inadequacy; scale informed by expected interannual variability \\
+Initial sea level & $H_0$ & Normal($H_{\text{obs}}(t_0), 50$~mm) & Centered on first observation; wide enough to accommodate datum uncertainty \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Physical motivation for priors on $a$ and $b$}
+
+The priors on $a$ and $b$ enforce $a \geq 0$ and $b \geq 0$, reflecting the physical expectation that (1)~warming accelerates sea-level rise through nonlinear ice-sheet dynamics and thermal expansion, and (2)~positive temperature anomalies drive positive sea-level anomalies.
+
+The background rate $c$ is \emph{not} constrained to be non-negative because it depends on the choice of temperature baseline.  For the 1995--2005 baseline used here, $c$ represents the rate of SLR at zero temperature anomaly, which is a data-processing artifact rather than a physical quantity.
+
+\subsection{Penalised-complexity (PC) prior on the quadratic coefficient}
+\label{sec:quadratic-prior}
+
+The integral regressors $I_2 = \int T^2\,\mathrm{d}\tau$ and $I_1 = \int T\,\mathrm{d}\tau$ are highly collinear over the 1900--2018 calibration period ($\rho \approx -0.993$), so many combinations of $(a, b, c)$ produce nearly identical cumulative GMSL but very different extrapolated rates.  A weakly informative prior (e.g., HalfNormal with $\sigma_a = 10$~mm/yr/\textdegree C$^2$) offers little guidance, and the posterior on~$a$ is largely determined by the collinearity structure rather than by the data.
+
+We address this with an Exponential prior on~$a$, which acts as a penalised-complexity (PC) prior \citep{simpson2017penalising}:
+\begin{equation}
+  a \sim \text{Exponential}(\mu_a), \qquad
+  p(a) = \frac{1}{\mu_a} \exp\!\left(-\frac{a}{\mu_a}\right)
+  \label{eq:pc-prior}
+\end{equation}
+where $\mu_a$ is the prior mean.  This prior has three key properties:
+\begin{enumerate}
+  \item \textbf{Mode at $a = 0$:} It genuinely favours the simpler order-1 model ($a = 0$), requiring the data to provide evidence to pull $a$ away from zero.  By contrast, the HalfNormal prior has a flat region near zero and does not distinguish $a = 0$ from $a = 0.5\sigma$.
+  \item \textbf{Monotonic decay:} The prior density decreases monotonically with~$a$, providing continuous shrinkage toward the base model.
+  \item \textbf{Interpretable calibration:} The mean $\mu_a$ is set via a tail probability constraint:
+  \begin{equation}
+    P(a > a_{\text{thresh}}) = p
+    \quad\Longrightarrow\quad
+    \mu_a = \frac{-a_{\text{thresh}}}{\ln p}
+    \label{eq:pc-calibration}
+  \end{equation}
+\end{enumerate}
+
+We calibrate with $P(a > 5\text{ mm/yr/\textdegree C}^2) = 0.10$, giving $\mu_a = 2.17$~mm/yr/\textdegree C$^2$.  This assigns 10\% prior probability to the quadratic coefficient exceeding the approximate frequentist DOLS estimate, while concentrating most prior mass near $a = 0$.
+
+\paragraph{Prior predictive checking.}  We verify that the prior predictive distribution produces physically plausible rates.  Drawing $(a, b, c)$ from their respective priors and evaluating $\text{rate}(T) = a\,T^2 + b\,T + c$ at representative temperatures yields rates consistent with observed and projected ranges (see companion notebook).  This confirms that the Exponential prior is not overly restrictive.
+
+\paragraph{Sensitivity analysis.}  We sweep $\mu_a$ over a range from 1.0 to 10.0~mm/yr/\textdegree C$^2$, examining the sensitivity of: (1)~the posterior on~$a$; (2)~the implied rate at the end of the observational record ($\approx$2018); (3)~the extrapolated rate at $T = 4$\textdegree C; and (4)~projected GMSL at 2100 under SSP2-4.5.  This transparently reports how the prior choice affects the results.
+
+\subsection{The $\sigextra$ prior}
+
+The HalfCauchy prior on $\sigextra$ is a standard choice for variance-like parameters in Bayesian hierarchical models.  Its heavy tail (relative to HalfNormal) allows the data to determine the scale of model inadequacy without the prior imposing an artificial ceiling.  We sample $\log\sigextra$ rather than $\sigextra$ directly, adding the appropriate Jacobian correction ($+\log\sigextra$) to the log-prior.
+
+
+\section{Computational Methods}
+
+\subsection{MCMC sampler}
+
+We use the \texttt{emcee} affine-invariant ensemble sampler \citep{foreman-mackey2013emcee} with 32 walkers, 1000 burn-in steps, and 3000 production steps, yielding $32 \times 3000 = 96{,}000$ total posterior samples (before thinning).
+
+\subsection{Initialization}
+
+Walkers are initialized around the OLS estimate: a multivariate perturbation with scale $\sim$10\% of each OLS coefficient magnitude, with $a$ and $b$ reflected to ensure non-negativity.
+
+\subsection{Convergence diagnostics}
+
+We assess convergence using:
+\begin{itemize}
+  \item The Gelman--Rubin statistic $\hat{R}$ across the first four walkers treated as independent chains; convergence requires $\hat{R} < 1.05$ for all parameters.
+  \item Effective sample size (ESS) $> 400$ for all parameters.
+  \item Visual inspection of trace plots for stationarity and mixing.
+  \item Autocorrelation plots to verify adequate thinning.
+\end{itemize}
+
+
+\section{Results}
+
+\subsection{Posterior estimates}
+
+The posterior mean coefficients, 94\% highest density intervals (HDI), and goodness of fit are reported in the companion notebook (\texttt{bayesian\_level\_space.ipynb}).  Key diagnostics include:
+
+\begin{itemize}
+  \item $R^2$ comparable to the frequentist DOLS fit ($\sim$0.97);
+  \item $\sigextra$ posterior in the range 2--5~mm, consistent with the expected magnitude of unmodeled interannual variability;
+  \item No posterior samples with $a < 0$ or $b < 0$, confirming the half-normal priors effectively constrain the physically meaningful region.
+\end{itemize}
+
+\subsection{Comparison with DOLS}
+
+The frequentist DOLS and Bayesian level-space calibrations use the same data and the same linear-in-parameters forward model, but differ in how they handle the $\int T^2 / \int T$ collinearity:
+
+\begin{itemize}
+  \item \textbf{DOLS}: Reports a single point estimate on the collinearity ridge with HAC standard errors that reflect the ridge geometry (large, negatively correlated uncertainties on $a$ and $b$).
+  \item \textbf{Bayesian}: The full posterior traces the ridge, but the half-normal priors truncate it at the physical boundary ($a \geq 0$, $b \geq 0$), yielding a posterior that is concentrated on the physically meaningful portion of the ridge.
+\end{itemize}
+
+The posterior correlation between $a$ and $b$ is strongly negative ($\rho \sim -0.9$), confirming that the collinearity is intrinsic to the data and not an artifact of either estimation approach.
+
+\subsection{The collinearity ridge and projection insensitivity}
+
+A crucial insight is that different points along the collinearity ridge can produce similar projected sea levels, because the integral $\int [a\,T^2 + b\,T + c]\,\mathrm{d}t$ over a smooth temperature trajectory is approximately preserved as $a$ and $b$ trade off.  This means that while individual coefficient estimates are sensitive to the prior, the \emph{projections} may be more robust than the individual parameter uncertainties suggest.
+
+
+\section{Projections}
+
+Posterior coefficient samples are passed to \texttt{project\_gmsl\_ensemble()} to generate Monte Carlo projection ensembles for each SSP scenario.  The \texttt{posterior\_samples} keyword bypasses the default multivariate normal sampling and instead draws (with replacement) from the actual posterior, preserving the non-Gaussian structure imposed by the half-normal priors and the collinearity ridge.
+
+Projections are compared at 2050, 2100, and 2150 against:
+\begin{itemize}
+  \item DOLS projections (multivariate normal coefficient sampling);
+  \item IPCC AR6 medium-confidence GMSL projections.
+\end{itemize}
+
+
+\section{Sensitivity Analysis}
+
+We test the robustness of the posterior to three perturbations:
+
+\begin{enumerate}
+  \item \textbf{Prior width}: Varying the Exponential mean for $a$ (via tail probability $P(a > 5) \in \{0.05, 0.10, 0.20\}$) and the HalfNormal $\sigma$ for $b$ by factors of $0.5\times$ and $2\times$.  If the posterior is data-dominated, the sensitivity should be small.
+
+  \item \textbf{Dam-filling amplitude}: Setting $A_{\text{dam}} = 0$, 3, and 6~mm in \cref{eq:dam}.  This tests whether the TWS structural uncertainty affects the physical parameter estimates or is absorbed by $\sigextra$.
+
+  \item \textbf{$\sigextra$ prior}: Comparing HalfCauchy(5~mm) with HalfCauchy(10~mm) to assess whether the heavy-tailed prior scale matters.
+\end{enumerate}
+
+
+\section{Rate-and-State Extension}
+\label{sec:ratestate}
+
+\subsection{Motivation}
+
+The instantaneous model (\cref{eq:rate}) assumes that the rate of sea-level rise responds immediately to surface temperature.  In reality, several SLR components have response timescales much longer than the annual sampling interval:
+
+\begin{itemize}
+  \item \textbf{Deep ocean thermal expansion}: The ocean mixed layer equilibrates within $\sim$30~yr, but the intermediate ocean (200--1000~m) requires $\sim$200~yr and the deep ocean ($>$2000~m) may take $>$1000~yr \citep{caldeira2013estimating}.
+  \item \textbf{Ice-sheet dynamics}: Glacier and Greenland response times are $\sim$10--100~yr, while WAIS marine instability processes operate on $\sim$100--1000~yr timescales.
+  \item \textbf{Semi-empirical precedents}: \citet{vermeer2009global} introduced a two-timescale semi-empirical model with a fast component ($\tau \sim 50$~yr), and \citet{mengel2016future} used a similar decomposition for thermal expansion ($\tau \leq 100$~yr).
+\end{itemize}
+
+Over the 1900--2018 calibration period, the instantaneous model works well empirically because temperature has been rising nearly monotonically.  However, for future projections --- especially under scenarios where temperature stabilises or declines (e.g., SSP1-2.6 post-2050) --- the instantaneous model cannot capture the ``committed'' sea-level rise from components that have not yet equilibrated to past warming.
+
+\subsection{State variable formulation}
+
+We augment the generative model with a state variable $S(t)$ governed by a first-order relaxation ODE:
+\begin{equation}
+  \frac{\mathrm{d}S}{\mathrm{d}t} = \frac{T(t) - S(t)}{\tau}
+  \label{eq:state_ode}
+\end{equation}
+where $\tau$ is the effective relaxation time.  The extended rate model is:
+\begin{equation}
+  \text{rate}(t) = a\,T(t)^2 + b\,T(t) + c + d\,[S(t) - T(t)]
+  \label{eq:state_rate}
+\end{equation}
+The disequilibrium term $d \cdot (S - T)$ is physically interpretable: during warming, $S < T$ (the state lags temperature), so the term is negative, meaning the realised SLR rate is \emph{less} than the equilibrium rate because slow ocean and ice-sheet components have not yet fully responded.  After temperature stabilises, $S$ catches up and the disequilibrium vanishes.
+
+\paragraph{Limiting behaviour.}  As $\tau \to 0$, $S \to T$ and $d \cdot (S - T) \to 0$, recovering the instantaneous model $\text{rate} = a\,T^2 + b\,T + c$.  This ensures the rate-and-state model is a strict generalisation of the baseline model.
+
+\paragraph{Connection to \citet{vermeer2009global}.}
+The semi-empirical model of \citet{vermeer2009global} writes the SLR rate as
+\begin{equation}
+  \frac{\mathrm{d}H}{\mathrm{d}t} = a_{\textsc{vr}}\,(T - T_0) + b_{\textsc{vr}}\,\frac{\mathrm{d}T}{\mathrm{d}t}
+  \label{eq:vr09}
+\end{equation}
+where $b_{\textsc{vr}}\,\mathrm{d}T/\mathrm{d}t$ is a transient correction that vanishes when temperature stabilises.  This is the \emph{small-$\tau$ limit} of the state-variable formulation.  Taylor-expanding $S(t)$ around $T(t)$ for small $\tau$:
+\begin{equation}
+  S \approx T - \tau\,\frac{\mathrm{d}T}{\mathrm{d}t}
+  \qquad\Longrightarrow\qquad
+  d\,[S - T] \approx -d\,\tau\,\frac{\mathrm{d}T}{\mathrm{d}t}
+  \label{eq:vr09_limit}
+\end{equation}
+so that $b_{\textsc{vr}} = -d\,\tau$.  The two formulations are mathematically equivalent when $\tau$ is short enough that $S$ tracks $T$ closely.  The state-variable form has two practical advantages: (i)~it remains valid for large $\tau$ (the Taylor expansion breaks down when $\tau\,|\mathrm{d}^2T/\mathrm{d}t^2|$ is not negligible), and (ii)~it avoids differentiating annual temperature data, which amplifies observational noise and makes $b_{\textsc{vr}}$ difficult to estimate.  Our $\tau$ sensitivity analysis (\cref{sec:dag}) effectively maps out the continuum from VR09-like behaviour (small $\tau$, transient correction $\propto \mathrm{d}T/\mathrm{d}t$) to deep-memory dynamics (large $\tau$, persistent disequilibrium).
+
+\paragraph{Analytical solution.}  For piecewise-linear temperature between grid points, the ODE has the exact exponential solution:
+\begin{equation}
+  S(t + \Delta t) = \bar{T} + [S(t) - \bar{T}]\,\exp(-\Delta t / \tau)
+  \label{eq:ode_solution}
+\end{equation}
+where $\bar{T} = \frac{1}{2}[T(t) + T(t+\Delta t)]$ is the midpoint temperature.  This avoids numerical ODE solver overhead and is used at every MCMC step.
+
+\paragraph{Linearity.}  For any fixed $\tau$, the forward model remains linear in the parameters $(a, b, c, d, H_0)$:
+\begin{equation}
+  H_{\text{model}}(t) = a \cdot I_2(t) + b \cdot I_1(t) + c \cdot I_0(t) + d \cdot I_S(t) + H_0
+  \label{eq:state_linear}
+\end{equation}
+where $I_S(t) = \int_{t_0}^{t} [S(\tau) - T(\tau)]\,\mathrm{d}\tau$ depends on $\tau$ but is pre-computable for each proposed $\tau$ value.  Only $\tau$ introduces nonlinearity.
+
+\subsection{Prior specification}
+
+The rate-and-state model has seven parameters.  \Cref{tab:state_priors} extends \cref{tab:priors} with the two new parameters $d$ and $\tau$.
+
+\begin{table}[ht]
+\centering
+\caption{Prior distributions for the rate-and-state model (extending \cref{tab:priors}).}
+\label{tab:state_priors}
+\begin{tabular}{lllp{6cm}}
+\toprule
+Parameter & Symbol & Prior & Rationale \\
+\midrule
+Acceleration sensitivity & $a$ & Exponential(mean $= 2.2$~mm/yr/\textdegree C$^2$) & PC prior (same as instantaneous; \cref{sec:quadratic-prior}) \\
+Linear sensitivity & $b$ & HalfNormal($\sigma = 10$~mm/yr/\textdegree C) & Same as instantaneous model \\
+Background rate & $c$ & Normal($2.0, 5.0$~mm/yr) & Same as instantaneous model \\
+Disequilibrium strength & $d$ & Exponential(mean $= 1.3$~mm/yr/\textdegree C) & PC prior: mode at $d=0$, shrinks toward instantaneous; $P(d>3)=0.10$ \\
+Relaxation time & $\tau$ & LogNormal($\log 20, 0.7$)~yr & Data-constrained; 95\% CI $\approx$ [5, 81]~yr \\
+Model inadequacy & $\sigextra$ & HalfCauchy($0, 5$~mm) & Same as instantaneous model \\
+Initial sea level & $H_0$ & Normal($H_{\text{obs}}(t_0), 50$~mm) & Same as instantaneous model \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Justification of the $\tau$ prior}
+
+The LogNormal prior on $\tau$ with median 20~yr and 95\% CI [5, 81]~yr is chosen to concentrate mass where the 1900--2018 observational record has resolving power.  The strongest transient feature in the instrumental record is the mid-20th century warming hiatus ($\sim$1940--1970), followed by a visible shallowing of GMSL trends with a lag of roughly 15--25 years.  This is the only event in the record that can meaningfully constrain $\tau$; a median of 50~yr would produce a response lag extending into the 1990s, inconsistent with observations.  The prior is informed by multiple lines of evidence for ocean and ice-sheet response timescales (\cref{tab:tau_lit}):
+
+\begin{table}[ht]
+\centering
+\caption{Literature estimates of ocean/ice-sheet response timescales.}
+\label{tab:tau_lit}
+\begin{tabular}{llc}
+\toprule
+Source & Component & $\tau$ estimate \\
+\midrule
+\citet{caldeira2013estimating} & Ocean mixed layer & $\sim$32~yr \\
+\citet{vermeer2009global} & Semi-empirical (fast) & $\sim$50~yr \\
+\citet{mengel2016future} & Fast thermal expansion & $\leq$100~yr \\
+Yang et al.\ (2011) & Intermediate ocean (200--1000~m) & $\sim$200~yr \\
+Rignot et al.\ (2014); Joughin et al.\ (2014) & Ice sheet dynamic response & 100--500+~yr \\
+Church et al.\ (2013); Clark et al.\ (2016) & Deep ocean + ice sheet equilibration & 500--2000+~yr \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Our single-$\tau$ model captures the \emph{dominant fast-to-intermediate response}.  With only 119~years of observation, we cannot separately identify fast ($\sim$5~yr) and slow ($\sim$500+~yr) timescales.  The LogNormal prior concentrates mass on [5, 81]~yr, spanning from upper-ocean mixed-layer response to intermediate-ocean equilibration, with the data determining where on this range the effective $\tau$ sits.  Longer timescales relevant to deep ocean and ice sheet equilibration ($\tau > 100$~yr) are effectively unresolvable from the instrumental record alone.
+
+\subsection{Computational cost}
+
+Each MCMC log-probability evaluation requires: (1)~solving the state ODE on the monthly grid, $O(n_{\text{monthly}})$; (2)~computing the disequilibrium integral $I_S$, $O(n_{\text{monthly}})$; and (3)~evaluating the likelihood at the $n_{\text{obs}}$ observation times, $O(n_{\text{obs}})$.  The total cost per step is $O(2 \times 1400 + 119) \approx O(3000)$, roughly $3\times$ the instantaneous model.  We use 64 walkers with 3000 burn-in and 5000 production steps to ensure adequate mixing of the nonlinear $\tau$ parameter.  Initialisation from a converged instantaneous-model fit (the $\tau \to 0$ limit) is critical: the 5-regressor OLS problem is ill-conditioned because $I_S$ is strongly collinear with $I_1$ and $I_0$, typically yielding infeasible negative values for $d$ and $b$.
+
+
+\section{Directed Acyclic Graph Framework}
+\label{sec:dag}
+
+\subsection{Hierarchical decomposition}
+
+The rate-and-state model occupies Level~1 (global constraint) in a four-level hierarchical framework connecting emissions scenarios to total GMSL projection uncertainty:
+
+\begin{description}
+  \item[Level 0 --- External forcing:] Emissions scenarios (SSPs) drive GMST projections $T(t)$ from IPCC/CMIP6 multi-model ensembles.
+
+  \item[Level 1 --- Global constraint (this model):] The rate-and-state model calibrates the temperature--SLR relationship against 1900--2018 observations, yielding $\sigma_{\text{constrained}}(t)$ --- the within-scenario projection uncertainty from coefficient and $\tau$ uncertainty.
+
+  \item[Level 2 --- Component attribution:] The calibrated total rate is decomposed into contributions from thermosteric expansion, glaciers, Greenland, WAIS, and terrestrial water storage.  The budget constraint $\sum_i \text{rate}_i = \text{rate}_{\text{total}}$ ensures component models are consistent with the Level~1 total within posterior uncertainty.
+
+  \item[Level 3 --- WAIS deep uncertainty:] The A4 scenario mixture model from the companion document provides $\sigma_{\text{ice}}(t)$, representing deep uncertainty from marine ice-sheet instability processes that observations alone cannot constrain.
+\end{description}
+
+\subsection{Variance decomposition}
+
+The total projection uncertainty combines three independent components:
+\begin{equation}
+  \sigma_{\text{total}}^2(t) = \sigma_{\text{constrained}}^2(t) + \sigma_{\text{scenario}}^2(t) + \sigma_{\text{ice}}^2(t)
+  \label{eq:var_decomp}
+\end{equation}
+where $\sigma_{\text{scenario}}$ captures the across-SSP spread (forcing/policy uncertainty) and $\sigma_{\text{ice}}$ is the WAIS deep-uncertainty tail from the A4 framework.
+
+\subsection{Connections between levels}
+
+Several key connections link the levels:
+
+\begin{itemize}
+  \item \textbf{Level~1 $\to$ Level~2}: The posterior on $(a, b, c, d, \tau)$ constrains the total rate envelope.  Component-level models must produce rates summing to the Level~1 total, reducing the dimensionality of the component-attribution problem.
+
+  \item \textbf{Level~1 $\leftrightarrow$ Level~3}: The posterior on $\tau$ provides a handle for ice-sheet-specific relaxation times.  If $\tau \gg 50$~yr, ice-sheet dynamics contribute significantly to the effective response time, informing the WAIS process models.
+
+  \item \textbf{Global $\to$ Local}: Level~1 constrains the total projection envelope; Level~3 process models provide the deep-uncertainty tails that observations alone cannot constrain.  The DAG ensures these are combined consistently rather than ad hoc.
+\end{itemize}
+
+
+\section{Discussion}
+
+\subsection{Advantages over previous approaches}
+
+The Bayesian level-space model offers several advantages:
+
+\begin{enumerate}
+  \item \textbf{Self-consistency}: A single generative model from temperature to sea level, with no intermediate kinematic step.
+  \item \textbf{Proper uncertainty}: Time-varying observation uncertainty naturally down-weights unreliable early data.
+  \item \textbf{Independent observations}: Annual GMSL measurements are genuinely independent, avoiding the serial-correlation complications of overlapping kernel rate estimates.
+  \item \textbf{Physical priors}: Half-normal constraints on $a$ and $b$ are physically motivated and naturally handle the collinearity.
+  \item \textbf{Learned model inadequacy}: $\sigextra$ provides an honest assessment of what the temperature model cannot explain.
+\end{enumerate}
+
+\subsection{Limitations}
+
+\begin{enumerate}
+  \item The $\int T^2 / \int T$ collinearity remains intrinsic to the data; the priors constrain but do not eliminate it.  Individual coefficient estimates remain prior-sensitive (by design).
+  \item The model assumes a time-invariant polynomial relationship between rate and temperature, which may not hold if the relative contributions of different SLR components evolve.
+  \item The HalfCauchy prior on $\sigextra$ could potentially absorb genuine signals (e.g., volcanic cooling periods) that the forward model does not capture, leading to slightly inflated model-inadequacy estimates.
+  \item The dam-filling structural uncertainty (\cref{eq:dam}) has an assumed functional form; the true TWS model error may differ.
+\end{enumerate}
+
+\subsection{Connection to the WAIS uncertainty framework}
+
+The Bayesian level-space calibration provides the ``constrained'' uncertainty component ($\sigma_{\text{constrained}}$) in the hierarchical variance decomposition.  It can be combined with the physics-informed WAIS uncertainty ($\sigma_{\text{ice}}$) from the companion document to produce the complete projection uncertainty budget.  The posterior samples directly feed into the Monte Carlo projection framework, ensuring that calibration uncertainty propagates consistently into the total forecast uncertainty.
+
+
+\subsection{Future work: Constraining $\tau$ with modelling, modern data, and palaeo-data}
+
+The relaxation time $\tau$ is the least constrained parameter in the rate-and-state model.  Several avenues exist for tightening the posterior on $\tau$:
+
+\begin{enumerate}
+  \item \textbf{Earth system model emulation.}  CMIP6 models simulate the full ocean--ice--atmosphere response to idealised forcing (e.g., abrupt-4$\times$CO$_2$, 1\%~CO$_2$~yr$^{-1}$).  Fitting the rate-and-state ODE to the simulated GMSL--temperature relationship in each model would yield a model-specific $\tau$, with the cross-model spread providing an independent constraint on the prior.  Step-response experiments (abrupt forcing) are particularly informative because the relaxation dynamics are directly observable.
+
+  \item \textbf{Modern oceanographic observations.}  Argo float data (2005--present) resolve the depth structure of ocean heat uptake, allowing separate estimation of mixed-layer vs.\ intermediate-ocean equilibration timescales.  GRACE/GRACE-FO gravity data distinguish ice-sheet and ocean-mass contributions, enabling component-specific $\tau$ estimation.  The short duration ($\sim$20~yr) limits the constraint on long timescales, but these data sharply constrain $\tau < 30$~yr.
+
+  \item \textbf{Palaeo-data.}  Sea-level reconstructions from the last interglacial (LIG, $\sim$125~ka), mid-Pliocene ($\sim$3~Ma), and Holocene provide records over timescales where slow-response components have fully equilibrated.  The ratio of equilibrium SLR per degree warming ($\sim$5--20~m/\textdegree C over millennia) to the transient ratio ($\sim$0.5$-$1~m/\textdegree C from the instrumental record) directly constrains $\tau$: a large ratio implies large $\tau$ and significant committed SLR.  High-resolution Holocene records from coral microatolls and salt marshes could constrain the transition from post-glacial decay to anthropogenic acceleration, a period where the state variable dynamics are most informative.
+
+  \item \textbf{Hierarchical multi-timescale models.}  The single-$\tau$ model captures the dominant response but conflates fast (thermal expansion, $\sim$30~yr) and slow (ice dynamics, $\sim$500+~yr) processes.  A two-state extension ($S_{\text{fast}}$, $S_{\text{slow}}$) with separate timescales could be identified as the observational record lengthens or as process-model constraints narrow the individual timescales.
+\end{enumerate}
+
+
+\subsection{Future work: Component-specific state variables}
+
+In principle, each contributor to GMSL has its own state variable and relaxation time:
+\begin{align}
+  \frac{\mathrm{d}S_{\text{thermo}}}{\mathrm{d}t} &= \frac{T(t) - S_{\text{thermo}}}{\tau_{\text{thermo}}}
+  & \tau_{\text{thermo}} &\sim 30\text{--}200~\text{yr} \label{eq:S_thermo} \\
+  \frac{\mathrm{d}S_{\text{glacier}}}{\mathrm{d}t} &= \frac{T(t) - S_{\text{glacier}}}{\tau_{\text{glacier}}}
+  & \tau_{\text{glacier}} &\sim 10\text{--}100~\text{yr} \label{eq:S_glacier} \\
+  \frac{\mathrm{d}S_{\text{GrIS}}}{\mathrm{d}t} &= \frac{T(t) - S_{\text{GrIS}}}{\tau_{\text{GrIS}}}
+  & \tau_{\text{GrIS}} &\sim 50\text{--}500~\text{yr} \label{eq:S_GrIS} \\
+  \frac{\mathrm{d}S_{\text{WAIS}}}{\mathrm{d}t} &= \frac{T(t) - S_{\text{WAIS}}}{\tau_{\text{WAIS}}}
+  & \tau_{\text{WAIS}} &\sim 100\text{--}1000+~\text{yr} \label{eq:S_WAIS}
+\end{align}
+with the total rate being the sum of component rates, each depending on its own state variable.  The current single-$\tau$ model provides an \emph{effective} $\tau$ that represents a weighted average of these component timescales, with the weights determined by each component's contribution to the total rate.
+
+Several data sources and models can help constrain individual component state variables:
+
+\begin{itemize}
+  \item \textbf{Thermosteric expansion:} CMIP6 simulations provide depth-resolved ocean thermal response functions.  Fitting separate mixed-layer and deep-ocean state variables to simulated steric sea level would yield $\tau_{\text{thermo}}$ with model uncertainty.  The deep-ocean contribution can also be constrained by ocean heat content measurements from Argo (0--2000~m) and deep hydrographic sections.
+
+  \item \textbf{Glaciers:} The Glacier Model Intercomparison Project (GlacierMIP) provides glacier mass change responses to standardised temperature forcings.  The effective $\tau_{\text{glacier}}$ can be estimated from the lag between temperature forcing and glacier equilibrium, which depends on glacier geometry and climate sensitivity.  Modern satellite gravimetry (GRACE-FO) and glacier inventories (Randolph Glacier Inventory) constrain the current disequilibrium.
+
+  \item \textbf{Greenland Ice Sheet:} Surface mass balance models (e.g., RACMO, MAR) coupled to ice-dynamical models (e.g., ISSM, Elmer/Ice) simulate the GrIS response to temperature forcing.  The $\sim$20-year satellite record of GrIS mass loss provides a transient constraint, while the Eemian sea-level highstand constrains the long-timescale equilibrium sensitivity.
+
+  \item \textbf{West Antarctic Ice Sheet:} WAIS dynamics are governed by marine ice-sheet instability (MISI) and potentially marine ice-cliff instability (MICI), which introduce strongly nonlinear behaviour that the linear relaxation model cannot capture.  However, for the pre-instability regime, a state-variable model can capture the thermal lag between ocean warming and sub-shelf melt response.  The A4 scenario mixture from the companion document provides the deep-uncertainty tail for the post-instability regime.
+
+  \item \textbf{Terrestrial water storage:} TWS responds to precipitation and human water management rather than temperature, so it does not naturally fit a temperature-driven state variable.  However, the groundwater depletion component responds on decadal timescales to extraction rates, which could be modelled with a similar relaxation framework driven by population and irrigation data rather than temperature.
+\end{itemize}
+
+The transition from a single effective $\tau$ to component-specific state variables represents a natural pathway for incorporating process-based constraints into the semi-empirical framework.  Each component's $\tau_i$ and $d_i$ can be informed by dedicated models and observations, while the DAG framework (\cref{sec:dag}) ensures that the component-level estimates remain consistent with the total GMSL constraint from Level~1.  This approach bridges the gap between the purely observational semi-empirical models and the fully process-based Earth system models, providing a principled way to incorporate physical understanding without abandoning the empirical constraint from the instrumental record.
+
+
+\bibliographystyle{apalike}
+\bibliography{references}
+
+\end{document}
