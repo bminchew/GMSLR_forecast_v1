@@ -276,7 +276,7 @@ where
   \sigma_{\text{budget}}^2(t_j) = \sigma_{\text{obs,total}}^2(t_j) + \sum_{i=1}^{K} \sigma_{\text{extra},i}^2
   \label{eq:budget-tolerance}
 \end{equation}
-incorporates both the measurement uncertainty in the total GMSL rate and the component-level model inadequacy terms $\sigma_{\text{extra},i}$ (\cref{sec:component-discrepancy}).  In the limit $\sigma_{\text{budget}} \to 0$, this recovers the deterministic budget; allowing slight imbalance prevents numerical pathologies from degenerate posteriors while honestly reflecting that no finite set of component models perfectly accounts for every physical process contributing to the total.
+incorporates both the measurement uncertainty in the total GMSL rate and the component-level model inadequacy terms $\sigma_{\text{extra},i}$ (see~\cref{sec:variance}).  In the limit $\sigma_{\text{budget}} \to 0$, this recovers the deterministic budget; allowing slight imbalance prevents numerical pathologies from degenerate posteriors while honestly reflecting that no finite set of component models perfectly accounts for every physical process contributing to the total.
 
 This soft-constraint formulation follows the approach to constraints in Bayesian calibration problems described by \citet{kennedy2001bayesian} and \citet{brynjarsdottir2014learning}.  The budget acts as both a \emph{regulariser} (preventing components from drifting to implausible values) and a \emph{cross-component constraint} (well-observed components tighten the residual and thereby constrain poorly observed ones).  Critically, because the constraint operates at every time step rather than through a small number of shared polynomial parameters, the regularisation is stronger: it penalises component models that deviate from the total \emph{anywhere} in the calibration period, not only through their integrated polynomial behaviour.
 
@@ -289,7 +289,7 @@ For components where observational constraints are insufficient to characterise 
   \item S3: MISI with amplifying feedbacks;
   \item S4: MISI with marine ice-cliff instability (MICI).
 \end{itemize}
-Each scenario has its own within-scenario distribution; the mixture weights encode expert assessment of scenario plausibility.  The resulting deep-uncertainty contribution enters the total projection variance through the nested law-of-total-variance decomposition (\cref{sec:variance}).  The approximation that the A4 contribution is independent of the Level~1 calibration uncertainty (Assumption~V1 in~\cref{sec:variance-approx}) requires that the A4 scenarios be consistent with the historical budget residual; this condition is tested empirically.
+Each scenario has its own within-scenario distribution; the mixture weights encode expert assessment of scenario plausibility.  The resulting deep-uncertainty contribution enters the total projection variance through the nested law-of-total-variance decomposition (\cref{sec:variance}).  The approximation that the A4 contribution is independent of the Level~1 calibration uncertainty (Assumption~V1 in~\cref{sec:variance-approx}) requires that the A4 scenarios be consistent with the historical budget residual; this condition is tested by the A4/budget consistency diagnostic (\cref{sec:a4-consistency}).
 
 \subsection{Formal DAG specification}
 \label{sec:dag-spec}
@@ -327,7 +327,7 @@ Total rate & $r_{\text{total}}(t)$ & G & Deterministic sum of component rates (\
 GMSL & $H_{\GMSL}(t)$ & G & Global mean sea level, obtained by integrating $r_{\text{total}}$. \\
 \addlinespace
 A4 scenario index & $k$ & D & Discrete index over AIS deep-uncertainty scenarios (S1--S4). \\
-Scenario weights & $w_k$ & D & Prior mixture weights from expert assessment; updated by budget consistency. \\
+Scenario weights & $w_k$ & D & Prior mixture weights from expert assessment; updated by budget consistency (\cref{sec:a4-consistency}). \\
 \addlinespace
 GMSL observations & $\mathbf{H}_{\text{obs}}$ & O & Frederikse et al.\ (2020) reconstruction, 1900--2018. \\
 Component datasets & $\mathbf{D}_{\text{th}}, \mathbf{D}_{\text{gl}}, \mathbf{D}_{\text{GrIS}}, \mathbf{D}_{\text{AIS}}, \mathbf{D}_{\text{TWS}}$ & O & Component-specific observational records (Argo, GlaMBIE, IMBIE, GRACE, etc.). \\
@@ -432,7 +432,7 @@ The DAG structure ensures that counterfactual queries are well-defined: for any 
 Component & Rate model & Forcing variable(s) & Justification \\
 \midrule
 Thermosteric & $b_{\text{th}} T + c_{\text{th}}$ & GMST & Direct thermodynamic response \\
-Glaciers & $(a_{\text{gl}} T^2 + b_{\text{gl}} T + c_{\text{gl}})\cdot[V_{\text{gl}}/V_{\text{gl},0}]^p$ & GMST & Melt + area-loss + depletion \\
+Glaciers & $a_{\text{gl}} T^2 + b_{\text{gl}} T + c_{\text{gl}}$ & GMST & Melt + area-loss feedback \\
 GrIS (SMB) & $b_{\text{SMB}} T + c_{\text{SMB}}$ & GMST & Surface energy balance \\
 GrIS (discharge) & $\beta_{\text{dis}} T_{\text{NA}} + c_{\text{dis}}$ & North Atlantic SST & Ocean-forced outlet dynamics \\
 AIS & Budget residual (calibration); & CDW proxy & Ocean-forced dynamics \\
@@ -450,9 +450,7 @@ Each component analysis provides a marginal posterior on its own parameters, whi
 
 \paragraph{Data.}  Argo float array (2005--present, global coverage below 2000~m); ocean reanalysis products (1950--present, declining coverage with depth and time); XBT profiles (1960s--present, upper 700~m, with known fall-rate biases).
 
-\paragraph{Model.}  Thermal expansion is well-understood from first principles: $\text{rate}_{\text{thermo}}(T) \approx b_{\text{th}} \cdot T + c_{\text{th}}$.  The response is expected to be nearly linear in global mean temperature because the thermal expansion coefficient varies slowly over the relevant temperature range.  A quadratic term $a_{\text{th}} T^2$ is available but expected to be small; an Exponential (PC) prior on $a_{\text{th}}$ provides shrinkage toward the linear model.  A scalar model-inadequacy term $\sigma_{\text{extra,th}}$ (\cref{sec:scalar-discrepancy}) accounts for unmodeled variability, primarily from depth-dependent heat uptake dynamics and regional ocean circulation effects.
-
-\paragraph{Phase~2 model extension: deep-ocean lag.}  The linear-in-$T$ model captures the upper-ocean response but ignores the slow equilibration of the deep ocean.  If Phase~1 residuals show structure consistent with a lagged response, a two-timescale model should replace the linear model: $\text{rate}_{\text{th}}(t) = b_{\text{fast}} T(t) + b_{\text{slow}} S_{\text{deep}}(t)$, with $\mathrm{d}S_{\text{deep}}/\mathrm{d}t = (T(t) - S_{\text{deep}}(t))/\tau_{\text{deep}}$ and $\tau_{\text{deep}} \sim 200$--1000~yr.  This is a \emph{model extension} (not a discrepancy correction) that captures the committed thermosteric response from heat already in the system.  It is deferred to Phase~2 unless the Phase~1 thermosteric residual diagnostics indicate structured model error.
+\paragraph{Model.}  Thermal expansion is well-understood from first principles: $\text{rate}_{\text{thermo}}(T) \approx b_{\text{th}} \cdot T + c_{\text{th}}$.  The response is expected to be nearly linear in global mean temperature because the thermal expansion coefficient varies slowly over the relevant temperature range.  A quadratic term $a_{\text{th}} T^2$ is available but expected to be small; an Exponential (PC) prior on $a_{\text{th}}$ provides shrinkage toward the linear model.
 
 \paragraph{Prior contribution.}  Because thermal expansion is the best-constrained component, the prior on $b_{\text{th}}$ will be tight: approximately Normal($\mu_{\text{th}}, \sigma_{\text{th}}$) with $\sigma_{\text{th}}$ determined by the Argo-era uncertainty.  This tight prior propagates through the rate-level budget to constrain the residual available to other components at every calibration time step.
 
@@ -461,21 +459,9 @@ Each component analysis provides a marginal posterior on its own parameters, whi
 
 \paragraph{Data.}  Randolph Glacier Inventory (RGI); geodetic mass balance estimates; GRACE/GRACE-FO (2002--present); regional temperature and precipitation records.
 
-\paragraph{Model.}  Glacier mass balance responds to both temperature (melt) and precipitation (accumulation).  The temperature sensitivity may be nonlinear because: (a)~small glaciers disappear entirely, reducing the total glacier area; (b)~the elevation--temperature feedback amplifies warming at glacier surfaces.  A polynomial rate model $\text{rate}_{\text{glaciers}}^{\text{uncorrected}}(T) = a_{\text{gl}} \cdot T^2 + b_{\text{gl}} \cdot T + c_{\text{gl}}$, with $a_{\text{gl}} > 0$ reflecting the accelerating loss as glacier area shrinks, captures the historical temperature sensitivity but is unphysical for projection: the global glacier reservoir is finite ($\sim$0.32~m sea level equivalent), and the polynomial model extrapolates monotonically increasing loss rates even after the reservoir is substantially depleted.
+\paragraph{Model.}  Glacier mass balance responds to both temperature (melt) and precipitation (accumulation).  The temperature sensitivity may be nonlinear because: (a)~small glaciers disappear entirely, reducing the total glacier area; (b)~the elevation--temperature feedback amplifies warming at glacier surfaces.  A model of the form $\text{rate}_{\text{glaciers}}(T) = a_{\text{gl}} \cdot T^2 + b_{\text{gl}} \cdot T + c_{\text{gl}}$ is appropriate, with $a_{\text{gl}} > 0$ reflecting the accelerating loss as glacier area shrinks.
 
-\paragraph{Volume-depletion saturation.}  The forward model must include a volume-depletion correction that bounds the cumulative glacier contribution by the remaining glacier volume:
-\begin{equation}
-  \text{rate}_{\text{glaciers}}(t) = \left(a_{\text{gl}} T^2 + b_{\text{gl}} T + c_{\text{gl}}\right)
-    \cdot \left[\frac{V_{\text{gl}}(t)}{V_{\text{gl},0}}\right]^{p}
-  \label{eq:glacier-depletion}
-\end{equation}
-where $V_{\text{gl},0} \approx 0.32$~m SLE is the initial (reference-epoch) total glacier volume, $V_{\text{gl}}(t) = V_{\text{gl},0} - \int_0^t \text{rate}_{\text{glaciers}}(\tau)\,\mathrm{d}\tau$ is the remaining volume at time~$t$, and the exponent $p > 0$ controls how sharply the rate declines as the reservoir depletes.
-
-This is a \emph{forward model extension}, not a discrepancy correction: without it, the model produces physically impossible projections above $\sim$3\textdegree C of warming (cumulative loss exceeding the total reservoir).  The depletion factor is unity at the start of the calibration period and declines monotonically; it has negligible effect during the historical period (when $V_{\text{gl}}(t) \approx V_{\text{gl},0}$) but dominates the projection at high warming levels.
-
-The exponent $p$ is calibrated, with a prior informed by the glacier volume--area scaling relationships used in GlacierMIP \citep{marzeion2012past, edwards2021projected}: $p \sim \text{LogNormal}(\log 0.7, 0.3)$, reflecting expectation that the rate declines somewhat more slowly than linearly with remaining volume (because large glaciers persist longer than small ones, and the area-weighted sensitivity shifts as small glaciers disappear).
-
-\paragraph{Prior contribution.}  Moderate constraint on $b_{\text{gl}}$ from the geodetic record; weak constraint on $a_{\text{gl}}$ from the relatively short satellite era.  The key question is whether the observed glacier acceleration is separable from ice-sheet acceleration in the GRACE record.  The depletion exponent $p$ is weakly constrained by the historical record (negligible depletion to date) and must be informed by the prior from glacier model intercomparisons.
+\paragraph{Prior contribution.}  Moderate constraint on $b_{\text{gl}}$ from the geodetic record; weak constraint on $a_{\text{gl}}$ from the relatively short satellite era.  The key question is whether the observed glacier acceleration is separable from ice-sheet acceleration in the GRACE record.
 
 \subsection{Greenland Ice Sheet}
 \label{sec:gris}
@@ -488,7 +474,7 @@ The exponent $p$ is calibrated, with a prior informed by the glacier volume--are
 \end{equation}
 where $T_{\text{NA}}(t)$ is a North Atlantic ocean temperature proxy.  The discharge term is driven by ocean thermal forcing on marine-terminating outlet glaciers, not by GMST directly; the relationship between GMST and North Atlantic subsurface temperature is mediated by Atlantic meridional overturning and regional ocean dynamics.  During the pre-Argo era, $T_{\text{NA}}$ may need to be treated as a latent variable or parameterised as a function of GMST with substantial uncertainty.
 
-\paragraph{Prior contribution.}  The SMB component provides an informed prior on $b_{\text{SMB}}$ from regional climate models (RACMO, MAR); the discharge component contributes through $\beta_{\text{dis}}$ and $c_{\text{dis}}$, constrained by satellite-era velocity and thickness observations.  Separate model-inadequacy terms $\sigma_{\text{extra,SMB}}$ and $\sigma_{\text{extra,dis}}$ (\cref{sec:scalar-discrepancy}) account for unmodeled variability in each channel: for SMB, primarily precipitation effects and melt--albedo feedbacks not captured by the linear model; for discharge, poorly characterised pre-Argo ocean forcing and nonlinear calving dynamics.
+\paragraph{Prior contribution.}  The SMB component provides an informed prior on $b_{\text{SMB}}$ from regional climate models (RACMO, MAR); the discharge component contributes through $\beta_{\text{dis}}$ and $c_{\text{dis}}$, constrained by satellite-era velocity and thickness observations.
 
 \subsection{Antarctic Ice Sheet}
 \label{sec:ais}
@@ -547,93 +533,6 @@ The ENSO--TWS--WAIS coupling has three consequences for the hierarchical model:
 \paragraph{Prior contribution.}  TWS contributes an informed prior on $c_{\text{TWS}}$ from dam and groundwater records.  The climate-driven component is parameterised as $\gamma_{\text{TWS}} \cdot E(t)$ where $E(t)$ is an ENSO index, because the TWS--temperature relationship is mediated by ENSO rather than by direct thermodynamic forcing.  Forcing TWS into a polynomial-in-$T$ model would create a spurious temperature dependence that contaminates the budget.
 
 
-\subsection{Component-level model inadequacy}
-\label{sec:component-discrepancy}
-
-The Level~1 model includes a learned model-inadequacy parameter $\sigextra$ that absorbs unmodeled interannual variability (ENSO, volcanic effects, internal climate modes).  The Level~2 component models require an analogous treatment.  Each component rate model (linear-in-$T$ thermosteric, quadratic-in-$T$ glaciers, etc.)\ is a parametric approximation to the true physical rate.  Without a discrepancy term, the parametric model is asserted as exact, forcing the component parameters to absorb variability that should be attributed to model error.  The resulting component posteriors are overconfident, and the budget residual inherits the bias.
-
-\subsubsection{Component discrepancy model}
-\label{sec:discrepancy-model}
-
-For each component~$i$, the observed rate is modelled as:
-\begin{equation}
-  \text{rate}_i^{\text{obs}}(t) = \text{rate}_i^{\text{model}}(t;\, \boldsymbol{\theta}_i) + \delta_i(t) + \epsilon_i(t)
-  \label{eq:component-discrepancy}
-\end{equation}
-where $\text{rate}_i^{\text{model}}(t;\, \boldsymbol{\theta}_i)$ is the parametric forward model (as specified in~\cref{tab:component-models}), $\delta_i(t)$ is the model discrepancy --- the systematic difference between the true rate and the best-fitting parametric model --- and $\epsilon_i(t)$ is the observation noise (measurement error in $\mathbf{D}_i$).
-
-This decomposition follows the framework of \citet{kennedy2001bayesian}: the discrepancy $\delta_i(t)$ is a property of the \emph{model}, not of the observations.  It represents the irreducible gap between the parametric functional form and the true physical rate, evaluated at the true parameter values.  Omitting this term (i.e., setting $\delta_i \equiv 0$) is equivalent to asserting that the parametric model is the true data-generating process, which is not credible for any of the component models.
-
-\subsubsection{Phase~1 implementation: scalar discrepancy}
-\label{sec:scalar-discrepancy}
-
-In Phase~1, the discrepancy is represented as a scalar inflation of the component observation variance --- the simplest possible treatment that captures the \emph{magnitude} of model inadequacy without modelling its temporal structure:
-\begin{equation}
-  \sigma_{D_i,\text{eff}}^2(t_j) = \sigma_{D_i}^2(t_j) + \sigma_{\text{extra},i}^2
-  \label{eq:component-variance-inflation}
-\end{equation}
-where $\sigma_{D_i}^2(t_j)$ is the known measurement uncertainty for component~$i$ at time~$t_j$ (from the component-specific dataset $\mathbf{D}_i$), and $\sigma_{\text{extra},i}$ is a learned parameter representing the root-mean-square amplitude of the model discrepancy for component~$i$.
-
-This is equivalent to treating $\delta_i(t) \sim \mathcal{N}(0, \sigma_{\text{extra},i}^2)$ independently at each time step --- i.e., white-noise discrepancy.  This is conservative in the sense that it inflates the component uncertainty uniformly across time, regardless of whether the model error is concentrated at particular times (e.g., during volcanic eruptions or strong ENSO events).  It cannot capture systematic biases or temporally correlated model errors, which would require the Gaussian process treatment described below.
-
-\paragraph{Priors on $\sigma_{\text{extra},i}$.}  Each $\sigma_{\text{extra},i}$ receives a weakly informative half-Cauchy prior:
-\begin{equation}
-  \sigma_{\text{extra},i} \sim \text{HalfCauchy}(0,\; s_i)
-  \label{eq:discrepancy-prior}
-\end{equation}
-where the scale~$s_i$ is set to the expected magnitude of unmodeled variability for that component.  Recommended values for Phase~1 (in mm/yr):
-
-\begin{center}
-\begin{tabular}{lrl}
-\toprule
-Component & $s_i$ (mm/yr) & Rationale \\
-\midrule
-Thermosteric & 0.3 & Best-constrained; residuals expected small \\
-Glaciers & 0.5 & Regional variability, precipitation effects \\
-GrIS (SMB) & 0.3 & RCM-constrained; moderate residuals \\
-GrIS (discharge) & 0.5 & Ocean forcing poorly characterised pre-Argo \\
-TWS (secular) & 0.2 & Near-constant; small deviations \\
-TWS (climate) & 1.0 & ENSO proxy is imperfect; large interannual signal \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent These scales are intentionally generous (the half-Cauchy places substantial mass well above the scale parameter) and are designed to let the data determine the posterior.  The AIS component does not receive a separate $\sigma_{\text{extra},i}$ in Phase~1 because the AIS rate is derived as a budget residual during calibration, not fitted to component-specific observations; its model inadequacy is absorbed into the budget tolerance (\cref{eq:budget-tolerance}).
-
-\paragraph{Interaction with the budget tolerance.}  The budget tolerance $\sigma_{\text{budget}}(t_j)$ already includes the $\sigma_{\text{extra},i}$ terms (\cref{eq:budget-tolerance}).  Because the $\sigma_{\text{extra},i}$ are sampled during MCMC, $\sigma_{\text{budget}}$ changes at each iteration.  The sampler must recompute $\sigma_{\text{budget}}$ from the current $\sigma_{\text{extra},i}$ values at each step; it is \emph{not} a pre-computed constant.
-
-\subsubsection{Consistency diagnostic}
-\label{sec:discrepancy-consistency}
-
-The sum of component model inadequacies should be approximately consistent with the global model inadequacy:
-\begin{equation}
-  \sigextra^2 \approx \sum_{i=1}^{K} \sigma_{\text{extra},i}^2
-  \label{eq:discrepancy-consistency}
-\end{equation}
-This is approximate because the global model may have additional (or fewer) sources of inadequacy than the sum of component models --- the global polynomial-in-$T$ model smooths over component-specific variability that the individual models are designed to capture.
-
-\paragraph{Diagnostic (mandatory).}  After the Phase~1 posterior is obtained, compare $\hat{\sigextra}^2$ (the posterior median of the global model inadequacy) with $\sum_i \hat{\sigma}_{\text{extra},i}^2$ (the posterior median of the summed component inadequacies).  Three outcomes are possible:
-\begin{enumerate}
-  \item $\sum_i \hat{\sigma}_{\text{extra},i}^2 \approx \hat{\sigextra}^2$: The component models collectively account for the same level of model error as the global model.  This is the expected outcome if the component functional forms are well-chosen.
-  \item $\sum_i \hat{\sigma}_{\text{extra},i}^2 \gg \hat{\sigextra}^2$: The component models are individually underfit (or the global polynomial captures structure that the components miss through cancellation of correlated errors across components).  Investigate whether cross-component discrepancy correlations provide partial cancellation.
-  \item $\sum_i \hat{\sigma}_{\text{extra},i}^2 \ll \hat{\sigextra}^2$: The global model has unmodeled variability that the component decomposition resolves (e.g., because component-specific forcing variables capture variance that the global polynomial-in-$T$ cannot).  This would be evidence that the component decomposition improves the physical representation.
-\end{enumerate}
-
-\subsubsection{Phase~2 extension: Gaussian process discrepancy}
-\label{sec:gp-discrepancy}
-
-If Phase~1 diagnostics reveal temporally structured residuals in any component's fit (e.g., systematic positive residuals during volcanic recovery periods, or autocorrelated residuals at interannual timescales), the scalar discrepancy should be replaced with a Gaussian process:
-\begin{equation}
-  \delta_i(t) \sim \mathcal{GP}\!\left(0,\; k_i(t, t';\, \lambda_i, \sigma_{\delta,i})\right)
-  \label{eq:gp-discrepancy}
-\end{equation}
-where $k_i$ is a stationary covariance kernel (Mat\'ern-$\tfrac{5}{2}$ recommended for smooth but flexible discrepancy) with lengthscale $\lambda_i$ and amplitude $\sigma_{\delta,i}$.  This captures both the magnitude and the temporal correlation structure of model error.
-
-The GP discrepancy adds 2--3 hyperparameters per component and requires either GP regression at each MCMC step (computationally expensive for long calibration records) or a basis-function approximation \citep{salter2019uncertainty}.  It is deferred to Phase~2 unless the Phase~1 residual diagnostics provide clear evidence of structured model error in a specific component.
-
-\paragraph{Decision criterion for GP upgrade.}  Compute the Durbin--Watson statistic (or the lag-1 autocorrelation) of the standardised residuals $\hat{\delta}_i(t_j) = (\text{rate}_i^{\text{obs}}(t_j) - \text{rate}_i^{\text{model}}(t_j;\, \hat{\boldsymbol{\theta}}_i)) / \sigma_{D_i,\text{eff}}(t_j)$ for each component.  If the lag-1 autocorrelation exceeds $|\hat{\rho}_1| > 0.3$, the white-noise assumption is violated and the GP discrepancy should be considered for that component.
-
-
 % ====================================================================
 \section{Bayesian Mechanics of the Hierarchy}
 \label{sec:mechanics}
@@ -641,19 +540,18 @@ The GP discrepancy adds 2--3 hyperparameters per component and requires either G
 
 \subsection{Joint model}
 
-The full hierarchical model has the following structure.  Let $\boldsymbol{\theta}_i$ denote the parameter vector for component~$i$ (with component-specific dimension and interpretation; see~\cref{tab:component-models}), let $\boldsymbol{\theta}_{\text{global}} = (a, b, c, \tau, H_0, \sigextra)$ denote the Level~1 global parameters, and let $\boldsymbol{\sigma}_{\text{extra}} = (\sigma_{\text{extra},1}, \ldots, \sigma_{\text{extra},K})$ denote the component-level model-inadequacy parameters (\cref{sec:component-discrepancy}).  The joint posterior is:
+The full hierarchical model has the following structure.  Let $\boldsymbol{\theta}_i$ denote the parameter vector for component~$i$ (with component-specific dimension and interpretation; see~\cref{tab:component-models}), and let $\boldsymbol{\theta}_{\text{global}} = (a, b, c, \tau, H_0, \sigextra)$ denote the Level~1 global parameters.  The joint posterior is:
 \begin{align}
-  &p(\boldsymbol{\theta}_{\text{global}}, \boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K, \boldsymbol{\sigma}_{\text{extra}}, \boldsymbol{\eta} \mid \mathbf{H}_{\text{obs}}, \mathbf{D}_1, \ldots, \mathbf{D}_K) \nonumber \\
+  &p(\boldsymbol{\theta}_{\text{global}}, \boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K, \boldsymbol{\eta} \mid \mathbf{H}_{\text{obs}}, \mathbf{D}_1, \ldots, \mathbf{D}_K) \nonumber \\
   &\quad \propto
   \underbrace{p(\mathbf{H}_{\text{obs}} \mid \boldsymbol{\theta}_{\text{global}}, \boldsymbol{\eta})}_{\text{GMSL likelihood}}
-  \cdot \underbrace{\prod_{j=1}^{N_t} p_{\text{budget}}\!\left(\text{rate}_{\text{total}}(t_j) - \sum_{i=1}^{K} \text{rate}_i(t_j;\, \boldsymbol{\theta}_i) \;\middle|\; \sigma_{\text{budget}}(t_j;\, \boldsymbol{\sigma}_{\text{extra}})\right)}_{\text{rate-level budget constraint}} \nonumber \\
-  &\qquad \cdot \prod_{i=1}^{K} \underbrace{p(\mathbf{D}_i \mid \boldsymbol{\theta}_i,\, \sigma_{\text{extra},i})}_{\text{component likelihoods}}
+  \cdot \underbrace{\prod_{j=1}^{N_t} p_{\text{budget}}\!\left(\text{rate}_{\text{total}}(t_j) - \sum_{i=1}^{K} \text{rate}_i(t_j;\, \boldsymbol{\theta}_i) \;\middle|\; \sigma_{\text{budget}}(t_j)\right)}_{\text{rate-level budget constraint}} \nonumber \\
+  &\qquad \cdot \prod_{i=1}^{K} \underbrace{p(\mathbf{D}_i \mid \boldsymbol{\theta}_i)}_{\text{component likelihoods}}
   \cdot \prod_{i=1}^{K} \underbrace{p(\boldsymbol{\theta}_i)}_{\text{component priors}}
-  \cdot \prod_{i=1}^{K} \underbrace{p(\sigma_{\text{extra},i})}_{\text{discrepancy priors}}
   \cdot \underbrace{p(\boldsymbol{\eta})}_{\text{nuisance priors}}
   \label{eq:joint-posterior}
 \end{align}
-where $p_{\text{budget}}$ is the Gaussian soft constraint from~\cref{eq:budget-constraint}, $\boldsymbol{\eta}$ collects nuisance parameters, and $\mathbf{D}_i$ is the component-specific dataset.  The budget tolerance $\sigma_{\text{budget}}(t_j;\, \boldsymbol{\sigma}_{\text{extra}})$ is given by~\cref{eq:budget-tolerance} and depends on the current values of the $\sigma_{\text{extra},i}$ at each MCMC step.  Each component likelihood $p(\mathbf{D}_i \mid \boldsymbol{\theta}_i, \sigma_{\text{extra},i})$ uses the inflated observation variance $\sigma_{D_i,\text{eff}}^2(t_j)$ from~\cref{eq:component-variance-inflation}; the discrepancy priors $p(\sigma_{\text{extra},i})$ are half-Cauchy distributions (\cref{eq:discrepancy-prior}).
+where $p_{\text{budget}}$ is the Gaussian soft constraint from~\cref{eq:budget-constraint}, $\boldsymbol{\eta}$ collects nuisance parameters, and $\mathbf{D}_i$ is the component-specific dataset.  The budget tolerance $\sigma_{\text{budget}}(t_j)$ is given by~\cref{eq:budget-tolerance}.
 
 Two structural differences from a coefficient-level budget formulation deserve emphasis:
 \begin{enumerate}
@@ -665,7 +563,7 @@ Two structural differences from a coefficient-level budget formulation deserve e
 
 Information flows in both directions through the hierarchy:
 
-\paragraph{Bottom-up (component data $\to$ global constraint).}  Each component likelihood $p(\mathbf{D}_i \mid \boldsymbol{\theta}_i, \sigma_{\text{extra},i})$ constrains the component rate at times where component-specific observations are available.  Through the rate-level budget (\cref{eq:budget-constraint}), these component-level constraints propagate upward: well-constrained component rates reduce the residual budget available to other components, effectively tightening the total.
+\paragraph{Bottom-up (component data $\to$ global constraint).}  Each component likelihood $p(\mathbf{D}_i \mid \boldsymbol{\theta}_i)$ constrains the component rate at times where component-specific observations are available.  Through the rate-level budget (\cref{eq:budget-constraint}), these component-level constraints propagate upward: well-constrained component rates reduce the residual budget available to other components, effectively tightening the total.
 
 \paragraph{Top-down (global likelihood $\to$ component posteriors).}  The GMSL likelihood constrains the total rate $\text{rate}_{\text{total}}(t)$ at every calibration time step.  Components that are poorly observed directly (e.g., AIS before GRACE) receive indirect constraint from the budget: if the sum of well-observed component rates accounts for most of the observed total, the budget likelihood penalises any component configuration whose residual deviates significantly from the remainder.
 
@@ -690,7 +588,85 @@ The framework is designed to be built incrementally.  At any stage, unresolved c
   \item \textbf{Stage 4:} Add AIS with the A4 deep-uncertainty module and the ENSO--\CDW{} coupling.  The framework is now complete.
 \end{enumerate}
 
-At each stage, the framework is \emph{self-consistent}: the budget holds, the posteriors are valid, and projections can be made.  Adding a new component \emph{refines} the projections but does not invalidate the previous stage.  Every component enters the framework with its own scalar model-inadequacy term $\sigma_{\text{extra},i}$ (\cref{sec:component-discrepancy}); the discrepancy parameters are sampled jointly with the component parameters from Stage~1 onward.
+At each stage, the framework is \emph{self-consistent}: the budget holds, the posteriors are valid, and projections can be made.  Adding a new component \emph{refines} the projections but does not invalidate the previous stage.
+
+
+\subsection{A4/budget consistency}
+\label{sec:a4-consistency}
+
+The A4 deep-uncertainty module (\cref{sec:ais}) assigns prior mixture weights $w_k^{\text{prior}}$ to four AIS scenarios (S1--S4) on the basis of expert assessment and process understanding.  These weights are calibrated against physical plausibility and future expert judgment, not against the observational record.  But each scenario also implies a historical AIS rate trajectory during the calibration period, because the temporal scaling functions $g_k(t)$ (quadratic accumulation for S1; delayed-exponential ramp-up for S2--S4) are defined back to the scenario onset times.  The budget-derived AIS rate provides an observationally grounded check on this implication.
+
+\subsubsection{Budget-derived AIS rate}
+
+During the calibration period, the AIS rate is obtained as a budget residual:
+\begin{equation}
+  r_{\text{AIS}}^{\text{budget}}(t) = r_{\text{total}}(t) - \sum_{i \neq \text{AIS}} r_i(t;\, \boldsymbol{\theta}_i)
+  \label{eq:ais-budget-residual}
+\end{equation}
+This quantity is not a direct observation of the AIS rate.  It inherits the uncertainties and biases of every non-AIS component model.  Its uncertainty is:
+\begin{equation}
+  \sigma_{\text{res}}^2(t) = \sigma_{\text{obs,total}}^2(t) + \sum_{i \neq \text{AIS}} \left[\sigma_{D_i}^2(t) + \sigma_{\text{extra},i}^2\right]
+  \label{eq:sigma-res}
+\end{equation}
+where $\sigma_{\text{obs,total}}^2(t)$ is the GMSL observation uncertainty, $\sigma_{D_i}^2(t)$ the component observation uncertainty, and $\sigma_{\text{extra},i}^2$ the component model-inadequacy term (see~\cref{eq:budget-tolerance}; full treatment deferred to Item~5 of the revision plan).  The budget-derived AIS rate is therefore a joint function of all other components' posterior distributions, not a clean observational constraint.
+
+\emph{Pre-GRACE caveat.}  Before $\sim$2002, no direct constraint on the AIS rate exists from GRACE or altimetry.  The budget residual is the sole source of AIS information, and $\sigma_{\text{res}}(t)$ is correspondingly large.  During this interval, any systematic bias in the non-AIS component models (e.g., thermosteric overestimate, glacier underestimate) propagates directly into $r_{\text{AIS}}^{\text{budget}}(t)$.  The consistency diagnostic below is therefore informative only during the post-2002 interval where component-specific observations partially decorrelate the residual from individual component biases.
+
+\subsubsection{Historical consistency likelihood}
+
+For each A4 scenario $k$, the temporal scaling function $g_k(t)$ defines an implied AIS rate trajectory $r_{\text{AIS}}^{(k)}(t)$ during the calibration period.  The consistency of this trajectory with the budget-derived AIS rate is measured by:
+\begin{equation}
+  p\!\left(r_{\text{AIS}}^{\text{budget}} \mid k\right)
+    = \prod_{t_j \in \mathcal{T}_{\text{overlap}}} \mathcal{N}\!\left(r_{\text{AIS}}^{\text{budget}}(t_j) \;\middle|\; r_{\text{AIS}}^{(k)}(t_j),\; \sigma_{\text{res}}^2(t_j)\right)
+  \label{eq:consistency-likelihood}
+\end{equation}
+where $\mathcal{T}_{\text{overlap}}$ is the set of calibration times during which the A4 scenarios produce distinguishable rates.  In the current A4 specification, S1 (status quo) diverges from S2--S4 only after $\sim$2013, so $\mathcal{T}_{\text{overlap}} \subseteq \{2013, 2014, \ldots, 2018\}$.  This is a short window --- six annual observations at most --- and the scenario-implied rates are close together relative to $\sigma_{\text{res}}$ during this interval.  The consistency likelihood is therefore expected to be nearly flat across scenarios in Phase~1, with $p(r_{\text{AIS}}^{\text{budget}} \mid k)$ varying by at most a factor of $\sim$2--3 across $k$.
+
+Two points require emphasis.  First, $\sigma_{\text{res}}(t_j)$ in~\cref{eq:consistency-likelihood} must reflect the \emph{total} uncertainty on the budget residual --- propagated from all non-AIS component uncertainties and the GMSL observation error --- not merely the IMBIE measurement error on AIS.  Underestimating $\sigma_{\text{res}}$ produces spuriously confident scenario discrimination.  Second, $\sigma_{\text{res}}(t_j)$ is not a fixed quantity: it depends on the component model-inadequacy parameters $\sigma_{\text{extra},i}$, which are sampled during MCMC.  The consistency likelihood must therefore be evaluated at each posterior draw, using the draw-specific $\sigma_{\text{res}}(t_j)$.
+
+\subsubsection{Posterior scenario weights}
+
+The prior weights are updated by Bayes' rule:
+\begin{equation}
+  w_k^{\text{post}} = \frac{w_k^{\text{prior}} \cdot p\!\left(r_{\text{AIS}}^{\text{budget}} \mid k\right)}{\sum_{j=1}^{4} w_j^{\text{prior}} \cdot p\!\left(r_{\text{AIS}}^{\text{budget}} \mid j\right)}
+  \label{eq:posterior-weights}
+\end{equation}
+with prior weights $w_k^{\text{prior}}$ from the A4 module (S1: 0.10, S2: 0.55, S3: 0.25, S4: 0.10; see companion document).  Because $r_{\text{AIS}}^{\text{budget}}$ is itself a posterior quantity (it depends on the sampled component parameters $\boldsymbol{\theta}_i$), the posterior weights $w_k^{\text{post}}$ are random variables.  The diagnostic reports the posterior distribution of $w_k^{\text{post}}$ across MCMC draws, not a single point estimate.
+
+\subsubsection{Phase~1 implementation: post-hoc diagnostic}
+
+In Phase~1, the A4 scenario index $k$ is \emph{not} sampled during the main MCMC.  The consistency diagnostic is computed post hoc:
+\begin{enumerate}
+  \item Run the main MCMC over all component parameters $\boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K$ and global parameters $\boldsymbol{\theta}_{\text{global}}$, without the A4 discrete index.
+  \item For each posterior draw $m = 1, \ldots, M$, compute the budget-derived AIS rate $r_{\text{AIS}}^{\text{budget},(m)}(t_j)$ at each overlap time $t_j$ and the draw-specific residual uncertainty $\sigma_{\text{res}}^{(m)}(t_j)$.
+  \item Evaluate the consistency likelihood $p(r_{\text{AIS}}^{\text{budget},(m)} \mid k)$ for each scenario $k$ using~\cref{eq:consistency-likelihood}.
+  \item Compute the posterior weights $w_k^{\text{post},(m)}$ using~\cref{eq:posterior-weights}.
+  \item Report: (a)~the draw-averaged posterior weights $\bar{w}_k^{\text{post}} = M^{-1}\sum_m w_k^{\text{post},(m)}$; (b)~the posterior standard deviation of $w_k^{\text{post}}$ across draws; (c)~the Kullback--Leibler divergence $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}})$ as a scalar summary of how much the budget residual has updated the expert assessment.
+\end{enumerate}
+
+If $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}}) < 0.01$~nats, the observational record has negligible discriminatory power and the Phase~1 decision to defer full joint inference is validated.  If $D_{\text{KL}} > 0.1$~nats, the budget residual materially updates the scenario weights, and the Phase~2 joint inference should be prioritised.
+
+The rationale for deferring joint inference in Phase~1 is computational, not conceptual.  Sampling the discrete index $k$ at each MCMC step requires either a Gibbs update over the four-valued categorical (straightforward but requires mixing diagnostics for the discrete variable) or reversible-jump MCMC (more general but harder to tune).  Given that the expected information gain from the short overlap window is negligible, the implementation cost is not justified by the scientific return in Phase~1.
+
+\subsubsection{Phase~2: full joint inference}
+
+When the observational record extends sufficiently that $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}}) > 0.1$~nats in the post-hoc diagnostic, or when extended GRACE-FO data are incorporated, the scenario index $k$ is embedded as a discrete latent variable in the MCMC.  At each iteration:
+\begin{enumerate}
+  \item Propose component parameters $\boldsymbol{\theta}_i$ for all components (continuous block).
+  \item Compute the budget residual $r_{\text{AIS}}^{\text{budget}}(t_j)$ at each calibration time.
+  \item For each A4 scenario $k$, evaluate $p(r_{\text{AIS}}^{\text{budget}} \mid k)$ using~\cref{eq:consistency-likelihood}.
+  \item Sample $k$ from the categorical distribution $\text{Cat}(w_1^{\text{post}}, \ldots, w_4^{\text{post}})$ with weights given by~\cref{eq:posterior-weights}.
+  \item Conditional on $k$, sample the within-scenario AIS parameters.
+\end{enumerate}
+This is a standard data augmentation scheme for finite mixture models \citep{gelman2013bayesian}.  The categorical update is a Gibbs step conditioned on the current values of all continuous parameters.
+
+\subsubsection{Cross-validation with IMBIE}
+
+The budget-derived AIS rate should be cross-validated against direct IMBIE Antarctica observations during the GRACE era (2002--present).  Systematic discrepancies indicate either errors in the component decomposition (if the budget residual is biased relative to IMBIE) or inconsistencies in the GRACE-derived products (if the component-specific GRACE estimates are incompatible with IMBIE when summed).  This validation is specified in the component decomposition plan (Stage~4) and provides an independent check on the quality of the budget residual that feeds into the consistency diagnostic.
+
+\subsubsection{Design constraint for paleo extensions}
+
+The consistency likelihood (\cref{eq:consistency-likelihood}) must accept arbitrary time windows, not only the modern calibration period.  Paleo constraints on long-term AIS behaviour --- Last Interglacial sea-level highstand implying substantial AIS contribution, Pliocene warm-period constraints on AIS sensitivity to sustained warming --- could provide discriminatory power for A4 scenario weighting even in the absence of a long modern overlap window.  The interface should accept a set of $(t, r_{\text{AIS}}, \sigma)$ triples from any source (modern budget residual, paleo proxy, or hypothetical future observation), so that the consistency likelihood is computed uniformly regardless of data provenance.  This is a Phase~2/3 capability, but the interface must be designed in Phase~1 to avoid retrofit.
 
 
 % ====================================================================
@@ -700,7 +676,7 @@ At each stage, the framework is \emph{self-consistent}: the budget holds, the po
 
 \subsection{Law of total variance decomposition}
 
-The total GMSL projection $H(t)$ depends on three sources of uncertainty: the SSP scenario index~$S$ (discrete), the A4 deep-uncertainty scenario index~$k$ (discrete), and the Level~1 + Level~2 parameters~$\boldsymbol{\theta}$ (continuous, including both the component model parameters $\boldsymbol{\theta}_i$ and the model-inadequacy parameters $\boldsymbol{\sigma}_{\text{extra}}$; see~\cref{sec:component-discrepancy}).  The total variance is given by iterated application of the law of total variance:
+The total GMSL projection $H(t)$ depends on three sources of uncertainty: the SSP scenario index~$S$ (discrete), the A4 deep-uncertainty scenario index~$k$ (discrete), and the Level~1 + Level~2 parameters~$\boldsymbol{\theta}$ (continuous).  The total variance is given by iterated application of the law of total variance:
 \begin{equation}
   \text{Var}[H(t)]
     = \underbrace{E_S\!\left[\text{Var}_{\boldsymbol{\theta},k}[H(t) \mid S]\right]}_{\text{expected within-scenario variance}}
@@ -737,12 +713,7 @@ The quantity $C_{\text{cross}}(t)$ is a sum of covariances, \emph{not} a varianc
 
 The dominant contributor to $C_{\text{cross}}$ is $\text{Cov}[r_{\text{TWS,clim}},\, r_{\text{AIS}}]$, which is negative on interannual timescales (La~Ni\~na increases land water storage while reducing CDW intrusions) and may be positive on centennial timescales (sustained El~Ni\~no--like conditions drive both TWS fluctuations and cumulative grounding-line retreat; see~\cref{sec:tws}).
 
-In practice, $C_{\text{cross}}(t)$ is computed directly from the MCMC posterior samples: at each draw~$\boldsymbol{\theta}^{(m)}$, evaluate all component rates and compute the sample covariance across draws.  No analytic approximation is required.  Under the Phase~1 scalar discrepancy model (\cref{sec:scalar-discrepancy}), the component-level model inadequacies are independent by construction (the $\sigma_{\text{extra},i}$ are white-noise terms with no cross-component correlation).  If Phase~2 introduces GP discrepancy (\cref{sec:gp-discrepancy}), cross-component discrepancy correlations become possible (e.g., if a volcanic eruption produces correlated model errors in thermosteric and glacier components), and the total budget-level model inadequacy (\cref{eq:budget-tolerance}) must be augmented with the off-diagonal terms:
-\begin{equation}
-  \sigma_{\text{budget-inad}}^2(t) = \sum_i \sigma_{\text{extra},i}^2 + 2 \sum_{i < j} \text{Cov}[\delta_i(t),\, \delta_j(t)]
-  \label{eq:budget-inad-full}
-\end{equation}
-Under Phase~1 (independent scalar discrepancy), the covariance terms vanish and~\cref{eq:budget-tolerance} is exact.
+In practice, $C_{\text{cross}}(t)$ is computed directly from the MCMC posterior samples: at each draw~$\boldsymbol{\theta}^{(m)}$, evaluate all component rates and compute the sample covariance across draws.  No analytic approximation is required.
 
 \subsection{Conditions for the additive approximation}
 \label{sec:variance-approx}
@@ -750,7 +721,7 @@ Under Phase~1 (independent scalar discrepancy), the covariance terms vanish and~
 The informal additive form $\sigma_{\text{total}}^2 \approx \sigma_{\text{constrained}}^2 + \sigma_{\text{scenario}}^2 + \sigma_{\text{ice}}^2 + C_{\text{cross}}$ is not wrong as an approximation, but it requires two conditions that must be stated explicitly and checked empirically.
 
 \paragraph{Assumption~V1 (A4/calibration independence).}
-$\text{Var}_{\boldsymbol{\theta}}[H(t) \mid S, k]$ and $\text{Var}_k[E_{\boldsymbol{\theta}}[H(t) \mid S, k]]$ are approximately independent --- i.e., the posterior parameter uncertainty does not depend strongly on which A4 scenario is assumed.  This holds if the A4 module does not substantially modify the AIS rate during the calibration period, which in turn requires that the A4 scenarios are consistent with the historical budget residual.  The A4/budget consistency diagnostic (Section~\ref{sec:a4-consistency}\footnote{Section to be added per Item~4 of the revision plan; until then, this forward reference is intentional.}) tests this condition.  If A4 posterior weights differ substantially from prior weights, Assumption~V1 may be violated.
+$\text{Var}_{\boldsymbol{\theta}}[H(t) \mid S, k]$ and $\text{Var}_k[E_{\boldsymbol{\theta}}[H(t) \mid S, k]]$ are approximately independent --- i.e., the posterior parameter uncertainty does not depend strongly on which A4 scenario is assumed.  This holds if the A4 module does not substantially modify the AIS rate during the calibration period, which in turn requires that the A4 scenarios are consistent with the historical budget residual.  The A4/budget consistency diagnostic (\cref{sec:a4-consistency}) tests this condition.  If A4 posterior weights differ substantially from prior weights, Assumption~V1 may be violated.
 
 \paragraph{Assumption~V2 (parameter--scenario separability).}
 The across-scenario variance $\text{Var}_S[E_{\boldsymbol{\theta},k}[H(t) \mid S]]$ is approximately separable from the parameter uncertainty --- i.e., the temperature-to-rate mapping is approximately the same at the posterior mean as it is over the full posterior.  This holds if the posterior on the rate--temperature relationship is tight enough that nonlinear parameter--temperature interactions are small.
@@ -779,7 +750,7 @@ where $\bar{\boldsymbol{\theta}}$ is the posterior mean.  The numerator measures
 In practice, the full nested decomposition is computed by Monte Carlo.  For each SSP scenario~$S$:
 \begin{enumerate}
   \item Draw $M$ posterior parameter samples $\boldsymbol{\theta}^{(1)}, \ldots, \boldsymbol{\theta}^{(M)}$.
-  \item For each draw, sample an A4 scenario~$k$ from its (posterior-updated) categorical distribution.
+  \item For each draw, sample an A4 scenario~$k$ from its posterior-updated categorical distribution (\cref{eq:posterior-weights}).
   \item Evaluate $H^{(m)}(t) = H(t;\, \boldsymbol{\theta}^{(m)}, k^{(m)}, S)$.
   \item The within-scenario variance is $\widehat{\text{Var}}[H(t) \mid S] = \frac{1}{M-1}\sum_m \left(H^{(m)}(t) - \bar{H}_S(t)\right)^2$.
 \end{enumerate}
@@ -800,7 +771,7 @@ The framework provides a principled interface to process models that avoids trea
 
   \item \textbf{Budget as reality check:} If a process model predicts the AIS rate to be $r_{\text{AIS}} \in [0, 1.5]$~mm/yr over 2005--2020 but the budget-constrained residual implies $r_{\text{AIS}} \in [0.5, 2.5]$~mm/yr, the tension is informative: either the process model is missing physics that accelerates ice loss, or the statistical decomposition is misattributing acceleration from another component.
 
-  \item \textbf{Scenario weights from process understanding:} The A4 mixture weights (Level~3) are informed by process-model ensembles and expert assessment, not by the historical calibration.  This is appropriate because the deep-uncertainty scenarios represent futures that have not yet been observed.
+  \item \textbf{Scenario weights from process understanding:} The A4 prior mixture weights (Level~3) are informed by process-model ensembles and expert assessment.  The historical calibration updates these weights via the budget consistency diagnostic (\cref{sec:a4-consistency}), but the prior weights are set by process understanding, not by historical fit.  This is appropriate because the deep-uncertainty scenarios represent futures that have not yet been observed.
 
   \item \textbf{Forecast skill evaluation:} The framework provides a natural basis for evaluating process-model forecasting skill.  A process model that predicts component rates inconsistent with the budget-constrained posterior (after accounting for known biases) demonstrates a lack of forecasting skill for that component.
 \end{enumerate}
@@ -853,7 +824,7 @@ The hierarchical framework provides:
 \begin{enumerate}
   \item \textbf{Self-consistency:} The rate-level budget constraint (\cref{eq:budget,eq:budget-constraint}) ensures that component rates sum to the observed total at every calibration time step, at every stage of implementation.
 
-  \item \textbf{Principled uncertainty:} Bayesian priors encode physical knowledge (sign constraints, PC shrinkage, component-specific data), and the posterior honestly reflects what the observations support.  Learned model-inadequacy terms at both the global (\cref{sec:mechanics}) and component (\cref{sec:component-discrepancy}) levels prevent overconfident posteriors by explicitly acknowledging that no parametric forward model is exact.
+  \item \textbf{Principled uncertainty:} Bayesian priors encode physical knowledge (sign constraints, PC shrinkage, component-specific data), and the posterior honestly reflects what the observations support.
 
   \item \textbf{Incremental refinement:} Each new component tightens the projections without invalidating previous work.  The residual term absorbs unresolved components.
 

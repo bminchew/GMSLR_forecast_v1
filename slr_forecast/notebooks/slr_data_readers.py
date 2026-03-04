@@ -3263,13 +3263,24 @@ if __name__ == "__main__":
 # =============================================================================
 
 def people_displaced_kulpstrauss2019(slr_m):
-    """Estimate millions of people exposed to annual coastal flooding.
+    """Estimate millions of people on land below annual flood level.
 
     Piecewise-linear interpolation of data extracted from Kulp & Strauss
     (2019), Nature Communications, Table 1 and main text (CoastalDEM).
+
+    **Important**: these are elevation-only exposure counts — people
+    living on land whose elevation is below the annual flood water
+    surface.  Coastal defenses (levees, seawalls, dikes) are **not**
+    included, so the numbers overestimate actual flooding impact.
+    The paper explicitly states: "Results should therefore not be
+    taken as projected impacts" and describes them as a "threat
+    indicator."  At SLR = 0 the baseline exposure is ~250 M, a large
+    fraction of whom are protected by existing infrastructure (e.g.
+    the Netherlands).
+
     Population counts correspond to present-day (~2010 census era)
-    population on land below the given water level; they do *not*
-    include future population growth or coastal migration.
+    population; they do *not* include future population growth or
+    coastal migration.
 
     Parameters
     ----------
@@ -3279,7 +3290,8 @@ def people_displaced_kulpstrauss2019(slr_m):
     Returns
     -------
     float or np.ndarray
-        Millions of people exposed to annual coastal flooding.
+        Millions of people on land below the annual flood level
+        (elevation-only, no coastal defenses).
 
     Reference
     ---------
@@ -3287,8 +3299,9 @@ def people_displaced_kulpstrauss2019(slr_m):
     estimates of global vulnerability to sea-level rise and coastal
     flooding. Nature Communications, 10, 4844.
     """
-    # Data points: (SLR in m, millions exposed to annual flooding)
+    # Data points: (SLR in m, millions on land below annual flood level)
     # Extracted from Table 1 + main text (CoastalDEM, median estimates)
+    # NB: elevation-only — no coastal defenses
     slr_pts = np.array([0.00, 0.25, 0.50, 0.60, 0.80, 1.46, 2.00])
     pop_pts = np.array([250., 300., 340., 360., 400., 480., 630.])
 
