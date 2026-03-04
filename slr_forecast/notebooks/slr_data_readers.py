@@ -3253,3 +3253,77 @@ if __name__ == "__main__":
     print("\nSAOD Readers:")
     print("  - read_glossac()")
     print("  - read_mauna_loa_transmission()")
+    print("\nImpact Functions:")
+    print("  - people_displaced_kulpstrauss2019()")
+    print("  - slr_cost_jevrejeva2018()")
+
+
+# =============================================================================
+# IMPACT ESTIMATION FUNCTIONS
+# =============================================================================
+
+def people_displaced_kulpstrauss2019(slr_m):
+    """Estimate millions of people exposed to annual coastal flooding.
+
+    Piecewise-linear interpolation of data extracted from Kulp & Strauss
+    (2019), Nature Communications, Table 1 and main text (CoastalDEM).
+    Population counts correspond to present-day (~2010 census era)
+    population on land below the given water level; they do *not*
+    include future population growth or coastal migration.
+
+    Parameters
+    ----------
+    slr_m : float or array-like
+        Global mean sea-level rise in **meters** above present (~year 2000).
+
+    Returns
+    -------
+    float or np.ndarray
+        Millions of people exposed to annual coastal flooding.
+
+    Reference
+    ---------
+    Kulp, S. A. & Strauss, B. H. (2019). New elevation data triple
+    estimates of global vulnerability to sea-level rise and coastal
+    flooding. Nature Communications, 10, 4844.
+    """
+    # Data points: (SLR in m, millions exposed to annual flooding)
+    # Extracted from Table 1 + main text (CoastalDEM, median estimates)
+    slr_pts = np.array([0.00, 0.25, 0.50, 0.60, 0.80, 1.46, 2.00])
+    pop_pts = np.array([250., 300., 340., 360., 400., 480., 630.])
+
+    return np.interp(slr_m, slr_pts, pop_pts)
+
+
+def slr_cost_jevrejeva2018(slr_m):
+    """Estimate global annual flood cost without additional adaptation.
+
+    Piecewise-linear interpolation of data from Jevrejeva et al. (2018),
+    Environmental Research Letters, Figure 4(a) and conclusions.
+    Costs are in billions of USD per year (2014 dollars), assuming the
+    SSP2 socioeconomic pathway with no additional coastal adaptation
+    beyond the base-year standard of protection.
+
+    Parameters
+    ----------
+    slr_m : float or array-like
+        Global mean sea-level rise in **meters** above present (~year 2000).
+
+    Returns
+    -------
+    float or np.ndarray
+        Annual global flood costs in **billions USD** per year.
+
+    Reference
+    ---------
+    Jevrejeva, S., Jackson, L. P., Grinsted, A., Lincke, D., &
+    Marzeion, B. (2018). Flood damage costs under the sea level rise
+    with warming of 1.5 C and 2 C. Environmental Research Letters,
+    13, 074014.
+    """
+    # Data points: (SLR in m, annual flood cost in billions USD/yr)
+    # Extracted from Table/Conclusions text + Figure 4(a)
+    slr_pts = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
+    cost_pts = np.array([0., 1000., 10200., 11700., 14000., 27000.])
+
+    return np.interp(slr_m, slr_pts, cost_pts)
