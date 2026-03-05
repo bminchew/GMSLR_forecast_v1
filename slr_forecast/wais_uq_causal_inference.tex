@@ -1,0 +1,458 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+% Indicator function without bbm
+\newcommand{\Ind}{\mathbf{1}}
+
+% Custom commands
+\newcommand{\WAIS}{\text{WAIS}}
+\newcommand{\CDW}{\text{CDW}}
+\newcommand{\MISI}{\text{MISI}}
+\newcommand{\MICI}{\text{MICI}}
+\newcommand{\sigice}{\sigma_{\text{ice}}}
+\newcommand{\GrIS}{\text{GrIS}}
+\newcommand{\EAIS}{\text{EAIS}}
+\newcommand{\ASE}{\text{ASE}}
+
+\title{Physics-Informed Approaches to WAIS Uncertainty\\
+  for Causal Sea-Level Rise Forecasting}
+
+\author{Working Document --- Ar\^{e}te / Hierarchical SLR Framework}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The ISMIP6 ice-sheet model ensemble has essentially zero forecasting skill for WAIS dynamics: most contributing models show the Antarctic Ice Sheet gaining mass for decades after initialisation, reflecting initialisation artifacts rather than physical uncertainty.  Correcting such a baseline distribution---no matter how sophisticated the correction---cannot produce a physically meaningful uncertainty estimate.  This document develops four alternative approaches to constructing a WAIS uncertainty distribution from scratch, using current observations, recent advances in ice rheology, marine ice-sheet instability theory, and structured expert judgment.  Each approach is designed to plug into the hierarchical Bayesian framework as the Level~3 (deep uncertainty) node, with explicit causal structure supporting $do()$-calculus intervention queries for glacier stabilisation, marine cloud brightening, stratospheric aerosol injection, and carbon dioxide removal scenarios.  The target horizon is 2150.
+\end{abstract}
+
+
+% ====================================================================
+\section{Motivation: Why Not Correct IPCC?}
+\label{sec:motivation}
+% ====================================================================
+
+The companion document (\texttt{physics\_informed\_wais\_uncertainty.tex}) develops four approaches to a physics-informed $\sigice$ by applying multiplicative rheology corrections, additive stochastic amplification, and scenario mixture weights to the IPCC AR6 AIS projection distribution.  These approaches share a common architecture: start from the IPCC distribution and adjust it.
+
+This architecture is fatally flawed for one reason: the IPCC AIS distribution is not a physically meaningful probability distribution over future ice loss.  The ISMIP6 ensemble \citep{seroussi2020ismip6, seroussi2024evolution} that underpins it exhibits systematic initialisation drift---most models show the ice sheet \emph{gaining} mass for years to decades after initialisation, a consequence of incomplete spin-up and inconsistent initial conditions rather than any physical mechanism.  The ensemble spread therefore reflects model construction artifacts at least as much as genuine physical uncertainty.
+
+No post-hoc correction can fix this.  A multiplicative correction to a distribution that does not represent physical uncertainty produces a rescaled non-physical distribution.  The correct response is to build a generative model from components we trust: observations, ice physics, and calibrated expert judgment.
+
+The four approaches below are ordered from simplest to most mechanistically detailed.  They are not mutually exclusive; the recommended implementation strategy uses two of them (A and C) as primary model and cross-check, with B as the Phase~2 target.
+
+
+% ====================================================================
+\section{Approach A: Observationally-Anchored Rate Model with Physics-Informed Acceleration}
+\label{sec:approach_a}
+% ====================================================================
+
+\subsection{Core idea}
+
+Start from what is directly measurable---the current WAIS mass loss rate and its observed acceleration---and project forward using a parametric acceleration model whose functional form is motivated by marine ice-sheet physics.
+
+\subsection{Generative model}
+
+The WAIS contribution to the GMSL rate at time $t$ is:
+\begin{equation}
+  \dot{M}_{\WAIS}(t) = \dot{M}_0 \left[1 + \left(\frac{t - t_0}{\tau_{\text{acc}}}\right)^{\!\beta}\right]
+    \cdot \left[1 + \delta \cdot \Ind\!\left(t > t_{\MISI}\right)\right]
+    + \epsilon(t)
+  \label{eq:rate_model_a}
+\end{equation}
+where:
+\begin{description}
+  \item[$\dot{M}_0$] is the observed WAIS mass loss rate at reference time $t_0$, constrained by GRACE/IMBIE at approximately $150 \pm 30$~Gt\,yr$^{-1}$ ($\sim$0.4~mm\,yr$^{-1}$ SLR equivalent);
+
+  \item[$\tau_{\text{acc}}$] is a timescale for acceleration, with a prior informed by the observed acceleration over the GRACE era ($\sim$2002--2025);
+
+  \item[$\beta$] controls the shape of acceleration: $\beta = 1$ gives constant acceleration (linear rate increase), $\beta > 1$ gives superlinear acceleration characteristic of MISI-driven positive feedback, and $\beta < 1$ gives sublinear acceleration reflecting eventual negative feedbacks (GIA rebound, reduced driving stress as ice thins);
+
+  \item[$t_{\MISI}$] is the onset time of a rapid-retreat phase, modelled as a threshold crossing in ocean thermal forcing.  This is the node on which a Thwaites stabilisation intervention operates: stabilisation sets $\Ind(t > t_{\MISI}) = 0$ by preventing the threshold crossing;
+
+  \item[$\delta$] is the fractional amplification from MISI onset---the multiplicative increase in the acceleration rate once rapid retreat begins;
+
+  \item[$\epsilon(t)$] is a stochastic noise term representing internal variability (ENSO-driven CDW fluctuations), drawn from a mean-zero process with variance $\sigma^2_\epsilon$ estimated from the interannual variability in the GRACE record.
+\end{description}
+
+\subsection{Integration}
+
+The cumulative WAIS SLR contribution is obtained by direct integration:
+\begin{equation}
+  M_{\WAIS}(t) = \int_{t_0}^{t} \dot{M}_{\WAIS}(s)\, ds
+  \label{eq:cumulative_a}
+\end{equation}
+For the deterministic part of \cref{eq:rate_model_a} (setting $\epsilon = 0$), the integral is analytic.
+
+\subsection{Parameters and priors}
+
+The model has six parameters, all with physically motivated priors:
+
+\begin{table}[h]
+\centering
+\caption{Approach~A parameter summary}
+\label{tab:params_a}
+\begin{tabular}{llll}
+\toprule
+Parameter & Prior basis & Distribution & Intervention target? \\
+\midrule
+$\dot{M}_0$ & GRACE/IMBIE trend at $t_0$ & $\mathcal{N}(150, 30^2)$~Gt\,yr$^{-1}$ & No (observed) \\
+$\tau_{\text{acc}}$ & Observed acceleration, 2002--2025 & LogNormal & Indirectly (MCB, SAI) \\
+$\beta$ & $\beta \approx 1$ pre-MISI; $\beta \in [1.5, 3]$ post-MISI & Uniform/Beta & No \\
+$t_{\MISI}$ & CDW temperature threshold; Robel et al.\ bifurcation & $\mathcal{N}(2050, 15^2)$ & Yes (Thwaites stabilisation) \\
+$\delta$ & Getraer \& Morlighem; Martin et al.\ & LogNormal$(0.3, 0.15^2)$ & No \\
+$\sigma_\epsilon$ & GRACE interannual residual variance & InvGamma & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{How the rheology exponent $n$ enters}
+
+Rather than applying $n$ as a post-hoc multiplicative correction, the Glen--Nye exponent enters the generative model through both $\beta$ and $\delta$.  Higher $n$ increases the stress sensitivity of flow, which steepens the acceleration curve (larger effective $\beta$) and amplifies the MISI onset response (larger $\delta$).  A prior on $n$ centred at 4 with support on $[3, 5]$---informed by \citet{millstein2022ice} and \citet{getraer2025increasing}---propagates through the acceleration functional form via a deterministic mapping $(\beta, \delta) = h(n, \text{geometry})$ that can be calibrated from the Getraer \& Morlighem and Martin et al.\ simulation pairs.
+
+\subsection{Causal structure}
+
+The key causal feature is that $t_{\MISI}$ depends on a forcing variable---CDW temperature anomaly on the continental shelf---which in turn depends on the SSP pathway and intervention decisions.  This gives the model explicit $do()$-calculus structure:
+\begin{equation}
+  P\!\left(M_{\WAIS} > x \mid do(\text{stabilise Thwaites at } t^*)\right)
+\end{equation}
+is computed by setting $\Ind(t > t_{\MISI}) = 0$ for the Thwaites contribution.  More precisely, if the model is extended to a multi-basin version (see Approach~B), the Thwaites node is intervened on individually while other basins evolve freely.
+
+For MCB and SAI interventions, the causal pathway operates through $\tau_{\text{acc}}$ and $t_{\MISI}$: reducing ocean thermal forcing delays the MISI threshold crossing and slows the background acceleration.
+
+\subsection{Strengths and limitations}
+
+\paragraph{Strengths.}  Simple, transparent, anchored to observations, and fast to evaluate (analytic integration enables cheap Monte Carlo sampling).  Every parameter has a physical interpretation.  The model has explicit intervention nodes for direct integration into the DAG.
+
+\paragraph{Limitations.}  The functional form of the acceleration is ad hoc---there is no derivation from first principles that the rate should follow a power law in time.  The single $t_{\MISI}$ threshold is a simplification of what is really a continuum of basin-by-basin retreat trajectories.  The model does not resolve individual basins, so the Thwaites stabilisation intervention requires additional assumptions about Thwaites' fractional contribution to $\dot{M}_{\WAIS}$.
+
+
+% ====================================================================
+\section{Approach B: Basin-Resolved Bifurcation Model}
+\label{sec:approach_b}
+% ====================================================================
+
+\subsection{Core idea}
+
+Treat each major WAIS drainage basin as a separate dynamical system that can undergo a bifurcation (MISI onset) at a basin-specific threshold.  This directly leverages \citet{robel2019marine} but applies the stochastic bifurcation framework per-basin rather than treating WAIS as a monolith.
+
+\subsection{Basin inventory}
+
+Identify 3--5 major WAIS drainage basins with significant SLR potential:
+\begin{enumerate}
+  \item Thwaites Glacier ($\sim$65~cm SLR potential)
+  \item Pine Island Glacier ($\sim$50~cm SLR potential)
+  \item Smith/Kohler system
+  \item Possibly the Siple Coast ice streams (lower priority, slower dynamics)
+\end{enumerate}
+
+\subsection{Per-basin dynamics}
+
+For each basin $i$, the mass loss rate is:
+\begin{equation}
+  \dot{M}_i(t) =
+  \begin{cases}
+    r_i + a_i(t - t_0) + \epsilon_i(t)
+      & \text{if } T_{\text{ocean},i}(t) < T^*_i \quad\text{(pre-MISI)} \\[6pt]
+    r_i + a_i(t - t_0) + g_i\!\left(t - t^{\MISI}_i;\, n\right) + \epsilon_i(t)
+      & \text{if } T_{\text{ocean},i}(t) \geq T^*_i \quad\text{(post-MISI)}
+  \end{cases}
+  \label{eq:basin_dynamics}
+\end{equation}
+where:
+\begin{description}
+  \item[$r_i, a_i$] are the current rate and acceleration for basin $i$ (constrained by GRACE and InSAR);
+
+  \item[$T^*_i$] is the ocean temperature threshold for MISI onset in basin $i$, determined by the bed geometry downstream of the current grounding line (deeper retrograde beds correspond to lower thresholds);
+
+  \item[$T_{\text{ocean},i}(t)$] is the CDW temperature at basin $i$'s grounding zone, a function of the SSP pathway and intervention variables;
+
+  \item[$g_i(t - t^{\MISI}_i;\, n)$] is the MISI acceleration function, parameterised by the time since onset and the rheology exponent $n$;
+
+  \item[$\epsilon_i(t)$] is basin-specific stochastic forcing from internal climate variability.
+\end{description}
+
+\subsection{The MISI acceleration function}
+
+\citet{robel2019marine} show that post-bifurcation, the retreat rate grows approximately exponentially with an e-folding time determined by the bed slope and ice thickness at the grounding line.  For a retrograde bed with slope $\alpha_{\text{bed},i}$ and ice thickness $H_i$:
+\begin{equation}
+  g_i(\Delta t;\, n) \approx g_{0,i} \cdot \exp\!\left(\frac{\Delta t}{\tau_i(n)}\right)
+  \label{eq:misi_acceleration}
+\end{equation}
+where the retreat timescale $\tau_i(n)$ depends on the flow law exponent because faster flow at a given stress (higher $n$) reduces the timescale for grounding-line migration.  BedMachine Antarctica v3 provides the bed geometry ($\alpha_{\text{bed},i}$, $H_i$) needed to estimate $\tau_i$ for each basin.
+
+The exponential growth must saturate as the basin depletes.  The total ice above flotation in basin $i$'s catchment, $M^{\max}_i$, provides a hard cap on the cumulative contribution:
+\begin{equation}
+  M_i(t) = \min\!\left(\int_{t_0}^{t} \dot{M}_i(s)\, ds,\; M^{\max}_i\right)
+  \label{eq:basin_cap}
+\end{equation}
+
+\subsection{Aggregation}
+
+Total WAIS contribution:
+\begin{equation}
+  M_{\WAIS}(t) = \sum_{i} M_i(t)
+  \label{eq:wais_aggregate}
+\end{equation}
+
+The basins share a common large-scale forcing trajectory $T_{\text{ocean}}(t)$ but have different thresholds $T^*_i$, so they trigger MISI at different times.  This naturally produces a stepped acceleration pattern---punctuated retreat rather than a smooth curve---which is more realistic than a single-threshold model.
+
+\subsection{Covariance structure}
+
+The basins are \emph{not} independent: they share a common large-scale ocean forcing.  However, the glaciological and oceanographic conditions differ significantly between basins.  Pine Island's cavity is more mature (warm CDW already circulates); Thwaites has a wider and shallower grounding zone with different geometric controls on retreat; Smith/Kohler face distinct ice-shelf buttressing conditions.
+
+The covariance enters the model through the shared forcing variable $T_{\text{ocean}}(t)$, not through assumed correlation in the stochastic terms $\epsilon_i$.  This is a justified first-order treatment.  The residual cross-basin correlations---e.g., from ice-dynamic interactions between adjacent basins sharing a common ice divide---are a second-order effect to be quantified in Phase~2 and flagged here as an open item.
+
+% TODO: Phase 2 --- quantify residual cross-basin correlations from shared ice divides and adjacent-basin buttressing interactions.
+
+\subsection{Causal structure}
+
+Each basin is a separate node in the DAG.  Thwaites stabilisation intervenes on the Thwaites node specifically, setting $g_{\text{Thwaites}} = 0$ or capping grounding-line retreat at a specified position.  MCB and SAI intervene on $T_{\text{ocean}}(t)$, which affects all basins simultaneously through the shared forcing pathway.  CDR operates on longer timescales through the radiative forcing $\to$ ocean temperature chain.
+
+This basin-resolved structure provides the resolution needed for Ar\^{e}te's mission: the intervention analysis can distinguish ``stabilise Thwaites only'' from ``reduce CDW temperature across all of Amundsen Sea'' from ``global radiative forcing reduction.''
+
+\subsection{Strengths and limitations}
+
+\paragraph{Strengths.}  Mechanistically grounded.  Naturally resolves the Thwaites intervention target.  Uses BedMachine geometry data that is well-characterised.  The $n$ parameter enters in a physically correct way (through the retreat timescale).  Produces basin-specific uncertainty contributions.
+
+\paragraph{Limitations.}  More complex than Approach~A.  The bed-geometry-to-retreat-timescale mapping ($\alpha_{\text{bed}}, H \to \tau_i$) requires scaling relationships from marine ice-sheet theory that carry their own uncertainty.  The threshold model is a simplification: real MISI onset is gradual, not a step function.  Requires BedMachine geometry processing and basin-specific CDW forcing models that are not yet implemented.
+
+
+% ====================================================================
+\section{Approach C: Structured Expert Judgment as Prior with Likelihood Updates}
+\label{sec:approach_c}
+% ====================================================================
+
+\subsection{Core idea}
+
+Use the \citet{bamber2019ice} structured expert judgment (SEJ) WAIS distributions as a formally elicited prior, then update with three pieces of post-2019 evidence: (1) the $n \geq 4$ rheological evidence, (2) post-2019 observational mass loss rates, and (3) the process amplifier inventory from \citet{fricker2025antarctica}.  This treats expert judgment as a prior in the literal Bayesian sense.
+
+\subsection{What Bamber et al.\ provide}
+
+The SEJ2018 study elicited uncertainty distributions from 22 ice-sheet experts, weighted by calibrated performance on seed questions.  The study provides:
+\begin{itemize}
+  \item WAIS SLR contributions at 2050, 2100, 2200, and 2300 under $+2$\textdegree C and $+5$\textdegree C temperature stabilisation scenarios;
+  \item 5th, 50th, and 95th percentile values at each time horizon;
+  \item Tail dependence structure between WAIS sub-processes (accumulation, discharge, runoff) and between WAIS, EAIS, and GrIS;
+  \item Performance-weighted (PW) and equal-weighted (EW) combinations.
+\end{itemize}
+
+The PW combination for WAIS under the $+5$\textdegree C scenario gives a 95th percentile of approximately 93~cm (930~mm) by 2100---a key benchmark for comparison with any alternative approach.
+
+\subsection{The Bayesian update}
+
+Let $\pi(\theta)$ represent the Bamber et al.\ prior over WAIS SLR trajectory parameters $\theta$.  We define a likelihood function $L(\text{data} \mid \theta)$ that incorporates three post-2019 evidence streams:
+
+\subsubsection{Rheology likelihood}
+
+\citet{getraer2025increasing} find $32 \pm 14\%$ more ice loss by 2100 with $n = 4$ vs.\ $n = 3$.  \citet{martin2025wrongn} find 21--35\% more from the Amundsen Sea Embayment under moderate to extreme forcing.  The 2018 experts were not informed of these results (both studies post-date the elicitation).
+
+Introduce a rheology bias parameter $\phi_n$ representing the fractional underestimate in the Bamber dynamic discharge component due to the $n = 3$ assumption.  The likelihood concentrates $\phi_n$ around 1.25--1.35:
+\begin{equation}
+  \phi_n \sim \text{LogNormal}\!\left(\ln(1.3),\; 0.12^2\right)
+  \label{eq:rheology_likelihood}
+\end{equation}
+which gives a 90\% credible interval of approximately $[1.1, 1.55]$, encompassing both the Martin et al.\ moderate-forcing result and the Getraer \& Morlighem pan-Antarctic estimate.
+
+\subsubsection{Observational likelihood}
+
+GRACE/IMBIE mass loss rates from 2018--2025 constrain the near-term WAIS trajectory.  If the observed rate is consistent with the Bamber median trajectory, the update tightens the distribution around central estimates.  If the observed rate exceeds (or falls below) the Bamber median, the update shifts the distribution accordingly.
+
+Let $\dot{M}^{\text{obs}}_{2018\text{--}2025}$ denote the observed mean WAIS mass loss rate over this period and $\dot{M}_{\text{Bamber}}(2022 \mid \theta)$ denote the rate implied by the Bamber trajectory parameters $\theta$ at the midpoint of the observation window:
+\begin{equation}
+  \dot{M}^{\text{obs}} \mid \theta \;\sim\; \mathcal{N}\!\left(\dot{M}_{\text{Bamber}}(2022 \mid \theta),\; \sigma^2_{\text{obs}}\right)
+  \label{eq:obs_likelihood}
+\end{equation}
+where $\sigma_{\text{obs}}$ reflects both measurement uncertainty and interannual variability.
+
+\subsubsection{Process coverage likelihood}
+
+\citet{fricker2025antarctica} identifies amplifying processes---grounding-zone tidal pumping, subglacial hydrology coupling, cold-to-warm cavity transitions---that were not considered by the 2018 experts.  This justifies widening the upper tail of the prior.
+
+Introduce a missing-process multiplier $\phi_{\text{amp}}$ with a prior that concentrates on $[1.0, 1.5]$, representing 0--50\% additional contribution from unmodelled amplifiers:
+\begin{equation}
+  \phi_{\text{amp}} \sim \text{Beta}(2, 4) \text{ scaled to } [1.0, 1.5]
+  \label{eq:process_likelihood}
+\end{equation}
+This is the least rigorous of the three likelihood components---it formalises a qualitative judgment about process incompleteness rather than a quantitative constraint.  Its influence on the posterior should be assessed via sensitivity analysis.
+
+\subsection{Posterior}
+
+The posterior over WAIS trajectory parameters is:
+\begin{equation}
+  p(\theta, \phi_n, \phi_{\text{amp}} \mid \text{data})
+    \propto L(\dot{M}^{\text{obs}} \mid \theta) \cdot p(\phi_n) \cdot p(\phi_{\text{amp}}) \cdot \pi(\theta)
+  \label{eq:posterior_c}
+\end{equation}
+where the Bamber distributions define $\pi(\theta)$ and the effective WAIS trajectory is $M_{\WAIS}(t \mid \theta) \cdot \phi_n \cdot \phi_{\text{amp}}$.
+
+\subsection{Causal structure}
+
+Approach~C has weaker causal structure than A or B because the Bamber distributions are conditioned on temperature stabilisation scenarios, not on specific physical forcing variables.  Causal queries are implemented by mapping intervention effects to shifts in the effective temperature scenario:
+\begin{equation}
+  P\!\left(M_{\WAIS} > x \mid do(\text{intervention})\right)
+  = P\!\left(M_{\WAIS} > x \mid T_{\text{eff}} = T_{\text{SSP}} - \Delta T_{\text{intervention}}\right)
+\end{equation}
+This is coarser than the basin-resolved approach: one cannot target Thwaites specifically, only the aggregate WAIS response through the temperature lever.
+
+\subsection{Strengths and limitations}
+
+\paragraph{Strengths.}  The prior is formally calibrated and performance-weighted---the highest-quality subjective probability assessment available for ice-sheet projections.  The update with $n \geq 4$ evidence is straightforward and well-motivated.  Produces a complete distributional estimate with minimal modelling machinery.  Provides an independent cross-check on Approach~A.
+
+\paragraph{Limitations.}  The Bamber distributions are for temperature \emph{stabilisation} scenarios, not transient pathways; mapping to SSPs requires assumptions about the warming time profile, not just the end-state temperature.  The causal structure is coarse---temperature is the only intervention channel.  The process-coverage likelihood (\cref{eq:process_likelihood}) is necessarily informal; there is no rigorous way to quantify a likelihood for processes that have not been modelled.
+
+
+% ====================================================================
+\section{Approach D: Committed + Forced Decomposition}
+\label{sec:approach_d}
+% ====================================================================
+
+\subsection{Core idea}
+
+Separate the WAIS contribution into two components: (1) \emph{committed} SLR from the current dynamical state (ice already responding to past and present forcing) and (2) \emph{additional} SLR from future forcing changes.  The committed component is constrained by current observations; the future forcing component is where scenario dependence and deep uncertainty reside.
+
+\subsection{Committed component}
+
+Given current grounding-line positions, bed geometry, and ocean conditions, some amount of WAIS retreat is already committed---it will occur even if ocean forcing stabilises at present-day levels.  This is estimated from two observational constraints:
+
+\begin{enumerate}
+  \item \textbf{Grounding-line geometry}: If the grounding line is already on a retrograde slope with no stabilising pinning points downstream, retreat to the next stable configuration is geometrically committed.  BedMachine v3 provides the bed topography; the question is whether the grounding line has crossed the critical point on the retrograde slope.
+
+  \item \textbf{Current ocean thermal forcing}: The thermal forcing required to sustain the current retreat rate is already present.  The question is whether it persists, intensifies, or relaxes.  Under the committed scenario, it is assumed to persist at present-day levels.
+\end{enumerate}
+
+The committed component has comparatively low uncertainty because it depends on geometry (well-observed) and current forcing (well-observed), not on future emissions or policy choices.
+
+\subsection{Future forcing component}
+
+Additional SLR beyond the committed amount depends on: (a) whether ocean forcing increases, decreases, or stays constant, and (b) whether the retreat encounters new retrograde slopes that trigger additional instabilities:
+\begin{equation}
+  M_{\WAIS}(t) = M_{\text{committed}}(t) + M_{\text{forced}}(t;\, \text{SSP},\, \text{intervention})
+  \label{eq:committed_forced}
+\end{equation}
+where $M_{\text{committed}}(t)$ follows from the current-state extrapolation (with uncertainty from geometry and present-day forcing persistence) and $M_{\text{forced}}(t)$ is drawn from a distribution that depends on the SSP and any interventions.
+
+\subsection{Communication value}
+
+The committed/forced decomposition is particularly powerful for framing the intervention problem.  The committed component provides a \emph{scenario-insensitive lower bound} on the WAIS SLR contribution: this much sea-level rise is coming regardless of emissions pathway or intervention.  The forced component quantifies the \emph{additional} contribution that interventions can mitigate.  This separation maps directly onto the decision calculus: the committed component determines what adaptation is required unconditionally, while the forced component determines the return on investment from mitigation and intervention.
+
+\subsection{Strengths and limitations}
+
+\paragraph{Strengths.}  Cleanly separates what we know (committed response) from what we do not know (forced response).  The committed component is insensitive to scenario choice, which is valuable for decision-making under deep uncertainty.  The forced component isolates where interventions have leverage.
+
+\paragraph{Limitations.}  Estimating committed SLR requires marine ice-sheet stability analysis for each basin, which depends on model assumptions (sliding law, rheology, basal conditions).  The boundary between ``committed'' and ``forced'' is not sharp---it depends on assumptions about the persistence of present-day ocean forcing.  Approach~D is therefore best understood as a decomposition framework that can be layered on top of either Approach~A or B, not as a standalone generative model.
+
+
+% ====================================================================
+\section{Synthesis and Implementation Recommendation}
+\label{sec:synthesis}
+% ====================================================================
+
+\subsection{Recommended implementation for Phase~1}
+
+\begin{description}
+  \item[Primary model: Approach~A] (observationally-anchored rate model).  This is the minimum viable causal model.  It has explicit intervention nodes, runs in milliseconds, and all parameters have physical interpretations with observable priors.  It can be plugged directly into the DAG as the Level~3 WAIS node.
+
+  \item[Cross-check: Approach~C] (Bamber prior + Bayesian update).  This provides an independent check grounded in the highest-quality available expert judgment, updated with evidence the 2018 experts did not have (the $n \geq 4$ results, 2018--2025 mass loss observations, and the Fricker et al.\ amplifier inventory).  If A and C agree within their respective uncertainties, confidence is high.  If they disagree, the discrepancy identifies a problem requiring diagnosis.
+
+  \item[Communication layer: Approach~D] (committed/forced decomposition).  This is not a separate model but a decomposition that can be applied to the output of Approach~A to separate the scenario-insensitive committed contribution from the intervention-sensitive forced contribution.
+
+  \item[Phase~2 target: Approach~B] (basin-resolved bifurcation model).  This requires more infrastructure---BedMachine geometry processing, basin-specific CDW forcing models, per-basin observational constraints---but produces the resolution needed for Thwaites-specific intervention analysis.
+\end{description}
+
+\subsection{Key design principle}
+
+The fundamental shift relative to the architecture in the companion document is: \textbf{stop correcting the IPCC distribution and build a generative model from observations and physics.}  The IPCC numbers become a comparison target for sanity-checking, not a starting point for adjustment.
+
+\subsection{Consistency checks across approaches}
+
+The following comparisons should be performed once Approaches~A and C are implemented:
+
+\begin{enumerate}
+  \item Compare the Approach~A 5th--95th percentile range at 2100 and 2150 against the updated Bamber posterior (Approach~C) at the same horizons.
+
+  \item Compare both against the IPCC AR6 low-confidence AIS range as a sanity check (noting that the IPCC range is expected to be narrower due to the initialisation drift problem).
+
+  \item Compare the Approach~A median trajectory against the committed component (Approach~D lower bound) to verify that the committed contribution does not exceed the median---if it does, the model parameters are inconsistent with observations.
+
+  \item Compute the variance decomposition $f_{\text{ice}} = \sigma^2_{\text{ice}} / \sigma^2_{\text{total}}$ at each time horizon and compare across approaches.  If $f_{\text{ice}}$ differs by more than a factor of two, the divergence requires diagnosis.
+\end{enumerate}
+
+
+% ====================================================================
+\section{Open Items}
+\label{sec:open_items}
+% ====================================================================
+
+\begin{enumerate}
+  \item \textbf{Approach A: functional form calibration.}  The power-law acceleration in \cref{eq:rate_model_a} requires calibration of the mapping $(\beta, \delta) = h(n, \text{geometry})$.  This can be derived from the Getraer \& Morlighem and Martin et al.\ $n = 3$ vs.\ $n = 4$ simulation pairs, but the functional form itself remains a modelling choice.
+
+  \item \textbf{Approach B: cross-basin residual correlations.}  The current treatment assumes correlations enter only through shared forcing.  Phase~2 should quantify correlations from shared ice divides and adjacent-basin buttressing interactions.
+
+  \item \textbf{Approach C: transient vs.\ stabilisation scenarios.}  Bamber et al.\ use temperature stabilisation scenarios; the framework uses transient SSP trajectories.  A principled mapping between these---accounting for the time profile of warming, not just end-state temperature---needs to be developed.
+
+  \item \textbf{Approach D: committed SLR estimation.}  Requires marine ice-sheet stability analysis.  The sensitivity to assumptions about basal sliding law and ocean forcing persistence should be characterised.
+
+  \item \textbf{EAIS contribution.}  Excluded from this analysis as a justified simplification for the 2150 horizon.  Should be revisited if multi-century projections become a priority.
+
+  \item \textbf{SSP-conditional scenario weights.}  If Approach~A or C is deployed within the hierarchical framework across multiple SSPs, the MISI onset probability (and hence the effective uncertainty distribution) should be SSP-conditional.  Under SSP1-1.9, the probability of widespread MISI triggering is lower than under SSP5-8.5; treating the MISI probability as SSP-independent would overstate uncertainty for low-emission scenarios and understate it for high-emission scenarios.
+\end{enumerate}
+
+
+% ====================================================================
+% References
+% ====================================================================
+
+\bibliographystyle{agsm}
+\begin{thebibliography}{99}
+
+\bibitem[Bamber et~al.(2019)]{bamber2019ice}
+Bamber, J.~L., Oppenheimer, M., Kopp, R.~E., Aspinall, W.~P., and Cooke, R.~M. (2019).
+\newblock Ice sheet contributions to future sea-level rise from structured expert judgment.
+\newblock \textit{Proceedings of the National Academy of Sciences}, 116(23):11195--11200.
+
+\bibitem[Fricker et~al.(2025)]{fricker2025antarctica}
+Fricker, H.~A., Becker, M.~K., Dow, C.~F., et~al. (2025).
+\newblock Antarctica in 2025: Drivers of deep uncertainty in projected ice loss.
+\newblock \textit{Science}, 387(6736):758--765.
+
+\bibitem[Getraer and Morlighem(2025)]{getraer2025increasing}
+Getraer, R.~D. and Morlighem, M. (2025).
+\newblock Increasing the {G}len--{N}ye power-law exponent accelerates ice-loss projections.
+\newblock \textit{Geophysical Research Letters}, 52.
+
+\bibitem[Martin et~al.(in review)]{martin2025wrongn}
+Martin, D.~F., Kachuck, S.~B., Trevers, K., Millstein, J.~D., Cornford, S.~L., and Minchew, B.~M. (in review).
+\newblock Impact of the stress exponent on ice sheet simulations.
+\newblock \textit{AGU Advances}.
+
+\bibitem[Millstein et~al.(2022)]{millstein2022ice}
+Millstein, J.~D., Minchew, B.~M., and Pegler, S.~S. (2022).
+\newblock Ice viscosity is more sensitive to stress than commonly assumed.
+\newblock \textit{Communications Earth \& Environment}, 3:57.
+
+\bibitem[Robel et~al.(2019)]{robel2019marine}
+Robel, A.~A., Seroussi, H., and Roe, G.~H. (2019).
+\newblock Marine ice sheet instability amplifies and skews uncertainty in projections of future sea-level rise.
+\newblock \textit{Proceedings of the National Academy of Sciences}, 116(30):14887--14892.
+
+\bibitem[Seroussi et~al.(2020)]{seroussi2020ismip6}
+Seroussi, H., et~al. (2020).
+\newblock {ISMIP6 Antarctica}: a multi-model ensemble of the {A}ntarctic ice sheet evolution over the 21st century.
+\newblock \textit{The Cryosphere}, 14(9):3033--3070.
+
+\bibitem[Seroussi et~al.(2024)]{seroussi2024evolution}
+Seroussi, H., et~al. (2024).
+\newblock Evolution of the {A}ntarctic Ice Sheet over the next three centuries from an {ISMIP6} model ensemble.
+\newblock \textit{Earth's Future}, 12:e2024EF004561.
+
+\end{thebibliography}
+
+\end{document}

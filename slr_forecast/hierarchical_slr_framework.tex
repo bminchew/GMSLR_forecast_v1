@@ -13,7 +13,6 @@
 \usetikzlibrary{arrows.meta, positioning, calc, fit, backgrounds, shapes.geometric, decorations.pathreplacing}
 
 % Custom commands
-\newcommand{\sigextra}{\sigma_{\text{extra}}}
 \newcommand{\daT}{\mathrm{d}\alpha/\mathrm{d}T}
 \newcommand{\GMSL}{\text{GMSL}}
 \newcommand{\GMST}{\text{GMST}}
@@ -31,7 +30,7 @@
 \maketitle
 
 \begin{abstract}
-No single approach to sea level rise (SLR) projection is sufficient.  Process models lack systematic parameter exploration and diverge from observations; purely statistical models cannot resolve component-specific dynamics; expert assessments lack formal self-consistency.  We outline a hierarchical Bayesian framework that fuses observational constraints, statistical models, and process-model structural information into a single, self-consistent probabilistic forecast.  The framework operates across four levels: (0)~global temperature forcing, (1)~total GMSL constrained by the observational record, (2)~component-level decomposition with component-specific data and models, and (3)~deep-uncertainty modules for ice-sheet processes.  At each level, posteriors from one analysis become informed priors for the next, and a global budget constraint ensures that components sum to the observed total.  The framework is designed to be built incrementally: it is self-consistent at every stage of completeness, with unresolved components absorbed into a residual term.
+No single approach to sea level rise (SLR) projection is sufficient.  Process models lack systematic parameter exploration and diverge from observations; purely statistical models cannot resolve component-specific dynamics; expert assessments lack formal self-consistency.  We outline a hierarchical Bayesian framework that fuses observational constraints, statistical models, and process-model structural information into a single, self-consistent probabilistic forecast.  The framework operates across four levels: (0)~global temperature forcing, (1)~total GMSL constrained by the observational record, (2)~component-level decomposition with component-specific data and models, and (3)~deep-uncertainty modules for ice-sheet processes.  At each level, posteriors from one analysis become informed priors for the next, and a global budget constraint ensures that components sum to the observed total.  Forecast uncertainty is decomposed by horizon: at short lead times ($<$15 years), observational constraints dominate; at intermediate horizons (15--60 years), physics-informed component models under diverging forcing scenarios provide the primary structure; at long horizons ($>$60 years), deep-uncertainty modules for Antarctic ice-sheet processes and scenario divergence dominate the projection envelope.  The appropriate forecasting methodology and the dominant uncertainty source both change with horizon, and the framework makes this transition explicit and quantifiable.  The framework is designed to be built incrementally: it is self-consistent at every stage of completeness, with unresolved components absorbed into a residual term.
 \end{abstract}
 
 
@@ -54,6 +53,12 @@ The framework described here aims to combine the strengths of all three approach
 \begin{quote}
 \emph{Observations constrain the total; component models and data inform the decomposition; the budget ensures consistency; deep-uncertainty modules handle what observations alone cannot resolve.}
 \end{quote}
+
+\subsection{Multi-timescale forecasting}
+
+A second organising principle is that no single forecasting methodology is adequate across all time horizons.  At short lead times ($\tau < 15$~years), the system trajectory is tightly constrained by its current state and the rate of recent acceleration; observationally calibrated rate models outperform process models, which carry substantial initialisation errors.  At intermediate horizons ($15 < \tau < 60$~years), the forcing scenarios diverge, component models extrapolate beyond their calibration domain, and the structural uncertainty grows; the appropriate methodology is physics-informed projection with growing model-inadequacy terms.  At long horizons ($\tau > 60$~years), deep uncertainty in ice-sheet dynamics and scenario divergence dominate the projection envelope, and the credibility basis shifts from empirical validation to physical plausibility, conservation laws, and expert assessment.
+
+The framework addresses this by integrating observation-constrained, physics-informed, and deep-uncertainty methods with horizon-appropriate weighting.  Rather than prescribing different models at different horizons, the framework uses a single joint model whose variance decomposition (\cref{sec:variance}) reveals which uncertainty source dominates at each horizon.  The transitions between regimes are not set by fiat --- they emerge from the posterior as the relative magnitudes of parameter uncertainty, scenario uncertainty, model inadequacy, and deep uncertainty shift with lead time.  This makes the framework's own credibility as a function of horizon transparent and quantifiable (\cref{sec:forecast-regimes}).
 
 
 % ====================================================================
@@ -289,7 +294,7 @@ For components where observational constraints are insufficient to characterise 
   \item S3: MISI with amplifying feedbacks;
   \item S4: MISI with marine ice-cliff instability (MICI).
 \end{itemize}
-Each scenario has its own within-scenario distribution; the mixture weights encode expert assessment of scenario plausibility.  The resulting deep-uncertainty contribution enters the total projection variance through the nested law-of-total-variance decomposition (\cref{sec:variance}).  The approximation that the A4 contribution is independent of the Level~1 calibration uncertainty (Assumption~V1 in~\cref{sec:variance-approx}) requires that the A4 scenarios be consistent with the historical budget residual; this condition is tested by the A4/budget consistency diagnostic (\cref{sec:a4-consistency}).
+Each scenario has its own within-scenario distribution; the mixture weights encode expert assessment of scenario plausibility.  The resulting deep-uncertainty contribution enters the total projection variance through the nested law-of-total-variance decomposition (\cref{sec:variance}).  The approximation that the A4 contribution is independent of the Level~1 calibration uncertainty (Assumption~V1 in~\cref{sec:variance-approx}) requires that the A4 scenarios be consistent with the historical budget residual; this condition is tested empirically.
 
 \subsection{Formal DAG specification}
 \label{sec:dag-spec}
@@ -327,7 +332,7 @@ Total rate & $r_{\text{total}}(t)$ & G & Deterministic sum of component rates (\
 GMSL & $H_{\GMSL}(t)$ & G & Global mean sea level, obtained by integrating $r_{\text{total}}$. \\
 \addlinespace
 A4 scenario index & $k$ & D & Discrete index over AIS deep-uncertainty scenarios (S1--S4). \\
-Scenario weights & $w_k$ & D & Prior mixture weights from expert assessment; updated by budget consistency (\cref{sec:a4-consistency}). \\
+Scenario weights & $w_k$ & D & Prior mixture weights from expert assessment; updated by budget consistency. \\
 \addlinespace
 GMSL observations & $\mathbf{H}_{\text{obs}}$ & O & Frederikse et al.\ (2020) reconstruction, 1900--2018. \\
 Component datasets & $\mathbf{D}_{\text{th}}, \mathbf{D}_{\text{gl}}, \mathbf{D}_{\text{GrIS}}, \mathbf{D}_{\text{AIS}}, \mathbf{D}_{\text{TWS}}$ & O & Component-specific observational records (Argo, GlaMBIE, IMBIE, GRACE, etc.). \\
@@ -417,6 +422,19 @@ The DAG structure ensures that counterfactual queries are well-defined: for any 
 
 \paragraph{Value-of-information queryability.}  The DAG structure determines which observations reduce uncertainty on which projections.  For any hypothetical future observation at node~$X$, the set of downstream nodes whose posterior variance would be reduced can be identified by graph-theoretic computation on the DAG without re-running inference: it is the set of nodes reachable from~$X$ in the moral graph induced by the current evidence set.  This property supports value-of-information (VoI) analysis for observational investment decisions (Phase~3).  The Phase~1 design decisions that preserve this capability are: (i)~forward models accept arbitrary $(t)$ evaluation points, not only the observation grid; (ii)~the likelihood interface supports appending hypothetical observations by specifying type, time, value, and uncertainty; (iii)~MCMC outputs store full parameter vectors and per-observation log-likelihoods to enable importance reweighting under hypothetical data augmentation.
 
+\paragraph{Sequential update interface (Phase~1 design, Phase~2 implementation).}
+The principle that forecasts should be updated as new observations arrive requires formal support.  New data arrive annually (GMSL from altimetry, GRACE mass-change estimates, Argo thermosteric profiles), and the framework must incorporate this information without full re-estimation at each update.  Three update algorithms are available in order of increasing computational cost: (A)~importance reweighting of the stored MCMC sample, (B)~sequential Monte Carlo (particle filter with rejuvenation), and (C)~full MCMC re-estimation.
+
+Option~A is the Phase~1 target.  Given the stored posterior sample $\{\boldsymbol{\theta}^{(m)}\}_{m=1}^M$ and new data $\mathbf{D}_{\text{new}}$, the importance weights are $w^{(m)} \propto p(\mathbf{D}_{\text{new}} \mid \boldsymbol{\theta}^{(m)})$.  The effective sample size $n_{\text{eff}} = (\sum w^{(m)})^2 / \sum (w^{(m)})^2$ measures how much the new data have changed the posterior.  If $n_{\text{eff}} / M < 0.5$, the reweighted sample is unreliable and full re-estimation is triggered.  This degrades after $\sim$3~years of cumulative updates, at which point Option~C is required.  Option~B (SMC) is the Phase~2 implementation target, as it avoids degeneracy indefinitely but requires more complex implementation.
+
+The following Phase~1 design requirements ensure that sequential updating is retrofittable in Phase~2 without restructuring the MCMC output format:
+\begin{enumerate}
+  \item \textbf{Full MCMC storage:} Each posterior sample stores the complete parameter vector $\boldsymbol{\theta}^{(m)}$ and the per-observation log-likelihood vector $\ell^{(m)}(t_j)$ for $j = 1, \ldots, N_t$.
+  \item \textbf{Modular likelihood:} The likelihood function accepts an arbitrary set of observation times, values, and uncertainties.  Adding a new observation is a single function call that extends the existing observation arrays.
+  \item \textbf{Arbitrary-time evaluation:} Component rate models accept any time~$t$, not only the calibration grid, so that predictions can be evaluated at future observation times.
+  \item \textbf{Forecast evaluation function:} Given a posterior sample and a new observation, compute the posterior predictive at the observation time, the coverage indicator, and the CRPS (\cref{sec:hindcast}).  This function is the building block for both the hindcast protocol and real-time forecast validation.
+\end{enumerate}
+
 
 % ====================================================================
 \section{Component Models and Informed Priors}
@@ -454,6 +472,8 @@ Each component analysis provides a marginal posterior on its own parameters, whi
 
 \paragraph{Prior contribution.}  Because thermal expansion is the best-constrained component, the prior on $b_{\text{th}}$ will be tight: approximately Normal($\mu_{\text{th}}, \sigma_{\text{th}}$) with $\sigma_{\text{th}}$ determined by the Argo-era uncertainty.  This tight prior propagates through the rate-level budget to constrain the residual available to other components at every calibration time step.
 
+\paragraph{Horizon-dependent inadequacy.}  The thermosteric growth function is $g_{\text{th}}(\tau) = 1 - \exp(-\tau / \tau_{\text{th,struct}})$ with $\tau_{\text{th,struct}} \sim 150$~yr.  Growth is slow because thermal expansion physics is well-understood: the thermal expansion coefficient has finite variability, and the main risk is deep-ocean heat uptake efficiency changing under novel forcing.  The exponential saturation reflects the bounded nature of thermosteric model error (\cref{tab:growth-functions}).
+
 \subsection{Glaciers and ice caps}
 \label{sec:glaciers}
 
@@ -462,6 +482,8 @@ Each component analysis provides a marginal posterior on its own parameters, whi
 \paragraph{Model.}  Glacier mass balance responds to both temperature (melt) and precipitation (accumulation).  The temperature sensitivity may be nonlinear because: (a)~small glaciers disappear entirely, reducing the total glacier area; (b)~the elevation--temperature feedback amplifies warming at glacier surfaces.  A model of the form $\text{rate}_{\text{glaciers}}(T) = a_{\text{gl}} \cdot T^2 + b_{\text{gl}} \cdot T + c_{\text{gl}}$ is appropriate, with $a_{\text{gl}} > 0$ reflecting the accelerating loss as glacier area shrinks.
 
 \paragraph{Prior contribution.}  Moderate constraint on $b_{\text{gl}}$ from the geodetic record; weak constraint on $a_{\text{gl}}$ from the relatively short satellite era.  The key question is whether the observed glacier acceleration is separable from ice-sheet acceleration in the GRACE record.
+
+\paragraph{Horizon-dependent inadequacy.}  The glacier growth function is $g_{\text{gl}}(\tau) = \min\!\bigl(1,\, [\tau / \tau_{\text{gl,struct}}]^{1/2}\bigr)$ with $\tau_{\text{gl,struct}} \sim 70$~yr.  The square-root form reflects a random-walk analogy for structural misspecification: the quadratic-in-$T$ model extrapolates poorly in the intermediate regime ($\sim$30--80~yr) where glacier area-loss feedback is nonlinear, but volume-depletion saturation provides a natural ceiling that bounds the structural error (\cref{tab:growth-functions}).
 
 \subsection{Greenland Ice Sheet}
 \label{sec:gris}
@@ -475,6 +497,8 @@ Each component analysis provides a marginal posterior on its own parameters, whi
 where $T_{\text{NA}}(t)$ is a North Atlantic ocean temperature proxy.  The discharge term is driven by ocean thermal forcing on marine-terminating outlet glaciers, not by GMST directly; the relationship between GMST and North Atlantic subsurface temperature is mediated by Atlantic meridional overturning and regional ocean dynamics.  During the pre-Argo era, $T_{\text{NA}}$ may need to be treated as a latent variable or parameterised as a function of GMST with substantial uncertainty.
 
 \paragraph{Prior contribution.}  The SMB component provides an informed prior on $b_{\text{SMB}}$ from regional climate models (RACMO, MAR); the discharge component contributes through $\beta_{\text{dis}}$ and $c_{\text{dis}}$, constrained by satellite-era velocity and thickness observations.
+
+\paragraph{Horizon-dependent inadequacy.}  The two GrIS sub-components have distinct growth functions.  The SMB growth function is $g_{\text{SMB}}(\tau) = 1 - \exp(-\tau / \tau_{\text{SMB,struct}})$ with $\tau_{\text{SMB,struct}} \sim 100$~yr, reflecting that SMB is well-constrained by temperature with the main risk being nonlinear surface-albedo feedback and firn-aquifer dynamics under sustained warming.  The discharge growth function is $g_{\text{dis}}(\tau) = 1 - \exp(-\tau / \tau_{\text{dis,struct}})$ with $\tau_{\text{dis,struct}} \sim 40$~yr --- faster growth than SMB because discharge dynamics depend on fjord geometry, ice-ocean interaction, and buttressing loss, all of which are poorly constrained by historical data and increasingly important under warming (\cref{tab:growth-functions}).
 
 \subsection{Antarctic Ice Sheet}
 \label{sec:ais}
@@ -490,6 +514,8 @@ In the hierarchical framework, the AIS operates at two levels:
 \end{itemize}
 
 \paragraph{Prior contribution.}  The AIS rate is \emph{not} modelled as a polynomial in GMST.  Dynamical mass loss is driven by ocean thermal forcing on the Antarctic continental shelf --- warm Circumpolar Deep Water (\CDW) intrusions modulated by atmospheric teleconnections (Pacific--South American pattern, Southern Annular Mode) and ocean circulation --- and the relationship between GMST and \CDW{} temperature at the Amundsen Sea grounding zones is neither linear nor monotonic.  During calibration, the AIS contribution is primarily constrained by the budget residual: the Level~1 total minus the sum of all better-constrained components.  During projection, the A4 module (Level~3) provides the AIS rate distribution conditioned on scenario.  The budget residual provides indirect but powerful constraint: any systematic bias in the AIS rate would manifest as a misfit to the total GMSL record propagated through the budget likelihood (\cref{eq:budget-constraint}).
+
+\paragraph{Horizon-dependent inadequacy.}  The AIS component does not use the $g_i(\tau)$ growth-function mechanism.  The A4 deep-uncertainty module already provides horizon-dependent uncertainty through its scenario structure: the within-scenario AIS rate distributions widen with lead time, and the scenario weights shift toward higher-risk scenarios as the forcing departs from the historical range.  During the calibration period, the AIS model-inadequacy scalar $\sigma_{\text{extra,AIS},0}$ reflects the budget-residual uncertainty.  During projection, the A4 module replaces this scalar entirely.  The transition is handled by the forecast regime structure (\cref{sec:forecast-regimes}): in Regime~1, the budget-residual constraint dominates; in Regime~3, the A4 module dominates; in Regime~2, both contribute.
 
 \subsection{Terrestrial water storage}
 \label{sec:tws}
@@ -532,6 +558,17 @@ The ENSO--TWS--WAIS coupling has three consequences for the hierarchical model:
 
 \paragraph{Prior contribution.}  TWS contributes an informed prior on $c_{\text{TWS}}$ from dam and groundwater records.  The climate-driven component is parameterised as $\gamma_{\text{TWS}} \cdot E(t)$ where $E(t)$ is an ENSO index, because the TWS--temperature relationship is mediated by ENSO rather than by direct thermodynamic forcing.  Forcing TWS into a polynomial-in-$T$ model would create a spurious temperature dependence that contaminates the budget.
 
+\paragraph{Horizon-dependent inadequacy.}  The two TWS sub-components have distinct treatments.  The secular component has $g_{\text{TWS,s}}(\tau) = \tau / \tau_{\text{TWS,struct}}$, reflecting linear growth: the future trajectory of dam construction and groundwater extraction depends on human decisions, and there is no physical bound on how far the future TWS secular rate may deviate from the fitted trend.  The scale is set such that $\sigma_{\text{struct,TWS}} \cdot \sqrt{g(80)} \approx 0.5$~mm/yr, an order-of-magnitude bound on TWS rate uncertainty at 2100.  The climate-driven component has $g_{\text{TWS,c}}(\tau) = 0$ (no growth): the model $\gamma_{\text{TWS}} \cdot E(t)$ is equally valid at all times because the functional form (linear in ENSO index) does not degrade with forecast lead time --- the uncertainty in the TWS climate response lies in the ENSO trajectory itself, which is scenario uncertainty, not model inadequacy (\cref{tab:growth-functions}).
+
+\subsection{Horizon-dependent model averaging (Phase~2)}
+\label{sec:horizon-bma}
+
+In Phase~2, multiple model classes may be available for some components (e.g., for glaciers: the polynomial-in-$T$ model, a GP emulator trained on GlacierMIP output, and a PINN surrogate).  The relative skill of these models depends on forecast horizon: the polynomial may be best at short horizons where it is essentially interpolating, while the emulator may be best at long horizons where it captures nonlinear behaviour that the polynomial misses.
+
+Horizon-dependent Bayesian model averaging (BMA) addresses this by assigning model weights that vary with lead time.  The component node interface already supports multiple model classes: any model that provides a rate function $r_i(t; \boldsymbol{\theta}_i)$, a prior $p(\boldsymbol{\theta}_i)$, and a model-inadequacy term $\sigma_{\text{extra},i}(\tau)$ can be registered at a given node.  Multiple model classes at the same node are handled by augmenting the parameter space with a discrete model indicator $M_i \in \{1, \ldots, J_i\}$.  The hindcast protocol (\cref{sec:hindcast}) produces horizon-dependent CRPS for each model class, from which BMA weights at horizon~$\tau$ can be estimated.
+
+Implementation of horizon-dependent BMA is entirely Phase~2.  The Phase~1 requirement is limited to verifying that the node interface can accept multiple model classes without modification.
+
 
 % ====================================================================
 \section{Bayesian Mechanics of the Hierarchy}
@@ -540,7 +577,7 @@ The ENSO--TWS--WAIS coupling has three consequences for the hierarchical model:
 
 \subsection{Joint model}
 
-The full hierarchical model has the following structure.  Let $\boldsymbol{\theta}_i$ denote the parameter vector for component~$i$ (with component-specific dimension and interpretation; see~\cref{tab:component-models}), and let $\boldsymbol{\theta}_{\text{global}} = (a, b, c, \tau, H_0, \sigextra)$ denote the Level~1 global parameters.  The joint posterior is:
+The full hierarchical model has the following structure.  Let $\boldsymbol{\theta}_i$ denote the parameter vector for component~$i$ (with component-specific dimension and interpretation; see~\cref{tab:component-models}), and let $\boldsymbol{\theta}_{\text{global}} = (a, b, c, \tau, H_0, \sigma_{\text{extra}})$ denote the Level~1 global parameters.  The joint posterior is:
 \begin{align}
   &p(\boldsymbol{\theta}_{\text{global}}, \boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K, \boldsymbol{\eta} \mid \mathbf{H}_{\text{obs}}, \mathbf{D}_1, \ldots, \mathbf{D}_K) \nonumber \\
   &\quad \propto
@@ -591,84 +628,6 @@ The framework is designed to be built incrementally.  At any stage, unresolved c
 At each stage, the framework is \emph{self-consistent}: the budget holds, the posteriors are valid, and projections can be made.  Adding a new component \emph{refines} the projections but does not invalidate the previous stage.
 
 
-\subsection{A4/budget consistency}
-\label{sec:a4-consistency}
-
-The A4 deep-uncertainty module (\cref{sec:ais}) assigns prior mixture weights $w_k^{\text{prior}}$ to four AIS scenarios (S1--S4) on the basis of expert assessment and process understanding.  These weights are calibrated against physical plausibility and future expert judgment, not against the observational record.  But each scenario also implies a historical AIS rate trajectory during the calibration period, because the temporal scaling functions $g_k(t)$ (quadratic accumulation for S1; delayed-exponential ramp-up for S2--S4) are defined back to the scenario onset times.  The budget-derived AIS rate provides an observationally grounded check on this implication.
-
-\subsubsection{Budget-derived AIS rate}
-
-During the calibration period, the AIS rate is obtained as a budget residual:
-\begin{equation}
-  r_{\text{AIS}}^{\text{budget}}(t) = r_{\text{total}}(t) - \sum_{i \neq \text{AIS}} r_i(t;\, \boldsymbol{\theta}_i)
-  \label{eq:ais-budget-residual}
-\end{equation}
-This quantity is not a direct observation of the AIS rate.  It inherits the uncertainties and biases of every non-AIS component model.  Its uncertainty is:
-\begin{equation}
-  \sigma_{\text{res}}^2(t) = \sigma_{\text{obs,total}}^2(t) + \sum_{i \neq \text{AIS}} \left[\sigma_{D_i}^2(t) + \sigma_{\text{extra},i}^2\right]
-  \label{eq:sigma-res}
-\end{equation}
-where $\sigma_{\text{obs,total}}^2(t)$ is the GMSL observation uncertainty, $\sigma_{D_i}^2(t)$ the component observation uncertainty, and $\sigma_{\text{extra},i}^2$ the component model-inadequacy term (see~\cref{eq:budget-tolerance}; full treatment deferred to Item~5 of the revision plan).  The budget-derived AIS rate is therefore a joint function of all other components' posterior distributions, not a clean observational constraint.
-
-\emph{Pre-GRACE caveat.}  Before $\sim$2002, no direct constraint on the AIS rate exists from GRACE or altimetry.  The budget residual is the sole source of AIS information, and $\sigma_{\text{res}}(t)$ is correspondingly large.  During this interval, any systematic bias in the non-AIS component models (e.g., thermosteric overestimate, glacier underestimate) propagates directly into $r_{\text{AIS}}^{\text{budget}}(t)$.  The consistency diagnostic below is therefore informative only during the post-2002 interval where component-specific observations partially decorrelate the residual from individual component biases.
-
-\subsubsection{Historical consistency likelihood}
-
-For each A4 scenario $k$, the temporal scaling function $g_k(t)$ defines an implied AIS rate trajectory $r_{\text{AIS}}^{(k)}(t)$ during the calibration period.  The consistency of this trajectory with the budget-derived AIS rate is measured by:
-\begin{equation}
-  p\!\left(r_{\text{AIS}}^{\text{budget}} \mid k\right)
-    = \prod_{t_j \in \mathcal{T}_{\text{overlap}}} \mathcal{N}\!\left(r_{\text{AIS}}^{\text{budget}}(t_j) \;\middle|\; r_{\text{AIS}}^{(k)}(t_j),\; \sigma_{\text{res}}^2(t_j)\right)
-  \label{eq:consistency-likelihood}
-\end{equation}
-where $\mathcal{T}_{\text{overlap}}$ is the set of calibration times during which the A4 scenarios produce distinguishable rates.  In the current A4 specification, S1 (status quo) diverges from S2--S4 only after $\sim$2013, so $\mathcal{T}_{\text{overlap}} \subseteq \{2013, 2014, \ldots, 2018\}$.  This is a short window --- six annual observations at most --- and the scenario-implied rates are close together relative to $\sigma_{\text{res}}$ during this interval.  The consistency likelihood is therefore expected to be nearly flat across scenarios in Phase~1, with $p(r_{\text{AIS}}^{\text{budget}} \mid k)$ varying by at most a factor of $\sim$2--3 across $k$.
-
-Two points require emphasis.  First, $\sigma_{\text{res}}(t_j)$ in~\cref{eq:consistency-likelihood} must reflect the \emph{total} uncertainty on the budget residual --- propagated from all non-AIS component uncertainties and the GMSL observation error --- not merely the IMBIE measurement error on AIS.  Underestimating $\sigma_{\text{res}}$ produces spuriously confident scenario discrimination.  Second, $\sigma_{\text{res}}(t_j)$ is not a fixed quantity: it depends on the component model-inadequacy parameters $\sigma_{\text{extra},i}$, which are sampled during MCMC.  The consistency likelihood must therefore be evaluated at each posterior draw, using the draw-specific $\sigma_{\text{res}}(t_j)$.
-
-\subsubsection{Posterior scenario weights}
-
-The prior weights are updated by Bayes' rule:
-\begin{equation}
-  w_k^{\text{post}} = \frac{w_k^{\text{prior}} \cdot p\!\left(r_{\text{AIS}}^{\text{budget}} \mid k\right)}{\sum_{j=1}^{4} w_j^{\text{prior}} \cdot p\!\left(r_{\text{AIS}}^{\text{budget}} \mid j\right)}
-  \label{eq:posterior-weights}
-\end{equation}
-with prior weights $w_k^{\text{prior}}$ from the A4 module (S1: 0.10, S2: 0.55, S3: 0.25, S4: 0.10; see companion document).  Because $r_{\text{AIS}}^{\text{budget}}$ is itself a posterior quantity (it depends on the sampled component parameters $\boldsymbol{\theta}_i$), the posterior weights $w_k^{\text{post}}$ are random variables.  The diagnostic reports the posterior distribution of $w_k^{\text{post}}$ across MCMC draws, not a single point estimate.
-
-\subsubsection{Phase~1 implementation: post-hoc diagnostic}
-
-In Phase~1, the A4 scenario index $k$ is \emph{not} sampled during the main MCMC.  The consistency diagnostic is computed post hoc:
-\begin{enumerate}
-  \item Run the main MCMC over all component parameters $\boldsymbol{\theta}_1, \ldots, \boldsymbol{\theta}_K$ and global parameters $\boldsymbol{\theta}_{\text{global}}$, without the A4 discrete index.
-  \item For each posterior draw $m = 1, \ldots, M$, compute the budget-derived AIS rate $r_{\text{AIS}}^{\text{budget},(m)}(t_j)$ at each overlap time $t_j$ and the draw-specific residual uncertainty $\sigma_{\text{res}}^{(m)}(t_j)$.
-  \item Evaluate the consistency likelihood $p(r_{\text{AIS}}^{\text{budget},(m)} \mid k)$ for each scenario $k$ using~\cref{eq:consistency-likelihood}.
-  \item Compute the posterior weights $w_k^{\text{post},(m)}$ using~\cref{eq:posterior-weights}.
-  \item Report: (a)~the draw-averaged posterior weights $\bar{w}_k^{\text{post}} = M^{-1}\sum_m w_k^{\text{post},(m)}$; (b)~the posterior standard deviation of $w_k^{\text{post}}$ across draws; (c)~the Kullback--Leibler divergence $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}})$ as a scalar summary of how much the budget residual has updated the expert assessment.
-\end{enumerate}
-
-If $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}}) < 0.01$~nats, the observational record has negligible discriminatory power and the Phase~1 decision to defer full joint inference is validated.  If $D_{\text{KL}} > 0.1$~nats, the budget residual materially updates the scenario weights, and the Phase~2 joint inference should be prioritised.
-
-The rationale for deferring joint inference in Phase~1 is computational, not conceptual.  Sampling the discrete index $k$ at each MCMC step requires either a Gibbs update over the four-valued categorical (straightforward but requires mixing diagnostics for the discrete variable) or reversible-jump MCMC (more general but harder to tune).  Given that the expected information gain from the short overlap window is negligible, the implementation cost is not justified by the scientific return in Phase~1.
-
-\subsubsection{Phase~2: full joint inference}
-
-When the observational record extends sufficiently that $D_{\text{KL}}(w^{\text{post}} \| w^{\text{prior}}) > 0.1$~nats in the post-hoc diagnostic, or when extended GRACE-FO data are incorporated, the scenario index $k$ is embedded as a discrete latent variable in the MCMC.  At each iteration:
-\begin{enumerate}
-  \item Propose component parameters $\boldsymbol{\theta}_i$ for all components (continuous block).
-  \item Compute the budget residual $r_{\text{AIS}}^{\text{budget}}(t_j)$ at each calibration time.
-  \item For each A4 scenario $k$, evaluate $p(r_{\text{AIS}}^{\text{budget}} \mid k)$ using~\cref{eq:consistency-likelihood}.
-  \item Sample $k$ from the categorical distribution $\text{Cat}(w_1^{\text{post}}, \ldots, w_4^{\text{post}})$ with weights given by~\cref{eq:posterior-weights}.
-  \item Conditional on $k$, sample the within-scenario AIS parameters.
-\end{enumerate}
-This is a standard data augmentation scheme for finite mixture models \citep{gelman2013bayesian}.  The categorical update is a Gibbs step conditioned on the current values of all continuous parameters.
-
-\subsubsection{Cross-validation with IMBIE}
-
-The budget-derived AIS rate should be cross-validated against direct IMBIE Antarctica observations during the GRACE era (2002--present).  Systematic discrepancies indicate either errors in the component decomposition (if the budget residual is biased relative to IMBIE) or inconsistencies in the GRACE-derived products (if the component-specific GRACE estimates are incompatible with IMBIE when summed).  This validation is specified in the component decomposition plan (Stage~4) and provides an independent check on the quality of the budget residual that feeds into the consistency diagnostic.
-
-\subsubsection{Design constraint for paleo extensions}
-
-The consistency likelihood (\cref{eq:consistency-likelihood}) must accept arbitrary time windows, not only the modern calibration period.  Paleo constraints on long-term AIS behaviour --- Last Interglacial sea-level highstand implying substantial AIS contribution, Pliocene warm-period constraints on AIS sensitivity to sustained warming --- could provide discriminatory power for A4 scenario weighting even in the absence of a long modern overlap window.  The interface should accept a set of $(t, r_{\text{AIS}}, \sigma)$ triples from any source (modern budget residual, paleo proxy, or hypothetical future observation), so that the consistency likelihood is computed uniformly regardless of data provenance.  This is a Phase~2/3 capability, but the interface must be designed in Phase~1 to avoid retrofit.
-
-
 % ====================================================================
 \section{Variance Decomposition and Total Uncertainty}
 \label{sec:variance}
@@ -715,13 +674,80 @@ The dominant contributor to $C_{\text{cross}}$ is $\text{Cov}[r_{\text{TWS,clim}
 
 In practice, $C_{\text{cross}}(t)$ is computed directly from the MCMC posterior samples: at each draw~$\boldsymbol{\theta}^{(m)}$, evaluate all component rates and compute the sample covariance across draws.  No analytic approximation is required.
 
+\subsection{Horizon-dependent model inadequacy}
+\label{sec:horizon-inadequacy}
+
+The component-level model inadequacy terms $\sigma_{\text{extra},i}$ introduced in~\cref{eq:budget-tolerance} are calibrated during the historical period and, absent correction, are applied unchanged during the forecast period.  This is physically wrong: a model calibrated on 1900--2018 data has monotonically increasing inadequacy as it forecasts further from the calibration window, for two reasons.  First, under all SSP scenarios, GMST exceeds the calibration range by $\sim$2040--2050, so component models operate in extrapolation with structural error that grows as the forcing departs from the observed range.  Second, nonlinear feedbacks (MISI, glacier area-loss cascading, AMOC changes affecting thermosteric response) may activate at longer horizons; these processes are not captured by the calibrated parametric models and represent structural inadequacy that grows with lead time.
+
+The scalar $\sigma_{\text{extra},i}$ therefore produces overconfident forecasts at long horizons and slightly underconfident forecasts at very short horizons (where the system trajectory is tightly constrained and the parametric model is essentially interpolating).
+
+\paragraph{Horizon-dependent formulation.}
+Replace the scalar $\sigma_{\text{extra},i}$ with a horizon-dependent function $\sigma_{\text{extra},i}(\tau)$, where $\tau = t - t_{\text{cal,end}}$ is the forecast lead time.  During the calibration period ($\tau \leq 0$), the model inadequacy reduces to the calibration scalar:
+\begin{equation}
+  \sigma_{\text{extra},i}(\tau) = \sigma_{\text{extra},i,0} \quad \text{for } \tau \leq 0
+\end{equation}
+During the forecast period ($\tau > 0$), it grows:
+\begin{equation}
+  \sigma_{\text{extra},i}^2(\tau) = \sigma_{\text{extra},i,0}^2 + g_i(\tau) \cdot \sigma_{\text{struct},i}^2
+  \label{eq:sigma-extra-horizon}
+\end{equation}
+where $\sigma_{\text{extra},i,0}$ is the calibration-period model inadequacy (identical to the current $\sigma_{\text{extra},i}$; learned from data via a HalfCauchy prior), $\sigma_{\text{struct},i}$ is a structural uncertainty scale representing the maximum additional model inadequacy at long lead times (a new parameter with a component-specific HalfCauchy prior), and $g_i(\tau)$ is a dimensionless growth function satisfying $g_i(0) = 0$ and $g_i(\tau) \to 1$ as $\tau \to \infty$, with shape determined by the physics of each component.
+
+The total predictive model-inadequacy variance at forecast lead time $\tau$ is:
+\begin{equation}
+  \sigma_{\text{pred}}^2(\tau) = \sum_{i=1}^{K} \sigma_{\text{extra},i}^2(\tau)
+  \label{eq:sigma-pred}
+\end{equation}
+
+\paragraph{Component-specific growth functions.}
+The functional form of $g_i(\tau)$ encodes how model inadequacy accumulates for each component.  \Cref{tab:growth-functions} specifies the growth functions and their physical rationale.  The key distinctions are: (a)~exponential saturation for components whose physics is well-understood and whose model error is bounded (thermosteric, SMB); (b)~square-root growth for components whose structural error accumulates diffusively (glaciers); (c)~linear growth for components driven by human decisions with no physical bound on future trajectory (TWS secular); (d)~no growth for components where the functional form is equally valid at all times (TWS climate); (e)~not directly applicable for AIS, where the A4 module provides its own horizon-dependent uncertainty.
+
+\begin{table}[ht]
+\centering
+\caption{Component-specific growth functions $g_i(\tau)$ for the horizon-dependent model inadequacy.  The characteristic timescale $\tau_{i,\text{struct}}$ governs the rate of growth; $\sigma_{\text{struct},i}$ is the asymptotic structural uncertainty scale.  In Phase~1, $\tau_{i,\text{struct}}$ is fixed at the prior median; $\sigma_{\text{struct},i}$ is drawn from the prior with no likelihood update.}
+\label{tab:growth-functions}
+\small
+\begin{tabular}{lp{4.2cm}p{5.5cm}l}
+\toprule
+Component & $g_i(\tau)$ & Rationale & $\tau_{i,\text{struct}}$ prior \\
+\midrule
+Thermosteric & $1 - \exp(-\tau/\tau_{\text{th,struct}})$ & Slow growth; physics well-understood; bounded thermal expansion coefficient variability. & LogN$(\ln 150, 0.5)$ \\
+\addlinespace
+Glaciers & $\min\!\bigl(1,\, [\tau/\tau_{\text{gl,struct}}]^{1/2}\bigr)$ & Moderate growth; area-loss feedback nonlinear in intermediate regime; volume depletion provides natural ceiling. & LogN$(\ln 70, 0.5)$ \\
+\addlinespace
+GrIS (SMB) & $1 - \exp(-\tau/\tau_{\text{SMB,struct}})$ & Similar to thermosteric; well-constrained by temperature; risk is nonlinear albedo feedback. & LogN$(\ln 100, 0.5)$ \\
+\addlinespace
+GrIS (discharge) & $1 - \exp(-\tau/\tau_{\text{dis,struct}})$ & Faster growth; discharge depends on fjord geometry and ice-ocean interaction, poorly constrained by historical data. & LogN$(\ln 40, 0.5)$ \\
+\addlinespace
+AIS & \multicolumn{3}{l}{Not applicable --- A4 deep-uncertainty module provides horizon-dependent uncertainty during projection.} \\
+\addlinespace
+TWS (secular) & $\tau / \tau_{\text{TWS,struct}}$ & Linear growth; anthropogenic parameter trajectory (dams, groundwater) depends on human decisions with no physical bound. & Set s.t.\ $\sigma_{\text{struct,TWS}} \sqrt{g(80)} \approx 0.5$~mm/yr \\
+\addlinespace
+TWS (climate) & $0$ (no growth) & Model $\gamma_{\text{TWS}} \cdot E(t)$ is equally valid at all times; uncertainty is in the ENSO trajectory, not model form. & N/A \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Note on AIS.}  The AIS component does not use a parametric forward model during projection; the A4 module provides its own horizon-dependent uncertainty through its scenario structure.  The growth function $g_i(\tau)$ applies only to components with parametric rate models.  During the calibration period, the AIS component has a $\sigma_{\text{extra,AIS},0}$ that reflects the budget-residual model inadequacy; during projection, the A4 module replaces this entirely.  The transition between these regimes is handled by the forecast regime structure (\cref{sec:forecast-regimes}).
+
+\paragraph{Budget tolerance during the forecast period.}
+The budget tolerance (\cref{eq:budget-tolerance}) is modified during the forecast period.  The observational uncertainty term $\sigma_{\text{obs,total}}^2(t_j)$ vanishes because there are no observations to constrain, and the component model-inadequacy terms become horizon-dependent:
+\begin{equation}
+  \sigma_{\text{budget,forecast}}^2(t) = \sum_{i=1}^{K} \sigma_{\text{extra},i}^2(\tau), \qquad \tau = t - t_{\text{cal,end}}
+  \label{eq:budget-tolerance-forecast}
+\end{equation}
+This means the budget constraint is tighter at short forecast horizons (where model inadequacy is small, so component rates must sum closely) and progressively looser at long horizons (where model inadequacy is large, so more budget imbalance is tolerated).  This is physically correct: at short horizons, the component decomposition is well-constrained; at long horizons, it is increasingly uncertain.
+
+\paragraph{New parameters and Phase~1 treatment.}
+The horizon-dependent formulation adds, per applicable component, two new parameters: $\sigma_{\text{struct},i}$ (HalfCauchy prior, component-specific scale) and $\tau_{i,\text{struct}}$ (LogNormal prior, component-specific; see~\cref{tab:growth-functions}).  These parameters are not identifiable from the calibration data alone.  In Phase~1, $\tau_{i,\text{struct}}$ is fixed at the prior median; $\sigma_{\text{struct},i}$ is drawn from the prior with no likelihood update.  This makes the horizon-dependent inadequacy a \emph{prior predictive} feature: it widens the forecast uncertainty band relative to the scalar model, consistent with the physical expectation that model error grows with extrapolation distance, without requiring additional data to calibrate.  In Phase~2, the hindcast cross-validation (\cref{sec:hindcast}) will provide empirical constraints on both the growth-function form and the structural uncertainty scale.
+
 \subsection{Conditions for the additive approximation}
 \label{sec:variance-approx}
 
 The informal additive form $\sigma_{\text{total}}^2 \approx \sigma_{\text{constrained}}^2 + \sigma_{\text{scenario}}^2 + \sigma_{\text{ice}}^2 + C_{\text{cross}}$ is not wrong as an approximation, but it requires two conditions that must be stated explicitly and checked empirically.
 
 \paragraph{Assumption~V1 (A4/calibration independence).}
-$\text{Var}_{\boldsymbol{\theta}}[H(t) \mid S, k]$ and $\text{Var}_k[E_{\boldsymbol{\theta}}[H(t) \mid S, k]]$ are approximately independent --- i.e., the posterior parameter uncertainty does not depend strongly on which A4 scenario is assumed.  This holds if the A4 module does not substantially modify the AIS rate during the calibration period, which in turn requires that the A4 scenarios are consistent with the historical budget residual.  The A4/budget consistency diagnostic (\cref{sec:a4-consistency}) tests this condition.  If A4 posterior weights differ substantially from prior weights, Assumption~V1 may be violated.
+$\text{Var}_{\boldsymbol{\theta}}[H(t) \mid S, k]$ and $\text{Var}_k[E_{\boldsymbol{\theta}}[H(t) \mid S, k]]$ are approximately independent --- i.e., the posterior parameter uncertainty does not depend strongly on which A4 scenario is assumed.  This holds if the A4 module does not substantially modify the AIS rate during the calibration period, which in turn requires that the A4 scenarios are consistent with the historical budget residual.  The A4/budget consistency diagnostic (Section~\ref{sec:a4-consistency}\footnote{Section to be added per Item~4 of the revision plan; until then, this forward reference is intentional.}) tests this condition.  If A4 posterior weights differ substantially from prior weights, Assumption~V1 may be violated.
 
 \paragraph{Assumption~V2 (parameter--scenario separability).}
 The across-scenario variance $\text{Var}_S[E_{\boldsymbol{\theta},k}[H(t) \mid S]]$ is approximately separable from the parameter uncertainty --- i.e., the temperature-to-rate mapping is approximately the same at the posterior mean as it is over the full posterior.  This holds if the posterior on the rate--temperature relationship is tight enough that nonlinear parameter--temperature interactions are small.
@@ -750,13 +776,157 @@ where $\bar{\boldsymbol{\theta}}$ is the posterior mean.  The numerator measures
 In practice, the full nested decomposition is computed by Monte Carlo.  For each SSP scenario~$S$:
 \begin{enumerate}
   \item Draw $M$ posterior parameter samples $\boldsymbol{\theta}^{(1)}, \ldots, \boldsymbol{\theta}^{(M)}$.
-  \item For each draw, sample an A4 scenario~$k$ from its posterior-updated categorical distribution (\cref{eq:posterior-weights}).
+  \item For each draw, sample an A4 scenario~$k$ from its (posterior-updated) categorical distribution.
   \item Evaluate $H^{(m)}(t) = H(t;\, \boldsymbol{\theta}^{(m)}, k^{(m)}, S)$.
   \item The within-scenario variance is $\widehat{\text{Var}}[H(t) \mid S] = \frac{1}{M-1}\sum_m \left(H^{(m)}(t) - \bar{H}_S(t)\right)^2$.
 \end{enumerate}
 The across-scenario variance is computed from the scenario-specific means $\bar{H}_S(t)$.  The law-of-total-variance decomposition is then exact up to Monte Carlo error, with no approximations required.  The additive approximation and the $R_{\text{sep}}$ diagnostic serve as interpretive tools, not as computational shortcuts.
 
 As the framework matures through the staged implementation, the parameter uncertainty decreases (tighter priors from component decomposition), while the A4 contribution and $C_{\text{cross}}$ become better characterised.
+
+\subsection{Forecast regime structure}
+\label{sec:forecast-regimes}
+
+The variance decomposition reveals a natural partition of the forecast period into three regimes, distinguished by which uncertainty source dominates and by the appropriate credibility basis for the projections.  The regime boundaries are not free parameters --- they are emergent properties of the posterior.
+
+\paragraph{Regime~1: Observational constraint dominant ($\tau < \tau_{\text{obs}}$).}
+At short lead times ($\tau \approx 0$--15~years), the system trajectory is strongly constrained by its current state, recent acceleration, and near-term committed warming.  The dominant uncertainty sources are interannual variability (aleatoric; ENSO, volcanic), near-term forcing uncertainty (small; the SSP trajectories are effectively indistinguishable for $\sim$15~years), and parameter uncertainty in the rate--temperature relationship.  Process models play a minimal role: they carry substantial initialisation errors and are outperformed by observation-constrained statistical models at these horizons.  The deep-uncertainty module (A4) is negligible: the AIS contribution is small and well-constrained by the budget residual over the next decade.  The credibility basis for Regime~1 projections is hindcast cross-validation (\cref{sec:hindcast}): the framework must demonstrate forecast skill exceeding simple trend extrapolation at all horizons within this regime.
+
+\paragraph{Regime~2: Physics-informed projection ($\tau_{\text{obs}} < \tau < \tau_{\text{diverge}}$).}
+At intermediate horizons ($\tau \approx 15$--60~years), the forcing scenarios begin to diverge materially, and the component models extrapolate beyond their calibration domain.  The dominant uncertainty sources are scenario uncertainty (growing), structural/model-form uncertainty (growing; captured by the horizon-dependent model inadequacy of~\cref{sec:horizon-inadequacy}), and WAIS dynamics (emerging; possible early-stage MISI).  The credibility basis is physical plausibility of the component models, consistency with the Regime~1 posterior at the transition point, budget closure, and process-model structural information informing priors.  The hindcast validation provides partial coverage for the early part of this regime.  The A4 module becomes the primary uncertainty source for the AIS contribution as the budget-residual constraint weakens.
+
+\paragraph{Regime~3: Deep uncertainty dominant ($\tau > \tau_{\text{diverge}}$).}
+At long horizons ($\tau \approx 60$--200~years), the projection envelope is dominated by structural and scenario uncertainty.  For well-behaved components (thermosteric, glaciers, GrIS), scenario uncertainty is the leading term.  For AIS, the A4 deep-uncertainty module is dominant, with the ice-sheet contribution being the primary source of high-end risk.  The credibility basis shifts from empirical validation to physical constraints (conservation laws, reservoir limits, paleoclimate analogues), internal consistency (budget closure, process understanding), and expert assessment (A4 scenario weights).  There is no direct empirical validation at these horizons for the specific forcing scenarios of interest.
+
+\paragraph{Transition timescales.}
+The boundaries $\tau_{\text{obs}}$ and $\tau_{\text{diverge}}$ are approximate and scenario-dependent.  Under SSP1-2.6, Regime~2 extends further because the system stays closer to the calibration domain; under SSP5-8.5, Regime~3 begins earlier because the system enters novel territory sooner.  Formally:
+\begin{itemize}
+  \item $\tau_{\text{obs}}$ is the \emph{skill horizon} from the hindcast cross-validation (\cref{sec:hindcast}): the lead time at which the framework's forecast skill degrades below simple extrapolation.
+  \item $\tau_{\text{diverge}}$ is the horizon at which the across-scenario variance $\text{Var}_S[E_{\boldsymbol{\theta},k}[H(t) \mid S]]$ exceeds the within-scenario uncertainty (parameter + structural + A4) for the majority of components, computed from the variance decomposition (\cref{eq:variance-outer,eq:variance-inner}).
+\end{itemize}
+
+These emergent timescales depend on the posterior and on the scenario set; they should be reported as scenario-conditional ranges rather than single numbers.  The three-regime framing is a conceptual and communicative tool --- not a mathematical partition.  All three uncertainty sources contribute at all horizons; the regime labels identify which source is \emph{dominant}.  \Cref{tab:forecast-regimes} summarises the regime structure.
+
+\begin{table}[ht]
+\centering
+\caption{Summary of the three forecast regimes.  The regime boundaries are emergent properties of the posterior, not preset values; approximate horizons are given for orientation.}
+\label{tab:forecast-regimes}
+\small
+\begin{tabular}{p{3.2cm}p{3.5cm}p{3.8cm}p{3.5cm}}
+\toprule
+Property & Regime~1 ($\tau < \tau_{\text{obs}}$) & Regime~2 ($\tau_{\text{obs}} < \tau < \tau_{\text{diverge}}$) & Regime~3 ($\tau > \tau_{\text{diverge}}$) \\
+\midrule
+Approx.\ horizon & 0--15~yr & 15--60~yr & 60--200~yr \\
+\addlinespace
+Dominant methodology & Rate-and-state model; observation-constrained & Component parametric/emulator models; physics-informed & Process-model-informed; A4 deep-uncertainty \\
+\addlinespace
+Dominant uncertainty & Parameter + aleatoric & Scenario + structural & Deep uncertainty + scenario \\
+\addlinespace
+Credibility basis & Hindcast cross-validation & Physical plausibility; budget closure & Conservation laws; paleo constraints; expert assessment \\
+\addlinespace
+A4 role & Negligible & Growing & Dominant (AIS) \\
+\addlinespace
+Model inadequacy & $\sigma_{\text{extra},i,0}$ (calibration value) & $g_i(\tau)$ growing & $g_i(\tau) \to 1$; saturated \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Horizon-stratified uncertainty composition}
+\label{sec:horizon-reporting}
+
+The variance decomposition (\cref{eq:variance-outer,eq:variance-inner}) combined with the horizon-dependent model inadequacy (\cref{eq:sigma-extra-horizon}) produces an uncertainty composition that changes qualitatively with forecast horizon.  This is one of the most communicable results of the framework: it directly answers the question that decision-makers require --- how confident should projections at 2050 vs.\ 2100 vs.\ 2150 be, and why.
+
+\paragraph{Reporting horizons.}  The variance decomposition is evaluated at $t \in \{2030, 2050, 2075, 2100, 2150, 2200\}$ for each SSP scenario.  These horizons span all three forecast regimes.
+
+\paragraph{Reported quantities.}  At each reporting horizon~$t$ and scenario~$S$:
+\begin{enumerate}
+  \item Total projection variance $\text{Var}[H(t) \mid S]$.
+  \item Fractional contributions from each uncertainty source:
+    \begin{align}
+      f_{\text{param}}(t, S) &= \frac{E_k\!\left[\text{Var}_{\boldsymbol{\theta}}[H(t) \mid S, k]\right]}{\text{Var}[H(t) \mid S]} &\quad &\text{(parameter uncertainty)} \\
+      f_{\text{A4}}(t, S) &= \frac{\text{Var}_k\!\left[E_{\boldsymbol{\theta}}[H(t) \mid S, k]\right]}{\text{Var}[H(t) \mid S]} &\quad &\text{(A4 deep uncertainty)} \\
+      f_{\text{struct}}(t, S) &= \frac{\sum_i g_i(\tau) \cdot \sigma_{\text{struct},i}^2}{\text{Var}[H(t) \mid S]} &\quad &\text{(model inadequacy)} \\
+      f_{\text{scenario}}(t) &= \frac{\text{Var}_S\!\left[E_{\boldsymbol{\theta},k}[H(t) \mid S]\right]}{\text{Var}[H(t)]} &\quad &\text{(scenario spread, across SSPs)}
+    \end{align}
+  \item Component-level fractional contributions (which physical component dominates the total variance at each horizon).
+  \item The forecast regime (1, 2, or~3) for each component at each horizon, based on the transition timescales from~\cref{sec:forecast-regimes}.
+\end{enumerate}
+
+\paragraph{Presentation.}  \Cref{fig:variance-horizon} will present the horizon-stratified decomposition as a two-panel summary figure.  Panel~A shows fractional contributions of parameter, scenario, A4, and model-inadequacy uncertainty at each reporting horizon for a reference scenario (SSP2-4.5).  Panel~B shows fractional contributions of each physical component (thermosteric, glaciers, GrIS, AIS, TWS) to the total variance at each reporting horizon.  Contributions that are prior-dominated (as opposed to data-constrained) should be visually distinguished (e.g., hatched shading) to communicate which parts of the decomposition are empirically grounded and which are informed by physical reasoning alone.
+
+\begin{figure}[ht]
+\centering
+\fbox{\parbox{0.9\textwidth}{\centering\vspace{3cm}
+  \textbf{Placeholder: Horizon-stratified variance decomposition}\\[6pt]
+  \emph{Panel~A:} Stacked bar chart of uncertainty-source fractions ($f_{\text{param}}$, $f_{\text{A4}}$, $f_{\text{struct}}$, $f_{\text{scenario}}$) at each reporting horizon for SSP2-4.5.  Hatched shading for prior-dominated contributions.\\[6pt]
+  \emph{Panel~B:} Stacked bar chart of component fractions (thermosteric, glaciers, GrIS, AIS, TWS) at each reporting horizon.\\[6pt]
+  \emph{To be populated when the Phase~1 posterior is available.}
+\vspace{3cm}}}
+\caption{Horizon-stratified variance decomposition.  The composition of total projection uncertainty changes qualitatively with forecast horizon, transitioning from parameter-dominated at short horizons through scenario-dominated at intermediate horizons to deep-uncertainty-dominated at long horizons (\cref{sec:forecast-regimes}).  Results for two SSP-weighting schemes (uniform and plausibility-weighted) should be compared, as the scenario-uncertainty fraction is sensitive to this choice.}
+\label{fig:variance-horizon}
+\end{figure}
+
+\paragraph{Sensitivity to scenario weighting.}  The fractional decomposition depends on the weights assigned to the SSP scenarios.  Under uniform weighting, scenario uncertainty will dominate at most horizons; under plausibility-weighted schemes (e.g., downweighting SSP5-8.5), the decomposition shifts toward parameter and structural uncertainty.  Results should be reported for at least two weighting schemes to make this sensitivity visible.
+
+
+% ====================================================================
+\section{Forecast Skill Validation}
+\label{sec:hindcast}
+% ====================================================================
+
+The framework includes no mechanism for evaluating its own forecast skill as a function of lead time unless one is explicitly specified.  Without such a mechanism, there is no empirical basis for calibrating the growth functions $g_i(\tau)$ in~\cref{sec:horizon-inadequacy}, no demonstration that the framework produces reliable short-term forecasts, and no basis for comparing the framework's skill to simpler alternatives.  This section defines a hindcast cross-validation protocol as a mandatory diagnostic.
+
+\subsection{Hindcast protocol}
+
+For each training cutoff year $Y \in \mathcal{Y} = \{1960, 1970, 1980, 1990, 2000\}$:
+\begin{enumerate}
+  \item Fit the full joint model (\cref{eq:joint-posterior}) using only data up to year~$Y$: GMSL observations $\mathbf{H}_{\text{obs}}(t)$ for $t \leq Y$; component datasets $\mathbf{D}_i(t)$ for $t \leq Y$ (where available --- for cutoff years before the satellite era, some component datasets are empty).
+  \item Generate posterior predictive distributions for $H(t)$ at forecast horizons $\tau \in \{10, 20, 30, 40, 50\}$~years, where $t = Y + \tau \leq 2018$ so that held-out observations are available for comparison.
+  \item Compute forecast skill metrics by comparing the posterior predictive to the held-out observations $\mathbf{H}_{\text{obs}}(Y + \tau)$.
+\end{enumerate}
+
+\subsection{Skill metrics}
+
+For each cutoff year~$Y$ and forecast horizon~$\tau$:
+
+\paragraph{Coverage probability.}  The fraction of held-out observations falling within the $p$-percent posterior predictive interval, evaluated at $p \in \{50, 90, 95\}$:
+\begin{equation}
+  \text{Coverage}_p(\tau) = \frac{1}{|\mathcal{Y}|} \sum_{Y \in \mathcal{Y}} \mathbf{1}\!\left(H_{\text{obs}}(Y+\tau) \in \text{CI}_p(Y, \tau)\right)
+  \label{eq:coverage}
+\end{equation}
+where $\text{CI}_p(Y, \tau)$ is the $p$-percent posterior predictive interval from the model trained on data up to year~$Y$.  Overconfidence manifests as coverage below the nominal rate; underconfidence as coverage above.
+
+\paragraph{Continuous Ranked Probability Score (CRPS).}  The CRPS measures the full distributional forecast quality:
+\begin{equation}
+  \text{CRPS}(F_{Y,\tau},\, H_{\text{obs}}(Y + \tau)) = \int_{-\infty}^{\infty} \left[F_{Y,\tau}(x) - \mathbf{1}(x \geq H_{\text{obs}}(Y + \tau))\right]^2 \, \mathrm{d}x
+  \label{eq:crps}
+\end{equation}
+where $F_{Y,\tau}$ is the posterior predictive CDF from the model trained on data up to year~$Y$, evaluated at horizon~$\tau$.  Lower CRPS indicates better distributional calibration.  The CRPS is a strictly proper scoring rule: it is minimised in expectation only by the true data-generating distribution.
+
+\paragraph{Interval width.}  The width of the 90\% posterior predictive interval at each horizon.  What matters is not the width per se but whether the interval width grows with $\tau$ in a way that is consistent with the coverage remaining near nominal.
+
+\paragraph{Skill relative to baseline.}  The framework is compared to two reference forecasts:
+\begin{itemize}
+  \item \emph{Linear trend extrapolation:} Fit a linear trend to $\mathbf{H}_{\text{obs}}(t)$ for $t \leq Y$ and extrapolate with Gaussian prediction interval.
+  \item \emph{Climatological drift:} Project the rate observed at year~$Y$ forward with no change, with prediction interval widening at $\sigma_{\text{rate}} \sqrt{\tau}$.
+\end{itemize}
+The framework should demonstrate positive skill (lower CRPS) relative to both baselines at all horizons up to the skill horizon $\tau^*$.
+
+\subsection{Skill horizon}
+
+The \emph{skill horizon} $\tau^*$ is the forecast lead time at which the framework's CRPS degrades to the level of the linear-trend baseline.  Beyond $\tau^*$, the parametric model adds no value over simple extrapolation, and the forecast should be dominated by the structural uncertainty terms $\sigma_{\text{struct},i}$ and, for AIS, by the A4 deep-uncertainty module.
+
+The skill horizon is component-specific and forcing-scenario-dependent: models extrapolate better under mild scenarios that stay closer to the calibration range.  Report $\tau^*_i$ for each component and scenario.  The skill horizon $\tau^*$ for the total GMSL serves as the empirical estimate of $\tau_{\text{obs}}$, the Regime~1/Regime~2 transition timescale in~\cref{sec:forecast-regimes}.
+
+\subsection{Calibrating the growth functions from hindcast data}
+
+If the framework is overconfident at horizon~$\tau$ (coverage below nominal for multiple cutoff years), the growth functions $g_i(\tau)$ are too slow --- the model inadequacy $\sigma_{\text{extra},i}(\tau)$ is too small.  Conversely, if the framework is underconfident, the growth functions are too aggressive.  The hindcast residuals provide an empirical constraint:
+\begin{equation}
+  g_i(\tau) \approx \frac{\hat{\sigma}_{\text{resid},i}^2(\tau) - \sigma_{\text{extra},i,0}^2}{\sigma_{\text{struct},i}^2}
+\end{equation}
+where $\hat{\sigma}_{\text{resid},i}^2(\tau)$ is the empirical mean squared forecast error at horizon~$\tau$, estimated across cutoff years.  In practice, the empirical signal is noisy (only 5 cutoff years, each with limited hold-out data), so a hybrid approach --- using the physics-informed functional form from~\cref{tab:growth-functions} but calibrating its parameters from hindcast data --- is likely optimal.  This calibration is deferred to Phase~2; in Phase~1, the growth functions are set by the physics-informed priors alone.
+
+\paragraph{Open limitations.}  With only 5 cutoff years, the coverage estimates have substantial sampling noise: coverage of 3/5 vs.\ 4/5 vs.\ 5/5 at the 90\% level is not statistically distinguishable at conventional significance levels.  The diagnostic is informative as a pattern across horizons and cutoffs, not as a point estimate.  The hindcast protocol requires re-running the MCMC for each cutoff year, which is computationally feasible for Phase~1 (polynomial rate models, $\sim$minutes per run) but may be substantial for Phase~2 (emulator-based models).  Most importantly, the hindcast does not test the framework's ability to forecast under forcing regimes that have not been observed: all held-out data are within the historical forcing envelope.  The hindcast validates interpolation skill, not extrapolation skill.
 
 
 % ====================================================================
@@ -771,7 +941,7 @@ The framework provides a principled interface to process models that avoids trea
 
   \item \textbf{Budget as reality check:} If a process model predicts the AIS rate to be $r_{\text{AIS}} \in [0, 1.5]$~mm/yr over 2005--2020 but the budget-constrained residual implies $r_{\text{AIS}} \in [0.5, 2.5]$~mm/yr, the tension is informative: either the process model is missing physics that accelerates ice loss, or the statistical decomposition is misattributing acceleration from another component.
 
-  \item \textbf{Scenario weights from process understanding:} The A4 prior mixture weights (Level~3) are informed by process-model ensembles and expert assessment.  The historical calibration updates these weights via the budget consistency diagnostic (\cref{sec:a4-consistency}), but the prior weights are set by process understanding, not by historical fit.  This is appropriate because the deep-uncertainty scenarios represent futures that have not yet been observed.
+  \item \textbf{Scenario weights from process understanding:} The A4 mixture weights (Level~3) are informed by process-model ensembles and expert assessment, not by the historical calibration.  This is appropriate because the deep-uncertainty scenarios represent futures that have not yet been observed.
 
   \item \textbf{Forecast skill evaluation:} The framework provides a natural basis for evaluating process-model forecasting skill.  A process model that predicts component rates inconsistent with the budget-constrained posterior (after accounting for known biases) demonstrates a lack of forecasting skill for that component.
 \end{enumerate}
@@ -809,6 +979,13 @@ Stage & Component added & Key data & Status \\
 2 & Glaciers + Greenland & RGI, GRACE, SMB models & Planned \\
 3 & TWS (secular + ENSO-driven) & GRACE, dam/GW records, SOI & Planned \\
 4 & AIS + ENSO--\CDW{} coupling & GRACE, altimetry, ocean T & Planned \\
+\addlinespace
+\multicolumn{4}{l}{\textit{Cross-cutting capabilities}} \\
+\addlinespace
+-- & Hindcast cross-validation & Held-out GMSL observations & Phase~1 \\
+-- & Sequential update interface (design) & -- & Phase~1 \\
+-- & Sequential update (SMC implementation) & Annual observation updates & Phase~2 \\
+-- & Horizon-dependent model averaging & Multiple model classes & Phase~2 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -833,9 +1010,11 @@ The hierarchical framework provides:
   \item \textbf{Cross-component coupling:} The ENSO--TWS--WAIS teleconnection is explicitly represented, rather than assumed away by a diagonal error model.
 
   \item \textbf{Transparent prior sensitivity:} The PC prior on~$a$ and the prior predictive checking ensure that the influence of the prior on projections is visible and quantifiable.
+
+  \item \textbf{Multi-timescale forecasting:} The framework explicitly recognises that the dominant uncertainty source and the appropriate credibility basis change with forecast horizon (\cref{sec:forecast-regimes}).  Horizon-dependent model inadequacy (\cref{sec:horizon-inadequacy}) prevents overconfident long-range forecasts, and the hindcast cross-validation (\cref{sec:hindcast}) provides empirical validation of short-range forecast skill.  The horizon-stratified variance decomposition (\cref{sec:horizon-reporting}) makes the framework's own credibility as a function of lead time transparent and quantifiable.
 \end{enumerate}
 
-The framework is designed not to produce a single ``best estimate'' of future SLR, but to provide a \emph{defensible probabilistic envelope} that honestly reflects what is known, what is uncertain, and what is deeply uncertain --- and to do so in a way that is formally self-consistent across scales, components, and methodological approaches.
+The framework is designed not to produce a single ``best estimate'' of future SLR, but to provide a \emph{defensible probabilistic envelope} that honestly reflects what is known, what is uncertain, and what is deeply uncertain --- and to do so in a way that is formally self-consistent across scales, components, time horizons, and methodological approaches.
 
 
 \bibliographystyle{apalike}
