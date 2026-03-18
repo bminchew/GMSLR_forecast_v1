@@ -3265,8 +3265,10 @@ if __name__ == "__main__":
 def people_displaced_kulpstrauss2019(slr_m):
     """Estimate millions of people on land below annual flood level.
 
-    Piecewise-linear interpolation of data extracted from Kulp & Strauss
-    (2019), Nature Communications, Table 1 and main text (CoastalDEM).
+    Quadratic fit to data extracted from Kulp & Strauss (2019), Nature
+    Communications, Table 1 and main text (CoastalDEM).  The smooth
+    polynomial allows extrapolation beyond the reported SLR range
+    (0–2 m); residuals within the reported range are < 30 M.
 
     **Important**: these are elevation-only exposure counts — people
     living on land whose elevation is below the annual flood water
@@ -3299,20 +3301,24 @@ def people_displaced_kulpstrauss2019(slr_m):
     estimates of global vulnerability to sea-level rise and coastal
     flooding. Nature Communications, 10, 4844.
     """
-    # Data points: (SLR in m, millions on land below annual flood level)
-    # Extracted from Table 1 + main text (CoastalDEM, median estimates)
-    # NB: elevation-only — no coastal defenses
-    slr_pts = np.array([0.00, 0.25, 0.50, 0.60, 0.80, 1.46, 2.00])
-    pop_pts = np.array([250., 300., 340., 360., 400., 480., 630.])
-
-    return np.interp(slr_m, slr_pts, pop_pts)
+    # Quadratic least-squares fit to reported data points:
+    #   SLR (m):  0.00  0.25  0.50  0.60  0.80  1.46  2.00
+    #   Pop (M): 250   300   340   360   400   480   630
+    # Coefficients: pop = 17.03·slr² + 145.0·slr + 260.0
+    slr = np.asarray(slr_m, dtype=float)
+    return 17.03 * slr**2 + 145.0 * slr + 260.0
 
 
 def slr_cost_jevrejeva2018(slr_m):
     """Estimate global annual flood cost without additional adaptation.
 
-    Piecewise-linear interpolation of data from Jevrejeva et al. (2018),
-    Environmental Research Letters, Figure 4(a) and conclusions.
+    Power-law fit to data from Jevrejeva et al. (2018), Environmental
+    Research Letters, Figure 4(a) and conclusions.  The power law
+    (cost = 16153 · slr^0.895) passes through the origin by
+    construction and extrapolates smoothly beyond the reported SLR
+    range (0–1.8 m); residuals within the reported range are
+    < 3000 billion USD.
+
     Costs are in billions of USD per year (2014 dollars), assuming the
     SSP2 socioeconomic pathway with no additional coastal adaptation
     beyond the base-year standard of protection.
@@ -3334,9 +3340,9 @@ def slr_cost_jevrejeva2018(slr_m):
     with warming of 1.5 C and 2 C. Environmental Research Letters,
     13, 074014.
     """
-    # Data points: (SLR in m, annual flood cost in billions USD/yr)
-    # Extracted from Table/Conclusions text + Figure 4(a)
-    slr_pts = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
-    cost_pts = np.array([0., 1000., 10200., 11700., 14000., 27000.])
-
-    return np.interp(slr_m, slr_pts, cost_pts)
+    # Power-law least-squares fit to reported data points (slr > 0):
+    #   SLR (m):  0.20   0.52   0.63   0.86   1.80
+    #   Cost (B): 1000  10200  11700  14000  27000
+    # Coefficients: cost = 16153 · slr^0.895
+    slr = np.asarray(slr_m, dtype=float)
+    return np.where(slr > 0, 16153.0 * slr**0.895, 0.0)

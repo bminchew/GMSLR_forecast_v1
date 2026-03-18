@@ -1,0 +1,573 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+% Custom commands
+\newcommand{\dT}{\Delta T}
+\newcommand{\dTstar}{\Delta T^{*}}
+\newcommand{\tcal}{T_{\mathrm{cal}}^{\max}}
+\newcommand{\tend}{t_{\mathrm{end}}}
+\newcommand{\sigr}{\sigma_{\hat{r}}}
+\newcommand{\sigrdot}{\sigma_{\dot{\hat{r}}}}
+\newcommand{\sigmodel}{\sigma_{\mathrm{model}}}
+\newcommand{\sigtrend}{\sigma_{\mathrm{trend}}}
+\newcommand{\MSEtrend}{\mathrm{MSE}_{\mathrm{trend}}}
+\newcommand{\MSEmodel}{\mathrm{MSE}_{\mathrm{model}}}
+
+\title{Near-Term Trend Constraint via Bayesian Predictive Synthesis\\
+  for the Hierarchical GMSL Framework}
+\author{Methods Document --- Working Draft}
+\date{March 11, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Executive Summary}
+
+\textbf{Problem.}  The rate-and-state model calibrated against 1900--2018+ observations produces projections whose near-term credibility depends on the model's functional form and the identifiability of the state variable, not on the well-constrained observational trend.  Over the next 10--20 years, under all SSP scenarios, temperature trajectories are nearly identical and remain close to the calibration-era range.  In this regime, a direct extrapolation of the observed GMSL trend is more reliable than the parametric model, because it avoids structural assumptions about the rate--temperature coupling that only add value when temperature departs from the calibration domain.
+
+\textbf{Solution.}  Combine the parametric (rate-and-state) projection with a non-parametric trend extrapolation using Bayesian Predictive Synthesis (BPS; \citealt{McAlinn2019}).  BPS defines two forecast agents --- the trend extrapolation and the rate-and-state model --- and a synthesis model that combines them with a latent, time-varying weight process.  The synthesis hyperparameters are calibrated from leave-future-out cross-validation on the satellite-era record.  Their posterior uncertainty is propagated through the combined predictive, producing credible intervals that account for uncertainty in both the individual forecasts and the combination itself.
+
+The combined predictive distribution at each future time~$t$ is:
+\begin{equation}
+  p_{\mathrm{comb}}(H(t) \mid D, \psi) = w(t;\,\psi)\,h_{\mathrm{trend}}(H(t)) + [1 - w(t;\,\psi)]\,h_{\mathrm{model}}(H(t) \mid \mathrm{SSP}),
+  \label{eq:bps_predictive}
+\end{equation}
+where $h_{\mathrm{trend}}$ and $h_{\mathrm{model}}$ are the agent predictive densities, $w(t;\,\psi)$ is the synthesis weight parameterized by hyperparameters~$\psi$, and the full predictive marginalises over the posterior on~$\psi$:
+\begin{equation}
+  p_{\mathrm{comb}}(H(t) \mid D) = \int p_{\mathrm{comb}}(H(t) \mid D, \psi)\,p(\psi \mid D)\,d\psi.
+  \label{eq:bps_marginal}
+\end{equation}
+
+\textbf{Key design choices.}
+\begin{itemize}
+  \item The crossover is governed by temperature departure from the calibration domain, not by elapsed time.  The weight process encodes this through a structured prior informed by the physics of rate--temperature coupling, with the data updating the hyperparameters where they are identifiable.
+  \item The synthesis hyperparameters are calibrated via leave-future-out cross-validation on the satellite-era record, replacing the purely assumed $\kappa$ of the MSE-optimal approach with a data-informed posterior (anchored at small~$\dT$, prior-dominated at large~$\dT$).
+  \item The combined predictive is a mixture distribution (correctly calibrated marginals), not a sample-wise linear combination (which is overconfident).  Temporally coherent trajectory ensembles are generated separately for rate-of-change analysis and counterfactual queries, using sample-specific synthesis weights that propagate synthesis uncertainty.
+  \item The trend constraint applies to total GMSL minus the AIS dynamic contribution.  AIS dynamics are exempt from trend suppression and added back to the combined projection, preventing the trend constraint from vetoing near-term WAIS instability scenarios.
+\end{itemize}
+
+\textbf{What the framework gains.}
+\begin{itemize}
+  \item Principled uncertainty quantification: the combined predictive distribution accounts for synthesis uncertainty (through the posterior on~$\psi$), not just agent-level uncertainty.
+  \item Data-informed combination: the synthesis hyperparameters are calibrated, not assumed.  The posterior on~$\psi$ reports which aspects of the combination are identified by the data and which remain prior-dominated.
+  \item Correct treatment of deep uncertainty: AIS instability scenarios are not suppressed at short leads.
+  \item Near-term projections anchored to the observed rate, with scenario-dependent transition to model-driven projections.
+  \item The calibration itself is unchanged.  The BPS synthesis operates on the projection ensemble after calibration.
+\end{itemize}
+
+
+\section{Motivation}
+
+\subsection{The near-term credibility gap}
+
+The rate-and-state model (see companion document, \texttt{bayesian\_level\_space\_methods.tex}) calibrates the relationship
+\begin{equation}
+  \mathrm{rate}(t) = a\,T(t)^2 + b\,T(t) + c + d\,[S(t) - T(t)]
+  \label{eq:rate_model}
+\end{equation}
+against annual GMSL observations, where $S(t)$ is a state variable that relaxes toward $T(t)$ with timescale~$\tau$.  The posterior predictive at the end of the calibration window ($\tend$) is well constrained: the model must fit the observed sea level trajectory, so its predicted level and rate at $\tend$ are close to the observed values.
+
+However, the projection beyond $\tend$ depends on the functional form of \cref{eq:rate_model}, the posterior distribution over $(a, b, c, d, \tau)$ (including the collinearity between $a$ and $b$ and the weak identifiability of $d$ and $\tau$), and the scenario temperature trajectory.  At short lead times ($\lesssim$10--20~yr), scenarios are nearly identical and temperature remains near the calibration range.  The parametric coupling rate~$\leftrightarrow$~$T$ generates scenario-differentiated projections only when temperature departs from the calibration domain; within the domain, the model is effectively a complicated interpolation of the recent trend, burdened by structural uncertainty that does not earn its keep.
+
+A direct trend extrapolation --- a weighted least-squares (WLS) quadratic fit to the satellite-era GMSL record --- avoids these structural assumptions entirely.  Its prediction error at short leads is dominated by the estimation uncertainty on the current rate, which is small (the satellite altimetry record is $>$30~years, with sub-mm/yr precision on the long-term rate).  At longer leads, the trend extrapolation's error grows without bound because it has no model of how the rate responds to forcing changes.
+
+The optimal strategy is therefore to use the trend extrapolation at short leads and transition to the physics-informed model at longer leads, with the transition governed by a principled Bayesian synthesis that accounts for uncertainty in the combination itself.
+
+
+\subsection{Why the crossover should be governed by temperature departure}
+
+The trend extrapolation is a statement that ``the rate of GMSL rise will remain close to its recently observed value.''  This statement degrades not with the passage of time, but with departure from the forcing regime in which the trend was estimated.  A time-based crossover gives the same transition horizon for all scenarios.  A temperature-based crossover gives a short crossover ($\sim$10~yr) under SSP5-8.5, where forcing departs rapidly; a long crossover ($\sim$25--30~yr) under SSP1-2.6, where the system remains near the calibration regime; and an indefinite crossover under overshoot scenarios where temperature returns toward the calibration interior.
+
+However, temperature departure is not the only source of trend degradation.  Even under constant temperature, the trend extrapolation assumes that the current SLR acceleration persists indefinitely.  The physical drivers of the current acceleration (glacier area loss, ice-sheet dynamic response, deep-ocean heat uptake) may evolve on decadal timescales even without further warming.  A pure $\dT$-based crossover with no time-dependent degradation would allow the trend to dominate for 40+~years under low-emissions scenarios, which is not defensible.  The synthesis weight process therefore includes both a forcing-departure term and a time-dependent acceleration-persistence term (\cref{sec:weight_process}).
+
+
+\section{Derivation}
+
+\subsection{Setup and notation}
+
+Let the calibration window span $[t_0, \tend]$, with $t_0 \approx 1900$ and $\tend$ the last year of available annual GMSL observations.  Let $T(t)$ denote the GMST trajectory for $t \le \tend$ (observed) and for $t > \tend$ (scenario-dependent, from CMIP6/IPCC).  Define:
+\begin{align}
+  \tcal &\equiv \max_{t \in [t_0, \tend]} T(t), \label{eq:Tcalmax} \\
+  \dT(t) &\equiv \max_{s \in [\tend, t]} \max\!\big(0,\; T(s) - \tcal\big). \label{eq:deltaT_def}
+\end{align}
+Here $\tcal$ is the warmest temperature observed during calibration, and $\dT(t)$ is the cumulative maximum positive exceedance of the scenario trajectory above this maximum.  The cumulative-maximum formulation ensures that once the system leaves the calibration domain, the trend extrapolation does not regain credibility even if temperature returns below~$\tcal$ (relevant for overshoot scenarios where irreversible processes such as marine ice-sheet instability may have been triggered).
+
+\textbf{Instantaneous mode for sensitivity analysis.}  Define additionally:
+\begin{equation}
+  \dT_{\mathrm{inst}}(t) = \max\!\big(0,\; T(t) - \tcal\big),
+  \label{eq:deltaT_inst}
+\end{equation}
+the instantaneous exceedance.  This is provided for sensitivity analysis only.  The cumulative-maximum mode (\cref{eq:deltaT_def}) is the default and recommended setting.
+
+\textbf{Note on the derivative discontinuity.}  The cumulative-maximum formulation creates a kink in $\dT(t)$ at the time when $T(t)$ reaches its peak: $\dT$ transitions from tracking $T(t)$ to being constant.  This propagates as a kink in $w(t)$, which is small in magnitude and occurs after the trend has yielded most of its weight under low-emission overshoot scenarios.  This is a known artefact, not a correction target.
+
+
+\subsection{Agent forecasts}
+\label{sec:agents}
+
+The BPS framework operates with two forecast agents.  Each produces a predictive distribution over $H(t)$ for $t > \tend$.
+
+\subsubsection{Agent 1: Trend extrapolation (WLS quadratic)}
+\label{sec:trend_agent}
+
+Fit a weighted least-squares quadratic to the satellite-era GMSL altimetry record (1993--$\tend$):
+\begin{equation}
+  H(t) = \alpha + \beta\,(t - t_{\mathrm{ref}}) + \gamma\,(t - t_{\mathrm{ref}})^2 + \varepsilon(t),
+  \label{eq:wls_model}
+\end{equation}
+where $t_{\mathrm{ref}}$ is a reference time (the midpoint of the satellite era), $\varepsilon(t) \sim \mathcal{N}(0,\,\sigma_i^2)$ is observation noise with per-observation uncertainties $\sigma_i$ used as WLS weights, and $(\alpha, \beta, \gamma)$ are estimated by minimising $\sum_i (H_i - \hat{H}_i)^2 / \sigma_i^2$.
+
+The rate and acceleration at $\tend$ are:
+\begin{align}
+  \hat{H}(\tend) &= \hat\alpha + \hat\beta\,(\tend - t_{\mathrm{ref}}) + \hat\gamma\,(\tend - t_{\mathrm{ref}})^2, \label{eq:wls_H}\\
+  \hat{r}(\tend) &= \hat\beta + 2\hat\gamma\,(\tend - t_{\mathrm{ref}}), \label{eq:wls_r}\\
+  \dot{\hat{r}}(\tend) &= 2\hat\gamma. \label{eq:wls_rdot}
+\end{align}
+The full $3 \times 3$ covariance matrix of $(\hat{H}(\tend),\, \hat{r}(\tend),\, \dot{\hat{r}}(\tend))$ is obtained by propagating the WLS parameter covariance $\hat\Sigma = \hat\sigma^2 (X^T W X)^{-1}$ through \cref{eq:wls_H,eq:wls_r,eq:wls_rdot} via the Jacobian $J$ of the transformation $(\alpha, \beta, \gamma) \mapsto (H, r, \dot{r})$.  Here $W = \mathrm{diag}(1/\sigma_i^2)$ and $\hat\sigma^2$ is the residual-variance estimate.
+
+\paragraph{GIA uncertainty.}  The satellite altimetry GMSL rate depends on the glacial isostatic adjustment (GIA) correction applied.  Different GIA models (ICE-6G, \citealt{Caron2018}) yield rate estimates differing by $\sim$0.3~mm/yr.  This systematic uncertainty is not captured by the WLS parameter covariance.  We inflate the rate marginal by adding $\sigma_{\mathrm{GIA}}^2 = (0.15\;\text{mm/yr})^2$ to $\mathrm{Var}(\hat{r})$ in the propagated 3$\times$3 covariance, treating the GIA correction error as uncorrelated with the estimation error.  The value $\sigma_{\mathrm{GIA}} = 0.15$~mm/yr represents half the inter-model spread; it is a conservative choice.  The acceleration estimate $\dot{\hat{r}}$ is essentially unaffected by GIA (which contributes a constant rate offset, not an acceleration), so no inflation is applied to its variance.
+
+\paragraph{Residual variance estimation.}  The WLS fit uses observation-specific uncertainties $\sigma_i$ as weights.  If these are trusted as absolute error bars, the residual scale parameter should be fixed at $\hat\sigma^2 = 1.0$, and the parameter covariance is $(X^T W X)^{-1}$.  If they are treated as relative weights only, $\hat\sigma^2$ is estimated from the weighted residuals and the parameter covariance is $\hat\sigma^2 (X^T W X)^{-1}$.  The choice should be a configurable parameter of the \texttt{WLSTrendModel} class.  The default is $\hat\sigma^2 = 1.0$ (trusted uncertainties).
+
+\paragraph{Why WLS quadratic, not a Gaussian process.}  The trend projection (\cref{eq:trend_projection}) uses exactly three quantities from the satellite-era fit: $\hat{H}$, $\hat{r}$, and $\dot{\hat{r}}$ at $\tend$, plus their covariance.  A GP would extract these same quantities from the derivative process, but at the cost of kernel specification (composite Mat\'ern, with 6 hyperparameters for $\sim$30 data points), hyperparameter optimisation, and derivative cross-covariance computation.  The GP's ability to capture non-quadratic structure is irrelevant because the trend projection discards it --- only the endpoint rate and acceleration propagate forward.  The WLS quadratic estimates the mean acceleration over the satellite era, which is the quantity the trend projection needs; a GP's acceleration estimate is sensitive to the kernel lengthscale, which is an opaque tuning parameter.
+
+\paragraph{Robustness checks.}
+\begin{enumerate}
+  \item \textit{Cubic test.}  Fit a WLS cubic ($+ \delta\,(t - t_{\mathrm{ref}})^3$).  If $\hat\delta$ is statistically significant ($|\hat\delta / \mathrm{se}(\hat\delta)| > 2$), the acceleration is changing over the satellite era, and $\dot{\hat{r}} = 2\hat\gamma$ is an average that may not represent the current acceleration.  In that case, shorten the fitting window or use the cubic's second derivative at $\tend$: $\dot{\hat{r}} = 2\hat\gamma + 6\hat\delta\,(\tend - t_{\mathrm{ref}})$.  If the cubic is significant at the 5\% level but not the 1\% level, report both quadratic and cubic fits and propagate the model-choice uncertainty as an additional contribution to the trend agent's predictive variance.
+  \item \textit{Window sensitivity.}  Fit the quadratic to the last 20 years only and compare $\hat{r}$ and $\dot{\hat{r}}$ to the full satellite-era fit.  If they differ by more than $1\sigma$ (from the WLS covariance), the acceleration is non-stationary and the window choice matters.  Report both values and propagate the window-choice sensitivity as an additional uncertainty.
+\end{enumerate}
+
+\paragraph{Trend projection.}  The trend extrapolation projects the current rate and acceleration forward without reference to any temperature model:
+\begin{equation}
+  H_{\mathrm{trend}}(t) = \hat{H}(\tend) + \hat{r}(\tend)\,(t - \tend) + \tfrac{1}{2}\,\dot{\hat{r}}(\tend)\,(t - \tend)^2.
+  \label{eq:trend_projection}
+\end{equation}
+Including the acceleration term captures the satellite-era SLR acceleration ($\sim$0.1~mm/yr$^2$), which is robustly observed.  Projecting $\dot{\hat{r}}$ forward assumes that the current SLR acceleration persists at its present value --- a physical assumption penalised by the acceleration-persistence degradation term in the synthesis weight process.
+
+The trend agent's predictive density $h_{\mathrm{trend}}(H(t))$ is the distribution of $H_{\mathrm{trend}}(t)$ induced by the 3-variate normal posterior of $(\hat{H}, \hat{r}, \dot{\hat{r}})$ from the WLS regression.  This is Gaussian at each~$t$, with mean and variance computed analytically from the WLS posterior.
+
+
+\subsubsection{Agent 2: Rate-and-state model}
+\label{sec:model_agent}
+
+The rate-and-state model produces a posterior predictive ensemble $\{H_{\mathrm{model}}^{(s)}(t)\}_{s=1}^{N_{\mathrm{samples}}}$ for each SSP, conditional on the calibrated posterior over $\theta = (a, b, c, d, \tau, \ldots)$.  The model agent's predictive density $h_{\mathrm{model}}(H(t) \mid \mathrm{SSP})$ is the empirical distribution of this ensemble.
+
+\textbf{Scope of application and AIS exemption.}  The trend constraint applies to total GMSL minus the AIS dynamic contribution.  Define:
+\begin{equation}
+  H_{\mathrm{non\text{-}AIS}}(t) = H_{\mathrm{total}}(t) - H_{\mathrm{AIS,dyn}}(t),
+  \label{eq:non_ais}
+\end{equation}
+where $H_{\mathrm{AIS,dyn}}(t)$ is the AIS dynamic mass-loss contribution to GMSL.  The BPS synthesis operates on $H_{\mathrm{non\text{-}AIS}}$; the AIS dynamic component is added back to the combined projection without passing through the trend-model weighting:
+\begin{equation}
+  H_{\mathrm{comb,total}}^{(s)}(t) = H_{\mathrm{comb,non\text{-}AIS}}^{(s)}(t) + H_{\mathrm{AIS,dyn}}^{(s)}(t).
+  \label{eq:ais_add_back}
+\end{equation}
+
+\textbf{Rationale.}  The entire purpose of the WAIS deep-uncertainty module is to capture scenarios where AIS dynamic mass loss departs from the recent trend on decadal timescales (rapid ice shelf collapse, MISI onset).  These scenarios are precisely the ones the Ar\^ete framework needs for counterfactual intervention queries (Thwaites stabilisation in the 2030s--2040s).  Applying the trend constraint to the AIS-inclusive total would force $w \approx 1$ at short leads regardless of the WAIS module's output, effectively vetoing the model's ability to express near-term instability scenarios.  The non-AIS components (thermal expansion, glaciers, land water storage, GrIS SMB) are well-behaved at short leads and appropriate targets for trend anchoring.
+
+\textbf{Implementation note.}  The AIS decomposition uses the 7-component structure (WAIS, EAIS, APIS) already specified in the framework.  The WLS trend model is fit to non-AIS GMSL, estimated as total observed GMSL minus the GRACE/IMBIE-era AIS mass balance contribution converted to GMSL-equivalent.  For the pre-GRACE satellite era (1993--2002), the AIS contribution is estimated from the reconciled IMBIE record.
+
+
+\subsection{Prediction MSE of the trend agent}
+\label{sec:prediction_mse_trend}
+
+The prediction MSE of $H_{\mathrm{trend}}(t)$ has three components with distinct origins.
+
+\paragraph{Component 1: Estimation uncertainty.}  The rate $\hat{r}$ and acceleration $\dot{\hat{r}}$ are estimated from finite, noisy data.  The resulting variance on $H_{\mathrm{trend}}(t)$ is captured by the ensemble:
+\begin{equation}
+  \mathrm{Var}_{\mathrm{est}}(t) = \mathrm{Var}\!\left[H_{\mathrm{trend}}^{(s)}(t)\right],
+  \label{eq:var_est}
+\end{equation}
+computed as the sample variance of the trend projection ensemble.  This includes all estimation-uncertainty contributions: $\sigr^2\,(t - \tend)^2$, $\frac{1}{4}\sigrdot^2\,(t - \tend)^4$, and the cross-terms involving $\mathrm{Cov}(\hat{H}, \hat{r})$, $\mathrm{Cov}(\hat{H}, \dot{\hat{r}})$, and $\mathrm{Cov}(\hat{r}, \dot{\hat{r}})$.  Using the Monte Carlo sample variance rather than the analytical approximation $\sigr^2\,(t - \tend)^2$ ensures that no estimation-uncertainty component is double-counted or omitted.
+
+\paragraph{Component 2: Squared bias from forcing departure.}  As temperature departs from the calibration domain, the true rate of SLR changes in ways the trend extrapolation cannot capture.  We model this as a squared-bias term:
+\begin{equation}
+  B_{\mathrm{forc}}^2(t) = \kappa\,\dT(t)^2\,(t - \tend)^2.
+  \label{eq:bias_forc}
+\end{equation}
+
+\textbf{Justification of the $\dT^2$ scaling.}  The true rate at time $t$ is approximately $r_{\mathrm{true}}(t) \approx r_{\mathrm{true}}(\tend) + (\partial r / \partial T)\big|_{\tend} \cdot \dT(t) + O(\dT^2)$.  The trend extrapolation assumes $r(t) \approx r(\tend) + \dot{\hat{r}}\,(t - \tend)$.  The rate mismatch is $O(\dT)$, which integrates to $O(\dT \cdot \Delta t)$ in the level.  The squared bias in the level is therefore $O(\dT^2 \cdot \Delta t^2)$.
+
+\textbf{This is a bias, not a variance.}  The $\kappa\,\dT^2$ term represents a systematic, scenario-dependent error.  It enters the prediction MSE as a squared-bias contribution, not as additional variance on the trend samples.  The trend ensemble samples retain only their WLS estimation uncertainty.  The bias is ``paid for'' by the decreasing synthesis weight, not by inflating individual samples.
+
+\paragraph{Component 3: Acceleration-persistence degradation.}  Even when $\dT(t) = 0$, the trend extrapolation assumes the current acceleration persists.  We model this as:
+\begin{equation}
+  B_{\mathrm{accel}}^2(t) = \kappa_t\,(t - \tend)^4.
+  \label{eq:bias_accel}
+\end{equation}
+The $(t - \tend)^4$ scaling arises because an error $\delta$ in the acceleration integrates twice to give a level error $\frac{1}{2}\delta\,(t - \tend)^2$; the squared bias is then $\propto (t - \tend)^4$.
+
+\textbf{No $\kappa_t^{\mathrm{eff}}$ construction.}  A previous draft defined $\kappa_t^{\mathrm{eff}} = \kappa_t + \frac{1}{4}\sigrdot^2$ to absorb the acceleration-estimation variance.  This is incorrect when the estimation uncertainty is computed via Monte Carlo sample variance (\cref{eq:var_est}): the $\frac{1}{4}\sigrdot^2\,(t-\tend)^4$ contribution is already captured by $\mathrm{Var}[H_{\mathrm{trend}}^{(s)}(t)]$.  Adding it again via $\kappa_t^{\mathrm{eff}}$ double-counts the acceleration estimation uncertainty.  The correct MSE uses $\kappa_t$ (the pure physical acceleration-persistence bias), not $\kappa_t^{\mathrm{eff}}$.
+
+\paragraph{Total trend MSE.}  Combining all three components:
+\begin{equation}
+  \MSEtrend(t) = \mathrm{Var}\!\left[H_{\mathrm{trend}}^{(s)}(t)\right] + \kappa\,\dT(t)^2\,(t - \tend)^2 + \kappa_t\,(t - \tend)^4.
+  \label{eq:MSE_trend_total}
+\end{equation}
+The first term is the estimation variance (from the Monte Carlo ensemble).  The second is the forcing-departure squared bias (scenario-dependent).  The third is the acceleration-persistence squared bias (scenario-independent).  The estimation variance captures all cross-terms exactly; the bias terms are additive.
+
+
+\subsection{Prediction MSE of the rate-and-state model}
+\label{sec:model_MSE}
+
+\paragraph{Posterior predictive variance.}
+\begin{equation}
+  \mathrm{Var}_{\mathrm{model}}(t \mid \mathrm{SSP}) = \mathrm{Var}_{\theta \mid D}\big[H_{\mathrm{model}}(t;\,\theta,\,T_{\mathrm{SSP}})\big],
+  \label{eq:var_model}
+\end{equation}
+estimated by Monte Carlo from the posterior samples.
+
+\paragraph{Structural bias.}  The identification $\MSEmodel = \mathrm{Var}_{\mathrm{model}}$ would require the model to be unbiased at all temperatures, which holds only within the calibration domain.  As temperature departs from the calibration range, the polynomial rate--temperature coupling extrapolates into an untested regime.  Symmetry with the trend agent requires a bias contribution.  We write:
+\begin{equation}
+  \MSEmodel(t \mid \mathrm{SSP}) = \mathrm{Var}_{\mathrm{model}}(t \mid \mathrm{SSP}) + \lambda\,\dT(t)^2\,(t - \tend)^2.
+  \label{eq:MSE_model}
+\end{equation}
+
+\paragraph{Functional form of $\lambda$.}  The $\dT^2\,(t - \tend)^2$ scaling assumes the model's rate error is $O(\dT)$ --- i.e., that even the first-order rate--temperature coupling is wrong at large~$\dT$.  This is conservative: the rate-and-state model is \emph{designed} to capture the rate--temperature coupling, so its residual structural error should begin at $O(\dT^2)$ in the rate if the first-order coupling is correct, yielding a squared bias of $O(\dT^4 \cdot (t - \tend)^2)$.
+
+The $\dT^2$ form is retained as the default because it is robust to the possibility that the polynomial coupling is wrong at first order (which is plausible given the $a$--$b$ collinearity and the difficulty of separating the quadratic from the linear coefficient).  A sensitivity diagnostic should compare the results under:
+\begin{align}
+  \text{Conservative (default):} \quad & \lambda\,\dT(t)^2\,(t - \tend)^2, \label{eq:lambda_conservative} \\
+  \text{Optimistic:} \quad & \lambda'\,\dT(t)^4\,(t - \tend)^2, \label{eq:lambda_optimistic}
+\end{align}
+where $\lambda'$ has units $({\rm mm/yr/\textdegree C}^2)^2$.  Under SSP3-7.0, the difference in crossover time between these two forms is 5--10~years.
+
+\paragraph{Recommended prior for $\lambda$.}
+\begin{equation}
+  \sqrt{\lambda} \sim \mathrm{LogNormal}(\log 1.0,\; 0.5) \;\text{mm/yr/\textdegree C},
+  \label{eq:lambda_prior}
+\end{equation}
+with median $\sqrt{\lambda} = 1.0$~mm/yr/\textdegree C and approximate 95\% CI $[0.37, 2.7]$~mm/yr/\textdegree C.  This corresponds to a model structural-bias growth rate roughly 4$\times$ slower than the trend's forcing-departure degradation (median $\sqrt{\kappa} = 4$~mm/yr/\textdegree C).
+
+
+\subsection{Bayesian Predictive Synthesis}
+\label{sec:bps}
+
+\subsubsection{Synthesis model}
+
+BPS (\citealt{McAlinn2019}) treats the forecast combination as a Bayesian inference problem.  Given $K$~agent forecasts (here $K = 2$), the synthesis model defines a combined predictive distribution via a synthesis function parameterized by latent synthesis variables.
+
+We adopt the \textbf{linear pool} synthesis:
+\begin{equation}
+  p_{\mathrm{comb}}(H(t) \mid \psi) = w(t;\,\psi)\,h_{\mathrm{trend}}(H(t)) + [1 - w(t;\,\psi)]\,h_{\mathrm{model}}(H(t) \mid \mathrm{SSP}),
+  \label{eq:bps_synthesis}
+\end{equation}
+where $w(t;\,\psi) \in [0, 1]$ is the time-varying synthesis weight, parameterized by hyperparameters~$\psi$ with a structured prior informed by the physics of rate--temperature coupling.
+
+\subsubsection{Weight process}
+\label{sec:weight_process}
+
+The synthesis weight is parameterized via:
+\begin{equation}
+  w(t;\,\psi) = \sigma\!\big(\phi(t;\,\psi)\big),
+  \label{eq:weight_logistic}
+\end{equation}
+where $\sigma(\cdot)$ is the logistic function and $\phi(t;\,\psi)$ is a structured latent function on $(t_{\mathrm{end}}, \infty)$:
+\begin{equation}
+  \phi(t;\,\psi) = \phi_0 - \kappa_{\mathrm{net}}\,\dT(t)^2\,(t - \tend)^2 - \kappa_t\,(t - \tend)^4.
+  \label{eq:phi_process}
+\end{equation}
+The synthesis hyperparameters are $\psi = (\phi_0, \kappa_{\mathrm{net}}, \kappa_t)$:
+
+\begin{description}
+  \item[$\phi_0 > 0$:] The initial logit-weight at $t = \tend$.  Since $\phi(t) \to \phi_0$ as $t \to \tend$, $w(\tend) = \sigma(\phi_0) \approx 1$ for $\phi_0 \gg 0$.  Physically, $\phi_0$ encodes the precision advantage of the trend agent over the model agent at $\tend$: $\phi_0 \approx \log(\MSEmodel(\tend) / \MSEtrend(\tend))$.  Since the trend's rate uncertainty is much smaller than the model's, $\phi_0$ is large and positive.
+
+  \item[$\kappa_{\mathrm{net}} > 0$:] The net forcing-departure degradation rate.  Conceptually, $\kappa_{\mathrm{net}}$ corresponds to $(\kappa - \lambda)$ in the MSE framework: the difference between the trend's forcing-departure degradation and the model's structural bias growth.  If $\kappa_{\mathrm{net}}$ is large, the trend loses credibility rapidly as temperature departs.  If $\kappa_{\mathrm{net}} \approx 0$, the model is no more reliable than the trend at large~$\dT$, and the crossover is governed entirely by $\kappa_t$.
+
+  \item[$\kappa_t > 0$:] The acceleration-persistence degradation rate.  This ensures the model eventually dominates even when $\dT \approx 0$.
+\end{description}
+
+\paragraph{Properties of the weight process.}
+\begin{itemize}
+  \item At $t = \tend$: $\phi = \phi_0 \gg 0$, so $w \approx 1$ (trend dominates).
+  \item As $\dT \to \infty$ or $(t - \tend) \to \infty$: $\phi \to -\infty$, so $w \to 0$ (model dominates).
+  \item The crossover ($w = 0.5$) occurs when $\phi = 0$: $\phi_0 = \kappa_{\mathrm{net}}\,\dT(t^*)^2\,(t^* - \tend)^2 + \kappa_t\,(t^* - \tend)^4$.
+  \item The logistic transform ensures $w \in (0, 1)$ without clipping.
+  \item The monotone structure of $\phi$ (decreasing in both $\dT^2\,(t-\tend)^2$ and $(t-\tend)^4$) prevents the non-physical re-emergence of the trend at late times.
+\end{itemize}
+
+
+\subsubsection{Priors on synthesis hyperparameters}
+\label{sec:psi_priors}
+
+\paragraph{Prior on $\phi_0$.}  The initial logit-weight is approximately $\phi_0 \approx \log(\sigmodel^2 / \sigr^2)$.  With $\sigmodel \approx 1.0$~mm/yr and $\sigr \approx 0.3$~mm/yr (after GIA inflation), $\phi_0 \approx \log(1.0^2 / 0.3^2) \approx 2.4$.  We assign:
+\begin{equation}
+  \phi_0 \sim \mathcal{N}(2.5,\; 0.5^2),
+  \label{eq:phi0_prior}
+\end{equation}
+truncated to $\phi_0 > 0$.  The prior is informative: the trend is known to be more precise at $\tend$.
+
+\paragraph{Prior on $\kappa_{\mathrm{net}}$.}  This is the net forcing-departure degradation.  Physically, $\kappa_{\mathrm{net}}$ absorbs the difference between $\kappa$ (the trend's sensitivity-based degradation, units $({\rm mm/yr/\textdegree C})^2$, via the squared rate--temperature sensitivity) and $\lambda$ (the model's structural bias growth).  However, unlike the MSE-optimal approach where $\kappa$ was pegged to the model's own $\partial r / \partial T$ (a circular estimate; see \cref{sec:kappa_circularity}), $\kappa_{\mathrm{net}}$ in the BPS framework is calibrated from the data wherever possible and prior-dominated only where the data are uninformative.
+\begin{equation}
+  \kappa_{\mathrm{net}} \sim \mathrm{LogNormal}(\log(15),\; 0.6),
+  \label{eq:kappa_net_prior}
+\end{equation}
+with median 15 (in logit-space units: $({\rm mm/yr/\textdegree C})^2 \cdot {\rm yr}^{-2}$ --- the effective units depend on the normalisation of $\phi$; see \cref{sec:kappa_net_units}) and approximate 95\% CI $[4.5, 50]$.  The prior is broad to accommodate the genuine uncertainty about the rate--temperature coupling strength.
+
+\paragraph{Prior on $\kappa_t$.}  The acceleration-persistence degradation:
+\begin{equation}
+  \kappa_t \sim \mathrm{LogNormal}(\log(10^{-3}),\; 0.5),
+  \label{eq:kappa_t_prior}
+\end{equation}
+with median $10^{-3}$ (logit-space units) and approximate 95\% CI $[3.7 \times 10^{-4},\; 2.7 \times 10^{-3}]$.
+
+
+\paragraph{Units and normalisation.}
+\label{sec:kappa_net_units}
+The synthesis hyperparameters operate in logit-space.  The mapping from logit-space to MSE-space is through the logistic function: a change of $\Delta\phi = 1$ in the logit roughly doubles or halves the odds ratio $w / (1 - w)$.  The priors on $\kappa_{\mathrm{net}}$ and $\kappa_t$ are therefore specified in the logit domain, where the natural scale for ``substantial degradation'' is $\Delta\phi \sim 2\text{--}5$ (corresponding to $w$ moving from $\sim$0.9 to $\sim$0.5 or below).  The MSE-space interpretations stated above are approximate guidance; the logit-space values are the definitive parameterization.
+
+
+\subsubsection{Calibration via leave-future-out cross-validation}
+\label{sec:lfocv}
+
+The synthesis hyperparameters are calibrated by evaluating the combined predictive density against held-out observations using expanding-window cross-validation on the satellite-era record.
+
+\paragraph{Cross-validation protocol.}  For each holdout endpoint $t_h \in \{t_h^{(1)}, t_h^{(2)}, \ldots, t_h^{(J)}\}$ (where $t_h^{(1)} \ge 2003$ and $t_h^{(J)} = \tend - 5$, spaced 2~years apart):
+\begin{enumerate}
+  \item Fit the WLS quadratic to the satellite-era GMSL over $[1993, t_h]$.  Extract $(\hat{H}, \hat{r}, \dot{\hat{r}})$ at $t_h$ and their covariance.
+  \item Fit the rate-and-state model to $[1900, t_h]$.  Generate the posterior predictive ensemble.
+  \item For each lead time $\Delta t = 1, 2, \ldots, \tend - t_h$:
+  \begin{enumerate}
+    \item Compute the trend agent density $h_{\mathrm{trend}}(H_{\mathrm{obs}}(t_h + \Delta t) \mid t_h)$.
+    \item Compute the model agent density $h_{\mathrm{model}}(H_{\mathrm{obs}}(t_h + \Delta t) \mid t_h)$ (using the actual observed temperature trajectory, which is known for $t \le \tend$).
+    \item Compute $\dT(t_h + \Delta t)$ relative to $T_{\mathrm{cal}}^{\max}(t_h) = \max_{t \le t_h} T(t)$.
+  \end{enumerate}
+\end{enumerate}
+
+\paragraph{Log predictive score.}  For a given $\psi$, the synthesis log-likelihood is:
+\begin{equation}
+  \ell(\psi) = \sum_{j=1}^{J}\; \sum_{\Delta t = 1}^{\tend - t_h^{(j)}} \log\!\Big[w(\Delta t, \dT;\,\psi)\,h_{\mathrm{trend}}\!\big(H_{\mathrm{obs}}^{(j,\Delta t)}\big) + [1 - w(\Delta t, \dT;\,\psi)]\,h_{\mathrm{model}}\!\big(H_{\mathrm{obs}}^{(j,\Delta t)}\big)\Big],
+  \label{eq:cv_loglik}
+\end{equation}
+where $H_{\mathrm{obs}}^{(j,\Delta t)}$ is the observed GMSL at time $t_h^{(j)} + \Delta t$, and $w(\Delta t, \dT;\,\psi) = \sigma(\phi_0 - \kappa_{\mathrm{net}}\,\dT^2\,\Delta t^2 - \kappa_t\,\Delta t^4)$.
+
+\paragraph{Posterior on $\psi$.}  The posterior is:
+\begin{equation}
+  p(\psi \mid D) \propto \exp\!\big(\ell(\psi)\big)\,\pi(\psi),
+  \label{eq:psi_posterior}
+\end{equation}
+where $\pi(\psi)$ is the joint prior from \cref{eq:phi0_prior,eq:kappa_net_prior,eq:kappa_t_prior}.  Since $\psi$ is low-dimensional (3 parameters), the posterior is sampled by MCMC.  Specifically, we use an adaptive Metropolis--Hastings sampler (or NUTS/HMC via a lightweight library such as \texttt{numpyro} or \texttt{emcee}) with 4 chains, 2000 warm-up and 5000 sampling iterations per chain.
+
+\paragraph{Identifiability from cross-validation.}  The cross-validation data constrain the hyperparameters as follows:
+\begin{itemize}
+  \item $\phi_0$ is well identified: it controls the ratio of trend-to-model predictive density at short leads, and there are many short-lead holdout observations.
+  \item $\kappa_t$ is moderately identified: it controls how the combined score changes at lead times of 10--20~years, and there are holdout observations at these leads (albeit fewer).
+  \item $\kappa_{\mathrm{net}}$ is weakly identified: $\dT$ is small ($\lesssim 0.2$\textdegree C) over all holdout periods, so the $\kappa_{\mathrm{net}}\,\dT^2$ contribution to the logit is dominated by $\kappa_t\,\Delta t^4$.  The posterior on $\kappa_{\mathrm{net}}$ will be close to the prior at the upper end, with the data providing a lower bound (if even small $\dT$ departures produce detectable trend degradation, $\kappa_{\mathrm{net}}$ must be at least some minimum value).
+\end{itemize}
+This is the honest state of knowledge: the combination is well-calibrated at short leads and at small~$\dT$, and prior-dominated at large~$\dT$.  The posterior on $\psi$ makes this explicit.
+
+\paragraph{Circularity resolution.}
+\label{sec:kappa_circularity}
+In the previous MSE-optimal approach, $\kappa$ was estimated from the model's own $\partial r / \partial T$ --- a self-referential estimate where model overconfidence accelerated its own dominance.  The BPS approach mitigates this circularity in two ways:
+\begin{enumerate}
+  \item The cross-validation calibration evaluates the \emph{combined} predictive against \emph{held-out observations}, not against the model's own assessment.  The data determine the optimal combination, bypassing the model's self-assessment.
+  \item The remaining prior dependence (at large~$\dT$) is explicit in the posterior: the posterior width of $\kappa_{\mathrm{net}}$ reports the degree to which the combination relies on assumed rather than calibrated information.
+\end{enumerate}
+The circularity is not fully eliminated (the prior on $\kappa_{\mathrm{net}}$ is still informed by physical intuition about $\partial r / \partial T$), but it is demoted from a point estimate to a prior that is updated where data are available, with residual dependence transparently reported.
+
+
+\subsubsection{Combined predictive distribution}
+\label{sec:combined_predictive}
+
+The full BPS predictive, marginalised over synthesis uncertainty, is:
+\begin{equation}
+  p_{\mathrm{comb}}(H(t) \mid D) = \int \Big[w(t;\,\psi)\,h_{\mathrm{trend}}(H(t)) + (1 - w(t;\,\psi))\,h_{\mathrm{model}}(H(t))\Big]\,p(\psi \mid D)\,d\psi.
+  \label{eq:full_predictive}
+\end{equation}
+Since the agent densities $h_{\mathrm{trend}}$ and $h_{\mathrm{model}}$ do not depend on $\psi$, this simplifies to:
+\begin{equation}
+  p_{\mathrm{comb}}(H(t) \mid D) = \bar{w}(t)\,h_{\mathrm{trend}}(H(t)) + (1 - \bar{w}(t))\,h_{\mathrm{model}}(H(t)),
+  \label{eq:predictive_simplified}
+\end{equation}
+where $\bar{w}(t) = \mathbb{E}_{\psi \mid D}[w(t;\,\psi)]$ is the posterior mean weight.  The combined predictive is a mixture with data-informed weights.
+
+\textbf{Quantile computation.}  For each time~$t$, compute quantiles of the mixture by the weighted-pool method: combine the trend and model ensemble samples into a single pool, assign weight $\bar{w}(t) / N_{\mathrm{samples}}$ to each trend sample and $(1 - \bar{w}(t)) / N_{\mathrm{samples}}$ to each model sample, sort, and compute weighted quantiles.  This produces properly calibrated credible intervals.
+
+\textbf{Relationship to the MSE-optimal approach.}  The fixed-weight MSE-optimal linear combination is a special case: $\psi$ fixed at its posterior mode, the linear-combination sample-wise blending used instead of the mixture.  The BPS predictive differs in two ways: (1) it is a mixture (correct marginals, heavier tails) rather than a linear combination (underconfident), and (2) it marginalises over synthesis uncertainty (through $\bar{w}$, which averages over the posterior on~$\psi$, not just the MAP estimate).
+
+
+\subsubsection{Temporally coherent trajectory ensemble}
+\label{sec:coherent_trajectories}
+
+The mixture predictive (\cref{eq:predictive_simplified}) produces correct marginals at each~$t$ but does not generate temporally coherent trajectories.  Coherent trajectories are required for rate-of-change analysis (Paper~3), counterfactual queries (Ar\^ete), and budget-constraint propagation.
+
+For each Monte Carlo index $s = 1, \ldots, N_{\mathrm{samples}}$:
+\begin{enumerate}
+  \item Draw $\psi^{(s)}$ from the posterior $p(\psi \mid D)$.
+  \item Compute $w^{(s)}(t) = \sigma(\phi(t;\,\psi^{(s)}))$ for all projection times~$t$.
+  \item Draw $u^{(s)} \sim \mathrm{Uniform}(0, 1)$.
+  \item Define the smooth transition indicator:
+  \begin{equation}
+    \omega^{(s)}(t) = \sigma\!\left(\frac{w^{(s)}(t) - u^{(s)}}{\varepsilon}\right),
+    \label{eq:smooth_transition}
+  \end{equation}
+  where $\varepsilon > 0$ is a smoothing parameter (recommended: $\varepsilon = 0.05$, producing a transition over a range of $w$ of approximately $\pm 0.1$, corresponding to $\sim$2--5~years).
+  \item Combine:
+  \begin{equation}
+    H_{\mathrm{comb}}^{(s)}(t) = \omega^{(s)}(t)\,H_{\mathrm{trend}}^{(s)}(t) + [1 - \omega^{(s)}(t)]\,H_{\mathrm{model}}^{(s)}(t).
+    \label{eq:trajectory_combination}
+  \end{equation}
+\end{enumerate}
+
+\textbf{Properties of this construction.}
+\begin{itemize}
+  \item Each trajectory transitions smoothly from trend-dominated to model-dominated at a sample-specific time.
+  \item The transition time for sample~$s$ is approximately the time when $w^{(s)}(t) = u^{(s)}$.  Since $u^{(s)}$ is uniform, the distribution of transition times across samples reflects both the synthesis-parameter uncertainty (through $\psi^{(s)}$) and the inherent model-selection uncertainty (through $u^{(s)}$).
+  \item Rates computed by finite differences on $H_{\mathrm{comb}}^{(s)}(t)$ are smooth (the $\sigma$ function smooths the transition over a few years).
+  \item The marginal distribution of $H_{\mathrm{comb}}^{(s)}(t)$ at each fixed~$t$ integrates, over $u$ and $\psi$, to the mixture predictive (\cref{eq:predictive_simplified}).
+\end{itemize}
+
+\textbf{Why this is better than fixed-weight linear combination.}  The fixed-weight approach applies $w(t)$ uniformly to all samples, producing an ensemble whose spread is $w^2 \cdot \mathrm{Var}_{\mathrm{trend}} + (1-w)^2 \cdot \mathrm{Var}_{\mathrm{model}}$ --- always narrower than either individual ensemble for $0 < w < 1$.  The stochastic-transition approach distributes trajectories between the trend and model regimes, producing spread that includes the inter-model variance (the difference between the trend and model predictions), not just the within-model variance.  The resulting trajectory ensemble has proper spread for uncertainty reporting, while maintaining the temporal smoothness required for rate analysis.
+
+\textbf{Smoothing parameter $\varepsilon$.}  The sigmoid smoothing in \cref{eq:smooth_transition} avoids abrupt rate discontinuities at the transition.  For $\varepsilon = 0.05$, the transition from $\omega = 0.12$ to $\omega = 0.88$ occurs over the interval where $w$ moves by approximately 0.2, corresponding to $\sim$2--5~years depending on the SSP and $\psi$.  A diagnostic should verify that the rate discontinuity at the transition is small compared to the ensemble rate spread.
+
+
+\subsection{The crossover as a derived diagnostic}
+\label{sec:crossover}
+
+In the BPS framework, the crossover is a diagnostic quantity derived from the posterior, not a plug-in formula.  For each posterior sample $\psi^{(s)}$, the crossover time $t^{*(s)}$ is the solution to $\phi(t^{*(s)};\,\psi^{(s)}) = 0$, i.e.:
+\begin{equation}
+  \phi_0^{(s)} = \kappa_{\mathrm{net}}^{(s)}\,\dT(t^{*(s)})^2\,(t^{*(s)} - \tend)^2 + \kappa_t^{(s)}\,(t^{*(s)} - \tend)^4.
+  \label{eq:crossover_numerical}
+\end{equation}
+This is computed numerically for each sample by root-finding on $\phi(t;\,\psi^{(s)})$.  The posterior distribution of $t^*$ is reported as a diagnostic.
+
+\paragraph{Analytic approximation.}  When the forcing-departure term dominates:
+\begin{equation}
+  \dTstar \approx \frac{\sqrt{\phi_0}}{\sqrt{\kappa_{\mathrm{net}}} \cdot \Delta t^*}, \qquad t^* \approx \tend + \frac{\dTstar}{\dot{T}\big|_{\mathrm{SSP}}}.
+  \label{eq:DT_crossover_analytic}
+\end{equation}
+This is reported for intuition and sensitivity analysis but should not replace the numerical computation.
+
+\paragraph{Crossover under low emissions ($\dT \approx 0$).}  When the forcing-departure term is negligible, the crossover is governed by:
+\begin{equation}
+  \phi_0 = \kappa_t\,(t^* - \tend)^4 \qquad\Longrightarrow\qquad \Delta t^* = \left(\frac{\phi_0}{\kappa_t}\right)^{1/4}.
+  \label{eq:crossover_lowemissions}
+\end{equation}
+At the prior medians ($\phi_0 \approx 2.5$, $\kappa_t = 10^{-3}$), $\Delta t^* \approx (2500)^{1/4} \approx 7$~yr.  This is shorter than the MSE-based estimate ($\sim$24~yr) because the logistic parameterization maps the precision advantage differently.  The cross-validation calibration will determine the empirically appropriate transition timescale.
+
+
+\subsection{Special cases and edge behaviour}
+
+\paragraph{Temperature within calibration range ($\dT = 0$).}  When the scenario temperature trajectory remains at or below $\tcal$, the forcing-departure term vanishes and the logit decreases only through the $\kappa_t\,(t - \tend)^4$ term.  The model eventually dominates but on a longer timescale than under high emissions.  The cross-validation calibration determines this timescale empirically.
+
+\paragraph{Overshoot scenarios.}  The cumulative-maximum $\dT$ (\cref{eq:deltaT_def}) ensures the trend does not regain credibility after temperature returns below $\tcal$.
+
+\paragraph{Internal variability.}  The trend extrapolation absorbs interannual variability (ENSO, volcanic) into its rate estimate.  Neither the trend nor the model handles volcanic surprises well; the BPS synthesis does not worsen this limitation.
+
+
+\section{Interaction with Other Framework Elements}
+
+\subsection{Relationship to the rate-and-state calibration}
+
+The calibration is unchanged.  The BPS synthesis is a post-calibration step applied to the projection ensemble.  The synthesis hyperparameters are calibrated independently via cross-validation.
+
+\subsection{Budget constraint interaction}
+
+The BPS synthesis is applied after all component projections are complete.  The combined total is the primary reported projection.  The budget constraint operates as follows:
+
+The BPS synthesis operates on the non-AIS GMSL total (\cref{eq:non_ais}).  The budget constraint at Level~1 compares the component sum against the rate-and-state Level~1 total (uncombined).  A secondary diagnostic compares the component sum against the BPS-combined total; discrepancies in the near term ($\sim$2025--2050) indicate that the component models may not be reproducing the observed rate correctly.
+
+For the joint inference budget constraint (enforced during MCMC), two architecture options are available:
+\begin{description}
+  \item[Option A: BPS as post-processing.]  The budget constraint operates on the uncombined Level~1 total.  The BPS-combined total is a diagnostic overlay.  Clean, but loses the benefit of propagating the trend-anchored near-term total to components.
+  \item[Option B: WLS rate prior in Level~1 calibration.]  The WLS regression posterior on $(\hat{r}, \dot{\hat{r}})$ at $\tend$ is included as a prior (or additional likelihood term) in the Level~1 calibration, integrating the trend information into the posterior.  More principled, but requires handling the double-counting of the satellite-era data (which enters both the WLS fit and the rate-and-state likelihood).  Resolution: either fit the WLS quadratic only to the satellite-era data while the rate-and-state model uses the full record (partial separation), or formally partition the likelihood.
+\end{description}
+
+\textbf{Recommendation:} Option~A for the initial implementation; evaluate Option~B once the joint MCMC is operational, using the near-term component-sum diagnostic as the decision criterion.
+
+\subsection{Component decomposition}
+
+The component-level models (Level~2) are unaffected.  The trend constraint operates at Level~1 on the non-AIS total.  The AIS dynamic component is exempt and added back after the BPS synthesis.
+
+\subsection{WAIS deep uncertainty (Level~3)}
+
+AIS dynamics are exempt from trend suppression.  WAIS instability scenarios at short leads are preserved in the combined projection.  The BPS synthesis affects only the non-AIS components, where trend anchoring is physically appropriate.
+
+\subsection{Counterfactual queries}
+
+The stochastic-transition trajectory ensemble (\cref{sec:coherent_trajectories}) provides the coherent base trajectories required for counterfactual branching.  Since the AIS component is added independently, intervention queries on Thwaites (or other AIS targets) modify $H_{\mathrm{AIS,dyn}}^{(s)}(t)$ directly without interacting with the BPS synthesis.
+
+
+\section{Implementation}
+
+\subsection{Module placement}
+
+The BPS synthesis is a \textbf{diagnostic/post-processing module} in \texttt{diagnostics/trend\_combination/}.  It is not a physical component of the sea-level budget and must not be placed under \texttt{components/}.
+
+\subsection{Workflow}
+
+\begin{enumerate}
+  \item \textbf{Fit the WLS quadratic trend model} to satellite-era non-AIS GMSL.  Extract $(\hat{H}, \hat{r}, \dot{\hat{r}})$ at $\tend$ and their $3 \times 3$ covariance (with GIA inflation on $\mathrm{Var}(\hat{r})$).  Run the cubic and window-sensitivity robustness checks.
+  \item \textbf{Run leave-future-out cross-validation.}  For each holdout endpoint $t_h$, refit both agents and compute the trend and model predictive densities at all held-out observations.  Construct the synthesis log-likelihood (\cref{eq:cv_loglik}).
+  \item \textbf{Sample the posterior on $\psi$.}  Run MCMC to obtain posterior samples $\{\psi^{(s)}\}_{s=1}^{N_{\mathrm{MCMC}}}$.  Assess convergence ($\hat{R}$, ESS).
+  \item \textbf{For each SSP:}
+  \begin{enumerate}
+    \item Compute $\dT(t)$ for the SSP temperature trajectory (cumulative-maximum mode).
+    \item Compute the posterior mean weight $\bar{w}(t) = \frac{1}{N_{\mathrm{MCMC}}} \sum_s \sigma(\phi(t;\,\psi^{(s)}))$.
+    \item \textbf{Predictive quantiles:} Compute mixture quantiles of $\bar{w}(t) \cdot h_{\mathrm{trend}} + (1 - \bar{w}(t)) \cdot h_{\mathrm{model}}$ by the weighted-pool method.
+    \item \textbf{Coherent trajectory ensemble:} For each $s$, draw $u^{(s)}$, compute $\omega^{(s)}(t)$, and combine $H_{\mathrm{comb}}^{(s)} = \omega^{(s)}\,H_{\mathrm{trend}}^{(s)} + (1 - \omega^{(s)})\,H_{\mathrm{model}}^{(s)}$.
+    \item \textbf{Add AIS:} $H_{\mathrm{comb,total}}^{(s)}(t) = H_{\mathrm{comb,non\text{-}AIS}}^{(s)}(t) + H_{\mathrm{AIS,dyn}}^{(s)}(t)$.
+    \item \textbf{Crossover diagnostic:} For each posterior sample $\psi^{(s)}$, compute $t^{*(s)}$ by root-finding.  Report posterior distribution of $t^*$.
+  \end{enumerate}
+\end{enumerate}
+
+\subsection{Scope of application}
+
+The trend constraint is applied to non-AIS GMSL only.  At the component level, the observational records are shorter, noisier, and have heterogeneous temporal coverage.  The trend extrapolation's comparative advantage is at the aggregate level, where the satellite altimetry record is long enough and precise enough to support precise rate and acceleration estimation.
+
+
+\section{Summary of Notation}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Symbol & Definition & Units \\
+\midrule
+$\tcal$ & Maximum GMST in calibration window & \textdegree C \\
+$\dT(t)$ & Cumulative max temperature departure above $\tcal$ & \textdegree C \\
+$\hat{r}(\tend)$ & WLS-estimated rate at end of calibration & mm/yr \\
+$\dot{\hat{r}}(\tend)$ & WLS-estimated acceleration at end of calibration & mm/yr$^2$ \\
+$\sigr$ & WLS posterior std of rate estimate (incl.\ GIA) & mm/yr \\
+$\sigrdot$ & WLS posterior std of acceleration estimate & mm/yr$^2$ \\
+$\sigma_{\mathrm{GIA}}$ & GIA inter-model rate uncertainty & mm/yr \\
+$h_{\mathrm{trend}}$ & Trend agent predictive density & --- \\
+$h_{\mathrm{model}}$ & Model agent predictive density & --- \\
+$\psi = (\phi_0, \kappa_{\mathrm{net}}, \kappa_t)$ & Synthesis hyperparameters & see text \\
+$\phi(t;\,\psi)$ & Logit of the synthesis weight & dimensionless \\
+$w(t;\,\psi) = \sigma(\phi)$ & Synthesis weight on trend & dimensionless \\
+$\bar{w}(t)$ & Posterior mean synthesis weight & dimensionless \\
+$\kappa$ & Forcing-departure degradation (trend's MSE) & $({\rm mm/yr/\textdegree C})^2$ \\
+$\lambda$ & Structural-bias growth rate (model's MSE) & $({\rm mm/yr/\textdegree C})^2$ \\
+$\kappa_{\mathrm{net}}$ & Net forcing-departure degradation (logit-space) & logit-space \\
+$\kappa_t$ & Acceleration-persistence degradation & logit-space \\
+$\omega^{(s)}(t)$ & Smooth stochastic transition indicator & $[0, 1]$ \\
+$u^{(s)}$ & Uniform draw for stochastic transition & $[0, 1]$ \\
+$\varepsilon$ & Sigmoid smoothing parameter & dimensionless \\
+$\MSEtrend(t)$ & Mean squared error of trend extrapolation & mm$^2$ \\
+$\MSEmodel(t)$ & Mean squared error of rate-and-state model & mm$^2$ \\
+$t^*$ & Crossover time ($w = 0.5$) & yr \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section*{References}
+
+\begin{description}
+  \item[] McAlinn, K.\ \& West, M.\ (2019).\ Dynamic Bayesian predictive synthesis in time series forecasting.\ \textit{Journal of Econometrics}, 210(1), 155--169.
+  \item[] Caron, L., Ivins, E.~R., Larour, E., et al.\ (2018).\ GIA model statistics for GRACE hydrology, cryosphere, and ocean science.\ \textit{Geophysical Research Letters}, 45, 2203--2212.
+\end{description}
+
+\end{document}

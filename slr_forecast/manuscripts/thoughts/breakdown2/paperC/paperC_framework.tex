@@ -1,0 +1,430 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+\newcommand{\CDW}{\text{CDW}}
+\newcommand{\ENSO}{\text{ENSO}}
+
+\title{A Hierarchical Bayesian Framework for\\
+  Self-Consistent Sea Level Rise Forecasting}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+% TARGET: JAMES, Journal of Climate, or Earth's Future
+% LENGTH: ~8000-10000 words (full-length)
+% FIGURES: 8-12
+% TIMELINE: Submission 3-6 months after Papers A and B
+% ====================================================================
+
+\begin{abstract}
+% ~250 words
+We present a hierarchical Bayesian framework for probabilistic sea level rise projections that integrates observational constraints, process-model structural information, and deep-uncertainty treatment into a single self-consistent system.
+The framework operates across four levels: (0) global temperature forcing, (1) total GMSL constrained by the observational rate--temperature relationship, (2) component-level decomposition into seven physically distinct contributions (thermal expansion, glaciers, Greenland, West Antarctic, East Antarctic, Antarctic Peninsula, terrestrial water storage) with component-specific forcing variables and a rate-level budget constraint, and (3) deep-uncertainty modules for marine ice-sheet instability.
+Three features distinguish the framework from existing approaches.
+First, a rate-level soft budget constraint enforces the sea level budget at every calibration time step, creating cross-component information flow via a collider mechanism that transfers information from well-observed components to poorly observed ones.
+Second, the directed acyclic graph (DAG) specification supports causal intervention analysis via do-calculus, enabling counterfactual projections under glacier stabilization or climate engineering scenarios.
+Third, learned Kennedy \& O'Hagan model-inadequacy terms at each component level prevent the overconfidence that arises from treating parametric models as truth.
+The framework is designed for incremental implementation: it is self-consistent at every stage of completeness, with unresolved components absorbed into a budget-constrained residual.
+We demonstrate the framework at Stage 1 (thermosteric decomposition) and Stage 2 (glaciers and Greenland), producing projections that are observationally calibrated, budget-consistent, and have explicit model-inadequacy accounting.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+% ~800 words
+% ====================================================================
+
+% 1. Three categories of existing SLR projection approaches, each with
+%    fundamental limitations:
+%    - Process models: lack parameter exploration, diverge from obs
+%    - Semi-empirical: cannot resolve components, wrong functional form at high T
+%    - Expert judgment: lacks formal self-consistency
+%
+% 2. What is needed: a framework that fuses observational constraints,
+%    process-model structure, and expert judgment into a single coherent system.
+%
+% 3. The hierarchical Bayesian approach provides this. It is not new in
+%    geophysics (Berliner 2003, Kennedy & O'Hagan 2001), but has not been
+%    applied to the SLR projection problem with the full component decomposition
+%    and budget constraint.
+%
+% 4. Paper A established observationally calibrated projections (the top-level
+%    constraint). Paper B demonstrated the budget constraint and WAIS treatment.
+%    This paper presents the full framework that unifies these elements and
+%    adds the component-level architecture, model-inadequacy terms, DAG
+%    specification, and causal intervention capability.
+%
+% 5. The framework is designed for the Arete Glacier Initiative's need to
+%    evaluate real glacier stabilization interventions. The counterfactual
+%    capability is not hypothetical.
+
+
+% ====================================================================
+\section{Framework Architecture}
+\label{sec:architecture}
+% ~2500 words
+% ====================================================================
+
+\subsection{Hierarchical structure}
+\label{sec:hierarchy}
+%
+% Four levels:
+%
+% Level 0: Temperature forcing
+%   - SSP → radiative forcing → GMST via FaIR
+%   - This is exogenous to the SLR framework
+%   - But the framework can accept arbitrary forcing trajectories
+%     (including intervention scenarios: SAI, CDR)
+%
+% Level 1: Total GMSL constraint
+%   - DOLS rate-temperature relationship (from Paper A)
+%   - This provides the top-level observational anchor
+%   - The rate-and-state extension for lagged response
+%
+% Level 2: Component decomposition
+%   - 7 components with component-specific forcing variables
+%   - Rate-level budget constraint (Eq: sum of rates = observed total rate)
+%   - Component-specific models:
+%     * TE: linear in GMST (PC prior on quadratic toward zero)
+%     * GL: quadratic in GMST with volume-depletion saturation
+%     * GrIS: two-component (SMB linear in GMST + discharge in T_NA)
+%     * WAIS: forcing-dependent rate ODE (CDW, with MISI threshold)
+%     * EAIS: SMB-dominated (precipitation + discharge from marine sectors)
+%     * APIS: atmospheric warming, comparatively well-constrained
+%     * LWS: secular (dam/GW) + climate-driven (ENSO)
+%
+% Level 3: Deep uncertainty (A4 module)
+%   - Scenario-mixture model for WAIS MISI (from Paper B)
+%   - Extends projection envelope beyond historical constraint
+%   - Mixture weights updated via budget residual consistency
+%
+% Figure 1: Schematic of the 4-level hierarchy.
+
+\subsection{Directed acyclic graph}
+\label{sec:dag}
+%
+% Full DAG specification:
+% - Node set (Table 2): forcing, mediating, component rate, constraint, 
+%   deep uncertainty, observation nodes
+% - Edge set with physical justification for each edge
+% - Conditional independence relations (CI-1 through CI-5)
+% - Critical distinction: generative vs inferential CI
+%   The budget node is a collider. During inference, conditioning on it
+%   opens paths between components.
+%
+% Figure 2: TikZ DAG with all nodes and edges.
+%
+% Intervention targets for do-calculus:
+% - Thwaites stabilization: do(rate_WAIS_Thwaites = f(t))
+% - CDW reduction: do(T_CDW = T_CDW - Delta_T)
+% - SAI: do(F(t) = F_SAI(t))
+% - CDR: do(F(t) = F_CDR(t))
+
+\subsection{Rate-level budget constraint}
+\label{sec:budget}
+%
+% Equation: sum_i rate_i(t) ~ N(rate_total_obs(t), sigma_budget^2(t))
+%
+% sigma_budget^2 = sigma_obs_total^2 + sum_i sigma_extra_i^2
+% where sigma_extra_i are learned model-inadequacy parameters (see below).
+% sigma_budget participates in inference (changes at each MCMC step).
+%
+% Why rate-level, not coefficient-level:
+% - AIS responds to CDW, not GMST → no shared polynomial
+% - TWS secular component has no temperature dependence
+% - Rate-level allows component-specific functional forms
+%
+% Information flow mechanics:
+% - Bottom-up: component data constrain component parameters
+% - Top-down: total GMSL constrains the sum (collider mechanism)
+% - Cross-component: well-constrained components tighten residual for others
+%
+% Quantify via posterior correlation Cor[r_i, r_j | H_obs, D]
+% vs prior correlation (approximately zero).
+
+\subsection{Model inadequacy}
+\label{sec:inadequacy}
+%
+% Kennedy & O'Hagan (2001) framework applied at each component:
+%
+% rate_i^obs(t) = rate_i^model(t; theta_i) + delta_i(t) + epsilon_i(t)
+%
+% Phase 1: scalar sigma_extra_i (white-noise discrepancy)
+%   - HalfCauchy prior on sigma_extra_i
+%   - Adds one parameter per component
+%   - Captures magnitude of model inadequacy
+%
+% Phase 2 (deferred): GP discrepancy delta_i(t) ~ GP(0, k_i)
+%   - Captures temporal structure of inadequacy
+%   - Activated when Phase 1 residuals show Durbin-Watson structure
+%
+% Specific model extensions (not discrepancy terms — forward model improvements):
+% - Thermosteric: two-timescale deep-ocean lag (deferred unless residuals demand it)
+% - Glaciers: volume-depletion saturation correction (required in Phase 1)
+
+\subsection{Staged implementation}
+\label{sec:staged}
+%
+% The framework is self-consistent at every stage:
+%
+% Stage 0: Total GMSL-GMST constraint only (DOLS + rate-and-state)
+%          All components in residual. Complete (Paper A).
+% Stage 1: Thermosteric decomposition. Best-constrained component.
+%          Residual = cryospheric + TWS. 
+% Stage 2: Glaciers + Greenland. Moderately well-observed.
+%          Residual = WAIS + EAIS + APIS + TWS.
+% Stage 3: TWS (secular + climate-driven). 
+%          Residual ≈ WAIS + EAIS + APIS.
+% Stage 4: AIS with deep-uncertainty module.
+%          Framework complete. No residual.
+%
+% Table 3: Implementation roadmap (what, data, status).
+%
+% At each stage: budget holds, posteriors are valid, projections can be made.
+% Adding a component refines but does not invalidate.
+
+
+% ====================================================================
+\section{Demonstration: Stages 1-2}
+\label{sec:demo}
+% ~2000 words
+% ====================================================================
+
+\subsection{Stage 1: Thermosteric decomposition}
+%
+% Model: rate_thermo(T) = b_thermo * T + c_thermo
+%   PC prior on a_thermo toward zero (expect linear response).
+%   sigma_extra_thermo ~ HalfCauchy(0, s_thermo).
+%
+% Data: NOAA/NCEI 0-2000m thermosteric, Argo era (2005+).
+%   Pre-Argo: Frederikse thermodynamic (1900-2018).
+%
+% Budget constraint: rate_residual = rate_total - rate_thermo
+%   This residual = glaciers + GrIS + WAIS + EAIS + APIS + LWS.
+%
+% Results:
+% - Posterior on b_thermo (linear sensitivity): value, comparison to DOLS alpha_0
+% - sigma_extra_thermo: magnitude of thermosteric model inadequacy
+% - Budget residual: time series, comparison to IMBIE + GlaMBIE
+%
+% Figure 3: Stage 1 results. Top: thermosteric rate (model + data + posterior).
+% Bottom: budget residual vs independently observed cryospheric + TWS rates.
+
+\subsection{Stage 2: Glaciers and Greenland}
+%
+% Glacier model: rate_gl(T) = a_gl * T^2 + b_gl * T + c_gl
+%   with volume-depletion saturation: rate_gl * [V_gl(t)/V_gl_0]^p
+%   V_gl_0 ~ 0.32 m SLE. Exponent p calibrated with prior from Marzeion/Edwards.
+%   sigma_extra_gl ~ HalfCauchy.
+%
+% GrIS model: rate_GrIS = (b_SMB * T + c_SMB) + (beta_dis * T_NA + c_dis)
+%   Two-component: SMB (GMST-forced) + discharge (ocean-forced).
+%   sigma_extra_GrIS ~ HalfCauchy.
+%   T_NA treated as latent variable pre-Argo (parameterized from GMST with uncertainty).
+%
+% Data: GlaMBIE (glaciers, 2000+), IMBIE GrIS (1992+), RACMO/MAR SMB.
+%
+% Budget constraint: rate_residual_2 = rate_total - rate_thermo - rate_gl - rate_GrIS
+%   This residual ≈ WAIS + EAIS + APIS + LWS.
+%
+% Results:
+% - Glacier saturation exponent p: posterior value
+% - GrIS SMB vs discharge partition: posterior on b_SMB, beta_dis
+% - Residual tightening from Stage 1 to Stage 2
+%
+% Figure 4: Stage 2 results. Glacier + GrIS rates. Budget residual narrows.
+
+\subsection{Projection comparison}
+%
+% Compare projections at Stage 0, 1, 2 under SSP2-4.5:
+% - Stage 0: widest uncertainty (all components in residual)
+% - Stage 1: narrower (thermosteric resolved)
+% - Stage 2: narrower still (glaciers + GrIS resolved)
+%
+% The residual at Stage 2 provides a budget-constrained estimate of
+% WAIS + EAIS + APIS + LWS. Compare to Paper B's direct analysis.
+%
+% Figure 5: Projection comparison across stages.
+% Show how each stage tightens the projection.
+
+\subsection{Model inadequacy diagnosis}
+%
+% Report sigma_extra_i for each component at Stages 1 and 2.
+% If sigma_extra is large relative to sigma_obs, the parametric model
+% is missing structure. Flag for Phase 2 GP discrepancy.
+%
+% Compute Durbin-Watson statistic on residuals for each component.
+% If DW indicates autocorrelation, the scalar sigma_extra is insufficient
+% and GP discrepancy should be activated.
+
+
+% ====================================================================
+\section{Causal Intervention Analysis}
+\label{sec:interventions}
+% ~1000 words
+% ====================================================================
+
+% Even at Stage 2 (without full AIS model), the DAG supports interventions
+% on the forcing nodes:
+%
+% Example 1: SAI intervention
+%   do(F(t) = F_SAI(t)) → modified T(t) → modified component rates
+%   With ENSO exogenous (Phase 1), this does NOT propagate to WAIS via ENSO.
+%   Document this limitation.
+%
+% Example 2: Thwaites stabilization
+%   do(rate_WAIS_Thwaites = f_stabilized(t))
+%   The budget residual changes → other components' posteriors shift.
+%   This shows the integrated effect of stabilizing one glacier system.
+%
+% Present as: "the framework supports these queries in principle.
+% At Stage 2, the AIS components are in the residual, so intervention
+% analysis on WAIS requires the Paper B mixture model or Stage 4.
+% We demonstrate the intervention engine on the forcing-level queries
+% (SAI, CDR) where the full component chain is resolved."
+%
+% Figure 6: Counterfactual projection under SAI scenario.
+% Show: total GMSL under SSP2-4.5, then with SAI reducing forcing after 2040.
+% The difference = the SLR avoided by the intervention.
+
+
+% ====================================================================
+\section{Variance Decomposition}
+\label{sec:variance}
+% ~600 words
+% ====================================================================
+
+% Nested law of total variance decomposition:
+% Total Var = E_S[Var_theta,k[H|S]] + Var_S[E_theta,k[H|S]]
+%
+% Within-scenario:
+% Var_theta,k[H|S] = E_k[Var_theta[H|S,k]] + Var_k[E_theta[H|S,k]]
+%
+% Cross-component covariance C_cross(t).
+%
+% R_sep diagnostic for separability of parameter and scenario uncertainty.
+%
+% Monte Carlo computation (exact up to MC error).
+%
+% Figure 7: Variance decomposition stacked area plot.
+% 7 components + interaction + scenario spread.
+% Show WAIS dominating at long horizons (connects to Paper B's result).
+
+
+% ====================================================================
+\section{Relationship to Existing Work}
+\label{sec:existing}
+% ~500 words
+% ====================================================================
+
+% Three primary differentiators from FACTS:
+% 1. Rate-level budget constraint (cross-component regularization)
+% 2. Causal intervention capability (do-calculus / graph surgery)
+% 3. Joint historical calibration (all components calibrated simultaneously
+%    against the same observations, not independently)
+%
+% Positioned as complementary, not adversarial.
+%
+% Comparison to Kopp et al. (2014, 2017): similar component decomposition
+% but without the global budget constraint from rate-temperature calibration.
+%
+% Comparison to semi-empirical models: the framework generalizes Vermeer &
+% Rahmstorf (2009) by decomposing the aggregate relationship into components.
+
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% ~600 words
+% ====================================================================
+
+% Open issues and deferred items:
+% - Phase 2 extensions: GP discrepancy, ENSO endogeneity, full AIS state model
+% - GRACE cross-product error correlations
+% - Paleo data integration
+% - Value-of-information analysis for observational investments
+%
+% The framework is designed to accommodate these without architectural changes.
+% Each extension adds detail within the existing hierarchy, not new hierarchy.
+
+
+% ====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+% ~300 words
+% ====================================================================
+
+% 1. The framework unifies observational calibration, component decomposition,
+%    budget constraint, model inadequacy, and deep uncertainty into one system.
+% 2. It is self-consistent at every stage of implementation.
+% 3. The budget constraint provides cross-component information flow that
+%    existing frameworks do not exploit.
+% 4. Causal intervention analysis is a structural capability, not an add-on.
+% 5. Papers A and B are special cases: Paper A is Stage 0, Paper B is the
+%    budget constraint + WAIS deep uncertainty. This paper presents the
+%    architecture that unifies them.
+
+
+% ====================================================================
+% SUPPLEMENTARY MATERIALS
+% ====================================================================
+%
+% SM1: Full DAG specification (node set, edge set, CI relations)
+% SM2: Rate-level budget constraint derivation
+% SM3: Kennedy & O'Hagan model inadequacy: full formulation
+% SM4: MCMC specification (sampler choice, tuning, convergence diagnostics)
+% SM5: Prior specifications for all parameters (table)
+% SM6: Component data details (temporal coverage, processing)
+% SM7: Phase 2 design notes (GP discrepancy, ENSO endogeneity)
+%
+% Fig S1: Full TikZ DAG (larger version with all annotations)
+% Fig S2: Prior sensitivity analysis
+% Fig S3: MCMC convergence diagnostics (trace plots, R-hat, ESS)
+% Fig S4: Posterior predictive checks (model vs observed rates, each component)
+% Fig S5: Stage 0 → 1 → 2 residual evolution
+% Fig S6: sigma_extra posteriors for each component
+% Fig S7: Durbin-Watson diagnostics on component residuals
+%
+% Table S1: Full prior specification table
+% Table S2: Posterior summary statistics (all parameters)
+% Table S3: MCMC convergence diagnostics
+% Table S4: Projection tables (all stages, all SSPs, decadal)
+
+% MAIN FIGURES (8):
+% Fig 1: Hierarchical structure schematic (4 levels)
+% Fig 2: DAG (TikZ)
+% Fig 3: Stage 1 results (thermosteric + residual)
+% Fig 4: Stage 2 results (glaciers + GrIS + narrowed residual)
+% Fig 5: Projection comparison across stages
+% Fig 6: Counterfactual projection under SAI
+% Fig 7: Variance decomposition
+% Fig 8: Posterior correlation matrix (7x7)
+
+% TABLES (4):
+% Table 1: Component decomposition (7 components, forcing, data, model form)
+% Table 2: DAG node set
+% Table 3: Implementation roadmap
+% Table 4: Projection summary (Stages 0-2, all SSPs)
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}

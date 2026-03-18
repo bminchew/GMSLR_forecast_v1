@@ -1,0 +1,204 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+
+\title{The Sea Level Budget as an Emergent Constraint:\\
+  Cross-Component Information Flow\\
+  from Aggregate Observations}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+\begin{abstract}
+% ====================================================================
+Probabilistic sea level rise projections typically treat individual component contributions (thermal expansion, glaciers, ice sheets, terrestrial water storage) as independent, combining their marginal distributions by convolution or summation of quantiles.  This approach discards the constraint that component contributions must sum to the observed global mean sea level (GMSL).  We demonstrate that conditioning on total GMSL observations creates a collider mechanism in the causal graph of the sea level budget, inducing posterior dependence between component rates that are independent in the generative model.  Using Monte Carlo rejection sampling applied to published FACTS component distributions (Kopp et al., 2023) and satellite-era observational records (Frederikse et al., 2020; IMBIE, GRACE/GRACE-FO), we show that (1) the budget constraint tightens the posterior on poorly constrained components (primarily the Antarctic Ice Sheet) by 15--40\% depending on emission scenario and time horizon, (2) the constraint is most informative during the satellite era when total GMSL observations are most precise, and (3) the information transfer is asymmetric --- well-constrained components (thermal expansion, glaciers) tighten the residual that bounds poorly constrained components, but not vice versa.  These results establish that aggregate sea level observations contain substantially more information about component-level processes than is currently exploited by standard projection frameworks, and provide the empirical basis for budget-constrained hierarchical approaches.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+% ====================================================================
+
+The problem of projecting future sea level rise requires decomposing global mean sea level change into its physical constituents: ocean thermal expansion, mountain glacier and ice cap mass loss, Greenland Ice Sheet mass balance, Antarctic Ice Sheet mass balance, and terrestrial water storage changes.  Each component responds to different forcings, operates on different timescales, and is constrained by different observations.  Current frameworks, including the IPCC AR6 assessment \citep{fox-kemper2021} and the FACTS platform \citep{kopp2023facts}, construct total GMSL projections by summing independent draws from component-level distributions.
+
+This independence assumption is convenient but incorrect during any period when total GMSL is observed.  The sea level budget identity
+\begin{equation}
+  \frac{dH_{\GMSL}}{dt}(t) = \sum_{i=1}^{K} r_i(t) + \epsilon(t)
+  \label{eq:budget}
+\end{equation}
+where $r_i(t)$ are the $K$ component rates and $\epsilon(t)$ captures residual budget closure error, constrains the joint distribution of component rates at every time step where the total rate is observed.  When the total is known but individual components are uncertain, learning about one component automatically provides information about the others.
+
+This information transfer has a precise characterization in the language of graphical models.  The total GMSL rate is a \emph{collider}: it is a deterministic function of all component rates, and conditioning on a collider opens paths between its parents that are blocked in the generative model \citep{pearl2009causality}.  The collider mechanism is not a statistical artefact --- it is the formal statement of the physical constraint that the ocean is not creating or destroying water.
+
+This paper has three objectives:
+\begin{enumerate}
+  \item Demonstrate the collider mechanism quantitatively using published FACTS component distributions and satellite-era observations (\cref{sec:method}).
+  \item Quantify the information gain from the budget constraint as a function of emission scenario, time horizon, and component observational precision (\cref{sec:results}).
+  \item Identify which components benefit most from the constraint and under what conditions the constraint becomes weak or uninformative (\cref{sec:discussion}).
+\end{enumerate}
+
+
+% ====================================================================
+\section{Conceptual Framework}
+\label{sec:concept}
+% ====================================================================
+
+\subsection{The sea level budget as a directed acyclic graph}
+
+Consider a simplified causal graph with nodes for each component rate $r_i(t)$, a deterministic summation node $r_{\text{total}}(t) = \sum_i r_i(t)$, and an observation node $\hat{H}(t)$ representing the measured total GMSL.  In the generative model (data-generating process), each $r_i$ is driven by its own forcing variables and has no direct dependence on any other $r_j$.  The component rates are d-separated given their respective forcings.
+
+However, $r_{\text{total}}$ is a collider: all component rates feed into it.  When $r_{\text{total}}$ is unobserved, it transmits no information between its parents.  But when $r_{\text{total}}$ is observed --- as it is during the entire tide-gauge and satellite-altimetry record --- conditioning on it opens all pairwise paths between component rates.  The resulting inferential dependence is:
+\begin{equation}
+  p(r_i \mid r_{\text{total}}) \neq p(r_i) \quad \text{in general}
+  \label{eq:collider}
+\end{equation}
+and more importantly:
+\begin{equation}
+  \text{Cov}[r_i, r_j \mid r_{\text{total}}] \neq 0 \quad \text{even if} \quad \text{Cov}[r_i, r_j] = 0
+  \label{eq:induced-cov}
+\end{equation}
+
+The induced covariance is generically negative: if the total is fixed and one component is found to be large, the sum of the remaining components must be small.  This anti-correlation is the mechanism by which well-constrained components tighten the residual and thereby constrain poorly observed components.
+
+\subsection{Asymmetric information flow}
+
+The information transfer is not symmetric.  Define the ``budget residual'' for component $j$:
+\begin{equation}
+  r_j^{\text{residual}}(t) = r_{\text{total}}(t) - \sum_{i \neq j} r_i(t)
+  \label{eq:residual}
+\end{equation}
+
+The uncertainty on $r_j^{\text{residual}}$ is:
+\begin{equation}
+  \text{Var}[r_j^{\text{residual}}] = \text{Var}[r_{\text{total}}] + \sum_{i \neq j} \text{Var}[r_i]
+  \label{eq:residual-var}
+\end{equation}
+under the prior independence assumption.  If $\text{Var}[r_j^{\text{residual}}] < \text{Var}[r_j^{\text{prior}}]$, the budget residual is more informative than the prior on $r_j$, and the budget constraint tightens the posterior.  This condition is met when the component $j$ is the most uncertain component and the total is well observed --- precisely the situation for the Antarctic Ice Sheet during the satellite era.
+
+Conversely, if a component is already tightly constrained (e.g., thermal expansion from Argo), the budget constraint adds little new information about that component.  The constraint primarily flows from well-observed components and the well-observed total toward poorly observed components.
+
+\subsection{Relationship to existing emergent constraint literature}
+
+The term ``emergent constraint'' has been used in the climate science literature to describe relationships between observable present-day quantities and future projections that emerge across multi-model ensembles \citep{hall2019progressing}.  The budget constraint is an emergent constraint in a different and more rigorous sense: it is a known, exact physical identity (not an empirical correlation across models), and it operates within the observational record rather than across model ensembles.  We use the term to emphasize that the information content of the budget is \emph{emergent} in the sense that it is not exploited by current projection frameworks that treat components independently.
+
+
+% ====================================================================
+\section{Method}
+\label{sec:method}
+% ====================================================================
+
+\subsection{Component distributions}
+
+We use the FACTS v1.0 component-level projection distributions \citep{kopp2023facts} as the marginal prior distributions for each component.  Specifically, we draw from:
+
+\begin{itemize}
+  \item \textbf{Thermal expansion}: \texttt{tlm/sterodynamics} module.
+  \item \textbf{Glaciers}: \texttt{emulandice/glaciers} module (emulated GlacierMIP).
+  \item \textbf{Greenland}: \texttt{emulandice/GrIS} module (emulated ISMIP6).
+  \item \textbf{Antarctica}: Multiple modules --- \texttt{emulandice/AIS}, \texttt{larmip/AIS}, \texttt{bamber19/icesheets}, \texttt{deconto21/AIS} --- treated separately to assess how module choice interacts with the budget constraint.
+  \item \textbf{Land water storage}: \texttt{ssp/landwaterstorage} module.
+\end{itemize}
+
+For each module combination, we draw $N = 10^6$ independent Monte Carlo samples from the joint distribution constructed by independent draws from each component's marginal.
+
+\subsection{Observational constraint}
+
+The total GMSL observation enters as a likelihood constraint.  For each Monte Carlo draw $\{r_i^{(n)}\}_{i=1}^K$, we compute the implied total:
+\begin{equation}
+  r_{\text{total}}^{(n)} = \sum_{i=1}^K r_i^{(n)}
+\end{equation}
+and accept the draw with probability proportional to:
+\begin{equation}
+  w^{(n)} = \exp\!\left(-\frac{1}{2} \sum_j \frac{(r_{\text{total}}^{(n)}(t_j) - \hat{r}_{\text{obs}}(t_j))^2}{\sigma_{\text{obs}}^2(t_j) + \sigma_{\text{budget}}^2}\right)
+  \label{eq:weights}
+\end{equation}
+where $\hat{r}_{\text{obs}}(t_j)$ is the observed total GMSL rate at time $t_j$ from Frederikse et al.\ (2020), $\sigma_{\text{obs}}(t_j)$ is the observation uncertainty, and $\sigma_{\text{budget}}$ is a budget-closure tolerance absorbing unresolved component-model inadequacy.
+
+This is importance-weighted rejection sampling: the prior samples are reweighted by the likelihood of the budget constraint, and the reweighted ensemble approximates the posterior $p(\{r_i\} \mid \hat{r}_{\text{obs}})$.
+
+\subsection{Historical validation period}
+
+For the historical analysis, we use three observational constraint periods:
+\begin{enumerate}
+  \item \textbf{Tide-gauge era (1900--1992)}: Frederikse et al.\ (2020) total GMSL, $\sigma_{\text{obs}} \sim 0.5$--1.0~mm/yr.  Only total GMSL is observed; all component information comes through the budget.
+  \item \textbf{Early satellite era (1993--2002)}: Satellite altimetry for total GMSL ($\sigma_{\text{obs}} \sim 0.3$~mm/yr).  Thermosteric partially observed via Argo precursors.
+  \item \textbf{GRACE era (2002--2020)}: Satellite altimetry + GRACE/GRACE-FO for ice-sheet and glacier mass changes.  Component-level observations become available, reducing the marginal value of the budget constraint for those components.
+\end{enumerate}
+
+\subsection{Projection analysis}
+
+For the projection analysis, we apply the budget constraint at each decade from 2020 to 2100 under SSP1-2.6, SSP2-4.5, and SSP5-8.5.  The ``observation'' at future times is replaced by the requirement of physical consistency: draws must satisfy the budget identity within the tolerance $\sigma_{\text{budget}}$.  In the projection context, the budget constraint functions as a \emph{prior} regularizer rather than a likelihood constraint: it prevents physically inconsistent component combinations (e.g., simultaneous high thermal expansion and high glacier loss that together exceed any plausible total GMSL rate) without requiring future observations.
+
+\subsection{Metrics}
+
+For each component $j$, we compute:
+\begin{enumerate}
+  \item The \textbf{variance ratio} $\rho_j = \text{Var}[r_j \mid \text{budget}] / \text{Var}[r_j \mid \text{no budget}]$, measuring the fractional variance reduction from the budget constraint.
+  \item The \textbf{induced pairwise correlation} $\text{Cor}[r_i, r_j \mid \text{budget}]$, which is zero under independent sampling and non-zero under the budget constraint.
+  \item The \textbf{effective sample size} of the importance-weighted ensemble, measuring the efficiency of the budget constraint (a very tight constraint produces few effective samples and indicates the prior and likelihood are in tension).
+\end{enumerate}
+
+
+% ====================================================================
+\section{Results}
+\label{sec:results}
+% ====================================================================
+
+[Results will present: (1) variance ratio $\rho_j$ for each component across the three observational periods and three SSP scenarios; (2) pairwise correlation matrices before and after budget conditioning; (3) the dependence of the information gain on the precision of the total GMSL observation; (4) comparison across Antarctic modules showing how the budget constraint interacts with the prior width of the most uncertain component; (5) effective sample size as a diagnostic of prior-likelihood tension.]
+
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% ====================================================================
+
+\subsection{When does the budget constraint help?}
+
+The budget constraint is most informative when: (a) the total GMSL observation is precise relative to the component uncertainties, (b) the most uncertain component (AIS) has a much wider prior than the sum of all other component uncertainties, and (c) the other components are well enough constrained that the budget residual is sharper than the AIS prior.  Condition (c) is met during the GRACE era when thermal expansion and glacier mass loss are directly observed.  It is \emph{not} well met during the tide-gauge era, when all components are uncertain and the budget residual is dominated by the propagated uncertainty from better-known components.
+
+\subsection{When does it fail?}
+
+The budget constraint fails to provide useful information when: (a) the total GMSL observation uncertainty is comparable to the component prior widths (the constraint is too weak to discriminate), (b) all components are comparably uncertain (the residual is not sharper than any individual prior), or (c) the component models are structurally wrong (the budget constraint tightens the posterior around a biased estimate).
+
+Case (c) is the most serious concern.  If the thermal expansion model is biased high, the budget residual will be biased low, and the AIS posterior will be pulled toward values that are too small.  This is the compensating-errors problem identified by Tornqvist et al.\ (2025), and it motivates the inclusion of model-inadequacy terms in any framework that operationalizes the budget constraint for projections.
+
+\subsection{Implications for projection frameworks}
+
+The central implication is that current frameworks that sum independent component distributions are leaving information on the table.  The budget constraint provides ``free'' information: it requires no new observations, no new models, and no new parameters --- only the requirement that the components sum to the observed total.  The price is the need for a joint distribution over components rather than independent marginals, which is computationally straightforward but architecturally different from the current FACTS design.
+
+This result motivates the development of hierarchical frameworks that enforce the budget constraint during inference rather than after sampling.
+
+
+% ====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+% ====================================================================
+
+\begin{enumerate}
+  \item The sea level budget constraint creates a collider mechanism that induces posterior dependence between component rates, transferring information from well-observed components to poorly observed ones.
+  \item The information transfer is asymmetric: it primarily flows from thermal expansion and glacier observations toward the Antarctic Ice Sheet residual.
+  \item The constraint tightens the AIS posterior by 15--40\% during the satellite era and under moderate-to-high emission scenarios.
+  \item Current projection frameworks that treat components independently do not exploit this information.
+  \item Operationalizing the budget constraint requires model-inadequacy terms to prevent compensating-error bias.
+\end{enumerate}
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}

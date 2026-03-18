@@ -1,0 +1,204 @@
+\documentclass[11pt]{article}
+
+% Science format: ~3000 words main text, ~125-word abstract,
+% 3-4 main figures, references ~30-40.
+% No numbered sections. Minimal equations in main text.
+% Extended methods, supplementary figures, and tables in SM.
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+
+\title{Compensating Errors Mask West Antarctic Ice Loss\\
+  in Sea Level Rise Projections}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+% ABSTRACT — ~125 words for Science
+% ====================================================================
+\begin{abstract}
+The apparent accuracy of global mean sea level (GMSL) projections over the satellite era masks compensating biases at the component level.
+We compare IPCC FACTS component projections against satellite-era observations decomposed into seven components, resolving West Antarctica (WAIS), East Antarctica (EAIS), and the Antarctic Peninsula separately.
+Observationally calibrated rate--temperature sensitivity analysis reveals that thermosteric projections overestimate the transient response by approximately a factor of two, while WAIS mass loss is systematically underestimated.
+Within Antarctica, EAIS mass gain further masks the WAIS shortfall.
+This two-level error cancellation produces accurate totals from structurally incorrect components.
+Under high emissions (SSP5-8.5), the cancellation degrades because the WAIS underestimate grows nonlinearly while the thermal overestimate scales approximately linearly, yielding total projections that are biased low by late century.
+\end{abstract}
+
+
+% ====================================================================
+% MAIN TEXT — ~3000 words, no numbered sections for Science
+% ====================================================================
+
+\paragraph{Introduction.}
+% ~400 words
+
+Sea level rise projections underpin coastal adaptation decisions worldwide.  The current assessment standard --- IPCC AR6, operationalized through the FACTS framework (1) --- decomposes future GMSL into contributions from ocean thermal expansion, glaciers, the Greenland and Antarctic Ice Sheets, and terrestrial water storage (TWS), then sums independent draws from each component's probability distribution to produce a total.
+
+A recent evaluation of the first 30 years of IPCC projections against satellite-era observations concluded that the agreement in the total was ``somewhat fortuitous'' (2): component-level biases partially cancelled.  If the accurate total arises from compensating errors rather than accurate component models, the projections cannot be trusted under conditions --- higher warming, longer time horizons --- where the cancellation may not persist.
+
+We extend this finding in three ways.  First, we resolve Antarctica into its physically distinct sub-regions: the West Antarctic Ice Sheet (WAIS), a marine ice sheet subject to dynamical instability driven by ocean thermal forcing; the East Antarctic Ice Sheet (EAIS), a largely land-based ice sheet whose mass balance is dominated by surface accumulation; and the Antarctic Peninsula (APIS), where atmospheric warming drives ice-shelf hydrofracture.  Lumping these into ``Antarctica'' obscures a within-continent compensating error: EAIS mass gain partially offsets WAIS mass loss, making the total Antarctic number appear less biased than the WAIS projection alone.
+
+Second, we calibrate the thermosteric bias independently of the hindcast period by fitting rate--temperature sensitivity curves to seven GMSL records across four temperature products, demonstrating that the transient sensitivity in CMIP-class models is approximately half the observational value --- a structural deficiency, not a calibration-period artifact.
+
+Third, we project the stability of the error cancellation forward under three emission scenarios, showing that the cancellation degrades under high emissions because the WAIS bias grows nonlinearly while the thermal bias grows approximately linearly.
+
+
+\paragraph{Observational transient sensitivity.}
+% ~500 words
+
+The thermosteric bias is the better-constrained member of the compensating pair.  To characterize it independently of the FACTS hindcast period, we fit a rate--temperature relationship to the observational record using dynamic ordinary least squares (DOLS) (3):
+$$\text{rate}(t) = \alpha_0 \cdot T(t) + \frac{d\alpha}{dT} \cdot T(t)^2$$
+where $T(t)$ is global mean surface temperature (GMST) relative to pre-industrial.  We run DOLS on every combination of six GMSL records (Frederikse total and thermodynamic (4), Dangendorf total and sterodynamic (5), IPCC observed total and thermodynamic) and four GMST products (Berkeley Earth, GISTEMP, HadCRUT5, NOAA GlobalTemp), producing a $6 \times 4$ robustness matrix of calibrated sensitivities (see supplementary materials, Table~S1).
+
+Two findings are robust across all dataset combinations.  First, the observational record requires a quadratic term: $d\alpha/dT > 0$ at high significance for all GMSL datasets except Dangendorf sterodynamic, which by construction excludes the cryospheric signal driving the acceleration.  The thermodynamic ensemble (8 dataset pairs) yields $d\alpha/dT = 2.85 \pm 0.38$~mm/yr/${}^\circ$C$^2$.  Second, IPCC process-model thermodynamic projections (thermal expansion + glaciers + Greenland, excluding Antarctica) unanimously prefer a linear rate--temperature relationship across all five SSP scenarios, with a transient sensitivity $\alpha_0 \approx 1.9$--$2.5$~mm/yr/${}^\circ$C --- approximately half the observational value.  The observational quadratic falls outside the IPCC 95\% confidence intervals for SSP2-4.5 through SSP5-8.5.
+
+This discrepancy has a known physical mechanism: CMIP-class ocean models have weaker stratification than observed, causing them to absorb heat too efficiently into the deep ocean rather than manifesting it as near-surface thermal expansion (6).  The result is a transient thermosteric overestimate that grows with warming --- during the calibration period the bias is modest, but under SSP5-8.5 it becomes substantial.
+
+
+\paragraph{Component-level biases.}
+% ~500 words
+
+We compare FACTS component projections against satellite-era observations: Argo-era thermosteric sea level (2005+), GlaMBIE glacier mass balance (2000+), IMBIE reconciled ice-sheet mass balance decomposed into WAIS, EAIS, and APIS (1992--2020) (7), and Frederikse (4) and Horwath (8) budget-derived Antarctic estimates for cross-validation (Fig.~1).
+
+[Fig.~1: Component-level bias waterfall chart. Seven bars (TE, GL, GrIS, WAIS, EAIS, APIS, LWS) plus total, for the GRACE era under SSP2-4.5.  The three Antarctic bars use a red color family. The WAIS bar is the largest negative bias. The gap between sum-of-absolutes and total-absolute represents the cancellation.]
+
+The results confirm and extend the Tornqvist et al.\ finding.  Thermal expansion shows a positive bias (FACTS overestimates), consistent with the DOLS sensitivity analysis.  Both glacier modules are consistent with GlaMBIE observations.  Greenland shows a modest negative bias (FACTS underestimates), concentrated in ice discharge.  LWS is consistent with observations.
+
+For Antarctica, resolving the sub-continental components reveals a structure invisible in the aggregate.  WAIS mass loss over 2010--2020 exceeds the median ISMIP6-emulated projection (emulandice/AIS) and falls near the upper end of the LARMIP range.  EAIS is near steady state or in slightly positive balance.  The aggregate ``Antarctic'' bias is therefore smaller in magnitude than the WAIS bias alone, because EAIS partially cancels WAIS in the sum.
+
+
+\paragraph{Two-level error cancellation.}
+% ~600 words
+
+We define a cancellation index $\mathcal{C} = 1 - |\text{bias}_{\text{total}}| / \sum_i |\text{bias}_i|$, ranging from 0 (no cancellation) to 1 (perfect cancellation), and compute it at two levels (Fig.~2).
+
+[Fig.~2: Hierarchical cancellation diagram. Left: seven component bias arrows (up = overestimate, down = underestimate). Center: two-level summation showing the within-Antarctica cancellation (WAIS + EAIS + APIS $\to$ AIS$_{\text{total}}$) and the global cancellation (all seven $\to$ total GMSL). Right: remaining bias at each level. Annotated with $\mathcal{C}_{\text{Antarctic}}$ and $\mathcal{C}_{\text{global}}$ values.]
+
+At Level~2 (within Antarctica), $\mathcal{C}_{\text{Antarctic}} > 0$ whenever EAIS and WAIS biases have opposite signs.  The WAIS underestimate is partially absorbed before it even enters the global sum.  At Level~1 (global), the partially-cancelled Antarctic bias then further cancels against the thermal overestimate.
+
+This two-level structure means the 7-component cancellation index exceeds the traditional 5-component version (TE, GL, GrIS, AIS$_{\text{total}}$, LWS).  The difference quantifies the hidden cancellation invisible when Antarctica is treated as a single component:
+$$\Delta\mathcal{C} = \mathcal{C}_{\text{global}}^{(7)} - \mathcal{C}_{\text{global}}^{(5)}$$
+
+Three independent Antarctic observational products --- IMBIE (direct reconciled mass balance), Frederikse (budget-derived), and Horwath (independent budget) --- agree within stated uncertainties during the overlap period 2002--2016, establishing the robustness of the Antarctic benchmark against which the biases are measured.
+
+The compensating errors are not coincidental.  Both the thermal overestimate and the WAIS underestimate originate in deficiencies of the same CMIP ocean models: weak stratification overestimates upper-ocean warming while simultaneously underrepresenting warm Circumpolar Deep Water intrusion onto the Antarctic continental shelf (6, 9).  The errors have a shared cause and opposite signs.
+
+
+\paragraph{Fragility under extrapolation.}
+% ~600 words
+
+The critical question is whether the cancellation persists under extrapolation.  We project component biases forward using the DOLS-calibrated thermosteric sensitivity (derived above) and extrapolated IMBIE WAIS rate trends, and compare against FACTS projections at each future decade (Fig.~3).
+
+[Fig.~3: Cancellation index time series, 2020--2150.  Top panel: $\mathcal{C}_{\text{global}}$. Bottom panel: $\mathcal{C}_{\text{Antarctic}}$.  One line per SSP, with 17--83\% uncertainty shading from Monte Carlo propagation of DOLS coefficient uncertainty and IMBIE extrapolation uncertainty.  Reference line at $\mathcal{C} = 0.5$.]
+
+Under SSP1-2.6, both cancellation indices remain approximately constant: the biases are small and their ratio is stable.  Under SSP2-4.5, $\mathcal{C}_{\text{global}}$ begins to decrease after mid-century.  Under SSP5-8.5, $\mathcal{C}_{\text{global}}$ drops substantially by 2100, indicating the total FACTS projection is biased low --- it underestimates GMSL because the WAIS underestimate has grown faster than the thermal overestimate can compensate.
+
+The asymmetry arises because the two biases scale differently with warming.  The thermal bias is approximately proportional to $T^2$ (it comes from the quadratic term in the rate--temperature relationship that CMIP models miss).  The WAIS bias, however, involves potential threshold behavior: if marine ice-sheet instability activates, the WAIS contribution accelerates nonlinearly, and the bias grows faster than any polynomial in temperature.  The extrapolation here uses a quadratic trend fitted to the IMBIE WAIS record, which is conservative --- it does not account for MISI.
+
+Within Antarctica, $\mathcal{C}_{\text{Antarctic}}$ may increase under high warming if EAIS mass gain from increased precipitation grows while WAIS loss accelerates.  This would make the aggregate Antarctic projection look increasingly adequate even as the WAIS projection becomes increasingly wrong --- a particularly insidious form of compensating error.
+
+[Fig.~4: WAIS-specific bias evolution. Three panels (SSP1-2.6, SSP2-4.5, SSP5-8.5). Each shows IMBIE WAIS observed rate (1992--2020) with quadratic extrapolation, overlaid with FACTS WAIS projections from each AIS module.  Shading shows the growing divergence.]
+
+
+\paragraph{Implications.}
+% ~400 words
+
+These results have three implications for the design and evaluation of sea level projection frameworks.
+
+First, agreement between projected and observed total GMSL does not constitute model validation at the component level.  The first 30 years of satellite-era observations are consistent with IPCC totals, but this consistency arises from compensating errors that are not guaranteed to persist.  Component-level validation against the full observational decomposition --- including the sub-continental Antarctic partition --- is necessary.
+
+Second, projection frameworks that sum independent component distributions leave information on the table.  The sea level budget constraint (the requirement that components sum to the observed total) would detect the tension between the thermal and ice-sheet biases and redistribute the error.  Current frameworks, including FACTS, do not enforce this constraint during inference.
+
+Third, the sub-continental Antarctic decomposition is not optional.  Treating Antarctica as a single component hides a compensating error that makes the WAIS projection bias --- the single most consequential bias for high-end sea level rise --- appear smaller than it is.  Any framework claiming to produce credible Antarctic projections must resolve WAIS, EAIS, and APIS separately.
+
+The WAIS bias has a known structural origin beyond ocean forcing deficiencies: the entire ISMIP6 ensemble uses the Glen--Nye flow-law exponent $n = 3$, but recent work shows $n \approx 4$ may be more appropriate for Antarctic ice streams (10, 11).  Forward simulations with $n = 4$ produce 32\% more mass loss from the Amundsen Sea Embayment by 2100 (12), and models initialized with $n = 3$ via standard inversion systematically underestimate ice loss in forward projections by 21--35\% even when the initialization appears accurate (13).  This unidirectional bias is not detectable from initialization quality and amplifies the WAIS underestimate documented here.
+
+
+% ====================================================================
+% REFERENCES — ~30-40 for Science
+% ====================================================================
+
+% Reference list (numbered style for Science):
+% 1.  R. E. Kopp et al., Geosci. Model Dev. 16, 7461-7489 (2023).  [FACTS]
+% 2.  T. E. Tornqvist et al., Earth's Future 13, e2025EF006533 (2025).
+% 3.  [DOLS method reference — this paper or existing methods paper]
+% 4.  T. Frederikse et al., Nature 584, 393-397 (2020).
+% 5.  S. Dangendorf et al., Nat. Clim. Change 9, 705-710 (2019).
+% 6.  T. Kuhlbrodt, J. M. Gregory, Geophys. Res. Lett. 39, L12610 (2012).
+% 7.  I. N. Otosaka et al., Earth Syst. Sci. Data 15, 1597-1616 (2023). [IMBIE]
+% 8.  M. Horwath et al., Earth Syst. Sci. Data 14, 411-447 (2022).
+% 9.  P. R. Holland et al., Nat. Geosci. 12, 718-724 (2019).
+% 10. M. Ranganathan, B. Minchew, PNAS 121, e2309788121 (2024).
+% 11. J. D. Millstein, B. Minchew, S. S. Pegler, Commun. Earth Environ. 3, 57 (2022).
+% 12. J. Getraer, M. Morlighem, Geophys. Res. Lett. 52, e2024GL112516 (2025).
+% 13. D. F. Martin et al., AGU Advances 7, e2025AV001946 (2026).
+% 14. B. Fox-Kemper et al., in Climate Change 2021: The Physical Science Basis (2021).
+% 15. H. Seroussi et al., The Cryosphere 14, 3033-3070 (2020).  [ISMIP6]
+% 16. H. Seroussi et al., Earth's Future 12, e2024EF004561 (2024).  [ISMIP6 extended]
+% 17. A. Grinsted, J. C. Moore, Geophys. Res. Lett. 48, e2020GL092064 (2021). [TSLS]
+% 18. S. Jevrejeva et al., Environ. Res. Lett. 16, 054012 (2021).
+% 19. S. Rahmstorf, G. Foster, A. Cazenave, Environ. Res. Lett. 7, 044035 (2012).
+% 20. A. Grinsted et al., Earth Syst. Dyn. 13, 1523-1533 (2022).
+% 21. H. A. Fricker et al., Science 387, eadp4749 (2025).
+% 22. E. Rignot et al., PNAS 123, e2524380123 (2026).
+% 23. J. L. Bamber et al., PNAS 116, 11195-11200 (2019).
+% 24. M. C. Kennedy, A. O'Hagan, J. R. Stat. Soc. Ser. B 63, 425-464 (2001).
+% 25+ Additional as needed
+
+\bibliographystyle{Science}
+\bibliography{slr_references}
+
+
+% ====================================================================
+% SUPPLEMENTARY MATERIALS — separate document in practice
+% ====================================================================
+
+% SM would contain:
+%
+% === Extended Methods ===
+% - DOLS methodology: full specification, HAC standard errors, lag selection
+% - Multi-dataset robustness matrix (Table S1): 6×4 grid of alpha_0, d_alpha/dT
+% - Start-date sensitivity (Table S2)
+% - Sliding-window DOLS coefficient evolution
+% - SAOD reconsideration
+% - IPCC emergent sensitivity comparison: method, power analysis, all 5 SSPs
+% - FACTS data extraction: module specifications, rate computation from cumulative
+% - IMBIE processing: sign conventions, 5-yr running means, WAIS/EAIS/APIS
+% - Frederikse and Horwath AIS: extraction, cross-validation with IMBIE
+% - Cancellation index: formal definition, properties, hierarchical decomposition
+% - Forward extrapolation: WAIS quadratic fit, EAIS constant rate, MC uncertainty
+% - Bias z-score computation
+%
+% === Supplementary Figures ===
+% - Fig S1: 7-panel component-level rate time series (obs vs FACTS)
+% - Fig S2: DOLS robustness matrix visualization
+% - Fig S3: IPCC vs observational rate-temperature relationship (per SSP)
+% - Fig S4: Start-date sensitivity of DOLS coefficients
+% - Fig S5: Sliding-window coefficient evolution
+% - Fig S6: AIS cross-validation (IMBIE vs Frederikse vs Horwath)
+% - Fig S7: Within-Antarctica compensating errors (stacked area, obs vs FACTS)
+% - Fig S8: Sensitivity to AIS module choice
+% - Fig S9: Sensitivity to sigma_budget
+% - Fig S10: Cancellation index at 5-component level for comparison
+%
+% === Supplementary Tables ===
+% - Table S1: Multi-dataset DOLS robustness matrix
+% - Table S2: Start-date sensitivity
+% - Table S3: Full 7-component bias table (all modules, all periods, all SSPs)
+% - Table S4: Cancellation indices at both levels (all workflows, all SSPs)
+% - Table S5: AIS cross-validation statistics
+
+\end{document}

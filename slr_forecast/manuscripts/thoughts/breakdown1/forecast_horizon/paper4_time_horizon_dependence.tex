@@ -1,0 +1,207 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+
+\title{Time-Horizon Dependence of Sea Level Rise Projection Methodology:\\
+  When Does Ice Sheet Uncertainty Dominate?}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+\begin{abstract}
+% ====================================================================
+Sea level rise projections serve decisions spanning a wide range of time horizons: infrastructure design (20--50 years), coastal adaptation planning (50--100 years), and long-term policy assessment (100--300 years).  The dominant source of projection uncertainty, the most credible forecasting methodology, and the appropriate validation strategy all change qualitatively across these horizons, but this dependence is rarely made explicit in the projection literature.  Using a combination of observational rate extrapolation, IPCC FACTS component-level projections, and satellite-era validation data, we demonstrate a three-regime structure: (1) a \emph{data-extrapolation regime} (1--20 years) where simple trend extrapolation outperforms or matches process-model projections and internal variability dominates uncertainty; (2) a \emph{forced-response regime} (20--60 years) where forced climate signal emerges, process models and observational calibration converge, and scenario uncertainty becomes the leading term; (3) a \emph{deep-uncertainty regime} (60--300+ years) where ice-sheet structural uncertainty --- particularly the activation of marine ice-sheet instability and its interaction with ice rheology --- dominates all other sources and process models diverge by factors of 3--10.  We identify the crossover times at which each transition occurs as a function of emission scenario, and show that the crossover between the forced-response and deep-uncertainty regimes is itself deeply uncertain, ranging from $\sim$2060 under SSP5-8.5 to $\sim$2120 under SSP1-2.6.  These findings establish that no single projection methodology is appropriate across all policy-relevant time horizons, and that frameworks claiming to provide seamless projections from 2030 to 2300 must explicitly address the methodological transitions between regimes.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+% ====================================================================
+
+The sea level rise projection literature is organized primarily by methodology (process models, semi-empirical models, expert judgment) or by component (thermal expansion, glaciers, ice sheets).  This organization obscures a fundamental structural feature of the projection problem: the \emph{time horizon} is the primary determinant of which methodology is most credible, which source of uncertainty dominates, and what kind of validation is meaningful.
+
+At short horizons (1--20 years from present), the committed sea level rise from ocean thermal inertia and ongoing glacier loss is large relative to the scenario divergence.  The system has enough inertia that the near-future trajectory is largely determined by the recent past, and simple extrapolation of observed trends --- which requires no process model, no emission scenario, and no expert judgment --- is difficult to beat.  The dominant uncertainty at these horizons is internal climate variability (ENSO, Pacific Decadal Oscillation), not model structural uncertainty.
+
+At intermediate horizons (20--60 years), the forced climate signal emerges from internal variability.  Scenario divergence becomes the leading source of spread in projections.  Process models and observationally-calibrated statistical models begin to converge, and the value of process understanding lies primarily in establishing the functional form of the response (e.g., approximately linear thermosteric sensitivity to warming, self-limiting glacier response as volume decreases).
+
+At long horizons (60--300+ years), ice-sheet structural uncertainty dominates.  The question is no longer ``how much warming will occur?'' but ``will the ice sheets cross thresholds that trigger rapid, irreversible mass loss?''  Process models diverge by factors of 3--10 depending on their treatment of marine ice-sheet instability, ice-cliff failure, sub-shelf melting parameterization, and ice rheology.  Observational constraints become indirect: the historical record cannot constrain a process that has not yet activated.  Expert judgment and deep-uncertainty frameworks become essential.
+
+This three-regime structure has been noted informally in several contexts.  \citet{slangen2023evaluating} evaluated the skill of various SLR projection approaches over different lead times. The IPCC AR6 acknowledged that uncertainty partitioning changes with time horizon (Fox-Kemper et al.\ 2021, Figure~9.27).  \citet{kopp2023facts} noted that different FACTS modules are more or less appropriate at different horizons.  But no systematic, quantitative analysis of the regime structure has been published.
+
+This paper provides that analysis.  Our objectives are:
+\begin{enumerate}
+  \item Quantify the forecast skill of trend extrapolation versus process-model projections as a function of lead time, using the satellite-era record for validation (\cref{sec:skill}).
+  \item Decompose projection variance into component contributions as a function of time and emission scenario, identifying the crossover time at which ice-sheet uncertainty dominates (\cref{sec:variance}).
+  \item Assess whether the variance decomposition is consistent across FACTS workflows, or whether the crossover time is itself a source of structural uncertainty (\cref{sec:structural}).
+  \item Identify implications for the design of projection frameworks (\cref{sec:design}).
+\end{enumerate}
+
+
+% ====================================================================
+\section{Data and Methods}
+\label{sec:data}
+% ====================================================================
+
+\subsection{Observational data}
+
+Satellite-era total GMSL from altimetry (1993--present).  We use this record to evaluate forecast skill in pseudo-forecast mode (``leave-future-out'' validation).
+
+\subsection{FACTS projections}
+
+Component-level and total GMSL projections from FACTS v1.0 under SSP1-2.6, SSP2-4.5, and SSP5-8.5, using all seven workflows (1e, 1f, 2e, 2f, 3e, 3f, 4).  The workflow structure is important because different workflows use different AIS modules, and the choice of AIS module is the primary driver of the deep-uncertainty regime.
+
+\subsection{Trend extrapolation baseline}
+
+For each validation origin year $t_0 \in \{1993, 1998, 2003, 2008, 2013\}$, we fit a linear and quadratic trend to the GMSL record ending at $t_0$ and extrapolate forward to the end of the satellite record.  The trend models are:
+\begin{align}
+  \text{Linear:} \quad H(t) &= H(t_0) + \hat{r} \cdot (t - t_0) \label{eq:linear} \\
+  \text{Quadratic:} \quad H(t) &= H(t_0) + \hat{r} \cdot (t - t_0) + \tfrac{1}{2}\hat{a} \cdot (t - t_0)^2 \label{eq:quad}
+\end{align}
+where $\hat{r}$ is the estimated rate and $\hat{a}$ is the estimated acceleration at $t_0$.
+
+We also use the DOLS rate--temperature relationship as a ``semi-empirical extrapolation'' that includes temperature forcing:
+\begin{equation}
+  \text{rate}^{\text{DOLS}}(t) = \alpha_0 \cdot T(t) + \frac{d\alpha}{dT} \cdot T(t)^2
+  \label{eq:dols}
+\end{equation}
+
+\subsection{Forecast skill metric}
+
+For each method $m$ (trend, DOLS, FACTS workflow) and lead time $\Delta t$:
+\begin{equation}
+  \text{RMSE}_m(\Delta t) = \sqrt{\frac{1}{N_v} \sum_{j=1}^{N_v} \left(H_m(t_0^{(j)} + \Delta t) - H_{\text{obs}}(t_0^{(j)} + \Delta t)\right)^2}
+  \label{eq:rmse}
+\end{equation}
+where the sum is over validation origins $t_0^{(j)}$.  We also compute the coverage probability: the fraction of times the observation falls within the method's 17--83\% prediction interval.
+
+\subsection{Variance decomposition}
+
+For the FACTS projections, we decompose the total GMSL projection variance using the nested law of total variance:
+\begin{equation}
+  \text{Var}[H(t)] = \underbrace{E_S[\text{Var}_{\theta}[H(t) \mid S]]}_{\text{within-scenario}} + \underbrace{\text{Var}_S[E_{\theta}[H(t) \mid S]]}_{\text{across-scenario}}
+  \label{eq:ltv}
+\end{equation}
+
+The within-scenario variance is further decomposed into component contributions.  For each SSP and each FACTS workflow, the component-level Monte Carlo samples allow direct computation of:
+\begin{equation}
+  f_i(t, S) = \frac{\text{Var}[r_i(t) \mid S]}{\text{Var}[r_{\text{total}}(t) \mid S]}
+  \label{eq:variance-fraction}
+\end{equation}
+the fractional variance contribution of component $i$ at time $t$ under scenario $S$.  The interaction term (cross-component covariance) is reported separately as:
+\begin{equation}
+  f_{\text{interaction}}(t, S) = 1 - \sum_i f_i(t, S)
+  \label{eq:interaction}
+\end{equation}
+
+The crossover time $t^*_{\text{AIS}}(S)$ is defined as the earliest time at which $f_{\text{AIS}}(t, S) > f_i(t, S)$ for all $i \neq \text{AIS}$.
+
+
+% ====================================================================
+\section{Results}
+\label{sec:results}
+% ====================================================================
+
+\subsection{Forecast skill as a function of lead time}
+\label{sec:skill}
+
+[Expected results:
+
+- At lead times of 5-10 years, linear trend extrapolation has RMSE comparable to or lower than FACTS projections. The satellite-era rate (~3.5 mm/yr) provides a strong baseline.
+
+- At lead times of 10-20 years, quadratic extrapolation (which captures the observed acceleration) matches or exceeds FACTS skill. The DOLS semi-empirical model performs similarly.
+
+- At lead times of 20-30 years, FACTS projections begin to outperform simple extrapolation under SSP5-8.5 (because the forced acceleration exceeds the historical trend), but remain comparable under SSP1-2.6 and SSP2-4.5.
+
+- The satellite record (33 years) provides at most 20-year lead-time validation (using origins from 1993-2003), so the comparison beyond 20 years becomes increasingly speculative.
+
+- The coverage probability of FACTS is better than extrapolation at long lead times (the FACTS uncertainty bands widen appropriately), but worse at short lead times (FACTS uncertainty is too wide for near-term predictions dominated by committed change).]
+
+\subsection{Variance decomposition}
+\label{sec:variance}
+
+[Expected results, drawing on the FACTS Figure 4 (Kopp et al. 2023) which already shows this decomposition for GMSL and RSL:
+
+- Near-term (2020-2040): Thermal expansion contributes ~40-50% of within-scenario variance, glaciers ~20%, GrIS ~10-20%, AIS ~10-20%, LWS < 5%. Scenario spread is small.
+
+- Medium-term (2040-2070): Scenario spread grows to become the dominant total-variance contributor. Within-scenario, AIS begins to overtake other components under SSP5-8.5.
+
+- Long-term (2070-2100): AIS dominates within-scenario variance under SSP3-7.0 and SSP5-8.5. Under SSP1-2.6, thermal expansion remains the largest single component.
+
+- Beyond 2100: AIS dominates everywhere. Scenario uncertainty remains large but is dwarfed by the AIS structural uncertainty (difference between FACTS workflows using different AIS modules).
+
+Key finding: The crossover time t*_AIS depends on both the SSP and the FACTS workflow. Under SSP5-8.5 with low-confidence AIS modules (bamber19, deconto21), t*_AIS ~ 2050-2060. Under SSP1-2.6 with medium-confidence modules (emulandice), t*_AIS > 2100.]
+
+\subsection{Cross-workflow structural uncertainty}
+\label{sec:structural}
+
+[Expected results: The variance decomposition itself is uncertain. Different FACTS workflows produce qualitatively different variance decompositions beyond ~2060 because the choice of AIS module determines the AIS variance contribution. This is a meta-uncertainty: the uncertainty about how much uncertainty the AIS contributes.
+
+Quantify by computing f_AIS(t, S) for each of the 7 FACTS workflows and reporting the inter-workflow range. Expected: at 2100 under SSP5-8.5, f_AIS ranges from ~0.2 (emulandice, narrow AIS distribution) to ~0.7 (bamber19 or deconto21, wide AIS distribution).]
+
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% ====================================================================
+
+\subsection{The three-regime structure}
+
+We propose a formal classification of the time horizon into three regimes, with the boundaries determined by the variance decomposition crossovers:
+
+\paragraph{Regime I: Data extrapolation (present to $\sim$present + 15--20 yr).}  The dominant uncertainty is internal variability (ENSO, PDO).  The best forecast is an observationally-calibrated trend (linear or DOLS-type semi-empirical), which implicitly marginalizes over the (irrelevant at this horizon) scenario uncertainty.  Process models add little skill at this horizon because committed sea level change dominates the signal.  The validation strategy is straightforward: compare against the satellite altimetry record.
+
+\paragraph{Regime II: Forced response ($\sim$present + 20 yr to $t^*_{\text{AIS}}$).}  The forced signal has emerged from internal variability, and scenario divergence is the dominant uncertainty.  Process models and observationally-calibrated models converge because the response is in the approximately linear-in-warming regime for most components.  The validation strategy involves cross-model comparison and sensitivity analysis.  The key methodological requirement is to separate scenario uncertainty from model uncertainty.
+
+\paragraph{Regime III: Deep uncertainty ($t^*_{\text{AIS}}$ onward).}  Ice-sheet structural uncertainty dominates.  Process models diverge because they disagree about fundamental mechanisms (MISI, ice-cliff failure, sub-shelf melting sensitivity).  The interaction of ice rheology uncertainty (n = 3 vs.\ n = 4) with these mechanisms amplifies the divergence.  Observational constraints become indirect: the budget residual provides some constraint on the AIS during the calibration period, but cannot constrain processes that have not yet activated.  Expert judgment and deep-uncertainty frameworks (scenario-mixture models, structured expert judgment) become essential.  Validation is impossible in the traditional sense; instead, frameworks must be assessed on internal consistency, sensitivity to assumptions, and the honesty of their uncertainty ranges.
+
+\subsection{Implications for framework design}
+
+These results have three implications for the design of sea level rise projection frameworks:
+
+\begin{enumerate}
+  \item \textbf{No single methodology is appropriate across all horizons.}  A framework claiming seamless projections from 2030 to 2300 must internally distinguish between the regimes and apply different methodology (or at least different weighting between observational constraint and process-model priors) in each regime.
+
+  \item \textbf{The crossover time is itself uncertain.}  The boundary between Regimes II and III depends on the AIS model used, which means the regime classification is not a fixed feature of the physical system but depends on the state of knowledge.  Frameworks must treat this as a source of uncertainty, not as a fixed parameter.
+
+  \item \textbf{Validation strategies must be regime-appropriate.}  Demonstrating that a framework tracks observations during the satellite era (Regime I) does not validate its projections in Regime III.  The compensating-error problem (Paper 3) demonstrates that agreement in the total can coexist with structurally incorrect component decompositions.
+\end{enumerate}
+
+\subsection{Comparison with existing assessments}
+
+The IPCC AR6 Figure 9.27 shows a qualitatively similar variance decomposition, but does not identify the regime boundaries or discuss the implications for projection methodology.  The FACTS platform \citep{kopp2023facts} acknowledges that different modules have different credibility at different horizons but does not formalize this into a methodological stratification.
+
+
+% ====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+% ====================================================================
+
+\begin{enumerate}
+  \item Sea level rise projection methodology should be explicitly stratified by time horizon into three regimes: data extrapolation, forced response, and deep uncertainty.
+  \item The crossover from forced-response to deep-uncertainty regime occurs at $t^*_{\text{AIS}} \sim$ 2050--2060 under SSP5-8.5, but $t^*_{\text{AIS}} > 2100$ under SSP1-2.6.
+  \item The crossover time is itself deeply uncertain, depending on the choice of AIS module.
+  \item Simple trend extrapolation matches or outperforms process-model projections at lead times below $\sim$15--20 years.
+  \item No single projection methodology is credible across all policy-relevant time horizons.
+  \item Frameworks must internally manage the transition between regimes, applying regime-appropriate methodology and validation.
+\end{enumerate}
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}

@@ -1,0 +1,197 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+
+\title{Compensating Errors in Component-Level Sea Level Rise Projections:\\
+  Implications for Uncertainty Quantification}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+\begin{abstract}
+% ====================================================================
+The IPCC AR6 assessed total global mean sea level (GMSL) projections have tracked satellite-era observations reasonably well, but recent evaluations suggest this agreement is ``somewhat fortuitous,'' arising from compensating biases at the component level: overestimated thermal expansion offsetting underestimated ice-sheet contributions.  We systematically quantify these compensating errors by comparing FACTS v1.0 component-level projection distributions against satellite-era observational decompositions from IMBIE (ice sheets), Argo-era thermosteric observations, GlaMBIE (glaciers), and GRACE/GRACE-FO (total budget).  We find that (1) IPCC process-model thermosteric projections exhibit a transient sensitivity approximately half the observational value, consistent with a systematic ocean heat uptake bias in CMIP-class models; (2) Antarctic and Greenland ice-sheet contributions are systematically underestimated in the emulated ISMIP6 projections relative to satellite-era mass-balance reconciliations; (3) the degree of error cancellation required for the total to track observations increases with emission scenario and projection lead time; and (4) under high-emission scenarios (SSP5-8.5), the cancellation is not guaranteed because the component biases scale differently with warming.  These findings demonstrate that accurate total projections can mask structurally incorrect component decompositions, and that uncertainty quantification based on independent component distributions underestimates the true structural uncertainty.  Joint calibration against the observational budget is required to produce credible component-level projections.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+% ====================================================================
+
+Sea level rise projections for policy-relevant time horizons (2050--2150) depend on decomposing the total GMSL change into contributions from ocean thermal expansion, glaciers and ice caps, the Greenland and Antarctic Ice Sheets, and terrestrial water storage.  The current assessment standard is the IPCC AR6 \citep{fox-kemper2021}, operationalized through the FACTS framework \citep{kopp2023facts}, which combines outputs from process-model intercomparison projects (ISMIP6 for ice sheets, GlacierMIP for glaciers) with climate model emulators and expert judgment.
+
+A recent evaluation by \citet{tornqvist2025evaluating} compared the first 30 years (1993--2023) of IPCC AR6 projections against observations and concluded that the agreement in the total was ``somewhat fortuitous'': the total tracked observations because component-level biases partially cancelled.  This finding has profound implications for uncertainty quantification.  If the accurate total arises from compensating errors rather than from accurate component models, then (a) the component-level uncertainty estimates are incorrectly centered, (b) extrapolation to higher warming levels --- where the compensating errors may not persist --- is unreliable, and (c) confidence in the total projection is misplaced.
+
+This paper extends the Tornqvist et al.\ finding by:
+\begin{enumerate}
+  \item Systematically quantifying component-level biases across all FACTS modules and SSP scenarios (\cref{sec:bias}).
+  \item Computing the degree of error cancellation required for the total to track observations, as a function of time and scenario (\cref{sec:cancellation}).
+  \item Assessing whether the cancellation persists under extrapolation to 2100 and beyond (\cref{sec:extrapolation}).
+  \item Drawing implications for the design of projection frameworks (\cref{sec:implications}).
+\end{enumerate}
+
+
+% ====================================================================
+\section{Data and Methods}
+\label{sec:data}
+% ====================================================================
+
+\subsection{FACTS component projections}
+
+We use the component-level projections from FACTS v1.0 \citep{kopp2023facts} under SSP1-2.6, SSP2-4.5, and SSP5-8.5.  For each component, multiple modules are available (see Table~\ref{tab:modules}), and we assess biases for each module independently rather than averaging across modules.
+
+\begin{table}[ht]
+\centering
+\caption{FACTS modules assessed in this study.}
+\label{tab:modules}
+\begin{tabular}{lll}
+\toprule
+Component & Module & Source \\
+\midrule
+Thermal expansion & \texttt{tlm/sterodynamics} & CMIP6 linear model \\
+Glaciers & \texttt{emulandice/glaciers} & Emulated GlacierMIP \\
+Glaciers & \texttt{ipccar5/glaciers} & GlacierMIP parametric \\
+Greenland & \texttt{emulandice/GrIS} & Emulated ISMIP6 \\
+Greenland & \texttt{FittedISMIP/GrIS} & Parametric ISMIP6 \\
+Antarctica & \texttt{emulandice/AIS} & Emulated ISMIP6 \\
+Antarctica & \texttt{larmip/AIS} & LARMIP-2 linear response \\
+Antarctica & \texttt{bamber19/icesheets} & Structured expert judgment \\
+Antarctica & \texttt{deconto21/AIS} & DeConto \& Pollard 2021 \\
+LWS & \texttt{ssp/landwaterstorage} & Trend extrapolation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Observational benchmarks}
+
+We construct a satellite-era (1993--2023) component-level observational benchmark from:
+\begin{itemize}
+  \item \textbf{Total GMSL}: Satellite altimetry \citep{nerem2018climate}, supplemented by Frederikse et al.\ (2020) budget reconstruction.
+  \item \textbf{Thermal expansion}: NOAA/NCEI ocean heat content (0--2000~m), converted to thermosteric sea level equivalent.  Argo-era (2005+) values are well-constrained; pre-Argo values carry larger uncertainty.
+  \item \textbf{Glaciers}: GlaMBIE consensus estimates (2000--2023).
+  \item \textbf{Greenland}: IMBIE-3 reconciled mass balance (1992--2020) plus updates.
+  \item \textbf{Antarctica}: IMBIE reconciled mass balance (1992--2020), decomposed into WAIS and EAIS.
+  \item \textbf{LWS}: Frederikse et al.\ (2020) TWS reconstruction; GRACE-derived TWS (2002+).
+\end{itemize}
+
+All quantities are expressed as rates (mm/yr) relative to a 1995--2014 reference period to match the FACTS baseline.
+
+\subsection{Bias computation}
+
+For each FACTS module and each overlapping time interval with observations, we compute:
+\begin{equation}
+  \text{bias}_i(t) = \hat{r}_i^{\text{FACTS}}(t) - \hat{r}_i^{\text{obs}}(t)
+  \label{eq:bias}
+\end{equation}
+where $\hat{r}_i^{\text{FACTS}}(t)$ is the median projected rate for component $i$ at time $t$, and $\hat{r}_i^{\text{obs}}(t)$ is the observed rate.  Positive bias means the projection overestimates the component contribution.
+
+The statistical significance of the bias is assessed using the combined uncertainty:
+\begin{equation}
+  z_i(t) = \frac{\text{bias}_i(t)}{\sqrt{\sigma_{\text{FACTS},i}^2(t) + \sigma_{\text{obs},i}^2(t)}}
+  \label{eq:zscore}
+\end{equation}
+where $\sigma_{\text{FACTS},i}$ is the FACTS 17--83\% range divided by $2 \times 0.954$ (converting likely range to standard deviation under Gaussian assumption) and $\sigma_{\text{obs},i}$ is the observational uncertainty.
+
+\subsection{Cancellation index}
+
+We define a cancellation index that measures the degree to which component biases offset:
+\begin{equation}
+  \mathcal{C}(t) = 1 - \frac{|\text{bias}_{\text{total}}(t)|}{\sum_i |\text{bias}_i(t)|}
+  \label{eq:cancellation}
+\end{equation}
+where $\text{bias}_{\text{total}}$ is the bias in the total GMSL and $\sum |\text{bias}_i|$ is the sum of absolute component biases.  $\mathcal{C} = 0$ means no cancellation (all biases have the same sign); $\mathcal{C} = 1$ means perfect cancellation (the total bias is zero despite nonzero component biases).  If all component biases are zero, $\mathcal{C}$ is undefined and set to zero by convention.
+
+
+% ====================================================================
+\section{Results}
+\label{sec:results}
+% ====================================================================
+
+\subsection{Component-level biases}
+\label{sec:bias}
+
+[Present bias_i(t) and z-scores for each module and component during the satellite era. Expected findings:
+
+- Thermal expansion: FACTS projects rate approximately consistent with or slightly above observations during 2005-2020. However, the DOLS analysis (companion paper) shows the transient sensitivity is approximately half the observational value, suggesting the agreement is specific to the calibration period and does not hold for extrapolation.
+
+- Glaciers: Both glacier modules (emulandice, ipccar5) are consistent with GlaMBIE observations during 2000-2020. Both are calibrated to GlacierMIP, so this is expected.
+
+- Greenland: IMBIE reconciled GrIS mass loss has accelerated more rapidly than the median ISMIP6 emulated projection. The acceleration is primarily in ice discharge, which responds to ocean thermal forcing not well captured by ISMIP6's surface-forcing protocol.
+
+- Antarctica: IMBIE reconciled WAIS mass loss exceeds all FACTS AIS module medians during 2010-2020. The WAIS is losing mass at rates that fall above the ISMIP6-emulated median and near the upper end of the LARMIP range.
+
+- LWS: Consistent with observations; this component is trend-dominated and well-observed.]
+
+\subsection{Total projection accuracy and error cancellation}
+\label{sec:cancellation}
+
+[Compute cancellation index C(t) for the hindcast period. Expected finding: C > 0.5 during most of the satellite era, confirming the Tornqvist et al. result quantitatively. The cancellation arises primarily from overestimated thermal expansion offsetting underestimated ice-sheet contributions.]
+
+\subsection{Scenario dependence}
+\label{sec:scenario}
+
+[Compute projected cancellation index forward in time under each SSP, using the FACTS projections and the observationally-calibrated component trends. Expected finding: under SSP1-2.6, the cancellation may persist because both biases remain small in absolute terms. Under SSP5-8.5, the cancellation breaks down because the ice-sheet underestimate grows faster than the thermal overestimate — the ice-sheet bias is nonlinear in forcing (potential MISI activation), while the thermal bias is approximately linear.]
+
+\subsection{Fragility under extrapolation}
+\label{sec:extrapolation}
+
+[The key analysis: using the DOLS-calibrated rate-temperature relationship (companion paper) and the observed ice-sheet acceleration trend, project the component biases forward and show that the cancellation index decreases over time under high forcing. This requires: (a) the DOLS transient sensitivity to give the "observationally correct" thermosteric rate, (b) an extrapolation of the IMBIE ice-sheet acceleration (linear or quadratic in time), (c) comparison against FACTS projections at each future decade.
+
+Expected finding: by 2100 under SSP5-8.5, the cancellation index drops below 0.3, meaning the total FACTS projection is biased low — it underestimates total GMSL because the ice-sheet underestimate has grown faster than the thermal overestimate can compensate.]
+
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% ====================================================================
+
+\subsection{Why do the errors compensate?}
+
+The compensation between thermal overestimate and ice-sheet underestimate has a physical origin.  CMIP-class ocean models tend to have weaker stratification than observed, causing them to absorb heat more efficiently into the deep ocean.  This manifests as an overestimate of ocean heat content change and hence thermosteric sea level rise \citep{kuhlbrodt2012ocean}.  Simultaneously, the ISMIP6 ice-sheet models use prescribed ocean forcing derived from CMIP ocean models that may not adequately represent warm water intrusion onto the Antarctic continental shelf, leading to underestimated sub-shelf melting and hence underestimated ice-sheet mass loss.
+
+The compensation is thus not coincidental --- it arises from a shared model deficiency (ocean representation in CMIP models) that manifests with opposite signs in the thermal expansion and ice-sheet components.  But the compensation is fragile: it depends on the ratio of thermal bias to ice-sheet bias remaining approximately constant as warming increases.  Because the ice-sheet response may be nonlinear (tipping points, MISI), the ratio is not guaranteed to remain constant.
+
+\subsection{Implications for uncertainty quantification}
+
+The standard approach --- summing independent component distributions to obtain a total distribution --- produces total uncertainty bounds that are technically correct (they reflect the propagated component uncertainties) but scientifically misleading.  The component distributions are centered on biased medians, so the total distribution is also centered on a biased median, even though the bias in the total is accidentally small during the calibration period.
+
+Joint calibration against the observational budget would detect and correct these biases: a framework that requires component rates to sum to the observed total at each time step would identify the tension between the thermal and ice-sheet components and redistribute the error.  This is the budget constraint mechanism demonstrated in Paper 2.
+
+\subsection{Implications for model-inadequacy accounting}
+
+The Kennedy \& O'Hagan (2001) model-inadequacy framework provides the formal apparatus.  Each component model has a discrepancy $\delta_i(t)$ representing the systematic difference between the model and reality.  Current practice implicitly sets $\delta_i = 0$ for all components.  The results here demonstrate that $\delta_{\text{th}} > 0$ (thermal model is biased high) and $\delta_{\text{AIS}} < 0$ (AIS model is biased low), and that $\delta_{\text{th}} + \delta_{\text{AIS}} \approx 0$ during the calibration period.  A hierarchical framework with learned $\delta_i$ would capture this structure, while a framework without discrepancy terms would propagate the biased medians into projections.
+
+
+% ====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+% ====================================================================
+
+\begin{enumerate}
+  \item IPCC/FACTS component-level projections contain systematic biases that approximately cancel in the total during the satellite era.
+  \item The primary compensating pair is overestimated thermal expansion versus underestimated ice-sheet mass loss.
+  \item The cancellation is fragile: it depends on the ratio of biases remaining approximately constant, which is not guaranteed under high warming where ice-sheet response may be nonlinear.
+  \item Under SSP5-8.5, the cancellation index is projected to decrease over time, meaning the total projection becomes biased low.
+  \item Joint calibration and model-inadequacy terms are required to produce credible component-level projections.  Accurate totals from compensating errors do not constitute model validation.
+\end{enumerate}
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}

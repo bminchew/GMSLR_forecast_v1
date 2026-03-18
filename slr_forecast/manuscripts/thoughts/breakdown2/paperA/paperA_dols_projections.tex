@@ -1,0 +1,271 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+\newcommand{\daT}{\mathrm{d}\alpha/\mathrm{d}T}
+
+\title{Observationally Calibrated Sea Level Rise Projections to 2150}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+% TARGET: Nature Communications, Nature Geoscience, or GRL
+% LENGTH: ~4000 words (NatComms) or ~3500 (GRL with supplement)
+% FIGURES: 4-5 main, supplementary as needed
+% TIMELINE: Submittable within 4-6 weeks (analysis exists)
+% ====================================================================
+
+\begin{abstract}
+% ~150 words
+We present global mean sea level (GMSL) projections to 2150 derived from an observationally calibrated rate--temperature relationship.
+Dynamic ordinary least squares (DOLS) applied to seven GMSL records and four global mean surface temperature (GMST) products yields a robust quadratic relationship between the rate of sea level rise and warming: the thermodynamic transient sensitivity $\daT = 2.85 \pm 0.38$~mm/yr/${}^\circ$C$^2$ across the thermodynamic dataset ensemble.
+Projections under SSP1-2.6 through SSP5-8.5, produced by evaluating this relationship at FaIR-emulated temperature trajectories, exceed IPCC AR6 process-model-based thermodynamic projections by [X]\% under SSP2-4.5 and [Y]\% under SSP5-8.5 at 2100.
+The difference arises because CMIP-class ocean models produce a genuinely more linear rate--temperature relationship, with transient sensitivity approximately half the observational value.
+The observationally calibrated projection decomposes naturally into a thermodynamic component (constrained by the DOLS calibration) and an ice-sheet residual, providing an independent bound on cryospheric contributions.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+% ~500 words
+% ====================================================================
+
+% Frame as: we produce projections, not critique existing ones.
+% 
+% Key points:
+% 1. SLR projections serve decisions from infrastructure (20 yr) to policy (100+ yr).
+%    Decision-makers need projections anchored to observations.
+%
+% 2. Current projections (IPCC AR6, FACTS) rely on process models that lack
+%    systematic observational calibration at the aggregate level. They calibrate
+%    component models individually but do not calibrate the total against the
+%    observed rate-temperature relationship.
+%
+% 3. Semi-empirical models (Rahmstorf 2007, Vermeer & Rahmstorf 2009) calibrate
+%    against observations but use simple functional forms and do not decompose
+%    the signal into physically distinct components.
+%
+% 4. We present a method that combines the strengths of both: observational
+%    calibration (like semi-empirical) with component decomposition (like FACTS).
+%    The DOLS rate-temperature relationship provides the thermodynamic constraint;
+%    the residual isolates the ice-sheet contribution.
+%
+% 5. We produce projection distributions under all SSPs to 2150 with uncertainty
+%    that includes dataset structural uncertainty, and compare to IPCC AR6.
+
+
+% ====================================================================
+\section{Observational Calibration}
+% ~800 words
+% ====================================================================
+
+\subsection{Dynamic OLS rate--temperature model}
+% 
+% Present the DOLS model:
+%   rate(t) = alpha_0 * T(t) + (d_alpha/dT) * T(t)^2 + [optional SAOD term]
+%
+% Explain: DOLS adds leads/lags of dT/dt to absorb short-run dynamics,
+% then discards them. HAC (Newey-West) standard errors for serial correlation.
+% WLS with weights = 1/sigma_rate^2.
+%
+% This is a methods paragraph, not a results paragraph. Keep it concise.
+
+\subsection{Multi-dataset robustness}
+%
+% The 6x4 robustness matrix: 6 GMSL records x 4 GMST products = 24 fits.
+% Present Table 1 (the robustness matrix).
+%
+% Key result: d_alpha/dT > 0 robustly across all datasets except Dangendorf
+% sterodynamic (which excludes the cryospheric signal by construction).
+%
+% Thermodynamic ensemble (8 pairs): d_alpha/dT = 2.85 +/- 0.38
+% All-dataset ensemble (24 pairs): d_alpha/dT = 1.83 +/- 1.09
+%
+% GMSL choice dominates spread; GMST choice has modest impact.
+% This quantifies the structural uncertainty from dataset choice.
+
+\subsection{Epoch dependence}
+%
+% Brief mention of the start-date sensitivity (Frederikse, Dangendorf 
+% at native vs 1950 start). alpha_0 and d_alpha/dT trade off.
+% The sliding-window DOLS shows smooth evolution.
+% This motivates using the 1950-start calibration as the primary estimate
+% (most datasets available, stable estimates) and reporting native-start
+% as a sensitivity check.
+%
+% Full sliding-window analysis in supplement.
+
+
+% ====================================================================
+\section{Projections}
+% ~1000 words
+% ====================================================================
+
+\subsection{Method}
+%
+% Given DOLS coefficients (alpha_0, d_alpha/dT) and their covariance matrix,
+% and given FaIR temperature trajectories T(t) for each SSP:
+%
+% 1. Draw (alpha_0, d_alpha/dT) from bivariate normal posterior.
+% 2. Compute rate(t) = alpha_0 * T(t) + d_alpha/dT * T(t)^2.
+% 3. Integrate to get cumulative GMSL: H(t) = integral_t0^t rate(tau) d_tau.
+% 4. Add structural uncertainty from multi-dataset spread (outer loop).
+%
+% Produce N_MC = 10,000 trajectories per SSP.
+% Report median and 17-83% (likely) and 5-95% (very likely) ranges.
+
+\subsection{DOLS projections}
+%
+% Present Table 2: DOLS projection ranges at 2050, 2100, 2150 for each SSP.
+% Format to match IPCC/FACTS Table A1 for direct comparison.
+%
+% Present Figure 1: Projection fan chart (time vs GMSL) for all SSPs.
+% Median lines + 17-83% shading. 
+% Overlay observed GMSL (satellite altimetry) for hindcast validation.
+
+\subsection{Decomposition into thermodynamic and residual}
+%
+% The DOLS model captures the "thermodynamic" component: everything that
+% responds to GMST through the rate-temperature relationship. This includes
+% thermal expansion, glaciers, Greenland SMB — the components that scale
+% with temperature.
+%
+% The ice-sheet dynamic component (WAIS, EAIS discharge, GrIS discharge)
+% is NOT captured by the DOLS model because it responds to ocean thermal
+% forcing, not GMST directly.
+%
+% Define: GMSL_residual(t) = GMSL_obs(t) - GMSL_DOLS(t)
+% During the calibration period, this residual represents the non-thermodynamic
+% contribution. Its magnitude and trend provide an observationally-derived
+% bound on the ice-sheet dynamic contribution.
+%
+% Figure 2: Residual time series, 1950-2020. Compare to IMBIE AIS+GrIS_discharge.
+% The residual should be small and consistent with known ice-sheet contributions.
+
+
+% ====================================================================
+\section{Comparison with IPCC AR6 / FACTS}
+% ~600 words
+% ====================================================================
+
+%
+% Figure 3: Side-by-side comparison of DOLS projections vs FACTS projections.
+% Two panels or overlaid:
+%   - DOLS median + 17-83% range
+%   - FACTS Workflow 2e median + 17-83% range
+% For each SSP.
+%
+% Key findings:
+% 1. At 2100 under SSP2-4.5: DOLS projects [X] mm vs FACTS [Y] mm.
+%    The DOLS thermodynamic projection is higher because the observational
+%    quadratic sensitivity exceeds the IPCC linear sensitivity.
+%
+% 2. The discrepancy grows with warming: small under SSP1-2.6, large under SSP5-8.5.
+%    This is because the quadratic term contributes more at higher T.
+%
+% 3. The IPCC process-model thermodynamic sensitivity is genuinely more linear.
+%    Present the comparison: fit rate-T to IPCC thermodynamic projections,
+%    find alpha_0 ~ 1.9-2.5, no significant quadratic. Power analysis confirms
+%    this is not a sample-size artifact. Observational quadratic falls outside
+%    IPCC 95% CI for SSP2-4.5 through SSP5-8.5.
+%
+% 4. Physical mechanism: Kuhlbrodt & Gregory (2012) — weak ocean stratification
+%    in CMIP models absorbs heat too efficiently into deep ocean.
+%
+% Frame this comparison as: "the DOLS projections provide an independent
+% observational check on process-model projections. Where they disagree,
+% the disagreement is informative about structural model deficiencies."
+
+
+% ====================================================================
+\section{Discussion}
+% ~500 words
+% ====================================================================
+
+\subsection{Strengths and limitations}
+%
+% Strengths:
+% - Anchored to observations, not process-model structure
+% - Robustly calibrated across datasets
+% - Transparent uncertainty (coefficient + structural)
+% - Directly produces projection distributions in IPCC-comparable format
+%
+% Limitations:
+% - Assumes rate-temperature relationship is stationary. Sliding-window
+%   analysis suggests it may be time-varying. This is a known limitation
+%   that could be addressed with a time-varying coefficient model.
+% - Cannot resolve component-specific dynamics (AIS response to ocean forcing,
+%   GrIS discharge, MISI). The residual captures these but cannot project them.
+% - The quadratic form is empirical. At very high T (>4°C above pre-industrial),
+%   saturation effects (glacier volume depletion, thermosteric equilibrium)
+%   may cause the relationship to deviate from quadratic.
+
+\subsection{Implications for AR7}
+%
+% The DOLS projections are directly usable by AR7 as an independent line of
+% evidence alongside process-model projections. They provide:
+% 1. A check on whether process-model thermodynamic projections are consistent
+%    with the observed rate-temperature relationship.
+% 2. An observationally-derived lower bound on total GMSL (the DOLS projection
+%    excludes the ice-sheet dynamic contribution, so it is a lower bound on
+%    the total if ice-sheet dynamics contribute positively).
+% 3. Projection distributions in the same format as FACTS for direct comparison.
+
+
+% ====================================================================
+\section{Data and Code Availability}
+% ====================================================================
+% Projection distributions (CSV): Zenodo deposit
+% Analysis code: GitHub repository
+% All input data: publicly available (list DOIs)
+
+
+% ====================================================================
+% SUPPLEMENTARY MATERIALS
+% ====================================================================
+% SM1: Full DOLS methodology (lag selection, kernel specification, HAC)
+% SM2: Multi-dataset robustness matrix (full table with all 24 fits)
+% SM3: Start-date sensitivity analysis
+% SM4: Sliding-window DOLS coefficient evolution
+% SM5: SAOD sensitivity
+% SM6: IPCC emergent sensitivity comparison (all 5 SSPs, power analysis)
+% SM7: FaIR temperature trajectory specification
+% SM8: Full projection tables at decadal intervals
+
+% FIGURES:
+% Main Fig 1: Projection fan chart (all SSPs, with observed GMSL overlay)
+% Main Fig 2: DOLS residual time series vs IMBIE ice-sheet contributions
+% Main Fig 3: DOLS vs FACTS comparison
+% Main Fig 4: Rate-temperature relationship: observational vs IPCC
+% Fig S1: DOLS robustness matrix visualization
+% Fig S2: Start-date sensitivity
+% Fig S3: Sliding-window coefficient evolution
+% Fig S4: IPCC sensitivity per SSP with power analysis
+% Fig S5: Projection distributions at 2100 (density plots per SSP)
+
+% TABLES:
+% Table 1: Multi-dataset DOLS robustness matrix (main text, condensed)
+% Table 2: Projection ranges at 2050, 2100, 2150 (main text)
+% Table S1: Full robustness matrix (all 24 fits)
+% Table S2: Start-date sensitivity
+% Table S3: IPCC sensitivity comparison (all 5 SSPs)
+% Table S4: Full projection tables (decadal, all SSPs)
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}

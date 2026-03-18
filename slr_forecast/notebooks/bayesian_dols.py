@@ -23,7 +23,7 @@ Six Bayesian models that complement the frequentist DOLS framework:
 Backend: emcee (affine-invariant ensemble sampler) + arviz (diagnostics).
 Design matrix construction replicates calibrate_dols() exactly.
 
-Authors: Minchew research group, 2026
+Authors: Minchew 
 """
 
 import sys
@@ -1966,23 +1966,33 @@ def build_level_design_vectors(
     }
 
 
-def _level_log_prior(theta, prior_scales, H0_prior_mean):
+def _level_log_prior(theta, prior_scales, H0_prior_mean,
+                     symmetric_a=False):
     """Log-prior for the Bayesian level-space model.
 
     Parameters: theta = [a, b, c, log_sigma_extra, H0]
 
     Priors:
-        a (dα/dT)       : Exponential(mean = prior_scales[0]) — a ≥ 0
+        a (dα/dT)       : Exponential(mean = prior_scales[0]) — a ≥ 0  [default]
+                           OR Normal(0, prior_scales[0]) if symmetric_a=True
                            PC prior: shrinks toward a=0 (order-1 model)
         b (α₀)          : HalfNormal(σ = prior_scales[1])     — b ≥ 0
         c (trend)        : Normal(prior_scales[2], prior_scales[3])
         σ_extra          : HalfCauchy(0, prior_scales[4])      — sampled as log(σ_extra)
         H₀              : Normal(H0_prior_mean, prior_scales[5])
+
+    symmetric_a : bool
+        If True, use Normal(0, prior_scales[0]) for a instead of
+        Exponential.  This allows a < 0, appropriate for components
+        whose rate–temperature sensitivity may saturate or reverse
+        (e.g., glaciers approaching depletion).
     """
     a, b, c, log_sigma_extra, H0 = theta
 
-    # Non-negativity hard bounds
-    if a < 0 or b < 0:
+    # Non-negativity hard bounds (b always ≥ 0; a ≥ 0 unless symmetric)
+    if b < 0:
+        return -np.inf
+    if not symmetric_a and a < 0:
         return -np.inf
 
     sigma_extra = np.exp(log_sigma_extra)
@@ -1990,9 +2000,13 @@ def _level_log_prior(theta, prior_scales, H0_prior_mean):
         return -np.inf
 
     lp = 0.0
-    # a ~ Exponential(mean = μ_a)  [PC prior — mode at a=0]
-    # log p(a) = -a/μ + const  (const = -log(μ), dropped for MCMC)
-    lp += -a / prior_scales[0]
+    if symmetric_a:
+        # a ~ Normal(0, σ_a)  — allows a < 0 (saturation)
+        lp += -0.5 * (a / prior_scales[0])**2
+    else:
+        # a ~ Exponential(mean = μ_a)  [PC prior — mode at a=0]
+        # log p(a) = -a/μ + const  (const = -log(μ), dropped for MCMC)
+        lp += -a / prior_scales[0]
     # b ~ HalfNormal(σ)
     lp += -0.5 * (b / prior_scales[1])**2
     # c ~ Normal(μ_c, σ_c)
@@ -2025,9 +2039,10 @@ def _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed):
 
 
 def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
-                    prior_scales, H0_prior_mean):
+                    prior_scales, H0_prior_mean, symmetric_a=False):
     """Log-posterior for the level-space model."""
-    lp = _level_log_prior(theta, prior_scales, H0_prior_mean)
+    lp = _level_log_prior(theta, prior_scales, H0_prior_mean,
+                          symmetric_a=symmetric_a)
     if not np.isfinite(lp):
         return -np.inf
     ll = _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed)
@@ -2054,6 +2069,7 @@ def fit_bayesian_level(
     thin: int = 1,
     progress: bool = True,
     seed: Optional[int] = None,
+    symmetric_a: bool = False,
 ) -> BayesianLevelResult:
     """Bayesian level-space calibration of the rate–temperature model.
 
@@ -2085,6 +2101,7 @@ def fit_bayesian_level(
         PC prior: mode at a=0, shrinks toward order-1 model.
         Use ``calibrate_exponential_prior_a()`` to set from a tail
         probability constraint.
+        If ``symmetric_a=True``, this is the Normal σ instead.
     prior_scale_b : float
         HalfNormal σ for b (α₀), in m/yr/°C.  Default 0.010.
     prior_c_mean : float
@@ -2121,7 +2138,10 @@ def fit_bayesian_level(
 
     if progress:
         print(f"Bayesian level-space fit: n={n} observations, ndim={ndim}")
-        print(f"  Priors: a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²), "
+        a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
+                       if symmetric_a else
+                       f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
+        print(f"  Priors: {a_prior_str}, "
               f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C), "
               f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f} mm/yr), "
               f"σ_extra~HC({prior_sigma_extra_scale*1e3:.1f} mm)")
@@ -2140,7 +2160,7 @@ def fit_bayesian_level(
     # ---- Initialize walkers ----
     rng = np.random.default_rng(seed)
     p0_center = np.array([
-        max(a0, 1e-6),
+        a0 if symmetric_a else max(a0, 1e-6),
         max(b0, 1e-6),
         c0,
         np.log(max(sigma_extra_0, 1e-6)),
@@ -2155,8 +2175,9 @@ def fit_bayesian_level(
     ])
     p0 = p0_center[None, :] + p0_scale[None, :] * rng.standard_normal(
         (n_walkers, ndim))
-    # Enforce a ≥ 0, b ≥ 0
-    p0[:, 0] = np.abs(p0[:, 0])
+    # Enforce b ≥ 0 always; a ≥ 0 only when not symmetric
+    if not symmetric_a:
+        p0[:, 0] = np.abs(p0[:, 0])
     p0[:, 1] = np.abs(p0[:, 1])
 
     # ---- Run emcee ----
@@ -2164,6 +2185,7 @@ def fit_bayesian_level(
         n_walkers, ndim, _level_log_prob,
         args=(I2_obs, I1_obs, I0_obs, H_obs, sigma_obs,
               prior_scales, H0_prior_mean),
+        kwargs={'symmetric_a': symmetric_a},
     )
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 

@@ -1,0 +1,395 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newcommand{\GMSL}{\text{GMSL}}
+\newcommand{\GMST}{\text{GMST}}
+
+\title{Budget-Consistent Sea Level Component Projections\\
+  with Observationally Constrained Ice Sheet Uncertainty}
+
+\author{B.\ Minchew}
+\date{Working Draft --- \today}
+
+\begin{document}
+\maketitle
+
+% ====================================================================
+% TARGET: GMD (alongside FACTS) or Earth's Future
+% LENGTH: ~6000-7000 words
+% FIGURES: 6-8 main
+% TIMELINE: Submittable 2-3 months after Paper A
+% ====================================================================
+
+\begin{abstract}
+% ~200 words
+Probabilistic sea level rise projections typically sum independent draws from component-level distributions (thermal expansion, glaciers, ice sheets, terrestrial water storage), discarding the constraint that components must sum to the observed total.
+We demonstrate a post-processing method that enforces this budget constraint on existing FACTS v1.0 component distributions, producing revised projections that are jointly consistent with satellite-era observations.
+Resolving Antarctica into West Antarctic (WAIS), East Antarctic (EAIS), and Antarctic Peninsula (APIS) sub-regions, we show that the budget constraint acts as an asymmetric filter: it preferentially eliminates process-model runs that show WAIS mass gain under warming---runs inconsistent with the observed sea level budget---truncating the lower tail of the WAIS distribution and shifting the median upward.
+For the critical WAIS component, we separate the projection into a budget-constrained committed trajectory and a deep-uncertainty marine ice-sheet instability (MISI) component, parameterized by an activation probability $\pi(t)$.
+The committed component is anchored by observations; the MISI component extends the upper tail using structured expert judgment and high-end process-model output.
+The resulting projection distributions are provided for all SSP scenarios under multiple $\pi$ assumptions, offering budget-consistent projections with transparent treatment of the WAIS deep uncertainty that dominates high-end sea level risk.
+\end{abstract}
+
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+% ~600 words
+% ====================================================================
+
+% Key points:
+% 1. FACTS (Kopp et al. 2023) produces component-level SLR projections by
+%    independently sampling each component's distribution. The total is the
+%    sum of independent draws. The budget identity (components sum to total)
+%    is not enforced during sampling.
+%
+% 2. This independence assumption wastes information. During the satellite era,
+%    total GMSL is observed with high precision. The budget constraint creates
+%    a collider mechanism (Pearl 2009) that induces posterior dependence between
+%    components: well-observed components (thermal expansion) tighten the
+%    residual that constrains poorly observed components (WAIS).
+%
+% 3. For WAIS specifically, the budget constraint addresses a known problem:
+%    ISMIP6 models (Seroussi et al. 2020) largely fail to produce marine
+%    ice-sheet instability. Most models show Antarctic mass gain under warming.
+%    These runs are inconsistent with the observed budget and should receive
+%    lower weight.
+%
+% 4. But the budget constraint alone is insufficient for WAIS projections.
+%    It constrains the historical trajectory but cannot constrain a future
+%    threshold process (MISI) that has not yet fully activated. We therefore
+%    separate the WAIS projection into a committed component (budget-constrained)
+%    and a MISI component (physically motivated, parameterized).
+%
+% 5. This paper provides a method, not just a diagnosis. The output is a set
+%    of revised, budget-consistent projection distributions that users can
+%    adopt directly.
+
+
+% ====================================================================
+\section{Method}
+\label{sec:method}
+% ~2000 words
+% ====================================================================
+
+\subsection{Component decomposition}
+\label{sec:components}
+%
+% We decompose GMSL into 7 components:
+% TE, GL, GrIS, WAIS, EAIS, APIS, LWS
+%
+% Table 1: Component definitions, forcing variables, observational data sources.
+%
+% All FACTS AIS modules (emulandice, larmip, bamber19, deconto21) provide
+% WAIS/EAIS/APIS via full_sample_components. This sub-continental resolution
+% is necessary because WAIS, EAIS, and APIS have distinct physics:
+% - WAIS: marine, CDW-forced, MISI-susceptible
+% - EAIS: land-based, SMB-dominated, near steady state
+% - APIS: atmospheric warming, hydrofracture
+
+\subsection{Budget constraint via importance sampling}
+\label{sec:budget}
+%
+% Given N independent draws from the 7-component FACTS prior:
+%   {r_i^(n)}_{i=1}^7, n = 1,...,N
+%
+% Compute importance weights from the budget likelihood:
+%   w^(n) = exp(-0.5 sum_t [(sum_i r_i^(n)(t) - r_obs(t))^2 / sigma^2(t)])
+%
+% where r_obs(t) is the observed total GMSL rate and sigma^2(t) includes
+% observation uncertainty + budget closure tolerance.
+%
+% The weighted ensemble approximates the posterior:
+%   p({r_i} | r_obs) propto p({r_i}) * L(r_obs | {r_i})
+%
+% Multiple observational constraints can be applied:
+% - Global budget: sum of all 7 = total GMSL (Frederikse, altimetry)
+% - Antarctic sub-budget: WAIS + EAIS + APIS = total AIS (IMBIE, Frederikse, Horwath)
+% - Component-level: individual IMBIE, Argo, GlaMBIE constraints where available
+%
+% Present equation for combined log-likelihood with all constraint levels.
+
+\subsection{The budget constraint as a physical filter on ISMIP6}
+\label{sec:filter}
+%
+% Key result, developed in detail:
+%
+% The ISMIP6 ensemble (Seroussi et al. 2020, 2024) contains models that show
+% Antarctic mass gain under warming. In the FACTS emulandice/AIS module, these
+% correspond to samples with rate_WAIS < 0 (mass gain) or rate_WAIS ~ 0.
+%
+% When the budget constraint is applied:
+% 1. Compute the implied total for each sample.
+% 2. Samples where WAIS contributes near-zero or negative, combined with
+%    the well-constrained positive contributions from TE, GL, GrIS, produce
+%    a total that is too low relative to observed GMSL.
+% 3. These samples receive low importance weights.
+% 4. The WAIS posterior has its lower tail truncated. The median shifts up.
+%
+% Quantify: what fraction of emulandice/AIS WAIS samples are effectively
+% eliminated (weight < 0.01 * max_weight)? What is the pre- vs post-constraint
+% WAIS median and 17-83% range?
+%
+% This is an observationally grounded reweighting of the ISMIP6 ensemble.
+% It does not require knowing why the models fail (though the n=3 rheology
+% bias and ocean forcing deficiencies are known mechanisms). It only requires
+% that the models be consistent with the observed total.
+%
+% Figure 1: WAIS prior vs posterior distribution at 2050 and 2100.
+% Show the lower tail truncation.
+
+\subsection{WAIS committed + MISI mixture model}
+\label{sec:mixture}
+%
+% The budget-constrained posterior addresses the low tail but does not
+% generate the upper tail. The ISMIP6 models cannot produce MISI. The
+% budget constraint cannot constrain a process that has not activated.
+%
+% We separate the WAIS projection into two components:
+%
+% p(r_WAIS(t)) = (1 - pi(t)) * p_committed(r_WAIS(t)) 
+%                + pi(t) * p_MISI(r_WAIS(t))
+%
+% --- p_committed ---
+% The budget-constrained WAIS trajectory, extrapolated forward using the
+% posterior rate and acceleration at the end of the observational period.
+% This is the "no MISI" scenario: WAIS continues to accelerate at
+% approximately the observed rate, driven by ongoing CDW intrusion and
+% grounding-line retreat on prograde/flat bed slopes.
+%
+% Specification:
+% - Initial rate r_0 and acceleration dr/dt at 2020 from the budget-constrained
+%   posterior (not from IMBIE alone — the budget shifts the estimate).
+% - Forward model: rate(t) = r_0 + (dr/dt)(t - t_0) + 0.5*(d2r/dt2)(t-t_0)^2
+%   with the second derivative set to zero (conservative) or estimated from
+%   the budget-constrained posterior curvature.
+% - Uncertainty: propagated from the posterior on r_0 and dr/dt.
+%
+% --- pi(t) ---
+% The probability that MISI has activated by time t. This is the deep-
+% uncertainty parameter. It is NOT constrained by the budget.
+%
+% Specification options (present all, recommend transparent parameterization):
+%
+% Option 1: Transparent parameterization.
+%   Present projections for pi(2100) in {0, 0.05, 0.10, 0.25, 0.50}.
+%   pi(t) ramps linearly from 0 at present to pi(2100) at 2100.
+%   The reader supplies their own belief. This is the primary presentation.
+%
+% Option 2: Process-model calibration.
+%   Seroussi et al. (2024): 30-40% of extended ISMIP6 models show widespread
+%   WAIS collapse by 2300 under high emissions. Infer pi(t) from the fraction
+%   of models that have collapsed by each time step. This gives a process-model-
+%   informed pi that can be compared to the expert-judgment-informed pi.
+%
+% Option 3: Expert judgment.
+%   Extract pi implicitly from Bamber et al. (2019): compare the Bamber WAIS
+%   distribution to the committed trajectory. The excess probability in the
+%   Bamber upper tail relative to p_committed is attributable to the experts'
+%   implicit belief about MISI. Invert to get pi.
+%
+% Option 4: Observational early-warning.
+%   Use the Rosier et al. (2021) tipping-point analysis for PIG. PIG may
+%   already be past its instability threshold. Thwaites is approaching it.
+%   Assign pi_PIG ~ 0.7-1.0 (likely committed) and pi_Thwaites as a function
+%   of CDW forcing trajectory. This physically grounds pi in specific glacier
+%   systems. [More appropriate for Paper C than Paper B — flag for later.]
+%
+% --- p_MISI ---
+% The WAIS rate distribution conditional on MISI having activated.
+%
+% Specification:
+% - Source 1: Upper tail of Bamber et al. (2019) WAIS distribution.
+%   Take the Bamber samples exceeding the committed 83rd percentile.
+%   These represent the experts' assessment of what happens with MISI/MICI.
+%
+% - Source 2: DeConto et al. (2021) / deconto21 WAIS output.
+%   Under SSP5-8.5, deconto21 produces substantially more WAIS loss than
+%   emulandice. This excess is attributable to the MICI mechanism in the
+%   DeConto model. Extract the deconto21-minus-committed residual.
+%
+% - Source 3: Getraer & Morlighem (2025) n=4 scaling.
+%   ISMIP6 with n=4 produces 32% more ASE mass loss by 2100, 70% by 2300.
+%   Apply this scaling factor to the committed trajectory to get a
+%   "rheology-corrected MISI" estimate.
+%
+% Use Source 1 (Bamber) as primary. Sources 2 and 3 as sensitivity checks.
+% Fit a shifted log-normal to the MISI-conditional rate distribution.
+%
+% Figure 2: Schematic of the mixture model.
+% Show p_committed (narrow, budget-anchored) and p_MISI (wide, heavy-tailed)
+% and the mixture at different pi values.
+
+
+% ====================================================================
+\section{Results}
+\label{sec:results}
+% ~1500 words
+% ====================================================================
+
+\subsection{Budget constraint tightens component distributions}
+%
+% Table 2: Variance ratio rho_j for all 7 components at 2050 and 2100
+% under SSP2-4.5, using emulandice modules, combined constraint.
+%
+% Key results:
+% - WAIS: largest variance reduction (rho ~ 0.6-0.75)
+% - TE: minimal reduction (rho ~ 0.95) — already well-constrained
+% - EAIS, APIS: moderate reduction
+%
+% Figure 3: 7x7 posterior correlation matrix at 2100.
+% Off-diagonal entries show the collider-induced dependence.
+% WAIS-TE correlation should be strongly negative.
+% WAIS-EAIS correlation negative (Antarctic sub-budget collider).
+
+\subsection{Asymmetric filtering of ISMIP6 WAIS distribution}
+%
+% Figure 4: Prior vs posterior WAIS distribution.
+% Two panels: emulandice/AIS and larmip/AIS.
+% Show the lower tail truncation and median shift.
+% Annotate: fraction of prior samples effectively eliminated.
+%
+% Key number: X% of emulandice WAIS samples are inconsistent with the
+% observed budget. The budget-constrained median is Y mm/yr higher than
+% the unconstrained median.
+
+\subsection{WAIS projections with MISI uncertainty}
+%
+% Figure 5: WAIS projection distributions at 2100.
+% Multiple panels or overlaid densities:
+% - pi = 0 (committed only, budget-constrained)
+% - pi = 0.10
+% - pi = 0.25
+% - pi = 0.50
+% Under SSP2-4.5 and SSP5-8.5.
+%
+% Show how the mixture extends the upper tail without affecting the
+% budget-constrained center/lower tail.
+%
+% Table 3: WAIS projection quantiles at 2100 for each SSP x pi combination.
+% Format: median (17-83) [5-95].
+
+\subsection{Total GMSL projections}
+%
+% Figure 6: Total GMSL projection fan chart.
+% Combine the budget-constrained non-WAIS components with the WAIS mixture
+% to produce total GMSL projections.
+% Show for pi = 0.10 (moderate) and pi = 0.25 (substantial).
+% Compare to FACTS unconstrained total.
+%
+% Table 4: Total GMSL at 2050, 2100, 2150 for each SSP × pi.
+% IPCC-comparable format (meters, relative to 1995-2014).
+%
+% Key result: the budget-constrained projection with moderate MISI probability
+% (pi = 0.10-0.25) produces a total that:
+% - Is similar to FACTS in the median (budget correction offsets MISI addition)
+% - Has a narrower 17-83% range at 2050 (budget constraint dominates)
+% - Has a wider 83-95% range at 2100 (MISI tail extends beyond FACTS)
+% - Has better-calibrated component decomposition (no compensating errors)
+
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+% ~800 words
+% ====================================================================
+
+\subsection{What the budget constrains and what it cannot}
+%
+% Clear statement of epistemics:
+% - The budget anchors WAIS during the historical period. It eliminates
+%   model trajectories inconsistent with observations.
+% - It cannot constrain future threshold crossings. MISI is parameterized,
+%   not predicted.
+% - The separation into committed + MISI is not arbitrary: it tracks the
+%   distinction between what the observational record can inform and what
+%   requires additional physical/expert judgment.
+
+\subsection{Relationship to existing frameworks}
+%
+% - FACTS: this method is a post-processing step applicable to FACTS output.
+%   It does not replace FACTS; it refines it. The code and revised distributions
+%   will be made available in a format compatible with FACTS workflows.
+%
+% - Bamber et al. (2019): the expert judgment distributions implicitly contain
+%   MISI. Our method makes the MISI component explicit and separates it from
+%   the budget-constrained committed component. This transparency is an
+%   advantage: the user sees exactly what comes from observations and what
+%   comes from expert judgment.
+%
+% - Paper A (DOLS projections): Paper A provides the thermodynamic projection;
+%   Paper B provides the component decomposition with budget consistency and
+%   MISI treatment. They are complementary. Paper A's DOLS residual provides
+%   an independent check on the ice-sheet contribution diagnosed by Paper B.
+
+\subsection{The n = 3 rheology bias}
+%
+% Brief discussion of how the Martin et al. (2025) n=3 initialization bias
+% compounds the WAIS underestimate. The budget constraint partially corrects
+% this (it eliminates runs that are too low regardless of cause), but it
+% cannot fully correct a structural model deficiency. The n=4 scaling from
+% Getraer & Morlighem (2025) provides a physics-based correction that could
+% be applied to the committed trajectory. We present this as a sensitivity
+% analysis, not a primary result.
+
+\subsection{Implications for AR7}
+%
+% The revised distributions are directly usable. They provide:
+% 1. Budget-consistent component projections (no compensating errors).
+% 2. WAIS projections with transparent MISI treatment.
+% 3. Projection tables in IPCC-comparable format.
+% 4. Code to apply the budget constraint to future FACTS releases.
+
+
+% ====================================================================
+\section{Data and Code Availability}
+% ====================================================================
+% Revised projection distributions: Zenodo deposit (CSV, NetCDF)
+% Budget constraint code: GitHub repository
+% FACTS post-processing pipeline: documented, open-source
+% All input data: publicly available
+
+
+% ====================================================================
+% SUPPLEMENTARY MATERIALS
+% ====================================================================
+% SM1: Importance sampling methodology details
+% SM2: Budget constraint specification (sigma_budget, observational products)
+% SM3: Antarctic sub-budget constraint (Frederikse, Horwath cross-validation)
+% SM4: WAIS committed trajectory specification (rate, acceleration extraction)
+% SM5: MISI distribution fitting (Bamber tail extraction, log-normal fit)
+% SM6: pi(t) specification options (transparent, process-model, expert)
+% SM7: Sensitivity to AIS module choice
+% SM8: Sensitivity to sigma_budget
+% SM9: ESS diagnostics
+% SM10: n=4 rheology scaling sensitivity
+%
+% Fig S1: AIS cross-validation (IMBIE vs Frederikse vs Horwath)
+% Fig S2: Variance ratio heatmap (7 components × time × SSP)
+% Fig S3: Constraint level comparison (global only vs combined vs AIS-only)
+% Fig S4: Within-Antarctica information flow
+% Fig S5: WAIS prior vs posterior for all 4 AIS modules
+% Fig S6: pi(t) sensitivity for total GMSL
+% Fig S7: n=4 rheology scaling effect on WAIS projections
+% Fig S8: ESS as function of sigma_budget
+% Fig S9: Budget residual time series (1900-2020)
+%
+% Table S1: Full variance ratios (all components × SSPs × constraint types)
+% Table S2: Full 7x7 correlation matrices (prior and posterior)
+% Table S3: WAIS filtering statistics (fraction eliminated, median shift)
+% Table S4: Full projection tables (decadal, all SSP × pi combinations)
+% Table S5: Sensitivity to sigma_budget
+
+
+\bibliographystyle{agsm}
+\bibliography{slr_references}
+
+\end{document}
