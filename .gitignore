@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 .eggs/
 *.egg
+*.json
 
 # Jupyter
 .ipynb_checkpoints/
