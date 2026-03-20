@@ -38,6 +38,7 @@ import scipy.linalg as la
 from scipy.optimize import minimize
 import emcee
 import arviz as az
+import statsmodels.api as sm
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -1966,6 +1967,289 @@ def build_level_design_vectors(
     }
 
 
+@dataclass
+class SatelliteEraQuadraticResult:
+    """Result from a quadratic fit to a GMSL record.
+
+    Provides end-of-record rate and acceleration with their joint
+    2×2 covariance, suitable for use as an informational prior in
+    the Bayesian level-space models.
+    """
+    rate: float                  # dH/dt at eval_time (m/yr)
+    accel: float                 # d²H/dt² (m/yr²), constant for quadratic
+    rate_accel_cov: np.ndarray   # (2, 2) covariance of (rate, accel)
+    rate_se: float               # marginal SE on rate (m/yr)
+    accel_se: float              # marginal SE on accel (m/yr²)
+    eval_time: float             # time at which rate is evaluated (decimal yr)
+    coefficients: np.ndarray     # (3,) [c0, c1, c2] from H = c0 + c1*dt + c2*dt²
+    cov_params: np.ndarray       # (3, 3) parameter covariance
+    t_start: float               # start of fitting window (decimal yr)
+    t_end: float                 # end of fitting window (decimal yr)
+    n_obs: int                   # number of observations used
+    r2: float                    # R² of the fit
+    fit_result: object           # statsmodels RegressionResultsWrapper
+    fit_method: str = 'OLS_HAC'  # 'WLS' or 'OLS_HAC'
+
+
+def fit_satellite_era_quadratic(
+    time: np.ndarray,
+    gmsl: np.ndarray,
+    sigma: Optional[np.ndarray] = None,
+    t_start: float = 1993.0,
+    t_end: float = None,
+    eval_time: float = None,
+    sigma_inflate: float = 1.0,
+    meas_cov_path: Optional[str] = None,
+    sigma_gia: float = 0.15e-3,
+) -> SatelliteEraQuadraticResult:
+    """Quadratic fit to a GMSL record with rigorous uncertainty.
+
+    Fits H(t) = c₀ + c₁·(t − t₀) + c₂·(t − t₀)² where t₀ = t_start.
+
+    Three fitting / uncertainty modes (in order of preference):
+
+    1. **Full error budget** (when ``meas_cov_path`` is provided):
+       OLS point estimates + three-component uncertainty following
+       Hamlington et al. (2024):
+
+       - **Measurement errors**: propagated from the Ablain et al.
+         (2019) error variance-covariance matrix (10-day resolution
+         NetCDF from doi:10.17882/58344).
+       - **Serial correlation**: Maul & Martin (1993) lag-1
+         autocorrelation inflation of formal OLS standard errors.
+       - **GIA uncertainty**: constant rate uncertainty (no accel
+         component); default 0.15 mm/yr (1σ) from Caron et al. (2018).
+
+       All three are summed in quadrature (independent sources).
+
+    2. **OLS + HAC** (when ``sigma`` is ``None`` and no
+       ``meas_cov_path``): OLS with Newey-West standard errors.
+
+    3. **WLS** (when ``sigma`` is provided): Weighted least squares
+       with weights = 1/σ².
+
+    The rate and acceleration at the evaluation time are::
+
+        rate(t_eval) = c₁ + 2·c₂·(t_eval − t₀)
+        accel        = 2·c₂
+
+    with their 2×2 covariance propagated from the parameter
+    covariance via the Jacobian.
+
+    Parameters
+    ----------
+    time : np.ndarray, shape (n,)
+        Observation times (decimal year).
+    gmsl : np.ndarray, shape (n,)
+        Observed GMSL (meters).
+    sigma : np.ndarray or None
+        1-σ observation uncertainty (meters).  If ``None``, uses
+        OLS (with HAC or full error budget).
+    t_start : float
+        Start of fitting window (decimal year).  Default 1993.0.
+    t_end : float or None
+        End of fitting window.  None → end of record.
+    eval_time : float or None
+        Time at which to evaluate rate.  None → end of record.
+    sigma_inflate : float
+        Multiplicative inflation factor for the output covariance.
+        Default 1.0 (no inflation).
+    meas_cov_path : str or None
+        Path to Ablain et al. (2019) error covariance NetCDF.
+        When provided, enables the full three-component error budget
+        (measurement + serial correlation + GIA).  The covariance
+        matrix covers 1993–2018 at ~10-day cadence.  If the fitting
+        window extends beyond the covariance matrix time span, the
+        measurement error contribution is computed over the overlap
+        period and scaled by the ratio of record lengths.
+    sigma_gia : float
+        1-σ GIA correction uncertainty on the rate (m/yr).
+        Default 0.15e-3 (= 0.15 mm/yr), from Caron et al. (2018).
+        Only used when ``meas_cov_path`` is provided.  GIA does not
+        contribute to acceleration uncertainty.
+
+    Returns
+    -------
+    SatelliteEraQuadraticResult
+
+    References
+    ----------
+    Ablain et al. (2019), ESSD — measurement error covariance matrix.
+    Caron et al. (2018), G-Cubed — GIA posterior ensemble.
+    Hamlington et al. (2024), Commun. Earth Environ. — methodology.
+    Maul & Martin (1993), GRL — serial correlation inflation.
+    """
+    # Truncate to fitting window
+    if t_end is None:
+        t_end = time[-1]
+    mask = (time >= t_start) & (time <= t_end) & np.isfinite(gmsl)
+    if sigma is not None:
+        mask &= np.isfinite(sigma) & (sigma > 0)
+    t_fit = time[mask]
+    h_fit = gmsl[mask]
+
+    if len(t_fit) < 5:
+        raise ValueError(
+            f"Only {len(t_fit)} observations in [{t_start}, {t_end}]; "
+            f"need at least 5 for a quadratic fit.")
+
+    if eval_time is None:
+        eval_time = t_fit[-1]
+
+    # Centre time on t_start for numerical stability
+    dt = t_fit - t_start
+
+    # Design matrix: [1, dt, dt²]
+    X = np.column_stack([np.ones_like(dt), dt, dt**2])
+
+    # --- Point estimates: always OLS when meas_cov_path is given ---
+    if meas_cov_path is not None or sigma is None:
+        model = sm.OLS(h_fit, X)
+        fit_result = model.fit()
+        fit_method = 'full_error_budget' if meas_cov_path else 'OLS_HAC'
+    else:
+        s_fit = sigma[mask]
+        weights = 1.0 / s_fit**2
+        model = sm.WLS(h_fit, X, weights=weights)
+        fit_result = model.fit()
+        fit_method = 'WLS'
+
+    c0, c1, c2 = fit_result.params
+    r2 = fit_result.rsquared
+
+    # Rate and acceleration at eval_time
+    dt_eval = eval_time - t_start
+    rate = c1 + 2.0 * c2 * dt_eval
+    accel = 2.0 * c2
+
+    # Jacobian: d(rate, accel) / d(c0, c1, c2)
+    J = np.array([
+        [0.0, 1.0, 2.0 * dt_eval],
+        [0.0, 0.0, 2.0],
+    ])
+
+    # --- Covariance estimation ---
+    if meas_cov_path is not None:
+        # Full three-component error budget
+        import netCDF4 as nc4
+        from datetime import datetime as _dt, timedelta as _td
+
+        # (1) Measurement errors from Ablain et al. covariance
+        with nc4.Dataset(meas_cov_path, 'r') as ds:
+            days_1950 = np.array(ds.variables['time'][:])
+            C_meas_full = np.array(ds.variables['covariance_matrix'][:])
+        base = _dt(1950, 1, 1)
+        t_cov = np.array([
+            (base + _td(days=float(d))).year
+            + ((base + _td(days=float(d))).timetuple().tm_yday - 0.5)
+            / 365.25
+            for d in days_1950
+        ])
+
+        # Build design matrix on the covariance grid (same t_start)
+        mask_cov = (t_cov >= t_start) & (t_cov <= t_end)
+        t_c = t_cov[mask_cov]
+        idx_cov = np.where(mask_cov)[0]
+        C_meas = C_meas_full[np.ix_(idx_cov, idx_cov)]
+        dt_c = t_c - t_start
+        X_c = np.column_stack([np.ones(len(dt_c)), dt_c, dt_c**2])
+        XtX_c_inv = np.linalg.inv(X_c.T @ X_c)
+        cov_beta_meas = XtX_c_inv @ (X_c.T @ C_meas @ X_c) @ XtX_c_inv
+
+        # Scale if fitting window extends beyond covariance span
+        t_cov_span = t_c[-1] - t_c[0]
+        t_fit_span = t_fit[-1] - t_fit[0]
+        if t_fit_span > t_cov_span * 1.05:
+            # Measurement error on trend scales ~ 1/T;
+            # on acceleration scales ~ 1/T²
+            scale_factor = (t_cov_span / t_fit_span)
+            cov_beta_meas *= scale_factor
+
+        ra_cov_meas = J @ cov_beta_meas @ J.T
+
+        # (2) Serial correlation (Maul & Martin 1993)
+        resid = h_fit - X @ fit_result.params
+        rho = np.corrcoef(resid[:-1], resid[1:])[0, 1]
+        sigma2_resid = np.sum(resid**2) / (len(t_fit) - 3)
+        XtX_inv = np.linalg.inv(X.T @ X)
+        inflate = (1.0 + rho) / (1.0 - rho)
+        cov_beta_serial = inflate * sigma2_resid * XtX_inv
+        ra_cov_serial = J @ cov_beta_serial @ J.T
+
+        # (3) GIA: constant rate, no acceleration
+        ra_cov_gia = np.zeros((2, 2))
+        ra_cov_gia[0, 0] = sigma_gia**2
+
+        # Total: sum independent sources
+        cov_params = cov_beta_meas + cov_beta_serial
+        # (GIA only enters the rate-accel covariance, not param cov)
+        rate_accel_cov = sigma_inflate**2 * (
+            ra_cov_meas + ra_cov_serial + ra_cov_gia)
+
+        fit_method = 'full_error_budget'
+
+    elif sigma is None:
+        # OLS + HAC fallback
+        maxlags = int(np.ceil(np.sqrt(len(t_fit))))
+        fit_result_hac = model.fit(
+            cov_type='HAC', cov_kwds={'maxlags': maxlags})
+        cov_params = np.array(fit_result_hac.cov_params())
+        rate_accel_cov = sigma_inflate**2 * (J @ cov_params @ J.T)
+        fit_method = 'OLS_HAC'
+
+    else:
+        # WLS
+        cov_params = np.array(fit_result.cov_params())
+        rate_accel_cov = sigma_inflate**2 * (J @ cov_params @ J.T)
+
+    rate_se = np.sqrt(rate_accel_cov[0, 0])
+    accel_se = np.sqrt(rate_accel_cov[1, 1])
+
+    return SatelliteEraQuadraticResult(
+        rate=rate,
+        accel=accel,
+        rate_accel_cov=rate_accel_cov,
+        rate_se=rate_se,
+        accel_se=accel_se,
+        eval_time=eval_time,
+        coefficients=np.array([c0, c1, c2]),
+        cov_params=cov_params,
+        t_start=t_start,
+        t_end=t_end,
+        n_obs=len(t_fit),
+        r2=r2,
+        fit_result=fit_result,
+        fit_method=fit_method,
+    )
+
+
+def _rate_accel_prior_logp(
+    rate_model: float,
+    accel_model: float,
+    rate_prior: SatelliteEraQuadraticResult,
+) -> float:
+    """Bivariate Gaussian log-prior penalty on (rate, accel).
+
+    Parameters
+    ----------
+    rate_model : float
+        Model-implied GMSL rate at end of record (m/yr).
+    accel_model : float
+        Model-implied GMSL acceleration (m/yr²).
+    rate_prior : SatelliteEraQuadraticResult
+        Contains observed rate, accel, and their 2×2 covariance.
+
+    Returns
+    -------
+    float
+        Log-density of the bivariate Gaussian.
+    """
+    delta = np.array([rate_model - rate_prior.rate,
+                      accel_model - rate_prior.accel])
+    cov_inv = np.linalg.inv(rate_prior.rate_accel_cov)
+    return -0.5 * delta @ cov_inv @ delta
+
+
 def _level_log_prior(theta, prior_scales, H0_prior_mean,
                      symmetric_a=False):
     """Log-prior for the Bayesian level-space model.
@@ -2039,8 +2323,22 @@ def _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed):
 
 
 def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
-                    prior_scales, H0_prior_mean, symmetric_a=False):
-    """Log-posterior for the level-space model."""
+                    prior_scales, H0_prior_mean, symmetric_a=False,
+                    rate_prior=None, T_end=0.0, dTdt_end=0.0):
+    """Log-posterior for the level-space model.
+
+    Parameters
+    ----------
+    rate_prior : SatelliteEraQuadraticResult or None
+        If provided, adds a bivariate Gaussian penalty on the
+        model-implied (rate, accel) at end of record.
+    T_end : float
+        Temperature at end of record (°C anomaly).
+        Only used when rate_prior is not None.
+    dTdt_end : float
+        Temperature trend at end of record (°C/yr).
+        Only used when rate_prior is not None.
+    """
     lp = _level_log_prior(theta, prior_scales, H0_prior_mean,
                           symmetric_a=symmetric_a)
     if not np.isfinite(lp):
@@ -2048,6 +2346,17 @@ def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
     ll = _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed)
     if not np.isfinite(ll):
         return -np.inf
+
+    # Satellite-era rate/accel prior
+    if rate_prior is not None:
+        a, b, c = theta[0], theta[1], theta[2]
+        rate_model = a * T_end**2 + b * T_end + c
+        accel_model = (2.0 * a * T_end + b) * dTdt_end
+        lp_rate = _rate_accel_prior_logp(rate_model, accel_model, rate_prior)
+        if not np.isfinite(lp_rate):
+            return -np.inf
+        return lp + ll + lp_rate
+
     return lp + ll
 
 
@@ -2070,6 +2379,10 @@ def fit_bayesian_level(
     progress: bool = True,
     seed: Optional[int] = None,
     symmetric_a: bool = False,
+    rate_prior: Optional['SatelliteEraQuadraticResult'] = None,
+    temperature_monthly: Optional[np.ndarray] = None,
+    time_monthly: Optional[np.ndarray] = None,
+    obs_times: Optional[np.ndarray] = None,
 ) -> BayesianLevelResult:
     """Bayesian level-space calibration of the rate–temperature model.
 
@@ -2118,6 +2431,19 @@ def fit_bayesian_level(
         Show emcee progress bar.
     seed : int or None
         Random seed.
+    symmetric_a : bool
+        If True, use Normal(0, σ) prior on a instead of Exponential.
+    rate_prior : SatelliteEraQuadraticResult or None
+        If provided, adds a bivariate Gaussian penalty on the
+        model-implied (rate, accel) at end of record.  Requires
+        ``temperature_monthly`` and ``time_monthly`` to compute
+        T_end and dT/dt at the evaluation epoch.
+    temperature_monthly : np.ndarray or None
+        Monthly temperature (°C), required when rate_prior is set.
+    time_monthly : np.ndarray or None
+        Monthly decimal years, required when rate_prior is set.
+    obs_times : np.ndarray or None
+        Observation times (decimal year), required when rate_prior is set.
 
     Returns
     -------
@@ -2136,6 +2462,45 @@ def fit_bayesian_level(
     ])
     H0_prior_mean = H_obs[0]   # centre H₀ prior on first observation
 
+    # ---- Compute T_end and dT/dt for rate prior ----
+    T_end_val = 0.0
+    dTdt_end_val = 0.0
+    if rate_prior is not None:
+        if temperature_monthly is None or time_monthly is None:
+            raise ValueError(
+                "rate_prior requires temperature_monthly and time_monthly "
+                "to compute T_end and dT/dt at the evaluation epoch.  "
+                "Use the FULL monthly temperature record (not truncated "
+                "to the observation period) to avoid boundary effects.")
+        # Find temperature at the rate_prior evaluation time
+        idx_eval = np.argmin(np.abs(time_monthly - rate_prior.eval_time))
+        T_end_val = temperature_monthly[idx_eval]
+        # Estimate dT/dt via linear fit over a ±5 yr window.
+        # A wide window smooths interannual variability (ENSO) and
+        # avoids boundary artefacts if the temperature record ends
+        # near eval_time.
+        dt_window = 5.0  # years
+        mask_window = ((time_monthly >= rate_prior.eval_time - dt_window) &
+                       (time_monthly <= rate_prior.eval_time + dt_window))
+        if mask_window.sum() >= 12:
+            t_w = time_monthly[mask_window]
+            T_w = temperature_monthly[mask_window]
+            dTdt_end_val = np.polyfit(t_w, T_w, 1)[0]
+        else:
+            # Narrow fallback (should not happen with full record)
+            warnings.warn(
+                f"Only {mask_window.sum()} months in ±{dt_window} yr "
+                f"window around eval_time={rate_prior.eval_time:.1f}. "
+                f"dT/dt estimate may be unreliable.  Pass the full "
+                f"monthly temperature record, not the truncated one.")
+            mask_narrow = (
+                (time_monthly >= rate_prior.eval_time - 2.0) &
+                (time_monthly <= rate_prior.eval_time + 2.0))
+            if mask_narrow.sum() >= 3:
+                dTdt_end_val = np.polyfit(
+                    time_monthly[mask_narrow],
+                    temperature_monthly[mask_narrow], 1)[0]
+
     if progress:
         print(f"Bayesian level-space fit: n={n} observations, ndim={ndim}")
         a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
@@ -2145,6 +2510,13 @@ def fit_bayesian_level(
               f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C), "
               f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f} mm/yr), "
               f"σ_extra~HC({prior_sigma_extra_scale*1e3:.1f} mm)")
+        if rate_prior is not None:
+            print(f"  Rate prior: rate={rate_prior.rate*1e3:.2f} "
+                  f"± {rate_prior.rate_se*1e3:.2f} mm/yr, "
+                  f"accel={rate_prior.accel*1e6:.2f} "
+                  f"± {rate_prior.accel_se*1e6:.2f} μm/yr², "
+                  f"T_end={T_end_val:.3f} °C, "
+                  f"dT/dt={dTdt_end_val*1e3:.2f} m°C/yr")
 
     # ---- OLS initialization ----
     X = np.column_stack([I2_obs, I1_obs, I0_obs, np.ones(n)])
@@ -2185,7 +2557,10 @@ def fit_bayesian_level(
         n_walkers, ndim, _level_log_prob,
         args=(I2_obs, I1_obs, I0_obs, H_obs, sigma_obs,
               prior_scales, H0_prior_mean),
-        kwargs={'symmetric_a': symmetric_a},
+        kwargs={'symmetric_a': symmetric_a,
+                'rate_prior': rate_prior,
+                'T_end': T_end_val,
+                'dTdt_end': dTdt_end_val},
     )
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
@@ -2513,6 +2888,7 @@ def _state_level_log_prob(
     I2_obs, I1_obs, I0_obs,
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
+    rate_prior=None, idx_eval=None, dTdt_end=0.0,
 ):
     """Log-posterior for the rate-and-state level-space model.
 
@@ -2540,6 +2916,13 @@ def _state_level_log_prob(
         Prior hyperparameters (see ``_state_level_log_prior``).
     H0_prior_mean : float
         Prior mean for H₀.
+    rate_prior : SatelliteEraQuadraticResult or None
+        If provided, adds a bivariate Gaussian penalty on the
+        model-implied (rate, accel) at end of record.
+    idx_eval : int or None
+        Index into the monthly grid at the rate_prior evaluation time.
+    dTdt_end : float
+        Temperature trend at end of record (°C/yr).
     """
     # Prior
     lp = _state_level_log_prior(theta, prior_scales, H0_prior_mean)
@@ -2574,6 +2957,22 @@ def _state_level_log_prob(
     if not np.isfinite(ll):
         return -np.inf
 
+    # Satellite-era rate/accel prior
+    if rate_prior is not None and idx_eval is not None:
+        T_end = T_monthly[idx_eval]
+        S_end = S[idx_eval]
+        # rate(t) = a·T² + b·T + c + d·(S − T)
+        rate_model = a * T_end**2 + b * T_end + c + d * (S_end - T_end)
+        # d(rate)/dt = (2a·T + b)·dT/dt + d·(dS/dt − dT/dt)
+        # where dS/dt = (T − S)/τ
+        dSdt_end = (T_end - S_end) / tau
+        accel_model = ((2.0 * a * T_end + b) * dTdt_end
+                       + d * (dSdt_end - dTdt_end))
+        lp_rate = _rate_accel_prior_logp(rate_model, accel_model, rate_prior)
+        if not np.isfinite(lp_rate):
+            return -np.inf
+        return lp + ll + lp_rate
+
     return lp + ll
 
 
@@ -2603,6 +3002,7 @@ def fit_bayesian_state_level(
     seed: Optional[int] = None,
     init_from_level: Optional['BayesianLevelResult'] = None,
     init_order: int = 2,
+    rate_prior: Optional['SatelliteEraQuadraticResult'] = None,
 ) -> BayesianStateLevelResult:
     """Bayesian rate-and-state level-space calibration.
 
@@ -2647,6 +3047,9 @@ def fit_bayesian_state_level(
         walkers start in the linear subspace.  This is consistent
         with the PC prior philosophy (start at the simpler model)
         and lets the MCMC decide whether a, d, or both are needed.
+    rate_prior : SatelliteEraQuadraticResult or None
+        If provided, adds a bivariate Gaussian penalty on the
+        model-implied (rate, accel) at end of record.
 
     Returns
     -------
@@ -2683,6 +3086,45 @@ def fit_bayesian_state_level(
               f"τ~LogN(median={tau_median:.0f} yr, "
               f"95% CI [{tau_lo:.0f}, {tau_hi:.0f}] yr)")
         print(f"  σ_extra~HC({prior_sigma_extra_scale*1e3:.1f} mm)")
+
+    # ---- Compute rate prior quantities ----
+    # Note: idx_eval_rp indexes into T_monthly (the calibration-period
+    # array used for the ODE solve).  dT/dt is estimated from a ±5 yr
+    # window centred on eval_time using the SAME array; if this array
+    # ends near eval_time, the user should extend T_monthly to cover
+    # at least ±5 yr beyond eval_time, or pass a longer temperature
+    # record.
+    idx_eval_rp = None
+    dTdt_end_rp = 0.0
+    if rate_prior is not None:
+        idx_eval_rp = int(np.argmin(
+            np.abs(time_monthly - rate_prior.eval_time)))
+        # dT/dt via linear fit over ±5 yr window
+        dt_window = 5.0
+        mask_w = ((time_monthly >= rate_prior.eval_time - dt_window) &
+                  (time_monthly <= rate_prior.eval_time + dt_window))
+        if mask_w.sum() >= 12:
+            dTdt_end_rp = np.polyfit(
+                time_monthly[mask_w], T_monthly[mask_w], 1)[0]
+        else:
+            warnings.warn(
+                f"Only {mask_w.sum()} months in ±{dt_window} yr "
+                f"window for dT/dt at {rate_prior.eval_time:.1f}. "
+                f"Extend T_monthly beyond the calibration period.")
+            mask_narrow = (
+                (time_monthly >= rate_prior.eval_time - 2.0) &
+                (time_monthly <= rate_prior.eval_time + 2.0))
+            if mask_narrow.sum() >= 3:
+                dTdt_end_rp = np.polyfit(
+                    time_monthly[mask_narrow],
+                    T_monthly[mask_narrow], 1)[0]
+        if progress:
+            print(f"  Rate prior: rate={rate_prior.rate*1e3:.2f} "
+                  f"± {rate_prior.rate_se*1e3:.2f} mm/yr, "
+                  f"accel={rate_prior.accel*1e6:.2f} "
+                  f"± {rate_prior.accel_se*1e6:.2f} μm/yr², "
+                  f"T_end={T_monthly[idx_eval_rp]:.3f} °C, "
+                  f"dT/dt={dTdt_end_rp*1e3:.2f} m°C/yr")
 
     tau_init = np.exp(prior_log_tau_mean)
 
@@ -2810,6 +3252,9 @@ def fit_bayesian_state_level(
               I2_obs, I1_obs, I0_obs,
               H_obs, sigma_obs,
               prior_scales, H0_prior_mean),
+        kwargs={'rate_prior': rate_prior,
+                'idx_eval': idx_eval_rp,
+                'dTdt_end': dTdt_end_rp},
     )
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
@@ -3627,18 +4072,26 @@ class BayesianGreenlandResult:
 def _greenland_log_prior(theta, prior_scales, H0_prior_mean):
     """Log-prior for the physics-informed Greenland model.
 
+    Reparameterized: the sampler explores (b_total, f_dyn) instead
+    of (b_eff, γ) to break the ridge degeneracy between SMB and
+    discharge linear sensitivities.
+
     Parameters
     ----------
     theta : array_like, length 7
-        [a_eff, b_eff, γ, log_τ_dyn, c, log_σ_extra, H₀]
-    prior_scales : array_like, length 9
-        [μ_a, σ_b, σ_γ, μ_logτ, σ_logτ, μ_c, σ_c, γ_σextra, σ_H0]
+        [a_eff, b_total, f_dyn, log_τ_dyn, c, log_σ_extra, H₀]
+        where b_eff = b_total × (1 − f_dyn), γ = b_total × f_dyn
+    prior_scales : array_like, length 11
+        [μ_a, σ_b_total, α_fdyn, β_fdyn, μ_logτ, σ_logτ,
+         μ_c, σ_c, γ_σextra, σ_H0, _reserved]
     H0_prior_mean : float
     """
-    a_eff, b_eff, gamma_dyn, log_tau_dyn, c, log_sigma_extra, H0 = theta
+    a_eff, b_total, f_dyn, log_tau_dyn, c, log_sigma_extra, H0 = theta
 
     # Hard bounds
-    if a_eff < 0 or b_eff < 0 or gamma_dyn < 0:
+    if a_eff < 0 or b_total < 0:
+        return -np.inf
+    if f_dyn <= 0.0 or f_dyn >= 1.0:
         return -np.inf
 
     sigma_extra = np.exp(log_sigma_extra)
@@ -3649,21 +4102,22 @@ def _greenland_log_prior(theta, prior_scales, H0_prior_mean):
     if tau_dyn < 0.5 or tau_dyn > 500.0:
         return -np.inf
 
-    mu_a        = prior_scales[0]
-    sigma_b     = prior_scales[1]
-    sigma_gamma = prior_scales[2]
-    mu_lt, sigma_lt = prior_scales[3], prior_scales[4]
-    mu_c, sigma_c   = prior_scales[5], prior_scales[6]
-    gamma_sigma = prior_scales[7]
-    sigma_H0    = prior_scales[8]
+    mu_a          = prior_scales[0]
+    sigma_b_total = prior_scales[1]
+    alpha_fdyn    = prior_scales[2]
+    beta_fdyn     = prior_scales[3]
+    mu_lt, sigma_lt = prior_scales[4], prior_scales[5]
+    mu_c, sigma_c   = prior_scales[6], prior_scales[7]
+    gamma_sigma = prior_scales[8]
+    sigma_H0    = prior_scales[9]
 
     lp = 0.0
     # a_eff ~ Exponential(mean = μ_a), PC prior
     lp += -a_eff / mu_a
-    # b_eff ~ HalfNormal(σ_b)
-    lp += -0.5 * (b_eff / sigma_b)**2
-    # γ ~ HalfNormal(σ_γ)
-    lp += -0.5 * (gamma_dyn / sigma_gamma)**2
+    # b_total ~ HalfNormal(σ_b_total)
+    lp += -0.5 * (b_total / sigma_b_total)**2
+    # f_dyn ~ Beta(α, β)
+    lp += (alpha_fdyn - 1.0) * np.log(f_dyn) + (beta_fdyn - 1.0) * np.log(1.0 - f_dyn)
     # τ_dyn ~ LogNormal  (log_tau_dyn ~ Normal)
     lp += -0.5 * ((log_tau_dyn - mu_lt) / sigma_lt)**2
     # c ~ Normal(μ_c, σ_c)
@@ -3682,24 +4136,42 @@ def _greenland_log_prob(
     T_avg_ann, dt_ann, T0_ann, obs_idx_ann, n_ann,
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
+    rate_prior_mean=None, rate_prior_sigma=0.0, T_end=0.0,
 ):
     """Log-posterior for the physics-informed Greenland model.
 
-    Optimised for MCMC: SMB uses pre-computed design vectors (O(n_obs)),
-    discharge uses an inline annual-resolution ODE (~120 steps).
+    Reparameterized: theta = [a_eff, b_total, f_dyn, log_τ_dyn, c,
+    log_σ_extra, H₀].  Physical parameters recovered as:
+        b_eff = b_total × (1 − f_dyn)
+        γ     = b_total × f_dyn
 
     Forward model:
         H_smb = a_eff·I₂ + b_eff·I₁
         dD/dt = (T − D) / τ_dyn → ∫D via trapezoidal rule
         H = H_smb + γ·∫D + c·I₀ + H₀
+
+    Parameters
+    ----------
+    rate_prior_mean : float or None
+        Observed Greenland SLR rate at end of record (m/yr).
+        If None, no rate prior is applied.
+    rate_prior_sigma : float
+        1-σ uncertainty on the rate prior (m/yr).
+    T_end : float
+        GMST anomaly at end of record (°C).  Only used when
+        rate_prior_mean is not None.
     """
     lp = _greenland_log_prior(theta, prior_scales, H0_prior_mean)
     if not np.isfinite(lp):
         return -np.inf
 
-    a_eff, b_eff, gamma_dyn, log_tau_dyn, c, log_sigma_extra, H0 = theta
+    a_eff, b_total, f_dyn, log_tau_dyn, c, log_sigma_extra, H0 = theta
     tau_dyn = np.exp(log_tau_dyn)
     sigma_extra = np.exp(log_sigma_extra)
+
+    # Recover physical parameters
+    b_eff = b_total * (1.0 - f_dyn)
+    gamma_dyn = b_total * f_dyn
 
     # ── SMB component (pre-computed design vectors, O(n_obs)) ──
     H_smb_obs = a_eff * I2_obs + b_eff * I1_obs
@@ -3732,7 +4204,48 @@ def _greenland_log_prob(
     if not np.isfinite(ll):
         return -np.inf
 
+    # ── Rate prior: penalise model rate that deviates from observed ──
+    if rate_prior_mean is not None and rate_prior_sigma > 0:
+        # D_eff at end of annual grid is `d` after the ODE loop
+        rate_model = a_eff * T_end**2 + b_eff * T_end + gamma_dyn * d + c
+        lp_rate = -0.5 * ((rate_model - rate_prior_mean) / rate_prior_sigma)**2
+        if not np.isfinite(lp_rate):
+            return -np.inf
+        return lp + ll + lp_rate
+
     return lp + ll
+
+
+def _greenland_log_prob_fixc(
+    theta6,
+    I2_obs, I1_obs, I0_obs,
+    T_avg_ann, dt_ann, T0_ann, obs_idx_ann, n_ann,
+    H_obs, sigma_obs_fixed,
+    prior_scales, H0_prior_mean,
+    fix_c_val=0.0,
+    rate_prior_mean=None, rate_prior_sigma=0.0, T_end=0.0,
+):
+    """Wrapper for fixed-c Greenland model.
+
+    Maps 6-parameter theta (no c) into the 7-parameter log-posterior
+    by inserting the fixed c value.
+
+    theta6 = [a_eff, b_total, f_dyn, log_τ_dyn, log_σ_extra, H₀]
+    """
+    theta7 = np.array([
+        theta6[0], theta6[1], theta6[2], theta6[3],
+        fix_c_val, theta6[4], theta6[5],
+    ])
+    return _greenland_log_prob(
+        theta7,
+        I2_obs, I1_obs, I0_obs,
+        T_avg_ann, dt_ann, T0_ann, obs_idx_ann, n_ann,
+        H_obs, sigma_obs_fixed,
+        prior_scales, H0_prior_mean,
+        rate_prior_mean=rate_prior_mean,
+        rate_prior_sigma=rate_prior_sigma,
+        T_end=T_end,
+    )
 
 
 def fit_bayesian_greenland(
@@ -3746,14 +4259,21 @@ def fit_bayesian_greenland(
     obs_times: np.ndarray,
     # ── Priors ──
     prior_scale_a: float = 0.00186,
-    prior_scale_b: float = 0.003,
-    prior_scale_gamma: float = 0.001,
+    prior_scale_b_total: float = 0.004,
+    prior_fdyn_alpha: float = 5.0,
+    prior_fdyn_beta: float = 5.0,
     prior_log_tau_mean: Optional[float] = None,
     prior_log_tau_sigma: float = 0.6,
     prior_c_mean: float = 0.0002,
-    prior_c_sigma: float = 0.0005,
+    prior_c_sigma: float = 0.00015,
     prior_sigma_extra_scale: float = 0.002,
     prior_H0_sigma: float = 0.005,
+    # ── Rate prior ──
+    rate_prior_mean: Optional[float] = None,
+    rate_prior_sigma: float = 0.0,
+    # ── Structural options ──
+    fix_c: Optional[float] = None,
+    T0_init: Optional[float] = None,
     # ── MCMC settings ──
     n_samples: int = 5000,
     n_walkers: int = 64,
@@ -3777,8 +4297,12 @@ def fit_bayesian_greenland(
         dD_eff/dt = (T − D_eff) / τ_dyn
         H_dyn = γ · ∫₀ᵗ D_eff(τ) dτ
 
-    As τ_dyn → 0 the discharge collapses to γ·I₁ and the model
-    degenerates to the standard instantaneous polynomial.
+    Reparameterized: the sampler explores (b_total, f_dyn) where
+    b_total = b_eff + γ and f_dyn = γ / b_total, so that the
+    well-constrained total linear sensitivity and the weakly-
+    constrained discharge fraction are axis-aligned.  Physical
+    parameters are recovered as b_eff = b_total·(1−f_dyn) and
+    γ = b_total·f_dyn.
 
     Parameters
     ----------
@@ -3790,13 +4314,29 @@ def fit_bayesian_greenland(
     time_monthly : (n_monthly,)  Monthly decimal years.
     obs_times : (n,)  Annual observation times (decimal years).
     prior_scale_a : Exponential mean for a_eff (m/yr/°C²); PC prior.
-    prior_scale_b : HalfNormal σ for b_eff (m/yr/°C).
-    prior_scale_gamma : HalfNormal σ for γ (m/yr/°C).
+    prior_scale_b_total : HalfNormal σ for b_total = b_eff + γ (m/yr/°C).
+    prior_fdyn_alpha, prior_fdyn_beta : Beta(α, β) prior on f_dyn.
     prior_log_tau_mean : LogNormal log-mean for τ_dyn (default log(20)).
     prior_log_tau_sigma : LogNormal log-σ for τ_dyn.
     prior_c_mean, prior_c_sigma : Normal prior for c (m/yr).
     prior_sigma_extra_scale : HalfCauchy γ (meters).
     prior_H0_sigma : Normal σ for H₀ (meters).
+    rate_prior_mean : float or None
+        Observed Greenland SLR rate at end of record (m/yr).
+        If None, no rate prior is applied.  Computed from Mankoff
+        or GRACE data as -MB / 362500.
+    rate_prior_sigma : float
+        1-σ uncertainty on the rate prior (m/yr).
+    fix_c : float or None
+        If not None, fix the secular trend c to this value (m/yr)
+        and remove it as a free parameter (ndim drops to 6).
+        Useful to prevent c from absorbing temperature-driven signal.
+        Typical GIA value: ~0.05e-3 m/yr.
+    T0_init : float or None
+        Initial condition for the discharge ODE (D_eff at t=0).
+        If None, uses the mean of the first 30 years of annual
+        temperature (pre-industrial equilibrium).  Set to 0.0 to
+        initialise at the anomaly baseline.
 
     Returns
     -------
@@ -3816,7 +4356,13 @@ def fit_bayesian_greenland(
     n_ann = len(time_annual)
     dt_ann = np.diff(time_annual)
     T_avg_ann = 0.5 * (T_annual[:-1] + T_annual[1:])
-    T0_ann = T_annual[0]   # equilibrium initial condition
+    # ODE initial condition: D_eff(t=0)
+    if T0_init is not None:
+        T0_ann = T0_init
+    else:
+        # Default: mean of first 30 years (pre-industrial equilibrium)
+        n_spinup = min(30, n_ann)
+        T0_ann = float(np.mean(T_annual[:n_spinup]))
 
     # Observation indices on annual grid
     obs_idx_ann = np.array([
@@ -3833,30 +4379,51 @@ def fit_bayesian_greenland(
               f"{time_annual[-1]:.0f}), "
               f"monthly: {len(time_monthly)} points")
 
-    # ── Prior scales ──
+    # ── Prior scales (reparameterized) ──
     H0_prior_mean = H_obs[0]
-    ndim = 7  # [a_eff, b_eff, γ, log_τ_dyn, c, log_σ_extra, H₀]
 
     prior_scales = np.array([
-        prior_scale_a,           # Exponential mean for a_eff
-        prior_scale_b,           # HalfNormal σ for b_eff
-        prior_scale_gamma,       # HalfNormal σ for γ
-        prior_log_tau_mean,      # LogNormal log-mean for τ_dyn
-        prior_log_tau_sigma,     # LogNormal log-σ for τ_dyn
-        prior_c_mean,            # Normal mean for c
-        prior_c_sigma,           # Normal σ for c
-        prior_sigma_extra_scale, # HalfCauchy γ for σ_extra
-        prior_H0_sigma,          # Normal σ for H₀
+        prior_scale_a,            # [0] Exponential mean for a_eff
+        prior_scale_b_total,      # [1] HalfNormal σ for b_total
+        prior_fdyn_alpha,         # [2] Beta α for f_dyn
+        prior_fdyn_beta,          # [3] Beta β for f_dyn
+        prior_log_tau_mean,       # [4] LogNormal log-mean for τ_dyn
+        prior_log_tau_sigma,      # [5] LogNormal log-σ for τ_dyn
+        prior_c_mean,             # [6] Normal mean for c
+        prior_c_sigma,            # [7] Normal σ for c
+        prior_sigma_extra_scale,  # [8] HalfCauchy γ for σ_extra
+        prior_H0_sigma,           # [9] Normal σ for H₀
+        0.0,                      # [10] reserved
     ])
-    param_names = ['a_eff', 'b_eff', 'gamma', 'log_tau_dyn',
-                   'c_gr', 'log_sigma_extra', 'H0']
+
+    if fix_c is not None:
+        ndim = 6  # [a_eff, b_total, f_dyn, log_τ_dyn, log_σ_extra, H₀]
+        param_names = ['a_eff', 'b_total', 'f_dyn', 'log_tau_dyn',
+                       'log_sigma_extra', 'H0']
+    else:
+        ndim = 7  # [a_eff, b_total, f_dyn, log_τ_dyn, c, log_σ_extra, H₀]
+        param_names = ['a_eff', 'b_total', 'f_dyn', 'log_tau_dyn',
+                       'c_gr', 'log_sigma_extra', 'H0']
+
+    # ── End-of-record temperature for rate prior ──
+    T_end_val = T_annual[-1]  # last annual-mean GMST anomaly
+
+    if progress:
+        if fix_c is not None:
+            print(f"  Fixed c = {fix_c*1e3:.3f} mm/yr "
+                  f"(removed as free parameter, ndim={ndim})")
+        print(f"  ODE init D_eff(0) = {T0_ann:.4f} °C")
+        if rate_prior_mean is not None:
+            print(f"  Rate prior: {rate_prior_mean*1e3:.2f} "
+                  f"± {rate_prior_sigma*1e3:.2f} mm/yr, "
+                  f"T_end={T_end_val:.3f} °C")
 
     # ── OLS initialization at fixed τ_dyn ──
     tau_dyn_init = np.exp(prior_log_tau_mean)
 
     # Solve discharge ODE on monthly grid (once, for accuracy)
     D_eff_init, _ = solve_twolayer_ode(
-        T_monthly, time_monthly, tau_dyn_init, np.inf
+        T_monthly, time_monthly, tau_dyn_init, np.inf, Su0=T0_ann
     )
 
     # Cumulative integral of D_eff (monthly grid)
@@ -3883,39 +4450,93 @@ def fit_bayesian_greenland(
     c_init = beta_ols[3]
     H0_init = beta_ols[4]
 
+    # Convert OLS (b_eff, γ) → (b_total, f_dyn)
+    b_total_init = b_init + gamma_init
+    f_dyn_init = np.clip(gamma_init / b_total_init, 0.05, 0.95)
+
     resid_ols = H_obs - X_init @ beta_ols
     sigma_extra_init = max(np.std(resid_ols), 1e-4)
 
-    theta0 = np.array([
-        a_init, b_init, gamma_init,
-        np.log(tau_dyn_init),
-        c_init,
-        np.log(sigma_extra_init),
-        H0_init,
-    ])
+    if fix_c is not None:
+        # 6 params: [a_eff, b_total, f_dyn, log_τ_dyn, log_σ_extra, H₀]
+        theta0 = np.array([
+            a_init, b_total_init, f_dyn_init,
+            np.log(tau_dyn_init),
+            np.log(sigma_extra_init),
+            H0_init,
+        ])
+    else:
+        # 7 params: [a_eff, b_total, f_dyn, log_τ_dyn, c, log_σ_extra, H₀]
+        theta0 = np.array([
+            a_init, b_total_init, f_dyn_init,
+            np.log(tau_dyn_init),
+            c_init,
+            np.log(sigma_extra_init),
+            H0_init,
+        ])
 
     if progress:
         print(f"  OLS init: a_eff={a_init*1e3:.3f} mm/yr/°C², "
-              f"b_eff={b_init*1e3:.3f} mm/yr/°C, "
-              f"γ={gamma_init*1e3:.3f} mm/yr/°C, "
+              f"b_total={b_total_init*1e3:.3f} mm/yr/°C "
+              f"(b_eff={b_init*1e3:.3f}, γ={gamma_init*1e3:.3f}), "
+              f"f_dyn={f_dyn_init:.3f}, "
               f"τ_dyn={tau_dyn_init:.0f} yr")
 
     # ── Walker initialization ──
     rng = np.random.default_rng(seed)
     pos = np.empty((n_walkers, ndim))
-    for i in range(n_walkers):
-        p = theta0 * (1.0 + 0.05 * rng.standard_normal(ndim))
-        p[0] = abs(p[0])   # a_eff ≥ 0
-        p[1] = abs(p[1])   # b_eff ≥ 0
-        p[2] = abs(p[2])   # γ ≥ 0
-        pos[i] = p
+    if fix_c is not None:
+        for i in range(n_walkers):
+            p = theta0.copy()
+            p[0] = abs(a_init * (1.0 + 0.05 * rng.standard_normal()))
+            p[1] = abs(b_total_init * (1.0 + 0.05 * rng.standard_normal()))
+            p[2] = np.clip(f_dyn_init + 0.02 * rng.standard_normal(),
+                           0.05, 0.95)
+            p[3] = theta0[3] + 0.05 * rng.standard_normal()
+            p[4] = theta0[4] + 0.1 * rng.standard_normal()   # log_σ_extra
+            p[5] = H0_init + abs(H0_init) * 0.05 * rng.standard_normal()
+            pos[i] = p
+    else:
+        for i in range(n_walkers):
+            p = theta0.copy()
+            p[0] = abs(a_init * (1.0 + 0.05 * rng.standard_normal()))
+            p[1] = abs(b_total_init * (1.0 + 0.05 * rng.standard_normal()))
+            p[2] = np.clip(f_dyn_init + 0.02 * rng.standard_normal(),
+                           0.05, 0.95)
+            p[3] = theta0[3] + 0.05 * rng.standard_normal()
+            p[4] = c_init + max(abs(c_init), 1e-5) * 0.05 * rng.standard_normal()
+            p[5] = theta0[5] + 0.1 * rng.standard_normal()
+            p[6] = H0_init + abs(H0_init) * 0.05 * rng.standard_normal()
+            pos[i] = p
 
     # ── MCMC (annual-resolution ODE for discharge) ──
+    moves = [
+        (emcee.moves.DESnookerMove(), 0.8),
+        (emcee.moves.DEMove(),        0.2),
+    ]
+    if fix_c is not None:
+        log_prob_fn = _greenland_log_prob_fixc
+        log_prob_kwargs = {
+            'fix_c_val': fix_c,
+            'rate_prior_mean': rate_prior_mean,
+            'rate_prior_sigma': rate_prior_sigma,
+            'T_end': T_end_val,
+        }
+    else:
+        log_prob_fn = _greenland_log_prob
+        log_prob_kwargs = {
+            'rate_prior_mean': rate_prior_mean,
+            'rate_prior_sigma': rate_prior_sigma,
+            'T_end': T_end_val,
+        }
+
     sampler = emcee.EnsembleSampler(
-        n_walkers, ndim, _greenland_log_prob,
+        n_walkers, ndim, log_prob_fn,
         args=(I2_obs, I1_obs, I0_obs,
               T_avg_ann, dt_ann, T0_ann, obs_idx_ann, n_ann,
               H_obs, sigma_obs, prior_scales, H0_prior_mean),
+        kwargs=log_prob_kwargs,
+        moves=moves,
     )
 
     if progress:
@@ -3928,13 +4549,29 @@ def fit_bayesian_greenland(
     # ── Extract chains ──
     flat = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
 
-    # theta = [a_eff, b_eff, γ, log_τ_dyn, c, log_σ_extra, H₀]
-    # physical = [a_eff, b_eff, γ, c] at indices [0, 1, 2, 4]
-    phys_idx = np.array([0, 1, 2, 4])
-    phys_samples = flat[:, phys_idx]         # [a_eff, b_eff, γ, c]
+    # Recover physical parameters: b_eff, γ from (b_total, f_dyn)
+    a_eff_samples = flat[:, 0]
+    b_total_samples = flat[:, 1]
+    f_dyn_samples = flat[:, 2]
+    b_eff_samples = b_total_samples * (1.0 - f_dyn_samples)
+    gamma_samples = b_total_samples * f_dyn_samples
     tau_dyn_samples = np.exp(flat[:, 3])
-    sigma_extra_samples = np.exp(flat[:, 5])
-    H0_samples = flat[:, 6]
+
+    if fix_c is not None:
+        # theta6 = [a_eff, b_total, f_dyn, log_τ_dyn, log_σ_extra, H₀]
+        c_samples = np.full(len(flat), fix_c)
+        sigma_extra_samples = np.exp(flat[:, 4])
+        H0_samples = flat[:, 5]
+    else:
+        # theta7 = [a_eff, b_total, f_dyn, log_τ_dyn, c, log_σ_extra, H₀]
+        c_samples = flat[:, 4]
+        sigma_extra_samples = np.exp(flat[:, 5])
+        H0_samples = flat[:, 6]
+
+    # physical = [a_eff, b_eff, γ, c]
+    phys_samples = np.column_stack([
+        a_eff_samples, b_eff_samples, gamma_samples, c_samples
+    ])
 
     phys_mean = np.mean(phys_samples, axis=0)
     phys_cov = np.cov(phys_samples, rowvar=False)
@@ -3948,7 +4585,7 @@ def fit_bayesian_greenland(
 
     # D_eff at posterior-median τ_dyn (monthly)
     D_eff_mean, _ = solve_twolayer_ode(
-        T_monthly, time_monthly, tau_dyn_median, np.inf
+        T_monthly, time_monthly, tau_dyn_median, np.inf, Su0=T0_ann
     )
 
     # Cumulative ∫D_eff (monthly)
@@ -3994,6 +4631,10 @@ def fit_bayesian_greenland(
               f"b_eff={phys_mean[1]*1e3:.3f} mm/yr/°C")
         print(f"  γ={phys_mean[2]*1e3:.3f} mm/yr/°C, "
               f"c={phys_mean[3]*1e3:.3f} mm/yr")
+        print(f"  b_total={np.mean(b_total_samples)*1e3:.3f} mm/yr/°C, "
+              f"f_dyn={np.mean(f_dyn_samples):.3f} "
+              f"[{np.percentile(f_dyn_samples, 3):.3f}, "
+              f"{np.percentile(f_dyn_samples, 97):.3f}]")
         print(f"  τ_dyn: median={np.median(tau_dyn_samples):.1f} yr "
               f"[{np.percentile(tau_dyn_samples, 3):.1f}, "
               f"{np.percentile(tau_dyn_samples, 97):.1f}]")
@@ -4001,12 +4642,20 @@ def fit_bayesian_greenland(
               f"{np.median(sigma_extra_samples)*1e3:.2f} mm")
         print(f"  R² = {r2:.4f},  acceptance = "
               f"{diag['acceptance_fraction']:.2f}")
-        # Discharge fraction check
-        H_total_change = H_model_mean[-1] - H_model_mean[0]
+        # Discharge fraction: change in each component over the obs period
+        H_smb_change = H_smb_mean_obs[-1] - H_smb_mean_obs[0]
         H_dyn_change = H_dyn_mean_obs[-1] - H_dyn_mean_obs[0]
-        if abs(H_total_change) > 1e-8:
-            dyn_frac = H_dyn_change / H_total_change
-            print(f"  Discharge fraction of total change: "
+        H_trend_change = phys_mean[3] * (I0_obs[-1] - I0_obs[0])
+        H_total_change = H_model_mean[-1] - H_model_mean[0]
+        print(f"  Component changes ({obs_times[0]:.0f}–{obs_times[-1]:.0f}):")
+        print(f"    SMB:       {H_smb_change*1e3:+.2f} mm")
+        print(f"    Discharge: {H_dyn_change*1e3:+.2f} mm")
+        print(f"    Trend:     {H_trend_change*1e3:+.2f} mm")
+        print(f"    Total:     {H_total_change*1e3:+.2f} mm")
+        H_phys_change = H_smb_change + H_dyn_change
+        if abs(H_phys_change) > 1e-8:
+            dyn_frac = H_dyn_change / H_phys_change
+            print(f"  Discharge fraction of SMB+discharge: "
                   f"{dyn_frac:.1%}")
 
     return BayesianGreenlandResult(

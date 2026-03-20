@@ -987,3 +987,162 @@ def project_greenland_ensemble(
         })
 
     return results
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Component-level projection from Bayesian level-space posteriors
+# ════════════════════════════════════════════════════════════════════
+
+def project_component_level_ensemble(
+    posterior_samples: np.ndarray,
+    H0_samples: np.ndarray,
+    temperature_monthly: np.ndarray,
+    time_monthly: np.ndarray,
+    projection_times: np.ndarray,
+    baseline_year: float = 2005.0,
+    n_samples: int = 2000,
+    order: int = 1,
+    temp_scale: float = 1.0,
+    seed: Optional[int] = None,
+    fixed_coefficients: Optional[dict] = None,
+    tau_samples: Optional[np.ndarray] = None,
+) -> dict:
+    """Project a single GMSL component using Bayesian level-space posteriors.
+
+    For each MC draw, evaluates the forward model:
+
+        H(t) = a·I₂(t) + b·I₁(t) + c·I₀(t) + H₀
+
+    where I₂ = ∫T²dτ, I₁ = ∫Tdτ, I₀ = t − t₀ are built from the
+    monthly temperature trajectory, and (a, b, c, H₀) are drawn from
+    the posterior.
+
+    Parameters
+    ----------
+    posterior_samples : np.ndarray, shape (n_post, 3)
+        MCMC samples of [a, b, c] from ``BayesianLevelResult``.
+        For order=1 (linear): a column is present but ignored
+        unless ``fixed_coefficients`` overrides it.
+    H0_samples : np.ndarray, shape (n_post,)
+        MCMC samples of baseline level H₀.
+    temperature_monthly : np.ndarray, shape (n_monthly,)
+        Monthly temperature anomaly (°C) covering the full timeline
+        from historical through projection.  For Greenland, this should
+        be GMST (the ``temp_scale`` factor handles AA internally).
+    time_monthly : np.ndarray, shape (n_monthly,)
+        Monthly decimal years matching ``temperature_monthly``.
+    projection_times : np.ndarray, shape (n_proj,)
+        Annual decimal years at which to evaluate projections.
+    baseline_year : float
+        Year at which H = 0 (projections are relative to this).
+    n_samples : int
+        Number of MC draws.
+    order : {1, 2}
+        1 = linear (rate = b·T + c), 2 = quadratic (rate = a·T² + b·T + c).
+        When order=1, the ``a`` coefficient is forced to 0 regardless of
+        the posterior samples.
+    temp_scale : float
+        Multiplicative factor applied to temperature before building
+        design vectors.  Use ``temp_scale=AA`` for Greenland to convert
+        GMST → Greenland temperature.  Default 1.0 (no scaling).
+    seed : int or None
+        Random seed for draw selection.
+    fixed_coefficients : dict or None
+        Override specific coefficients with fixed values instead of
+        drawing from the posterior.  Keys: 'a', 'b', 'c', 'H0'.
+        Example: ``{'a': 0.0}`` forces a=0 for all draws.
+    tau_samples : np.ndarray or None, shape (n_post,)
+        Reserved for future rate-and-state extension.  When provided,
+        the forward model becomes:
+
+            dS/dt = (T − S) / τ
+            H(t) = a·∫S²dτ + b·∫Sdτ + c·(t − t₀) + H₀
+
+        where S is the ocean state variable with relaxation time τ.
+        NOT YET IMPLEMENTED — raises NotImplementedError.
+
+    Returns
+    -------
+    dict with keys:
+        'samples'      : np.ndarray (n_samples, n_proj) — H(t) in meters
+        'median'       : np.ndarray (n_proj,) — median projection
+        'p5', 'p95'    : np.ndarray (n_proj,) — 5th/95th percentiles
+        'p17', 'p83'   : np.ndarray (n_proj,) — 17th/83rd percentiles
+        'projection_times' : np.ndarray — copy of input times
+        'baseline_year': float
+        'order'        : int
+        'temp_scale'   : float
+        'n_samples'    : int
+
+    Notes
+    -----
+    Units follow the project convention: all sea-level values in meters.
+    Temperature in °C.  Convert to mm at the plotting layer only.
+    """
+    if tau_samples is not None:
+        raise NotImplementedError(
+            "Rate-and-state projection not yet implemented.  "
+            "Set tau_samples=None for the standard level-space model."
+        )
+
+    rng = np.random.default_rng(seed)
+    n_post = len(posterior_samples)
+    idx = rng.choice(n_post, size=n_samples, replace=True)
+
+    # Draw parameter vectors
+    a_draws = posterior_samples[idx, 0].copy()
+    b_draws = posterior_samples[idx, 1].copy()
+    c_draws = posterior_samples[idx, 2].copy()
+    H0_draws = H0_samples[idx].copy()
+
+    # Force a=0 for linear order
+    if order == 1:
+        a_draws[:] = 0.0
+
+    # Apply fixed coefficient overrides
+    if fixed_coefficients is not None:
+        if 'a' in fixed_coefficients:
+            a_draws[:] = fixed_coefficients['a']
+        if 'b' in fixed_coefficients:
+            b_draws[:] = fixed_coefficients['b']
+        if 'c' in fixed_coefficients:
+            c_draws[:] = fixed_coefficients['c']
+        if 'H0' in fixed_coefficients:
+            H0_draws[:] = fixed_coefficients['H0']
+
+    # Build design vectors with scaled temperature
+    T_scaled = temperature_monthly * temp_scale
+    from bayesian_dols import build_level_design_vectors
+    design = build_level_design_vectors(
+        temperature_monthly=T_scaled,
+        time_monthly=time_monthly,
+        obs_times=projection_times,
+    )
+    I2 = design['I2_obs']   # (n_proj,)
+    I1 = design['I1_obs']   # (n_proj,)
+    I0 = design['I0_obs']   # (n_proj,)
+
+    # Evaluate forward model: H(t) = a·I₂ + b·I₁ + c·I₀ + H₀
+    # Vectorised: (n_samples, 1) × (1, n_proj) → (n_samples, n_proj)
+    H_ens = (a_draws[:, None] * I2[None, :]
+             + b_draws[:, None] * I1[None, :]
+             + c_draws[:, None] * I0[None, :]
+             + H0_draws[:, None])
+
+    # Rebase to baseline year
+    bl_idx = np.argmin(np.abs(projection_times - baseline_year))
+    H_ens -= H_ens[:, bl_idx:bl_idx+1]
+
+    return {
+        'samples': H_ens,
+        'median': np.median(H_ens, axis=0),
+        'p5': np.percentile(H_ens, 5, axis=0),
+        'p95': np.percentile(H_ens, 95, axis=0),
+        'p17': np.percentile(H_ens, 17, axis=0),
+        'p83': np.percentile(H_ens, 83, axis=0),
+        'projection_times': projection_times,
+        'baseline_year': baseline_year,
+        'order': order,
+        'temp_scale': temp_scale,
+        'n_samples': n_samples,
+    }
