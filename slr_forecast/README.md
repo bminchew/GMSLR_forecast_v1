@@ -1,173 +1,188 @@
 # Sea Level Rise Forecasting: A Hierarchical Framework
 
-A physics-informed framework for probabilistic sea-level rise (SLR) projections that separates **predictable** thermodynamic responses from **deeply uncertain** Antarctic ice-sheet dynamics.
+A physics-informed framework for probabilistic sea-level rise (SLR) projections that decomposes total GMSL into physical components, calibrates each against independent observations, and propagates all uncertainties through conditional SSP scenarios.
 
 ## Overview
 
-This project implements a hierarchical SLR forecasting framework that decomposes total projection uncertainty into three components:
+This project implements a hierarchical SLR forecasting framework with three tiers of increasing physical complexity:
 
-$$\sigma^2_{\text{total}}(t) = \sigma^2_{\text{constrained}}(t) + \sigma^2_{\text{scenario}}(t) + \sigma^2_{\text{ice}}(t)$$
+1. **Naive extrapolation**: Satellite-era rate + acceleration (lower bound)
+2. **Aggregate semi-empirical**: Bayesian rate-state model relating GMSL rate to GMST
+3. **Component decomposition**: Separate physics-informed models for each SLR contributor
 
-- **Constrained uncertainty** ($\sigma_{\text{constrained}}$): Calibrated from the observational record using Dynamic Ordinary Least Squares (DOLS), capturing thermodynamic sensitivity (steric expansion + glaciers + Greenland)
-- **Scenario uncertainty** ($\sigma_{\text{scenario}}$): Spread across SSP emission pathways (societal choices)
-- **Ice-sheet deep uncertainty** ($\sigma_{\text{ice}}$): Physics-informed West Antarctic Ice Sheet (WAIS) uncertainty, correcting systematic biases in IPCC AR6 projections
+The component decomposition is the primary framework. Each contributor is modeled independently with component-specific physics, calibrated against dedicated observational datasets, and validated against withheld data:
 
-### Key Results
-
-- DOLS calibration: quadratic rate-temperature model `dH/dt = (dα/dT) × T² + α₀ × T + trend`
-- Physics-informed WAIS corrections increase ice-sheet uncertainty from ~150 mm (IPCC medium confidence) to ~491 mm at 2100
-- The ice-sheet fraction of total variance rises from 2% to 18% with physics-informed corrections
-- Multi-dataset robustness analysis confirms positive quadratic sensitivity across all observational records
-- IPCC process models show systematically lower thermodynamic sensitivity than observations
+| Component | Model | Calibration data | Key parameters |
+|-----------|-------|-------------------|---------------|
+| Thermosteric | Single-layer ODE, joint calibration | NOAA TSL (1955-2025) + EN4 subsurface T (1970-2021) | a, b, c, tau_u, kappa, delta |
+| Glaciers | Bayesian linear DOLS + volume cap | GlaMBIE consensus (2000-2024) | b, c, H0 |
+| Greenland SMB | RCM-derived sensitivity | RACMO via Mouginot (1972-2018) | C_T, C_T2 (literature) |
+| Greenland discharge | ODE with ocean thermal lag | Mouginot discharge + EN4 ocean T | gamma_atm, gamma_ocean, tau |
+| EAIS | Trend-only (literature SMB sensitivity) | IMBIE (1992-2020) | b, c |
+| Peninsula | Bayesian linear DOLS | IMBIE (1992-2020) | b, c, H0 |
+| WAIS | A4 deep-uncertainty scenario mixture | Expert judgment + rheology correction | Scenario weights, skew-normal params |
 
 ## Project Structure
 
 ```
 slr_forecast/
-├── README.md                          # This file
+├── README.md
 ├── TODO.md                            # Research task tracking
-├── physics_informed_wais_uncertainty.tex  # LaTeX document (supplementary material)
+├── taxonomy.md                        # Bayesian terminology, uncertainty decomposition
+├── refactor.md                        # Sign conventions, units, baseline tracking
 │
 ├── notebooks/                         # Analysis code
-│   ├── predictability_analysis.ipynb  # PRIMARY: DOLS calibration, projections, WAIS framework
+│   ├── component_ocean.ipynb          # Thermosteric: joint NOAA+EN4 physical ODE
+│   ├── component_glacier.ipynb        # Glaciers: linear DOLS on GlaMBIE
+│   ├── component_greenland.ipynb      # Greenland: SMB (literature) + discharge ODE
+│   ├── component_eais.ipynb           # East Antarctica: trend-only + ISMIP6 comparison
+│   ├── component_apeninsula.ipynb     # Antarctic Peninsula: linear DOLS + ISMIP6
+│   ├── component_wais.ipynb           # WAIS: A4 scenario framework
+│   │
+│   ├── predictability_analysis.ipynb  # Aggregate DOLS calibration and projections
 │   ├── read_process_datafiles.ipynb   # Data loading and preprocessing pipeline
 │   ├── slr_analysis_notebook.ipynb    # Exploratory analysis and visualization
 │   │
-│   ├── slr_analysis.py               # Core DOLS engine + kinematics + statistical tests
-│   ├── slr_data_readers.py            # 14+ data reader functions with unit conversion
-│   ├── slr_projections.py             # Monte Carlo projection ensemble generation
-│   ├── preprocessing_functions.py     # Data preprocessing utilities
-│   ├── visualization_cells.py         # Plotting helper functions
-│   ├── test_dols.py                   # 19-test verification suite for DOLS
+│   ├── bayesian_dols.py              # Bayesian fitting: level-space, rate-state,
+│   │                                  #   thermosteric physical, Greenland discharge
+│   ├── slr_analysis.py               # Core DOLS engine + kinematics
+│   ├── slr_data_readers.py           # 14+ data reader functions
+│   ├── slr_projections.py            # MC projection ensemble generation
+│   ├── smb_projections.py            # SMB sensitivity projections (Greenland, EAIS)
+│   ├── component_analysis.py         # Fitting helpers, transfer functions
+│   ├── component_projections.py      # IPCC/ISMIP6 readers, A4 WAIS framework
+│   ├── component_plotting.py         # Projection plots, histograms, ridge plots
+│   ├── component_io.py               # HDF5 I/O for component results
 │   │
-│   ├── dols_robustness.py             # Multi-dataset robustness matrix (7 GMSL × 4 GMST)
-│   ├── ipcc_emergent_sensitivity.py   # DOLS applied to IPCC projections
-│   ├── dols_sliding_window.py         # Sliding-window epoch sensitivity + SAOD analysis
-│   │
-│   └── archive/                       # Deprecated code (kept for reference)
+│   ├── archive/                      # Superseded notebooks
+│   └── diagnostics/                  # Supplementary diagnostic notebooks
+│
+├── src/slr_forecast/
+│   ├── config.py                     # BASELINE_YEAR, N_SAMPLES, SEEDS, paths
+│   └── readers/                      # Package-level data readers
+│       ├── forcing.py                # NOAA thermosteric, volcanic AOD
+│       ├── gmst.py                   # Berkeley Earth, GISTEMP
+│       ├── ocean_temp.py             # EN4 regional subsurface temperature
+│       └── ice_sheets.py             # Mouginot, Mankoff, IMBIE
 │
 ├── data/
-│   ├── raw/                           # Immutable observational records (see data/raw/README.md)
-│   │   ├── gmslr/                     # Sea level reconstructions
-│   │   ├── gmst/                      # Temperature products
-│   │   ├── ice_sheets/                # IMBIE mass balance
-│   │   ├── glaciers/                  # GlaMBIE glacier data
-│   │   ├── saod/                      # Volcanic aerosol optical depth
-│   │   ├── tws/                       # GRACE terrestrial water storage
-│   │   ├── steric/                    # Steric sea level
-│   │   ├── enso/                      # Climate indices
-│   │   └── ipcc_ar6/                  # IPCC AR6 FACTS projections (NetCDF)
+│   ├── raw/                          # Immutable observational records
+│   │   ├── gmslr/                    # Sea level reconstructions
+│   │   ├── gmst/                     # Temperature products
+│   │   ├── steric/                   # NOAA thermosteric, EN4
+│   │   ├── ocean_temp/               # EN4 subsurface gridded T
+│   │   ├── ice_sheets/               # IMBIE, Mouginot, Mankoff
+│   │   │   └── ismip6/               # ISMIP6 Antarctica (13 models, regional ivaf)
+│   │   ├── glaciers/                 # GlaMBIE consensus
+│   │   ├── ipcc_ar6/                 # IPCC AR6 FACTS projections (NetCDF)
+│   │   └── ...                       # SAOD, TWS, ENSO indices
 │   └── processed/
-│       ├── slr_processed_data.h5      # All preprocessed data (53 HDF5 keys)
-│       └── results_summary.json       # Machine-readable key results
+│       ├── slr_processed_data.h5     # All preprocessed data (53 HDF5 keys)
+│       └── component_results.h5      # Fitted parameters + projections per component
 │
-├── figures/                           # Generated figures (PNG, 150 dpi)
-├── scripts/                           # Standalone execution scripts
-│   ├── dols_engine.py                 # DOLS execution engine
-│   └── check_readiness.py            # Data readiness validation
-└── environment/                       # Docker reproducibility setup
+├── figures/                          # Generated figures (PNG, 150 dpi)
+├── manuscripts/
+│   └── 00_ddpi_slrforecast2026/      # Main paper (LaTeX)
+└── scripts/                          # Standalone utilities
 ```
 
 ## Quick Start
 
 ### Prerequisites
-- Python 3.9+
-- Core dependencies: `numpy`, `pandas`, `scipy`, `statsmodels`, `matplotlib`, `h5py`
-
-### Docker (recommended)
-```bash
-docker build -t slr-forecast ./environment
-docker run -p 8888:8888 slr-forecast
-```
-
-### Local setup
-```bash
-pip install numpy pandas scipy statsmodels matplotlib h5py tables openpyxl netCDF4
-```
+- Python 3.10+
+- Core: `numpy`, `pandas`, `scipy`, `statsmodels`, `matplotlib`, `h5py`, `netCDF4`
+- Bayesian: `emcee`, `arviz`
+- Optional: `tables` (HDF5 via pandas), `openpyxl`
 
 ### Workflow
 
 1. **Data preprocessing**: Run `read_process_datafiles.ipynb` to load all raw data, standardize units, harmonize baselines, and save to `slr_processed_data.h5`
-2. **Main analysis**: Run `predictability_analysis.ipynb` for DOLS calibration, Monte Carlo projections, variance decomposition, and physics-informed WAIS uncertainty
-3. **Robustness checks**: Run the standalone scripts:
-   ```bash
-   cd notebooks
-   python dols_robustness.py        # Multi-dataset coefficient stability
-   python ipcc_emergent_sensitivity.py  # DOLS vs IPCC process models
-   python dols_sliding_window.py    # Epoch sensitivity + SAOD reconsideration
-   ```
 
-## Core Analysis Modules
+2. **Component fitting**: Run each `component_*.ipynb` notebook with `REFIT = True`. Each notebook:
+   - Loads observational data
+   - Fits a Bayesian model (MCMC via emcee)
+   - Generates SSP projections with full MC uncertainty
+   - Saves results to `component_results.h5`
+   - Compares against IPCC AR6 and/or ISMIP6
 
-### `slr_analysis.py` — DOLS Engine
+3. **Subsequent runs**: Set `REFIT = False` to skip expensive fitting and load from HDF5. The switch auto-falls back to `REFIT = True` if no saved results exist.
 
-The central analysis module implementing:
+4. **Aggregate analysis**: Run `predictability_analysis.ipynb` for the aggregate DOLS framework and three-step comparison.
 
-- **`calibrate_dols()`**: Unified DOLS function supporting polynomial orders 1-3, optional WLS (weighted least squares with measurement uncertainties), optional SAOD (volcanic forcing), and HAC (Newey-West) standard errors for robust inference
-- **`calibrate_dols_sliding()`**: Sliding-window (kernel-weighted) DOLS for estimating time-varying coefficients α₀(t) and dα/dT(t)
-- **`compute_kinematics()`**: Kernel-weighted local polynomial regression for rates and accelerations
-- **`test_rate_temperature_nonlinearity()`**: Model selection (linear/quadratic/cubic) via F-tests, AIC, BIC
-- **`test_saod_ic()`**: Information-criterion test for volcanic forcing significance
+### Component I/O
 
-### `slr_data_readers.py` — Data I/O
+All component notebooks write to a shared HDF5 file (`data/processed/component_results.h5`) via `component_io.py`:
 
-14+ reader functions, each attaching standardized metadata (`df.attrs`) including dataset name, reference, DOI, native and current units. Includes:
+```python
+from component_io import load_all_projections, list_components
 
-- **`convert_to_standard_units()`**: Converts to meters, Celsius, years (idempotent)
-- **`convert_units()`**: General-purpose unit conversion (m/mm/cm/ft, degC/degF/K, compound rates)
+# Inspect what's saved
+list_components()
 
-### `slr_projections.py` — Forward Projections
+# Load all projections for aggregation
+proj_years, all_proj = load_all_projections()
+# all_proj = {'ocean': {'SSP2-4.5': {'samples': (2000, 201), 'median': ..., ...}}, ...}
+```
 
-Monte Carlo ensemble generation under SSP scenarios with optional SAOD for hindcasting.
+## Component Models
+
+### Thermosteric (Ocean Thermal Expansion)
+Single-layer physical ODE with joint NOAA + EN4 calibration:
+- `dS_u/dt = (T - S_u) / tau_u` (ocean thermal lag)
+- `eta(t) = a*S_u^2 + b*S_u + c*t + H0` (steric expansion)
+- Transfer function `T_sub = kappa*S_u + delta` couples to Greenland discharge
+
+### Glaciers
+Bayesian linear rate-temperature fit to GlaMBIE:
+- `dH/dt = b*T + c` (linear selected over quadratic by BIC)
+- Volume cap at 0.32 m SLE (Farinotti et al. 2019)
+
+### Greenland
+- **SMB**: Literature-derived C_T sensitivities from RCM ensemble (RACMO, MAR, HIRHAM)
+- **Discharge**: ODE driven by subsurface ocean temperature via jointly-calibrated transfer function
+
+### WAIS
+A4 deep-uncertainty scenario mixture with skew-normal distributions in log-space (Robel et al. 2019), rheology correction (n=3 to n=4, Martin et al.), SSP-independent.
+
+## Key Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| BASELINE_YEAR | 2005.0 | Reference epoch for anomalies |
+| N_SAMPLES | 2000 | MC ensemble size |
+| M_TO_MM | 1000.0 | Unit conversion |
+| PROJ_YEARS | 1950-2150 | Annual projection grid |
 
 ## Datasets
 
-### Sea Level (GMSL)
-| Dataset | Period | Type | Reference |
-|---------|--------|------|-----------|
-| Frederikse et al. | 1900-2018 | Budget reconstruction | Nature (2020) |
-| Dangendorf et al. | 1900-2021 | Kalman smoother | Nature Climate Change (2019) |
-| Horwath et al. | 1993-2016 | ESA CCI budget | ESSD (2022) |
-| NASA GSFC | 1993-present | Satellite altimetry | — |
-| IPCC AR6 observed | 1950-2020 | Composite | IPCC AR6 WG1 |
+### Calibration Data
+| Component | Dataset | Period | Reference |
+|-----------|---------|--------|-----------|
+| Thermosteric | NOAA TSL 0-700m | 1955-2025 | Levitus et al. (2012) |
+| Thermosteric | EN4 global 0-700m | 1970-2021 | Good et al. (2013) |
+| Glaciers | GlaMBIE consensus | 2000-2024 | GlaMBIE (2024) |
+| Greenland SMB | Mouginot/RACMO | 1972-2018 | Mouginot et al. (2019) |
+| Greenland discharge | Mouginot + EN4 | 1972-2018 | Mouginot et al. (2019) |
+| EAIS, Peninsula, WAIS | IMBIE-2 | 1992-2020 | Otosaka et al. (2023) |
 
-### Temperature (GMST)
-Berkeley Earth, GISTEMP v4, HadCRUT5, NOAA GlobalTemp
+### Validation Data
+| Dataset | Period | Reference |
+|---------|--------|-----------|
+| Frederikse steric | 1900-2018 | Frederikse et al. (2020) |
+| Mankoff discharge | 1986-2023 | Mankoff et al. (2021) |
+| ISMIP6 Antarctica | 2016-2101 | Seroussi et al. (2020) |
+| IPCC AR6 FACTS | 2020-2150 | Fox-Kemper et al. (2021) |
 
-### IPCC AR6 Projections
-Component-resolved FACTS projections (medium + low confidence) for SSP1-1.9 through SSP5-8.5, with ocean dynamics, glaciers, Greenland, and Antarctic contributions.
-
-## Key Findings
-
-### DOLS Calibration
-- Quadratic rate model preferred over linear (F-test, AIC, BIC)
-- SAOD (volcanic) forcing does NOT alias into temperature sensitivity (γ_saod t-stat = 0.26)
-- Multi-dataset ensemble (excluding Dangendorf sterodynamic): dα/dT = 2.85 ± 0.38 mm/yr/°C²
-
-### IPCC vs Observations
-- IPCC thermodynamic sensitivity is ~2× lower than observational DOLS estimate
-- All SSPs prefer linear (not quadratic) rate-temperature relationship
-- Consistent with Grinsted & Christensen (2021) transient sea level sensitivity framework
-
-### Physics-Informed WAIS Uncertainty
-Four complementary approaches (A1-A4) for correcting IPCC AIS projections:
-- A1: Rheology correction (Glen's flow law n=3 → n=4)
-- A2: Stochastic amplification during marine ice-sheet instability
-- A3: Process-informed discrete scenario mixture
-- A4 (recommended): Combined framework — σ_ice ≈ 491 mm at 2100
-
-### Sliding-Window DOLS
-- Coefficients α₀ and dα/dT trade off in an epoch-dependent manner
-- MLO SAOD becomes significant in ~50% of sliding windows (vs 0% in static DOLS)
-- Sensitivity to start date: Frederikse thermo dα/dT drops from 2.65 (1950+) to 0.19 (1900+)
+### Temperature Forcing
+Berkeley Earth monthly GMST (1850-present), SSP projections from IPCC AR6 FACTS.
 
 ## References
 
 - Frederikse, T., et al. (2020). The causes of sea-level rise since 1900. *Nature*, 584, 393-397.
-- Dangendorf, S., et al. (2019). Persistent acceleration in global sea-level rise since the 1960s. *Nature Climate Change*, 9, 705-710.
-- Grinsted, A. & Christensen, J.H. (2021). The transient sensitivity of sea level rise. *Ocean Science*, 17, 181-186.
+- Seroussi, H., et al. (2020). ISMIP6 Antarctica. *The Cryosphere*, 14, 3033-3070.
+- Mouginot, J., et al. (2019). Forty-six years of Greenland Ice Sheet mass balance. *PNAS*, 116(19), 9239-9244.
 - Robel, A.A., Seroussi, H. & Roe, G.H. (2019). Marine ice sheet instability amplifies and skews uncertainty. *PNAS*, 116(30), 14887-14892.
 - Martin, D.F., et al. (in review). Impact of the stress exponent on ice sheet simulations. *AGU Advances*.
-- Getraer, R.D. & Morlighem, M. (2025). Increasing the Glen-Nye power-law exponent accelerates ice-loss projections. *GRL*, 52.
-- Fricker, H.A., et al. (2025). Antarctica in 2025: Drivers of deep uncertainty in projected ice loss. *Science*, 387(6736), 758-765.
-
+- Fricker, H.A., et al. (2025). Antarctica in 2025. *Science*, 387(6736), 758-765.
+- Good, S.A., et al. (2013). EN4: Quality controlled ocean temperature and salinity profiles. *JGR Oceans*, 118, 6704-6716.
+- Levitus, S., et al. (2012). World ocean heat content and thermosteric sea level change. *GRL*, 39, L10603.
