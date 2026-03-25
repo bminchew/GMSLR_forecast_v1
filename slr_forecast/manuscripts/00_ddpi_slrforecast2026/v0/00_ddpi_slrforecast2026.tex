@@ -1,0 +1,412 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+% Custom commands
+\newcommand{\dT}{\Delta T}
+\newcommand{\dTstar}{\Delta T^{*}}
+\newcommand{\tcal}{T_{\mathrm{cal}}^{\max}}
+\newcommand{\tend}{t_{\mathrm{end}}}
+\newcommand{\sigr}{\sigma_{\hat{r}}}
+\newcommand{\sigrdot}{\sigma_{\dot{\hat{r}}}}
+\newcommand{\sigmodel}{\sigma_{\mathrm{model}}}
+\newcommand{\sigtrend}{\sigma_{\mathrm{trend}}}
+\newcommand{\MSEtrend}{\mathrm{MSE}_{\mathrm{trend}}}
+\newcommand{\MSEmodel}{\mathrm{MSE}_{\mathrm{model}}}
+
+\title{Data indicate that sea level rise projections are too low by at least half}
+\author{Minchew et al.}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{enumerate} 
+\item {abstract}
+\begin{itemize}
+	\item Roughly 1 million more people are exposed to the risks of displacement for every centimeter of global mean sea level rise (SLR). Annual costs of coastal flood damage increase by roughly ***X*** USD/cm SLR. 
+	\item Sea levels are currently rising $\approx$4.5 cm/decade and will continue to accelerate for decades under all realistic warming scenarios.  
+	\item This places forecasts, or projections, of SLR among the most consequential and value outputs in the history of science. However, the uncertainties in SLR projections are unquantified but range a minimum of more than 1.5 m ($>$100 million potential refugees) according to the latest assessment of the IPCC.
+	\item SLR projections are dominated by complex models with millions of degrees of freedom and dozens of uncertain parameters and parameterizations, constrained by data whose information content is vanishingly small relative to the demands of the models. 
+	\item The outputs of the current generations of have been shown to consistently fail all comparisons with data, leaving the world without reliable information for planning and adaptation to SLR
+	\item The broader forecasting literature has shown that increasing model complexity often degrades forecasting skill and the general rule that forecast models should be no more complex than the data can support. 
+	\item Here, we begin the construction of a data-driven, causal SLR forecast model that starts from the most naive forecast -- simple data extrapolation that provides a baseline and skill over approximately 20 years -- to an SLR component-level physics-informed hierarchical Bayesian calibrated against dozens of independent climatological and glaciological data sets. 
+\end{itemize}
+
+\item{Introduction}
+\begin{itemize}
+	\item Overview of SLR 
+	\item Current state of SLR projections
+	\item Universal forecasting principles 
+	\item Failures and limitations of current SLR forecasting models 
+\end{itemize}
+
+\item{Data and Methods}
+\begin{itemize}
+	\item Extrapolation from Hamlington et al quadratic fits 
+	\item SLR semi-empirical models -- Bayesian rate-state: quadratic and state relaxation time; emergence of quadratic from change in dominant SLR source 
+	\item SLR component-wise decompositions using physics-informed, hiearchical Bayesian 
+\end{itemize}
+
+\item{Results}
+\begin{itemize}
+
+	\item Naive forecast - data extrapolation (brief bc it's been published); 
+	\begin{itemize}
+		\item baseline estimation
+		\item  likely lower-bound due to continued warming 
+	\end{itemize}
+	
+	\item SLR quadratic and state relaxation time; 
+	\begin{itemize}
+		\item emergence of quadratic from change in dominant SLR source; 
+		\item unlikely to be reliable by themselves (include analysis) but 
+		\item resulting forecasts likely bracket (upper bound) truth 
+	\end{itemize}
+	
+	\item SLR component-wise decompositions
+	\begin{itemize}
+		\item component-wise fits; priors + posteriors 
+		\item forecasting skill 
+		\item Arguably most-reduced framework that faithfully represents physics 
+	\end{itemize}
+	
+	\item WAIS uncertainty -- Consider if simply using Bamber SEJ is appropriate here bc it's easy, honest, transparent, justifiable -- can followup with a separate paper on WAIS uncertainty 
+	
+	\item Uncertainty budget and value of information 
+	
+\end{itemize}
+
+
+\item{Discussion}
+\begin{itemize}
+	\item Discuss results for SLR projections 
+	\item Forecasting skills 
+	\item Comparison with IPCC results -- fall below observed trends even for warming scenarios; fail to capture basic sensitivities observed in data; component-wise comparisons all fail tests against data 
+\end{itemize}
+
+\item{Conclusions} 
+
+\end{enumerate}
+
+\section{Introduction}
+
+\textbf{Overview of SLR.}
+Global mean sea level has risen approximately 20~cm since 1900, with the rate of rise accelerating from $\sim\!1.4$~mm\,yr$^{-1}$ over the 20th century to $\sim\!4.5$~mm\,yr$^{-1}$ in the most recent decade \citep{Frederikse2020, Hamlington2020}. This acceleration reflects the combined effect of ocean thermal expansion and increasing mass loss from glaciers and the Greenland and Antarctic ice sheets. For each centimeter of global mean sea level rise, roughly one million additional people are exposed to the risk of coastal flooding and displacement \citep{Kulp2019}. Sea level rise is among the most consequential and irreversible impacts of climate change: once ice is lost and oceans warmed, the commitment persists for centuries to millennia regardless of subsequent emissions reductions \citep{Clark2016}.
+
+\textbf{Current state of SLR projections.}
+The Intergovernmental Panel on Climate Change (IPCC) Sixth Assessment Report (AR6) provides sea level projections based primarily on process-based ice sheet models (the Ice Sheet Model Intercomparison Project, ISMIP6; \citealp{Seroussi2020}), emulated glacier models (GlacierMIP; \citealp{Marzeion2020}), and coupled climate model output for thermal expansion. These projections form the basis for coastal adaptation planning worldwide. The AR6 medium-confidence projections for 2100 range from approximately 0.3~m (SSP1-2.6) to 0.7~m (SSP5-8.5) relative to a 1995--2014 baseline, with a ``low-likelihood, high-impact'' upper bound of 2~m that reflects deep uncertainty in ice sheet dynamics \citep{Fox-Kemper2021}. The gap between the medium-confidence projections and the acknowledged upper bound---a factor of three---reflects not measurement uncertainty but unquantified structural uncertainty in the process models that inform the central estimates.
+
+\textbf{Universal forecasting principles.}
+The broader forecasting literature, developed across economics, meteorology, and public health, has established principles that are relevant to sea level prediction but have not been applied systematically. First, forecast models should be no more complex than the information content of the calibration data can support; increasing complexity beyond this threshold degrades out-of-sample skill \citep{Green2015}. Second, forecast combinations---weighted averages of multiple independent methods---consistently outperform individual methods, including the most sophisticated among them \citep{Makridakis2018}. Third, model skill should be demonstrated through out-of-sample validation, not in-sample fit statistics. Current sea level projections rely on process models with millions of degrees of freedom and dozens of uncertain parameterizations, constrained by observational records whose information content is small relative to the demands of the models. The forecasting literature suggests that this regime is likely to produce overconfident, poorly calibrated predictions.
+
+\textbf{Failures and limitations of current SLR forecasting models.}
+Multiple lines of evidence indicate that IPCC process-model projections systematically underestimate the rate and magnitude of sea level rise. ISMIP6 ice sheet models diverge from IMBIE satellite observations almost immediately, with most models producing ice sheets that gain mass under warming rather than losing it \citep{Aschwanden2021, Fricker2025}. Under continued warming to 4$\,^\circ$C or more, observed trends in global mean sea level exceed IPCC medium-confidence projections for all emission scenarios \citep{Hamlington2025}. Known sources of low bias include: the universal use of Glen's flow law exponent $n = 3$ when observations support $n \approx 4$, which underestimates ice sheet response by 21--35\% \citep{Millstein2022, Martin2026}; the absence of calving, subglacial hydrology, and ice damage from most models \citep{Aschwanden2021}; the sensitivity of projections to calibration methodology, with different data constraints producing factor-of-two differences in projected loss rates from the same model \citep{Goldberg2026}; and incomplete uncertainty quantification that omits parametric uncertainty, which alone may exceed inter-model spread \citep{Aschwanden2019}. These are not speculative concerns---they are documented, quantified biases in the models that inform the central estimates used for coastal planning.
+
+In this work, we construct a data-driven, physics-informed hierarchical Bayesian framework for sea level prediction that does not depend on process models and that makes its assumptions, calibration range, and extrapolation uncertainty explicit. The framework proceeds in three steps of increasing physical complexity: (1) observational extrapolation of satellite-era trends, which provides a baseline lower bound; (2) an aggregate semi-empirical model relating the rate of sea level rise to global mean surface temperature, which captures the observed acceleration but conflates physically distinct components; and (3) a component-level decomposition that fits separate rate--temperature relationships to each contributor (thermal expansion, glaciers, Greenland ice sheet, Antarctic sub-components), identifies where the aggregate acceleration originates, and produces conditional predictive distributions with a decomposed uncertainty budget. Throughout, we calibrate exclusively against observational data, use Bayesian inference to propagate parametric uncertainty, and validate against independent datasets withheld from calibration.
+
+\section{Methods} 
+\subsection{Naive forecasts}
+
+We use Hamlington et al results ***Brent comment: needs fleshing out***
+
+\subsection{Semi-empirical forecasts} 
+
+\subsection{Physics-informed forecasts}
+	\subsubsection{Thermosteric}
+
+Ocean thermal expansion is the largest single contributor to observed sea level rise and the component with the longest observational record. We model the thermosteric contribution using a physically motivated single-layer ocean model that captures the first-order thermal lag between surface warming and steric sea level response.
+
+\paragraph{Physical model.}
+The effective upper-ocean temperature state $S_u(t)$ evolves as
+\begin{equation}
+	\frac{dS_u}{dt} = \frac{T(t) - S_u(t)}{\tau_u},
+	\label{eq:thermo_ode}
+\end{equation}
+where $T(t)$ is the monthly global mean surface temperature anomaly (Berkeley Earth; \citealp{Rohde2020}) and $\tau_u$ is the upper-ocean relaxation timescale. The steric sea level is then
+\begin{equation}
+	\eta(t) = a\, S_u(t)^2 + b\, S_u(t) + c\,(t - t_0) + H_0,
+	\label{eq:thermo_level}
+\end{equation}
+where $a$ captures the temperature dependence of the thermal expansion coefficient ($\alpha \propto \alpha_0 + \alpha_1 T$ from the equation of state; \citealp{McDougall2011}), $b$ is the baseline thermal expansion sensitivity, $c$ is a secular drift from halosteric and dynamical contributions not captured by the thermal model, and $H_0$ is the baseline offset. As $\tau_u \to 0$, $S_u \to T$ and the model reduces to the instantaneous quadratic $\eta = a\,T^2 + b\,T + c\,t + H_0$ used in the aggregate semi-empirical framework. The physical model thus nests the simpler model as a limiting case while adding the ocean thermal lag that controls the committed warming signal.
+
+\paragraph{Joint calibration.}
+The model is calibrated jointly against two independent observational datasets:
+\begin{enumerate}
+	\item \textbf{NOAA thermosteric sea level} (0--700\,m, 1955--2025, 71 annual points; \citealp{Levitus2012}): direct in situ measurements of ocean thermal expansion, providing the primary constraint on $a$, $b$, $c$, and $H_0$.
+	\item \textbf{EN4 global subsurface temperature} (0--700\,m, 1970--2021, monthly; \citealp{Good2013}): an independent observation of the ocean thermal state that constrains $\tau_u$ and simultaneously calibrates a transfer function $T_{\mathrm{sub}} = \kappa\, S_u + \delta$ linking the model's latent ocean state to observed subsurface temperature.
+\end{enumerate}
+We use NOAA rather than the thermosteric component of the \citet{Frederikse2020} budget reconstruction because the Frederikse record relies on model--data fusion for the pre-1955 period; the NOAA product is based entirely on in situ hydrographic measurements. The Frederikse reconstruction is retained for validation.
+
+The dual likelihood is
+\begin{align}
+	\eta^{\mathrm{obs}}(t_i) &\sim \mathcal{N}\!\left(\eta(t_i),\ \sigma_{\eta}(t_i)^2 + \sigma_{\mathrm{extra}}^2\right), \label{eq:thermo_lik_steric} \\
+	T_{\mathrm{sub}}^{\mathrm{obs}}(t_j) &\sim \mathcal{N}\!\left(\kappa\, S_u(t_j) + \delta,\ \sigma_{T}(t_j)^2 + \sigma_{\mathrm{ocean}}^2\right), \label{eq:thermo_lik_ocean}
+\end{align}
+where the first equation constrains the steric expansion parameters and the second constrains the ocean thermal state through the transfer function parameters $\kappa$ and $\delta$. The joint calibration resolves an identifiability problem present in single-likelihood fits: $\tau_u$ trades off with $b$ when only steric sea level is observed (a fast ocean with low sensitivity produces similar trajectories to a slow ocean with high sensitivity), but the subsurface temperature likelihood breaks this degeneracy by directly observing the ocean state.
+
+\paragraph{Transfer function for Greenland discharge.}
+The calibrated transfer function $T_{\mathrm{sub}} = \kappa\, S_u + \delta$ serves a dual purpose: it constrains $\tau_u$ during calibration, and it provides the ocean temperature forcing for the Greenland discharge model (\cref{eq:greenland_ode}). Under SSP projections, surface temperature drives the ODE for $S_u$, which is then mapped to subsurface ocean temperature via the jointly calibrated $\kappa$ and $\delta$, propagating the transfer function uncertainty into the Greenland discharge projections. This coupling through a shared latent ocean state ensures physical consistency between the thermosteric and Greenland components.
+
+\paragraph{Priors.}
+We assign physics-informed priors based on the thermal equation of state (TEOS-10; \citealp{McDougall2011}) and the two-layer energy balance model of \citet{Geoffroy2013}:
+\begin{align}
+	a &\sim \mathrm{Exp}\!\left(\mu = 0.22\ \mathrm{m\,{^\circ C}^{-2}}\right), \label{eq:thermo_prior_a} \\
+	b &\sim \mathrm{HalfNormal}\!\left(\sigma = 0.15\ \mathrm{m\,{^\circ C}^{-1}}\right), \label{eq:thermo_prior_b} \\
+	c &\sim \mathcal{N}\!\left(0.3,\ 0.5\ \mathrm{mm\,yr^{-1}}\right), \label{eq:thermo_prior_c} \\
+	\tau_u &\sim \mathrm{LogNormal}\!\left(\log 8,\ 0.5\right)\ \mathrm{yr}, \label{eq:thermo_prior_tau} \\
+	\kappa &\sim \mathcal{N}\!\left(0.5,\ 0.5\right), \label{eq:thermo_prior_kappa} \\
+	\delta &\sim \mathcal{N}\!\left(0,\ 0.3\ \mathrm{^\circ C}\right). \label{eq:thermo_prior_delta}
+\end{align}
+The prior on $\tau_u$ has a median of 8\,yr with a 94\% credible interval of approximately 4--25\,yr, consistent with the CMIP5-derived estimates of \citet{Geoffroy2013}. The prior on $a$ is a penalized-complexity prior calibrated so that $P(a > 0.5\ \mathrm{m\,{^\circ C}^{-2}}) = 0.10$, reflecting the thermodynamic constraint that the thermal expansion coefficient increases with temperature but at a rate bounded by the equation of state. The priors on $\kappa$ and $\delta$ are weakly informative, allowing the EN4 data to determine the transfer function.
+
+\paragraph{Two-layer sensitivity.}
+As a sensitivity analysis, we extend the model to two ocean layers by adding a deep-ocean state:
+\begin{equation}
+	\frac{dS_d}{dt} = \frac{S_u(t) - S_d(t)}{\tau_d},
+	\label{eq:thermo_twolayer}
+\end{equation}
+with $\eta(t) = a\, S_u^2 + b_u\, S_u + b_d\, S_d + c\,(t - t_0) + H_0$. The two-layer model provides a marginal improvement in $R^2$ ($< 0.001$) with $\tau_d$ poorly constrained (posterior rail against the prior upper bound), confirming that the deep-ocean relaxation timescale ($> 100$\,yr) is unresolvable within the $\sim\!70$-year NOAA record. We therefore use the single-layer model for all projections and report the two-layer results as a sensitivity check.
+
+	\subsubsection{Glaciers}
+
+Mountain glaciers contribute to sea level rise through mass loss driven by surface energy balance changes under warming. We model the glacier contribution using the same rate--temperature framework as the thermosteric component, but with priors that permit moderate nonlinearity to accommodate the expected response as warming exposes new ice area and accelerates frontal ablation.
+
+The instantaneous rate of glacier mass loss is modeled as
+\begin{equation}
+	\dot{H}_{\mathrm{gl}}(t) = a_{\mathrm{gl}}\, T(t)^2 + b_{\mathrm{gl}}\, T(t) + c_{\mathrm{gl}},
+	\label{eq:glacier_rate}
+\end{equation}
+where $T(t)$ is the global mean surface temperature anomaly relative to the 1995--2005 mean, $a_{\mathrm{gl}}$ captures any nonlinear acceleration in the temperature sensitivity of glacier mass loss, $b_{\mathrm{gl}}$ is the linear mass-loss sensitivity to temperature, and $c_{\mathrm{gl}}$ is a background trend representing mass loss under pre-industrial equilibrium conditions (expected to be small but nonzero, as many glaciers were already adjusting to post--Little Ice Age warming).
+
+The cumulative glacier sea level contribution is
+\begin{equation}
+	H_{\mathrm{gl}}(t) = a_{\mathrm{gl}}\, I_2(t) + b_{\mathrm{gl}}\, I_1(t) + c_{\mathrm{gl}}\, I_0(t) + H_0^{\mathrm{gl}},
+	\label{eq:glacier_level}
+\end{equation}
+where $I_2(t) = \int_{t_0}^{t} T(\tau)^2\, d\tau$, $I_1(t) = \int_{t_0}^{t} T(\tau)\, d\tau$, and $I_0(t) = t - t_0$ are the design vectors precomputed from the monthly temperature record, and $H_0^{\mathrm{gl}}$ is the initial sea level offset at the baseline epoch.
+
+\textbf{Priors:} We assign the following priors to the glacier parameters:
+\begin{align}
+	a_{\mathrm{gl}} &\sim \mathcal{N}\!\left(0,\ 1.82\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-2}}\right), \label{eq:glacier_prior_a} \\
+	b_{\mathrm{gl}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 5\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}\right), \label{eq:glacier_prior_b} \\
+	c_{\mathrm{gl}} &\sim \mathcal{N}\!\left(0.3,\ 2.0\ \mathrm{mm\,yr^{-1}}\right), \label{eq:glacier_prior_c} \\
+	\sigma_{\mathrm{extra}}^{\mathrm{gl}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 2\ \mathrm{mm}\right), \label{eq:glacier_prior_sigma} \\
+	H_0^{\mathrm{gl}} &\sim \mathcal{N}\!\left(0,\ 10\ \mathrm{mm}\right). \label{eq:glacier_prior_H0}
+\end{align}
+Unlike the thermosteric and Greenland components, the prior on $a_{\mathrm{gl}}$ is symmetric about zero rather than restricted to positive values. Glaciers are a finite, depleting reservoir: under sustained warming, lower-elevation glaciers disappear entirely while high-elevation accumulation zones receive increased precipitation, causing the aggregate mass-loss rate to peak and then decline. This reservoir depletion and the associated hypsometric feedback (glacier retreat to higher, colder elevations) would manifest as $a_{\mathrm{gl}} < 0$, which a one-sided prior would exclude by construction. The scale is set so that $P(|a_{\mathrm{gl}}| > 3\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-2}}) = 0.10$, providing weak regularization toward the linear model while allowing the data to determine the sign and magnitude of any nonlinearity. The half-normal prior on $b_{\mathrm{gl}}$ enforces positive sensitivity: glaciers lose mass in a warming climate. The prior on $c_{\mathrm{gl}}$ is centered near zero with sufficient width to accommodate a positive background trend from post--Little Ice Age disequilibrium.
+
+\textbf{Data and calibration:} The model is calibrated against the GlaMBIE global glacier consensus estimate \citep[2000--2023;][]{GlaMBIE2024}, which combines glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 glacier regions of the Randolph Glacier Inventory. We use GlaMBIE rather than the glacier component of the \citet{Frederikse2020} budget reconstruction because the latter relies on extrapolating a small sample of directly measured glaciers to the global total via area--volume scaling for the pre-satellite era (1961--2000), introducing model dependence that we seek to avoid. The GlaMBIE record is shorter (24 years versus 57) but is entirely observational: every annual estimate is derived from direct measurements with near-global coverage. This is a critical distinction from the Greenland SMB data (Section~\ref{sec:greenland}), where the observational record is itself the output of a regional climate model (RACMO); for glaciers, the rate--temperature fit extracts an empirical sensitivity directly from observations without a process-model intermediary. The observation model is
+\begin{equation}
+	H_{\mathrm{gl}}^{\mathrm{obs}}(t_i) \sim \mathcal{N}\!\left(H_{\mathrm{gl}}(t_i),\ \sigma_{\mathrm{obs}}(t_i)^2 + \left(\sigma_{\mathrm{extra}}^{\mathrm{gl}}\right)^2\right),
+	\label{eq:glacier_likelihood}
+\end{equation}
+where $\sigma_{\mathrm{obs}}(t_i)$ is the time-varying observational uncertainty from the GlaMBIE consensus and $\sigma_{\mathrm{extra}}^{\mathrm{gl}}$ is a learned model-inadequacy term that absorbs any systematic misfit between the rate--temperature model and the observations not accounted for by measurement uncertainty (e.g., missing covariates, wrong functional form, temporally correlated residuals). This parameter measures the detectable component of structural uncertainty within the calibration window; it does not bound the extrapolation error at temperatures outside the calibration range, which is a distinct and generally larger source of uncertainty in conditional predictions. Posterior samples are drawn using an affine-invariant ensemble MCMC sampler.
+
+\textbf{Volume cap:} Glaciers are a finite ice reservoir with a total volume of approximately $0.32$~m SLE \citep{Farinotti2019}. When projecting the fitted rate--temperature relationship forward under warming scenarios, we impose a hard ceiling: the cumulative glacier contribution to sea level cannot exceed the total available glacier volume. This is applied per Monte Carlo sample, so the conditional predictive distribution at each future time step reflects the physical constraint that mass loss must cease when no ice remains. This cap is distinct from the hypsometric feedback (glacier retreat to higher elevations reducing the effective temperature sensitivity), which has been documented at the individual glacier scale \citep{Marzeion2014} but has not been demonstrated as a globally significant effect over the observational period. The symmetric prior on $a_{\mathrm{gl}}$ allows the data to detect a declining sensitivity ($a_{\mathrm{gl}} < 0$) if the hypsometric feedback is operating at the global aggregate level; the posterior is centered near zero ($a_{\mathrm{gl}} = -0.12\ [-0.60,\ 0.37]$~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$), indicating that the 2000--2024 data do not require nonlinearity in either direction.
+
+\textbf{Validation:} The calibrated glacier model is validated against the glacier component of the \citet{Frederikse2020} budget reconstruction (1900--2018) and the satellite-era glacier component from \citet{Horwath2022} (1993--2016), both rebased to match GlaMBIE at the 2005 baseline to remove systematic offsets from different processing chains and peripheral glacier treatment. The \citet{Frederikse2020} reconstruction extends further back in time than the GlaMBIE calibration window and provides a check on whether the fitted sensitivity extrapolates to pre-2000 conditions. We also compare our posterior sensitivity $b_{\mathrm{gl}}$ against the emergent temperature sensitivity from the PyGEM process-based glacier model \citep{Rounce2023}, which reported an approximately linear relationship between cumulative glacier mass loss and global warming level across $+1.5$ to $+4\,^\circ$C. Our data-driven sensitivity serves as an independent observational benchmark for the process model: agreement would increase confidence in both approaches, while disagreement would indicate where the process model departs from what the observations support.
+
+	\subsubsection{Greenland}
+	\label{sec:greenland}
+
+Greenland contributes to sea level rise through surface mass balance (SMB) anomalies driven by atmospheric warming and ice-dynamic discharge driven by ocean thermal forcing at marine-terminating glacier margins. We treat these separately: SMB is taken directly from observations, while discharge is modeled with a physically motivated ODE.
+
+\paragraph{Surface mass balance.}
+The \citet{Mouginot2019} SMB record (1972--2018) is derived from the RACMO regional climate model \citep{Noel2018}, which computes surface energy balance, snowfall, refreezing, and runoff on a high-resolution grid forced by ERA reanalysis. We use this record directly as observed data rather than fitting a rate--temperature polynomial. Fitting a simpler model to RACMO output would discard information: RACMO already resolves the spatially heterogeneous processes (albedo feedback, rain/snow partitioning, refreezing capacity) that determine SMB, and a polynomial in temperature cannot recover what the regional climate model computes. This is distinct from the glacier component, where GlaMBIE \citep{GlaMBIE2024} provides direct observations without a process-model intermediary, making a data-driven rate--temperature fit the appropriate approach.
+
+For projections, the SMB anomaly relative to the baseline period scales with temperature \citep[][Eq.~4.8]{CuffeyPaterson2010}:
+\begin{equation}
+	\Delta \dot{H}_{\mathrm{smb}} = C_T\, \Delta T_{\mathrm{global}} + C_{T^2}\, \Delta T_{\mathrm{global}}^2,
+	\label{eq:smb_sensitivity}
+\end{equation}
+where $C_T$ is the linear sensitivity incorporating both increased runoff and the partial offset from Clausius--Clapeyron scaling of accumulation \citep{Gregory2006}, and $C_{T^2}$ captures the nonlinear enhancement from ablation zone expansion under sustained warming \citep{Noel2021, Sellevold2020}. Published RCM sensitivities are reported per degree of local Greenland temperature; we convert to GMST using an Arctic amplification factor of approximately 2.0. Multiple RCMs constrain the linear sensitivity to $C_T \approx -200$ to $-250$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST: MAR gives $-100$ to $-150$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of local temperature \citep{Fettweis2013, Hanna2021}, RACMO gives approximately $-100$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of local temperature \citep{Noel2018}, with HIRHAM producing values similar to MAR. We use the inter-RCM spread as structural uncertainty: under identical SSP5-8.5 forcing, end-of-century SMB ranges from $-964$\,Gt\,yr$^{-1}$ (RACMO) to $-1735$\,Gt\,yr$^{-1}$ (MAR), a factor of $\sim\!1.8$ \citep{Glaude2024}. We draw
+\begin{align}
+	C_T &\sim \mathcal{N}\!\left(-200,\, 80^2\right)\,\mathrm{Gt\,yr^{-1}\,{^\circ C}^{-1}\ GMST}, \label{eq:smb_CT} \\
+	C_{T^2} &\sim \mathcal{N}\!\left(-50,\, 30^2\right)\,\mathrm{Gt\,yr^{-1}\,{^\circ C}^{-2}\ GMST}, \label{eq:smb_CT2}
+\end{align}
+and propagate this uncertainty through the Monte Carlo ensemble. The quadratic term reflects the approximately sixfold acceleration in SMB decline above $\sim\!2.7\,^\circ$C GMST documented in high-resolution RCM experiments \citep{Sellevold2020, Noel2021}. As an independent check, we compute a data-driven $C_T$ from GRACE total mass balance minus satellite-era discharge \citep{Otosaka2023, Mankoff2021}, which yields $C_T = 177 \pm 65$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST ($R^2 = 0.21$, 29 annual points). The low $R^2$ reflects high interannual variability from weather (NAO, atmospheric blocking) rather than a poor trend estimate; the data-driven value is within $1\sigma$ of the RCM-derived central estimate and serves as an observational lower bound.
+
+\paragraph{Discharge model.}
+The cumulative Greenland sea level contribution is
+\begin{equation}
+	H_{\mathrm{GrIS}}(t) = H_{\mathrm{smb}}^{\mathrm{obs}}(t) + H_{\mathrm{dyn}}(t),
+	\label{eq:greenland_total}
+\end{equation}
+where the discharge component is governed by
+\begin{equation}
+	\frac{dD_{\mathrm{eff}}}{dt} = \frac{T_{\mathrm{ocean}}(t) - D_{\mathrm{eff}}(t)}{\tau},
+	\label{eq:greenland_ode}
+\end{equation}
+\begin{equation}
+	H_{\mathrm{dyn}}(t) = \gamma_{\mathrm{atm}}\, I_1^{\mathrm{Gr}}(t) + \gamma_{\mathrm{ocean}} \int_{t_0}^{t} D_{\mathrm{eff}}(\tau)\, d\tau + D_0\, I_0(t) + H_0^{\mathrm{dyn}}.
+	\label{eq:greenland_dyn}
+\end{equation}
+Here $D_{\mathrm{eff}}(t)$ is an effective ocean thermal state that parameterizes the lagged response of calving-front position to subsurface ocean temperature $T_{\mathrm{ocean}}(t)$ (EN4/Argo, 200--500\,m, Greenland peripheral waters; \citealp{Good2013, Roemmich2009}). The timescale $\tau$ represents the delay between ocean warming and grounding-line retreat. The term $\gamma_{\mathrm{atm}}$ allows for residual atmospheric influence on discharge, such as enhanced submarine melting from increased subglacial meltwater discharge \citep{Slater2021}; $D_0$ is a secular drift.
+
+\paragraph{Independence of SMB and discharge.}
+The model treats SMB and discharge as independent, additive components. Three lines of evidence support this structure. First, \citet{King2020} showed that Greenland's discharge acceleration (2000--2005) was driven by calving-front retreat, with a consistent 4--5\% speedup per km of retreat that has persisted independent of interannual surface melt variability. Second, dynamic thinning propagates inland from the terminus at rates of $\sim$10\,m\,yr$^{-1}$, an order of magnitude larger than SMB-driven thinning in the ablation zone \citep{Felikson2017}; these are spatially separated processes. Third, a potential SMB--discharge feedback through driving stress ($\tau_d = \rho_{\mathrm{ice}} g h \nabla h$)---in which SMB-driven thinning via the kinematic boundary condition $\partial h/\partial t = \dot{b} - \nabla \cdot (\mathbf{u} h)$ modifies glacier dynamics---is not supported by the data. Using the per-glacier records from \citet{Mouginot2019} for all 219 marine-terminating glaciers, we find no significant correlation between area-normalized cumulative SMB deficit and discharge change ($r = +0.12$, $p = 0.08$; wrong sign for the feedback hypothesis) or between cumulative mass balance and discharge change ($r = -0.01$, $p = 0.93$). The meltwater--sliding feedback is further constrained by observations at land-terminating sectors showing that increased melt can produce \emph{deceleration} through efficient subglacial drainage development \citep{Tedstone2015}. Under sustained future warming, cumulative thinning may eventually become large enough to affect discharge, but this is not detectable in the 1972--2018 record.
+
+The posterior estimate of $\gamma_{\mathrm{atm}}$ is near zero, confirming that ocean forcing dominates decadal discharge variability.
+
+\paragraph{Priors and calibration.}
+The discharge model has 6 free parameters:
+\begin{align}
+	\gamma_{\mathrm{atm}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 2\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}\right), \label{eq:gr_prior_gamma_atm} \\
+	\gamma_{\mathrm{ocean}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 2\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}\right), \label{eq:gr_prior_gamma_ocean} \\
+	\tau &\sim \mathrm{LogNormal}\!\left(\log 10,\ 0.6\right), \label{eq:gr_prior_tau} \\
+	D_0 &\sim \mathcal{N}\!\left(0,\ 0.5\ \mathrm{mm\,yr^{-1}}\right), \label{eq:gr_prior_D0}
+\end{align}
+plus a model-inadequacy term $\sigma_{\mathrm{extra}}^{\mathrm{dyn}}$ and baseline offset $H_0^{\mathrm{dyn}}$ with weakly informative priors. The prior on $\tau$ (median 10\,yr, 94\% CI 4--25\,yr) is informed by observed outlet glacier response times \citep{Straneo2015}. The model is calibrated against the discharge component of \citet{Mouginot2019} (1972--2018, 47 annual observations), forced by EN4/Argo subsurface ocean temperature (200--500\,m, 58--80$^\circ$N, 75--5$^\circ$W; \citealp{Straneo2012}). The observation model is
+\begin{equation}
+	H_{\mathrm{dyn}}^{\mathrm{obs}}(t_j) \sim \mathcal{N}\!\left(H_{\mathrm{dyn}}(t_j),\ \sigma_{\mathrm{dyn}}(t_j)^2 + \left(\sigma_{\mathrm{extra}}^{\mathrm{dyn}}\right)^2\right).
+	\label{eq:gr_likelihood_dyn}
+\end{equation}
+The independent \citet{Mankoff2021} product (1986--2023) is withheld from calibration; the 2019--2023 period provides an out-of-sample forecast test. Total Greenland mass balance (observed SMB + modeled discharge) is validated against IMBIE \citep{Otosaka2023} and \citet{Horwath2022}.
+
+	\subsubsection{Antarctica: Peninsula and EAIS}
+
+The Antarctic Peninsula and East Antarctic Ice Sheet (EAIS) are smaller contributors to GMSL than Greenland, glaciers, or WAIS, but are treated explicitly to close the component budget. EAIS projections use literature-derived SMB sensitivities for the same reason as Greenland SMB: the observational record is too short and noisy for a data-driven temperature regression, and the underlying accumulation physics requires spatially resolved atmospheric modeling. The Peninsula is modeled with an empirical linear fit that captures the combined SMB and discharge signal directly.
+
+\paragraph{East Antarctic Ice Sheet.}
+EAIS mass balance is dominated by accumulation: warming increases snowfall via Clausius--Clapeyron scaling ($\sim\!5\%\,^\circ$C$^{-1}$ of $\sim\!1200$~Gt\,yr$^{-1}$ total accumulation), partially offset by marginal dynamic losses. We use the sensitivity $C_T^{\mathrm{EAIS}} \sim \mathcal{N}(+60,\, 20^2)$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST from \citet{Frieler2015} and \citet{Ligtenberg2013}. Because $C_T > 0$ (mass gain under warming), EAIS produces a \emph{negative} sea level contribution that partially offsets other components. As a diagnostic, we fit a Bayesian rate--temperature model to the IMBIE East Antarctic record (1992--2020; \citealp{Otosaka2023}); BIC model selection confirms the trend-only model over the quadratic, consistent with no detectable temperature sensitivity over the 28-year satellite era.
+
+\paragraph{Antarctic Peninsula.}
+The Peninsula contributes $\sim\!45$~mm to GMSL by 2100 under SSP2-4.5, approximately 9\% of the total---small relative to other components but not negligible. We model the Peninsula with a Bayesian linear rate--temperature fit to IMBIE (1992--2020), which captures the combined SMB and discharge signal in a single empirical relationship:
+\begin{equation}
+	\dot{H}_{\mathrm{Pen}}(t) = b_{\mathrm{Pen}}\, T(t) + c_{\mathrm{Pen}},
+	\label{eq:peninsula_rate}
+\end{equation}
+where $b_{\mathrm{Pen}}$ is the net temperature sensitivity and $c_{\mathrm{Pen}}$ is a background mass-loss rate. BIC model selection confirms the linear model over a quadratic. This approach is justified on two grounds. First, the Peninsula signal is dominated by ice dynamics ($\sim\!94\%$ of mass loss on decadal timescales; \citealp{Kim2024}), so the linear fit is primarily capturing discharge, which is the component that would require a separate ODE in a Greenland-style decomposition. Second, while recent work has documented a widespread discharge acceleration on the western Peninsula since 2018 driven by subsurface ocean warming \citep{Davison2024}, with discharge trends tripling from $\sim\!50$ to $\sim\!160$~Mt\,yr$^{-2}$ \citep{Davison2024}, and satellite observations confirm sustained velocity increases through 2023 \citep{Wuite2025, Wallis2023}, the total contribution remains small enough that the $\sim\!15$~mm difference between the linear extrapolation and a more physically decomposed model is well within the uncertainty of larger components (the WAIS 90\% credible interval alone spans $\sim\!250$~mm). The comprehensive grounding-line discharge dataset of \citet{Rignot2025}, which provides monthly estimates for 998 basins from 1996--2024, notes that Peninsula discharge estimates show less inter-method agreement than for West Antarctica, further limiting the value of a more complex decomposition at this stage.
+
+We note that the post-2018 acceleration, if sustained, would add $\sim\!15$~mm to our central estimate by 2100---a correction we flag for future work but do not incorporate here given the short observational baseline of the acceleration ($\sim\!5$ years) and its small magnitude relative to total GMSL uncertainty.
+
+\subsection{WAIS uncertainty}
+\label{sec:wais}
+
+The West Antarctic Ice Sheet dominates sea level projection uncertainty at centennial timescales. Unlike thermosteric, glacier, and Greenland components, WAIS dynamics cannot be modeled with a data-driven rate--temperature regression: the observational record (28 years of IMBIE satellite gravimetry) is too short to constrain a temperature-dependent response for a system whose instabilities unfold over decades to centuries, and the physics of marine ice sheet instability involves threshold processes that are poorly represented by smooth functional forms. We therefore adopt a scenario-based approach that constructs a probability distribution over WAIS contributions from a discrete mixture of physically distinct regimes, each with literature-informed ranges and an explicit skewness parameterization motivated by the stochastic dynamics of grounding-line retreat.
+
+\subsubsection{A4 scenario framework}
+
+We define three scenarios for WAIS contributions at 2100, reflecting distinct physical regimes of ice sheet behavior:
+
+\begin{enumerate}
+	\item[\textbf{S1.}] \textbf{Status quo} ($P = 0.10$; 30--80\,mm). Current discharge rates continue without marine ice sheet instability (MISI). Grounding lines either stabilize or retreat slowly. The range is anchored to IMBIE observed rates: the recent peak rate of $\sim\!0.44$\,mm\,yr$^{-1}$ \citep{Otosaka2023} extrapolated over 95 years gives $\sim\!42$\,mm; bounds of 30--80\,mm bracket moderate deceleration to continued acceleration without instability. The low weight reflects growing evidence that MISI may already be underway: grounding-line retreat on retrograde beds is observed at Thwaites Glacier \citep{Joughin2014}, ocean thermal forcing sufficient to drive WAIS retreat is committed regardless of emissions pathway \citep{Naughten2023}, and present-day forcing held constant is sufficient to deglaciate large parts of WAIS \citep{vandenAkker2025}.
+
+	\item[\textbf{S2.}] \textbf{MISI} ($P = 0.80$; 150--1000\,mm; $\alpha = +4$). Marine ice sheet instability is triggered, with the full range of amplifying processes that current models omit. The lower bound (150\,mm) is consistent with the ISMIP6 upper range for WAIS dynamic losses \citep[$\sim\!180$\,mm under RCP8.5;][]{Seroussi2020} and the median total Antarctic contribution from DeConto et al.\ under $\sim\!3\,^\circ$C warming \citep{DeConto2021}. The upper bound (1000\,mm) matches the Bamber et al.\ structured expert judgment 95th percentile for WAIS under $+5\,^\circ$C \citep[$\sim\!930$\,mm;][]{Bamber2019}. We assign $\alpha = +4$ (positive skewness in log-space) following \citet{Robel2019}, who showed analytically that MISI amplifies and skews uncertainty toward worse outcomes: when the grounding-line flux nonlinearity exponent exceeds 3 (realistic values are 4--5), ensemble distributions are systematically skewed toward greater ice loss. Their Thwaites Glacier ensemble simulations produced $\sim\!20$--40\,cm of irreducible uncertainty from climate variability alone during periods of rapid retreat, representing 25--50\% of total Thwaites deglaciation.
+
+	This scenario merges what were previously separate ``moderate MISI'' and ``MISI with amplifiers'' scenarios. The distinction is not physically defensible: if MISI is triggered, the amplifying processes that models omit---calving \citep{Aschwanden2021, Fricker2025}, subglacial hydrology that can amplify discharge up to threefold \citep{Dow2022}, and the 21--35\% underestimation from incorrect ice rheology ($n = 3$ vs.\ observed $n \approx 4$; \citealp{Martin2026, GetraerMorlighem2025})---operate concurrently. There is no physical basis for a scenario in which MISI proceeds exactly as current models predict, because those models do not represent the processes that govern the instability rate.
+
+	\item[\textbf{S3.}] \textbf{MISI + MICI} ($P = 0.10$; 600--2000\,mm; $\alpha = -3$). Marine ice cliff instability \citep{Bassis2012, DeContoP2016} operates in addition to MISI. The lower bound (600\,mm) reflects the Edwards et al.\ emulator estimate for Antarctic SLR with MICI under RCP8.5 \citep[$\sim\!450$\,mm most likely;][]{Edwards2019}, augmented by MISI contributions. The upper bound (2\,m from WAIS alone) represents $\sim\!60\%$ deglaciation of a $\sim\!3.3$\,m SLE reservoir. We assign $\alpha = -3$ (negative skewness in log-space, concentrating probability toward the lower portion of the range), reflecting the accumulating evidence against MICI viability during the 21st century: \citet{Morlighem2024} showed in a multi-model study that Thwaites would not retreat further due to MICI and that calving rates would need to be $\geq\!25\times$ higher than physically motivated models suggest; \citet{Clerc2019} demonstrated that realistic ice-shelf removal timescales raise the critical cliff height from $\sim\!90$\,m to $\sim\!540$\,m; and \citet{Schlemm2022} found MICI to be self-limiting due to m\'{e}lange buttressing. IPCC AR6 assigns low confidence to MICI \citep{Fox-Kemper2021}.
+\end{enumerate}
+
+\subsubsection{Distribution and corrections}
+
+Within each scenario, samples are drawn from a skew-normal distribution in log-space. This parameterization has three transparent parameters: a location $\xi$ and scale $\omega$ (determined by the requirement that the 5th and 95th percentiles match the scenario bounds) and a shape parameter $\alpha$ that controls skewness. Setting $\alpha = 0$ recovers a log-normal; $\alpha > 0$ produces positive skew (heavy right tail); $\alpha < 0$ produces negative skew. The skew-normal family is chosen because $\alpha$ maps directly to the physical insight of \citet{Robel2019}: MISI creates a systematic asymmetry in which the probability of ice loss exceeding the most likely outcome is substantially greater than the probability of falling below it.
+
+A multiplicative rheology correction is applied to all samples from all scenarios. Current ice sheet models universally assume Glen's flow law exponent $n = 3$, but satellite observations yield $n = 4.1 \pm 0.4$ \citep{Millstein2022}, supported by field measurements \citep{Bons2018}, laboratory meta-analysis \citep{Fan2025}, and a theoretical framework connecting laboratory to ice-sheet scales \citep{Ranganathan2024}. \citet{Martin2026} showed that this mismatch causes a 21--35\% underestimation of 100-year SLR in the MISMIP+ benchmark, while \citet{GetraerMorlighem2025} found $32 \pm 14\%$ greater Amundsen Sea Embayment loss with $n = 4$ in the ISMIP6 framework. We apply the correction as a multiplicative factor drawn from $\mathcal{N}(1.28,\, 0.07^2)$, truncated below at 1.0, where the median spans the range from the MISMIP+ result (1.21) to the ABUMIP result (1.35).
+
+The combined A4 distribution is SSP-independent: WAIS dynamics on projection timescales are driven primarily by ocean thermal forcing with long lag times, not by contemporaneous atmospheric warming. \citet{Naughten2023} showed that rapid West Antarctic ice-shelf melting at $\sim\!3\times$ historical rates is unavoidable regardless of emissions scenario.
+
+\subsubsection{Independent validation: Bamber et al.\ SEJ}
+
+As an independent cross-check, we compare the A4 mixture against the structured expert judgment (SEJ) of \citet{Bamber2019}, which elicited WAIS-specific probability distributions from 22 ice sheet experts using Cooke's classical model. Under $+5\,^\circ$C, their WAIS 5th--95th percentile range is $-50$ to $930$\,mm (median 180\,mm). Our A4 mixture produces a median of $\sim\!390$\,mm with 90\% CI of approximately 60--1800\,mm---wider than the Bamber distribution, as expected given that the SEJ predates the quantification of the rheology bias \citep{Martin2026} and recent observational evidence of ongoing destabilization. The broad agreement in distributional shape (strongly right-skewed, median in the hundreds of mm) between two methodologically independent approaches---physics-informed scenario mixture vs.\ performance-weighted expert judgment---strengthens confidence that the ISMIP6 medium-confidence range substantially underestimates WAIS uncertainty.
+
+\section{Results}
+
+\subsection{Semi-empirical forecasts}
+
+\subsection{Physics-informed forecasts}
+	\subsubsection{Thermosteric}
+
+The single-layer physical model is jointly calibrated against 71 annual NOAA thermosteric observations (1955--2025) and 618 monthly EN4 subsurface temperature measurements (1970--2021). The joint calibration resolves the $\tau_u$--$b$ degeneracy that limits single-likelihood fits: the steric likelihood constrains the product $b \cdot f(\tau_u)$, while the EN4 likelihood independently observes $S_u(t)$, breaking the trade-off.
+
+\paragraph{Posterior parameters.}
+The posterior estimates are [values to be updated after final fit]:
+\begin{align}
+	a &= \text{***}\ \mathrm{mm\,{^\circ C}^{-2}}, \\
+	b &= \text{***}\ \mathrm{mm\,{^\circ C}^{-1}}, \\
+	c &= \text{***}\ \mathrm{mm\,yr^{-1}}, \\
+	\tau_u &= \text{***}\ \mathrm{yr}, \\
+	\kappa &= \text{***}, \\
+	\delta &= \text{***}\ \mathrm{^\circ C},
+\end{align}
+where brackets denote 90\% credible intervals. The steric fit achieves $R^2 = \text{***}$; the ocean temperature transfer function achieves $R^2 = \text{***}$. The model-inadequacy term $\sigma_{\mathrm{extra}}$ is small ($\text{***}$\,mm), indicating that the physical model captures the NOAA observations within their stated uncertainties over the calibration period.
+
+\paragraph{Ocean thermal lag.}
+The posterior on $\tau_u$ is well constrained by the dual likelihood, with a median of $\sim\!$***\,yr. This implies a committed thermosteric sea level rise of $b \cdot (T_{\mathrm{eq}} - S_u^{\mathrm{now}})$, where the gap between equilibrium and current ocean state represents warming already absorbed by the atmosphere but not yet expressed in ocean thermal expansion. At the 2024 GMST anomaly of $+1.3\,^\circ$C, the ocean state $S_u \approx \text{***}\,^\circ$C, implying a committed expansion of $\text{***}$\,mm even under immediate emissions cessation.
+
+\paragraph{Transfer function.}
+The jointly calibrated transfer function $T_{\mathrm{sub}} = \kappa\, S_u + \delta$ provides a physically consistent mapping from the model's latent ocean state to observed subsurface temperatures. The posterior $\kappa \approx \text{***}$ indicates that subsurface temperature responds to roughly ***\% of the effective ocean state change, consistent with the depth-averaging of the 0--700\,m EN4 product. This transfer function is passed directly to the Greenland discharge model (\cref{eq:greenland_ode}), coupling the thermosteric and Greenland components through a shared ocean state with fully propagated parametric uncertainty.
+
+\paragraph{Validation.}
+The NOAA-calibrated model is validated against the \citet{Frederikse2020} steric reconstruction (1900--2018), which was withheld from calibration. Over the satellite era (1993--2018), the model and Frederikse reconstruction agree within uncertainties. Before 1955 (outside the NOAA calibration window), the model extrapolation tracks the Frederikse record, though pre-1955 Frederikse steric values are partially model-constrained and therefore not a fully independent test.
+
+	\subsubsection{Glaciers}
+
+The glacier model is calibrated on 24 annual GlaMBIE observations (2000--2024) spanning approximately $1\,^\circ$C of GMST warming relative to the 1995--2005 baseline. The posterior distributions for the rate--temperature parameters are:
+\begin{align}
+	a_{\mathrm{gl}} &= -0.12\ [-0.60,\ 0.37]\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-2}}, \label{eq:glacier_result_a} \\
+	b_{\mathrm{gl}} &= \phantom{-}0.77\ [0.49,\ 1.05]\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}, \label{eq:glacier_result_b} \\
+	c_{\mathrm{gl}} &= \phantom{-}0.59\ [0.51,\ 0.67]\ \mathrm{mm\,yr^{-1}}, \label{eq:glacier_result_c}
+\end{align}
+where brackets denote the 90\% credible interval. The model-inadequacy term is small ($\sigma_{\mathrm{extra}}^{\mathrm{gl}} = 0.11\ [0.01,\ 0.34]$~mm), indicating that the rate--temperature model captures the GlaMBIE observations within their stated uncertainties over the calibration period. The fit achieves $R^2 = 0.998$. We emphasize that a small $\sigma_{\mathrm{extra}}$ does not imply small structural uncertainty in conditional predictions at higher temperatures: the model is calibrated over $\sim\!1\,^\circ$C of warming, and extrapolation to $+3$--$4\,^\circ$C carries additional risk from physical processes (reservoir depletion, hypsometric feedback) that may not be detectable within the calibration range. The volume cap and the symmetric prior on $a_{\mathrm{gl}}$ provide partial safeguards, but the out-of-sample structural uncertainty remains the dominant source of predictive uncertainty for the glacier component at centennial horizons.
+
+The posterior on $a_{\mathrm{gl}}$ is centered near zero and spans both positive and negative values (posterior probability $P(a_{\mathrm{gl}} > 0.5) = 1.8\%$), confirming that the data do not require nonlinearity in either direction over the observational period. The linear model ($a_{\mathrm{gl}} = 0$) is sufficient: the instantaneous rate of glacier mass loss is well described by
+\begin{equation}
+	\dot{H}_{\mathrm{gl}} \approx 0.77\, T + 0.59 \quad \mathrm{mm\,yr^{-1}},
+	\label{eq:glacier_linear_rate}
+\end{equation}
+where $T$ is the GMST anomaly in $^\circ$C relative to the 1995--2005 mean. At the 2024 GMST anomaly of approximately $+1.3\,^\circ$C, this implies a glacier mass-loss rate of $\sim\!1.6$~mm\,yr$^{-1}$, consistent with the GlaMBIE consensus.
+
+The background trend $c_{\mathrm{gl}} = 0.59$~mm\,yr$^{-1}$ represents glacier mass loss at the baseline temperature. This is physically expected: glaciers were losing mass throughout the 20th century due to post--Little Ice Age disequilibrium and the cumulative effects of prior warming.
+
+\paragraph{Comparison with process models.}
+The data-driven linear sensitivity $b_{\mathrm{gl}} = 0.77$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ provides an observational benchmark for process-based glacier models. Integrating over 85 years (2015--2100), this sensitivity implies approximately 65~mm of cumulative glacier SLR per degree of sustained warming. \citet{Rounce2023}, using the PyGEM process-based glacier evolution model, reported 90--154~mm cumulative glacier loss by 2100 across $+1.5$ to $+4\,^\circ$C warming levels, implying an effective sensitivity of 35--40~mm per degree. Our data-driven value is roughly $1.5$--$2\times$ the process-model value. This discrepancy could reflect the hypsometric feedback incorporated in process models (glacier retreat to higher elevations reduces future sensitivity) or errors in the process models themselves. Process-based glacier models have been calibrated at the individual glacier scale but have not been validated against independent out-of-sample predictions of global aggregate mass loss under warming.  We note that our conditional predictions are bounded by the finite glacier ice volume ($\sim\!0.32$~m SLE), which limits the practical consequence of this sensitivity difference under high-warming scenarios.
+
+An independent diagnostic decomposes the IPCC AR6 glacier median projections into rate--temperature space by fitting $\dot{H}_{\mathrm{IPCC}} = b_{\mathrm{IPCC}}\, T + c_{\mathrm{IPCC}}$ to the decadal rates implied by the IPCC median trajectories. This yields $b_{\mathrm{IPCC}} \approx 0.13$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and $c_{\mathrm{IPCC}} \approx 1.2$~mm\,yr$^{-1}$, stable across SSPs ($R^2 > 0.85$). The structure is inverted relative to our data-driven fit: the IPCC median attributes most of the glacier mass-loss rate to a temperature-independent committed response, with a temperature sensitivity roughly $6\times$ smaller than what GlaMBIE observations support. This structural difference---high committed rate with low sensitivity versus moderate committed rate with high sensitivity---means that the IPCC projections and our model converge at intermediate warming levels but diverge under both low- and high-warming scenarios, with IPCC projecting more loss under stabilization (due to its large $c$) and less under sustained warming (due to its small $b$).
+
+\paragraph{Validation against independent datasets.}
+The GlaMBIE-calibrated model is evaluated against the \citet{Frederikse2020} glacier reconstruction (1900--2018) and the \citet{Horwath2022} satellite-era budget (1993--2016), both rebased to match GlaMBIE at the 2005 baseline.  Over the satellite era (2000--2018), all three datasets agree within their stated uncertainties, confirming that the fitted rate--temperature relationship is consistent across independent observational products. Before 2000, the model extrapolation tracks the Frederikse reconstruction, though Frederikse pre-2000 glacier estimates depend on area--volume scaling extrapolations and are therefore not purely observational.
+
+	\subsubsection{Greenland}
+	
+	\subsubsection{Antarctica: Peninsula and EAIS}
+
+	\subsubsection{WAIS}
+
+\section{Discussion}
+
+\subsection{Implication of results for sea-level prediction}
+
+\subsection{Forecasting skill} 
+
+\subsection{Calibration considerations}
+
+How far outside the calibration bounds does our model still have skill?
+
+\paragraph{Model inadequacy vs.\ structural uncertainty.}
+Each component model includes a learned parameter $\sigma_{\mathrm{extra}}$ that quantifies the systematic misfit between the model and the calibration data beyond what measurement uncertainty explains. A small $\sigma_{\mathrm{extra}}$ indicates that the chosen functional form is adequate for the calibration period and temperature range --- it does not guarantee adequacy outside that range. The distinction matters for interpretation: $\sigma_{\mathrm{extra}}$ is a lower bound on structural uncertainty within sample, not an estimate of the prediction error at temperatures the model has not seen.
+
+For the glacier component, $\sigma_{\mathrm{extra}} \approx 0.1$~mm over 2000--2024, during which GMST warmed by $\sim\!1\,^\circ$C. Extrapolating the fitted linear sensitivity to $+3$--$4\,^\circ$C introduces structural risks --- reservoir depletion, hypsometric feedback, threshold behavior --- that are invisible to $\sigma_{\mathrm{extra}}$ because they have not yet been expressed in the data. The same caveat applies to all components: the thermosteric model is calibrated over a temperature range that is a fraction of what SSP5-8.5 projects, and the Greenland discharge ODE has been observed for only $\sim\!50$ years of a response time $\tau \sim 10$--$20$~yr. These limitations are inherent to any data-driven framework and are not unique to ours; the advantage of our approach is that the calibration range and the extrapolation lever arm are explicit, whereas process models embed analogous extrapolation assumptions in their parameterizations without reporting them as such.
+
+\subsection{Extensions and next steps}
+
+This work is intended to develop a simple hierarchical, data-driven approach to sea-level rise prediction as a complement to and diagnostic for the complex process-based models that have largely dominated discussions of sea-level rise. 
+
+
+\bibliographystyle{agufull08}
+\bibliography{references}
+
+\end{document}
+
+
+

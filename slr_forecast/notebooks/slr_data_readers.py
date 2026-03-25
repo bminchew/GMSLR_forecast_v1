@@ -1507,6 +1507,103 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     return df
 
 
+def read_berkeley_earth_gridded(
+    filepath: str,
+    lat_bounds: tuple = (60.0, 84.0),
+    lon_bounds: tuple = (-73.0, -12.0),
+    land_threshold: float = 0.5,
+) -> pd.DataFrame:
+    """
+    Read Berkeley Earth 1° gridded NetCDF and return area-weighted monthly
+    temperature for a specified region (default: Greenland).
+
+    The returned anomaly is relative to the 1951-1980 climatology embedded
+    in the file.  Grid cells are weighted by ``land_mask * areal_weight``
+    so that ocean-dominated cells contribute less.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``berkEarth_Global_TAVG_Gridded_1deg.nc``.
+    lat_bounds : tuple of float
+        (lat_min, lat_max) in degrees north.  Default (60, 84) for Greenland.
+    lon_bounds : tuple of float
+        (lon_min, lon_max) in degrees east.  Default (-73, -12) for Greenland.
+    land_threshold : float
+        Minimum ``land_mask`` fraction for a cell to be included.
+        Default 0.5 retains mixed land/ocean coastal cells.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with datetime index and columns:
+        - temperature : area-weighted anomaly (°C, rel. 1951-1980)
+        - decimal_year : fractional year for each month
+    """
+    import netCDF4 as nc
+
+    ds = nc.Dataset(filepath)
+
+    lat = ds.variables['latitude'][:]
+    lon = ds.variables['longitude'][:]
+    time = ds.variables['time'][:]            # decimal year
+    temp = ds.variables['temperature'][:]     # (time, lat, lon)
+    land_mask = ds.variables['land_mask'][:]  # (lat, lon)
+    areal_wt = ds.variables['areal_weight'][:] # (lat, lon)
+    ds.close()
+
+    # Region mask
+    lat_mask = (lat >= lat_bounds[0]) & (lat <= lat_bounds[1])
+    lon_mask = (lon >= lon_bounds[0]) & (lon <= lon_bounds[1])
+    region = np.ix_(lat_mask, lon_mask)
+
+    lm = land_mask[region]
+    aw = areal_wt[region]
+
+    # Combined weight: land fraction × cell area, zeroing sub-threshold cells
+    weight = np.where(lm >= land_threshold, lm * aw, 0.0)
+    weight_sum = weight.sum()
+
+    # Area-weighted mean for each time step
+    temp_region = temp[:, lat_mask, :][:, :, lon_mask]  # (time, nlat, nlon)
+    # Handle NaNs: use nansum / adjusted weight
+    valid = ~np.isnan(temp_region)
+    weighted_temp = np.where(valid, temp_region * weight[np.newaxis, :, :], 0.0)
+    effective_weight = np.where(valid, weight[np.newaxis, :, :], 0.0)
+
+    ts = weighted_temp.sum(axis=(1, 2)) / effective_weight.sum(axis=(1, 2))
+
+    # Build datetime index from decimal year
+    # Time values are mid-month: Jan=1/24, Feb=3/24, ..., Dec=23/24
+    dates = pd.to_datetime([
+        f'{int(y)}-{max(1, min(12, int((y - int(y)) * 12) + 1)):02d}-01'
+        for y in time
+    ])
+
+    df = pd.DataFrame({
+        'temperature': ts,
+        'decimal_year': time,
+    }, index=dates)
+    df.index.name = 'time'
+
+    # Attach metadata
+    df.attrs = {
+        'dataset': 'berkeley_earth_gridded',
+        'reference': 'Rohde & Hausfather (2020)',
+        'doi': '10.5194/essd-12-3469-2020',
+        'native_units': {'temperature': 'degC'},
+        'current_units': {'temperature': 'degC'},
+        'temperature_baseline': '1951-1980',
+        'native_time_resolution': 'monthly',
+        'region_lat': lat_bounds,
+        'region_lon': lon_bounds,
+        'land_threshold': land_threshold,
+        'n_cells': int((weight > 0).sum()),
+    }
+
+    return df
+
+
 def read_hadcrut5(filepath: str) -> pd.DataFrame:
     """
     Read HadCRUT5 global mean surface temperature.
@@ -3199,6 +3296,7 @@ __all__ = [
     'read_imbie_west_antarctica',
     # Temperature readers
     'read_berkeley_earth',
+    'read_berkeley_earth_gridded',
     'read_hadcrut5',
     'read_nasa_gistemp',
     'read_noaa_globaltemp',
@@ -3242,6 +3340,7 @@ if __name__ == "__main__":
     print("  - read_imbie_west_antarctica()")
     print("\nTemperature Readers:")
     print("  - read_berkeley_earth()")
+    print("  - read_berkeley_earth_gridded()")
     print("  - read_hadcrut5()")
     print("  - read_nasa_gistemp()")
     print("  - read_noaa_globaltemp()")

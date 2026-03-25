@@ -104,12 +104,25 @@ IPCC medium-confidence SLR projections are structurally biased low because the i
 
 ### Notebook Partitioning
 
+**Component notebooks** (one per SLR component, self-contained, standardized structure):
+
+| Notebook | Component | Model | Key Data |
+|----------|-----------|-------|----------|
+| `component_ocean.ipynb` | Thermosteric | Physical ODE (1L/2L) + quadratic DOLS | Frederikse steric, NOAA TSL |
+| `component_glacier.ipynb` | Glaciers | Linear DOLS + volume cap | GlaMBIE global |
+| `component_greenland.ipynb` | Greenland | Joint SMB + discharge ODE | Mouginot, Mankoff, EN4 ocean T |
+| `component_eais.ipynb` | EAIS | Linear trend-only | IMBIE EAIS |
+| `component_apeninsula.ipynb` | Peninsula | Linear DOLS | IMBIE Peninsula |
+| `component_wais.ipynb` | WAIS | A4 scenario framework | IMBIE WAIS |
+
+Each follows: §0 Imports → §1 Data → §2 Fitting → §3 Diagnostics → §4 Projections → §5 IPCC Comparison → §6 Appendix.
+
 **Main text notebooks** (must run cleanly, produce publication figures):
 
 | Notebook | Paper Section | Produces |
 |----------|--------------|----------|
 | `bayesian_ratestate.ipynb` | §2 (rate prior), §3 (semi-empirical) | Figs 2, S1–S5, S10 |
-| `component_decomposition.ipynb` | §4 (component fits) | Figs 1b, 3, S12–S14, S18 |
+| `component_*.ipynb` (6 notebooks) | §4 (component fits) | Figs 1b, 3, S12–S14, S18 |
 | `predictability_analysis.ipynb` | §4 (WAIS), §5 (projections) | Figs 4, S6–S7, S11, S15–S16 |
 
 **Supplementary notebooks** (support claims, not needed for main figures):
@@ -120,27 +133,24 @@ IPCC medium-confidence SLR projections are structurally biased low because the i
 | `slr_analysis_notebook.ipynb` | S6 (multi-dataset robustness) |
 | `wais_data_ipccar6.ipynb` | S17 (IMBIE vs ISMIP6 comparison) |
 | `read_process_datafiles.ipynb` | Data processing pipeline (not for publication figures) |
+| `ipcc_hindcast.ipynb` | IPCC sensitivity extraction and hindcast |
 
-**Not needed for publication** (archive or remove):
+**Archived** (superseded by per-component notebooks):
 
 | Notebook | Reason |
 |----------|--------|
+| `archive/component_decomposition_refactor.ipynb` | Replaced by 6 per-component notebooks (Mar 2026) |
+| `archive/component_decomp_sensitivities.ipynb` | Sensitivity analyses moved into per-component appendix sections |
 | `playing_w_figures.ipynb` | Exploration / figure prototyping |
 | `hybrid_forecast.ipynb` / `*_executed.ipynb` | Superseded by rate-and-state framework |
 | `slr_heuristic_projections.ipynb` / `*_executed.ipynb` | Superseded by three-step framework |
-| `stats_v_process.ipynb` | Early exploratory analysis |
-| `wais_scenario_uncertainties.ipynb` | Superseded by A4 framework in predictability_analysis |
 
 ### Analyses Still Needed (before paper)
 
 | Analysis | Notebook | Priority | Notes |
 |----------|----------|----------|-------|
-| Complete component-level projections with budget closure | `component_decomposition.ipynb` | **Critical** | Must show Σcomponents ≈ total GMSL at 2100 |
-| Component-level variance decomposition | `component_decomposition.ipynb` | **Critical** | Which component dominates uncertainty at each horizon |
 | Side-by-side comparison of all three steps at 2050/2100 | New or `predictability_analysis.ipynb` | **Critical** | The paper's central figure |
-| Sensitivity to WAIS scenario weights | `predictability_analysis.ipynb` | High | How much do results change with different P(MISI)? |
 | Run rate-and-state model with NASA rate prior | `bayesian_ratestate.ipynb` | High | Already coded, needs execution |
-| Validate component fits against IMBIE/GlaMBIE observations | `component_decomposition.ipynb` | High | Cross-check: model-implied cryospheric rates vs observed |
 
 ---
 
@@ -198,14 +208,37 @@ All sea-level and temperature anomalies are defined relative to a baseline perio
    Every module imports from this file. No notebook cell should define its own baseline.
 
 2. **Every rebaseline operation must be a named function, not inline code.**
+   Implement `rebaseline(df, baseline_window)` in `units.py` that subtracts the mean over the window and updates `df.attrs`.
 
-3. **Tag DataFrames with baseline metadata.**
+3. **Tag DataFrames with baseline metadata — mandatory, not optional.**
+   Every reader must call `tag_baseline(df, ...)` before returning. The attrs must include:
+   - `baseline_year`: float (e.g., 2005.0)
+   - `baseline_window`: tuple (e.g., (1995, 2005))
+   - `original_baseline`: str describing the native baseline of the raw data (e.g., `'1951-1980'` for Berkeley Earth, `'absolute'` for EN4)
 
-4. **Assert baseline consistency before combining datasets.**
+   If a reader returns absolute values (not anomalies), set `baseline_year = None` and `baseline_window = None`.
+
+4. **Assert baseline consistency before combining datasets — enforced at function boundaries.**
+   Any function that takes two or more DataFrames as input (e.g., fitting, differencing, plotting together) must call:
+   ```python
+   assert_baseline_consistent(df1, df2, ..., tolerance_yr=0.0)
+   ```
+   This function checks that all inputs share the same `baseline_year` and `baseline_window`. If they differ, it raises `BaselineMismatchError` with a message naming the datasets and their baselines.
+
+   Implement in `units.py`:
+   ```python
+   class BaselineMismatchError(ValueError): ...
+
+   def assert_baseline_consistent(*dfs, tolerance_yr=0.0):
+       """Raise BaselineMismatchError if DataFrames have different baselines."""
+   ```
 
 5. **IPCC FACTS projections are relative to 2005 by construction.** Document the match explicitly.
 
 6. **IMBIE records start in 1992 and are rebased to ~2005.** Document sensitivity.
+
+7. **Ocean temperature baselines.**
+   EN4 and Argo return absolute temperatures. Readers must convert to anomalies relative to `BASELINE_WINDOW` at ingestion and tag the result. The `original_baseline` attr preserves the information that the raw data were absolute.
 
 ---
 
@@ -218,20 +251,80 @@ The most common unit in the project is meters (sea level), but raw data arrives 
 
 1. **Define all conversion constants in one place** (`units.py`).
 
-2. **Standard internal units:**
-   | Quantity | Internal unit |
-   |---|---|
-   | Sea level | meters (m) |
-   | Temperature | degrees Celsius (degC), anomaly relative to baseline |
-   | Time | decimal years (yr) |
-   | Rate | m/yr |
-   | Acceleration | m/yr² |
+2. **Standard base operational units (SI-derived):**
 
-3. **Convert to display units only at the plotting layer.**
+   | Dimension | Internal unit | Symbol | Notes |
+   |---|---|---|---|
+   | Mass | kilograms | kg | Use Gt only at ingestion/display |
+   | Length / sea level | meters | m | |
+   | Time | seconds | s | Stored as decimal years for time axes; seconds for rates in SI contexts |
+   | Energy | joules | J | Ocean heat content |
+   | Power | watts | W | Energy flux |
+   | Temperature | degrees Celsius | °C | Anomaly relative to baseline |
+   | Temperature (absolute) | kelvin | K | Only for ocean T raw data (EN4); convert to °C at ingestion |
+   | Rate (sea level) | m/yr | | Decimal-year convention for time |
+   | Acceleration | m/yr² | | |
+   | Area | m² | | Ocean area for SLE conversion |
 
-4. **Tag every DataFrame with unit metadata.**
+   For this project, time axes remain in decimal years and rates in m/yr (not m/s) because all datasets and analysis operate on annual-to-decadal timescales. The SI base of seconds is used only when computing derived quantities (e.g., W = J/s for OHC flux).
 
-5. **Add unit-checking assertions to key functions** (e.g., warn if sea-level values > 1.0, likely mm not m).
+3. **Convert at ingestion, never downstream.**
+   Every reader converts raw data to standard internal units before returning. No analysis function should contain unit conversion logic.
+
+4. **Tag every DataFrame with unit metadata — mandatory, not optional.**
+   Every reader must call `tag_units(df, {...})` before returning. The attrs must include:
+   - `units`: dict mapping column name → unit string (e.g., `{'temperature': 'degC', 'gmsl': 'm'}`)
+   - `original_units`: dict mapping column name → native unit of the raw data (e.g., `{'temperature': 'K'}` for EN4)
+
+   This allows provenance tracking: what the data were originally, and what they are now.
+
+5. **Assert unit consistency before combining datasets — enforced at function boundaries.**
+   Any function that operates on multiple DataFrames must call:
+   ```python
+   assert_units_consistent(df1, df2, ..., columns=['temperature'])
+   ```
+   This checks that the named columns have the same unit string in `df.attrs['units']`. If they differ, it raises `UnitMismatchError`.
+
+   Implement in `units.py`:
+   ```python
+   class UnitMismatchError(ValueError): ...
+
+   def assert_units_consistent(*dfs, columns=None):
+       """Raise UnitMismatchError if DataFrames have different units for the given columns."""
+   ```
+
+6. **Add unit-checking assertions to key functions** (e.g., warn if sea-level values > 1.0, likely mm not m). Existing: `assert_units_meters()`, `assert_sigma_positive()`. These must be called in every reader that returns sea-level data.
+
+7. **Plotting units: user-configurable display layer.**
+
+   Analysis code always works in internal units. Conversion to display units happens only in plotting functions via a `display_units` dict:
+
+   ```python
+   # Default display units (can be overridden per plot)
+   DISPLAY_UNITS = {
+       'sea_level': 'mm',       # m → mm
+       'temperature': 'degC',   # no change
+       'rate': 'mm/yr',         # m/yr → mm/yr
+       'acceleration': 'mm/yr²',
+       'time': 'yr',            # no change
+       'mass': 'Gt',            # kg → Gt
+       'ohc': 'ZJ',             # J → ZJ (10²¹ J)
+   }
+   ```
+
+   Every plotting function accepts an optional `display_units=` kwarg that overrides defaults. Implement a helper:
+   ```python
+   def to_display(values, from_unit, to_unit):
+       """Convert array from internal unit to display unit.
+       Used only in plotting layer."""
+   ```
+
+   Axis labels are auto-generated from the display unit: `f'{quantity} ({display_unit})'`.
+
+   The user sets display units in one place (e.g., top of a notebook or in `config.py`) and all figures use them consistently. Changing from mm to cm for a journal requires editing one dict, not every plot.
+
+8. **Compound unit tracking.**
+   For derived quantities (rates, accelerations), units are tracked as strings with `/` separators (e.g., `'m/yr'`, `'mm/yr²'`). The `to_display()` function parses these and applies conversions to numerator and denominator independently.
 
 ---
 
@@ -332,7 +425,21 @@ slr_forecast/
 - [ ] All sigma values are positive after loading
 - [ ] All sea-level data in SLR convention (positive = rise)
 - [ ] Baseline consistent across all datasets (BASELINE_YEAR = 2005.0)
-- [ ] Unit consistency: all internal computation in meters; mm only for display
+- [ ] Unit consistency: all internal computation in standard base units (m, kg, s, J, W, °C); display units only at plotting layer
+
+### Unit and Baseline Tracking Checks
+- [ ] Every reader tags `df.attrs['units']` (dict: column → unit string) via `tag_units()`
+- [ ] Every reader tags `df.attrs['original_units']` (dict: column → native raw-data unit)
+- [ ] Every reader tags `df.attrs['baseline_year']`, `df.attrs['baseline_window']`, `df.attrs['original_baseline']` via `tag_baseline()`
+- [ ] Readers returning absolute values (not anomalies) set `baseline_year = None`
+- [ ] `assert_baseline_consistent()` called at the entry of every function combining 2+ DataFrames
+- [ ] `assert_units_consistent()` called at the entry of every function combining 2+ DataFrames on shared columns
+- [ ] `BaselineMismatchError` and `UnitMismatchError` implemented in `units.py`
+- [ ] `rebaseline(df, baseline_window)` function implemented and used for all rebaselining (no inline subtraction)
+- [ ] `DISPLAY_UNITS` dict defined in `config.py`; all plotting functions accept `display_units=` kwarg
+- [ ] `to_display(values, from_unit, to_unit)` helper implemented in `units.py`
+- [ ] No unit conversion code exists outside `units.py` and reader ingestion functions
+- [ ] Ocean temperature data (EN4, Argo) converted from K to °C and from absolute to anomaly at ingestion
 
 ### Efficiency Checks
 - [ ] No duplicate MCMC runs — each model is fit once, results cached
@@ -397,6 +504,11 @@ test:      pytest tests/
 - [x] Add `df.attrs` metadata enforcement *(done — all readers tag sign_convention, units; helpers in `units.py`)*
 - [x] Add assertion guards to reader functions *(done — `assert_sigma_positive`, `assert_units_meters` called at end of readers)*
 - [ ] Add assertion guards to analysis functions
+- [ ] Implement `BaselineMismatchError`, `UnitMismatchError`, `assert_baseline_consistent()`, `assert_units_consistent()` in `units.py`
+- [ ] Implement `rebaseline(df, baseline_window)` function in `units.py`
+- [ ] Add `original_units` and `original_baseline` attrs to all readers
+- [ ] Implement `DISPLAY_UNITS` dict in `config.py` and `to_display()` helper in `units.py`
+- [ ] Audit all plotting code to use `to_display()` instead of inline `* M_TO_MM`
 - [ ] Write `DATA_SOURCES.md`
 - [ ] Audit `data/raw/` for unused files
 - [ ] Pin all dependencies in `requirements.txt` / `pyproject.toml`
@@ -418,4 +530,6 @@ test:      pytest tests/
 - **Langsmith pytest plugin conflict**: The environment has a broken `langsmith` install (missing `zstandard`). Use `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest` to run tests cleanly.
 - **Reader migration strategy**: New readers in `src/slr_forecast/readers/` are independent copies of the parsing logic from `notebooks/slr_data_readers.py`, with sign-convention fixes (§1), unit constants from `units.py` (§3), and metadata tagging applied at the point of ingestion. The original `notebooks/slr_data_readers.py` is untouched and still used by notebooks. When notebooks are converted to import from the package, the old file can be archived.
 - **Cross-platform paths**: All file and folder paths should use `pathlib.Path` (or `os.path.join`) instead of hardcoded `/` separators. Audit notebooks and `.py` modules for string-concatenated paths (e.g., `DATA_RAW / 'ice_sheets'` is fine; `'data/raw/ice_sheets'` is not). This is required for reproducibility on Windows.
+- **Greenland component must use Greenland temperature**: The Greenland ice sheet model (Stage 2b) must be forced with Greenland regional surface temperature (`read_berkeley_earth_gridded()` from the 1° gridded NetCDF, 60–84°N, 73–12°W), NOT global mean surface temperature (GMST). GMST produces poor fits (R² ≈ 0.31 with fixed c) because it lacks the Arctic-amplified variability that drives Greenland SMB. Using Greenland T yields R² ≈ 0.98. Only use GMST if the user explicitly requests it (e.g., for a sensitivity analysis). This applies to design vectors, the discharge ODE, and projections.
+- **NASA altimetry `gmsl_sigma` is NOT measurement error**: The `gmsl_sigma` column in the NASA satellite altimetry data is the spatial standard deviation of sea surface height across the ocean — it reflects geographic variability, not measurement uncertainty on the global mean. The actual measurement uncertainty on the GMSL trend comes from the Ablain et al. (2019) error covariance matrix and the Hamlington et al. (2024) three-component error budget, both of which are already handled in `fit_satellite_era_quadratic()`. Any analysis that uses NASA `gmsl_sigma` as observation weights (e.g., WLS regression on satellite-era GMSL) will be wrong — it over-weights early data and under-weights recent data because spatial variability is roughly constant while true measurement error decreases over time. If observation-level uncertainty is needed for the satellite record, derive it from the Ablain covariance diagonal or use a fixed value informed by the error budget.
 - **Next step**: Migrate analysis modules (`slr_analysis.py`, `bayesian_dols.py`, `slr_projections.py`) into `src/slr_forecast/analysis/`, or proceed with the critical-path component analysis work.

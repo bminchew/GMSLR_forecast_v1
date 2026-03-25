@@ -18,6 +18,7 @@ from slr_forecast.readers.gmsl import (
 # Temperature
 from slr_forecast.readers.gmst import (
     read_berkeley_earth,
+    read_berkeley_earth_gridded,
     read_hadcrut5,
     read_nasa_gistemp,
     read_noaa_globaltemp,
@@ -57,6 +58,11 @@ from slr_forecast.readers.forcing import (
     read_mauna_loa_transmission,
     read_noaa_oni,
     read_noaa_mei,
+)
+
+# Ocean temperature
+from slr_forecast.readers.ocean_temp import (
+    read_en4_regional,
 )
 
 # TWS

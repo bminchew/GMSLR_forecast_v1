@@ -1,133 +1,140 @@
 # SLR Forecasting — TODO
 
-*Last updated: 2026-02-16*
+*Consolidated 2026-03-22. Previous plans archived in `archive/done.md`.*
 
 ---
 
-## Active Priorities
+## Manuscript (00_ddpi_slrforecast2026.tex)
 
-### 1. Component-Wise DOLS — Per-Component Temperature Sensitivity
-**Priority: HIGH | Effort: ~1 day | Dependencies: None (data loaded)**
+### Critical — must complete before submission
 
-Fit DOLS to each SLR component independently (steric, glaciers, Greenland, Antarctica) to determine which components drive the quadratic acceleration. Replicate on IPCC projected components to compare model vs observed per-component sensitivities.
+- [ ] **Write remaining Methods subsections**: Thermosteric, Greenland, Antarctica/Peninsula/EAIS, WAIS uncertainty
+  *Effort: 1–2 days. Glaciers subsection done.*
 
-- [ ] Fit DOLS to Frederikse component columns: `steric`, `glaciers`, `greenland`, `antarctica` each regressed against GMST
-- [ ] Compare component sensitivities: Which show significant quadratic? Expected: thermosteric and glaciers continuous; Antarctica poorly fit
-- [ ] Replicate with IPCC projected components: `oceandynamics`, `glaciers`, `GIS`, `AIS`
-- [ ] Cross-check: Do per-component α₀ values sum to total GMSL α₀?
-- [ ] Variance attribution: Which component contributes most to total dα/dT?
-- [ ] Horwath budget validation (1993–2016, limited statistical power)
+- [ ] **Write Introduction**: SLR overview, current projection failures, forecasting principles, our approach
+  *Effort: 1–2 days*
 
-**Data**: Frederikse has `steric`, `glaciers`, `greenland`, `antarctica` (1900–2018). IPCC has `oceandynamics`, `glaciers`, `GIS`, `AIS` (decadal, 2020–2100). Horwath has `steric_dieng`, `glaciers`, `greenland`, `antarctica_altimetry`/`antarctica_grace` (monthly, 1993–2016).
+- [ ] **Write Results**: Three-step results, component fits, projections comparison with IPCC
+  *Effort: 2–3 days*
 
----
+- [ ] **Write Discussion and Conclusions**
+  *Effort: 1–2 days*
 
-### 2. Stress-Test WAIS Uncertainty Approaches
-**Priority: HIGH | Effort: 1–2 days | Dependencies: None (code exists)**
+- [ ] **Publication figures**: Journal-formatted versions of existing analysis figures
+  *Effort: 2–3 days. See figure inventory in `refactor.md` §0b.*
 
-Reviewer-ready sensitivity analysis of the A1–A4 framework.
+- [ ] **Side-by-side comparison of all three steps** (naive, aggregate, component) at 2050/2100
+  *Effort: 0.5 day. Central figure of the paper.*
 
-- [ ] **Scenario weight sensitivity:** Sweep A4 weights ±0.1 per scenario; tornado diagram of σ_ice at 2100
-- [ ] **Scenario range sensitivity:** Perturb (low, high) bounds by ±20%; identify which scenario drives most variance
-- [ ] **Rheology exponent:** Test n = 3.5 and n = 4.5 in A1 correction
-- [ ] **Stochastic amplification magnitude:** A2 noise ±50%
-- [ ] **Comparison with published estimates:** Tabulate σ_ice at 2100 from IPCC (med/low), A1–A4, Bamber (2019), DeConto (2021), Edwards (2021)
-- [ ] **Tail behavior:** Compare A4 99th percentile with published worst-case estimates
-- [ ] **Internal consistency:** Verify A4 convolved with DOLS reproduces IPCC low-confidence total GMSL range (approximately)
+- [ ] **Complete component-level variance decomposition**: Which component dominates uncertainty at each horizon
+  *Effort: 0.5 day. Run all 6 component notebooks, then aggregate.*
 
----
+- [ ] **Budget closure figure**: Σcomponents ≈ total GMSL at 2100
+  *Effort: 0.5 day. Run per-component notebooks, sum projections.*
 
-### 3. Greenland SLR Sensitivity to Regional Warming
-**Priority: MEDIUM | Effort: 2–3 days | Dependencies: New data acquisition**
+- [ ] **Data inventory spreadsheet**: Create an Excel workbook documenting all datasets used in this study. One sheet per component (Thermosteric, Glaciers, Greenland, EAIS, Peninsula, WAIS) plus sheets for GMSL, GMST, and cross-cutting data (IPCC AR6, ISMIP6). Each entry should include: dataset name, source/reference with DOI, temporal coverage, spatial coverage, how it is used (calibration/validation/diagnosis), units, file path in repo, and notes on processing. Goal: full replicability of the data pipeline.
+  *Effort: 1 day*
 
-Test whether Greenland ice mass loss is more predictable when regressed against regional (Arctic) temperature rather than GMST.
+### High — strengthens paper
 
-- [ ] Acquire Greenland regional temperature data (ERA5, Berkeley Earth regional, DMI composites, or MAR/RACMO)
-- [ ] Write reader function with `df.attrs` metadata
-- [ ] Fit GrIS mass loss (IMBIE) vs regional T and compare with GMST fit
-- [ ] Assess implications for variance decomposition: Does regional T shrink deep uncertainty fraction?
-- [ ] If successful, construct component-level model: `GrIS_rate = α_GrIS × T_regional + trend`
+- [ ] **WAIS scenario weight sensitivity**: Sweep A4 weights ±0.1; tornado diagram of σ_ice at 2100
+  *Effort: 0.5 day*
 
----
+- [ ] **WAIS scenario range sensitivity**: Perturb (low, high) bounds ±20%; identify dominant scenario
+  *Effort: 0.5 day*
 
-### 4. Predictable/Unpredictable Framing
-**Priority: HIGH (but comes last) | Effort: 1–2 days | Dependencies: Items 1–3**
+- [ ] **Rheology exponent sensitivity**: Test n = 3.5 and n = 4.5 in A1 correction
+  *Effort: 0.25 day*
 
-Synthesize all results into the paper's central argument.
+- [ ] **Comparison table**: σ_ice at 2100 from IPCC (med/low), A1–A4, Bamber (2019), DeConto (2021), Edwards (2021)
+  *Effort: 0.5 day*
 
-- [ ] Quantify reducible vs irreducible uncertainty fractions at 2050 and 2100
-- [ ] Relate constrained/scenario/ice partition to decision-relevant timescales
-- [ ] Connect DOLS residuals to internal variability (AMO/PDO structure?)
-- [ ] Classify volcanic contribution as noise (unpredictable future eruptions)
-- [ ] Incorporate IPCC cross-validation results (emergent sensitivity test)
+- [ ] **Populate references.bib**: Add all cited works with DOIs
+  *Effort: 0.5 day*
 
 ---
 
-### 5. Dangendorf Thermodynamic Signal
-**Priority: LOW | Effort: ~0.5 day | Dependencies: None (data loaded)**
+## Analysis
 
-Compute Dangendorf-based thermodynamic signal as an additional robustness check.
+### High — needed for paper
 
-- [ ] Approach: `thermodynamic = steric + barystatic` or generalize `compute_thermodynamic_signal()` to detect available columns
-- [ ] Add to `read_process_datafiles.ipynb`
-- [ ] Cross-validate vs Frederikse thermodynamic over 1900–2018 overlap
+- [ ] **Confirm `component_eais.ipynb`**: Run with `RERUN_FITS=True` to validate SMB-based projections (C_T = +60 ± 20 Gt/yr/°C GMST from Frieler/Ligtenberg). Check that cached HDF5 round-trips correctly and projections are physically reasonable (negative SLR under warming).
+  *Effort: 0.25 day*
+
+- [ ] **Peninsula SMB+D decomposition (future work)**: Peninsula currently uses a DOLS linear fit (~45 mm at 2100 under SSP2-4.5, ~9% of total GMSL). This is adequate: the ~40 mm difference vs an SMB-only approach is well within WAIS uncertainty (~250 mm 90% CI). A Greenland-style SMB+D decomposition (truncate pre-2005 to exclude Larsen A/B collapse, fit post-collapse D) would improve physical transparency but not meaningfully change totals. Flag for follow-up paper.
+  *Effort: 0.5–1 day*
+
+- [ ] **Validate component fits against IMBIE/GlaMBIE**: Cross-check model-implied cryospheric rates vs directly observed
+  *Effort: 0.25 day*
+
+### Medium — valuable but not blocking
+
+- [ ] **Dangendorf thermodynamic signal**: Compute as additional robustness check
+  *Effort: 0.5 day. Approach: `thermodynamic = steric + barystatic` or generalize `compute_thermodynamic_signal()`.*
+
+- [ ] **Predictable/unpredictable framing synthesis**: Quantify reducible vs irreducible uncertainty fractions at 2050 and 2100; relate to decision-relevant timescales
+  *Effort: 1–2 days*
+
+- [ ] **Rate-and-state model with NASA rate prior**: Already coded in `bayesian_ratestate.ipynb`, needs execution
+  *Effort: 0.25 day*
+
+### Low — future work or follow-up paper
+
+- [ ] **A4 framework extensions**: Calving correction, rapid grounding-line retreat rate amplification, initialisation uncertainty (see `taxonomy.md` TODO block for details)
+  *Effort: 2–3 days*
+
+- [ ] **BPS trend constraint**: Informative ΔT₀ prior (σ_log = 0.2 instead of 0.5); assess value in component-sum framework
+  *Effort: 0.5 day*
+
+- [ ] **DOLS residual structure**: Connect to internal variability (AMO/PDO); classify volcanic as unpredictable noise
+  *Effort: 1 day*
+
+- [ ] **A4 tail behavior**: Compare 99th percentile with published worst-case estimates
+  *Effort: 0.25 day*
+
+- [ ] **A4 internal consistency**: Verify A4 convolved with DOLS reproduces IPCC low-confidence total GMSL range (approximately)
+  *Effort: 0.25 day*
 
 ---
 
-### 6. Publication Figures
-**Priority: REQUIRED | Effort: 2–3 days | Dependencies: Items 1–4**
+## Code Quality (from refactor.md)
 
-Journal-formatted figures for manuscript submission.
+### Medium — do before final submission
 
-#### Planned figure list
-- [ ] **Fig 1: Observational context** — GMSL records + GMST, thermodynamic overlay
-- [ ] **Fig 2: DOLS calibration + hindcast** — (a) Rate-vs-T phase plot, (b) cross-validation skill
-- [ ] **Fig 3: Variance decomposition** — Stacked area: constrained/scenario/ice, with and without physics-informed WAIS
-- [ ] **Fig 4: GMSLR projections** — Projection envelopes (IPCC / DOLS / DOLS+WAIS), 2100 histograms
-- [ ] **Fig 5: Greenland regional** — Mass loss vs regional T and vs GMST (depends on item 3)
-- [ ] **Fig S1: WAIS uncertainty approaches** — A1–A4 comparison
-- [ ] **Fig S2: Coefficient stability**
-- [ ] **Fig S3: IPCC component decomposition**
-- [ ] **Fig S4: DOLS on IPCC projections** — Rate-vs-T with IPCC SSP trajectories
-- [ ] **Fig S5: Multi-dataset robustness** — Heatmap + forest plot
-- [ ] **Fig S6: Sliding-window DOLS** — Multi-bandwidth coefficient evolution
-- [ ] **Fig S7: Bayesian analysis** — Static posterior, DLM coefficients, hierarchical forest
-- [ ] **Fig S8: WAIS stress tests** — Tornado/sensitivity diagrams
+- [ ] **Sign convention enforcement**: Assert SLR convention (`df.attrs['sign_convention'] = 'slr'`) in all readers; add `assert_sign_consistent()` at function boundaries
+  *Effort: 0.5 day*
 
-#### Formatting
-- [ ] `visualization_config.py` with consistent styling: Nature single-column (89 mm), double-column (183 mm), 7–8 pt fonts, colorblind-safe palette
-- [ ] All figures save as PNG (150 dpi) + PDF (vector)
-- [ ] Panel labels (a, b, c) applied consistently
+- [ ] **Baseline tracking**: Define baseline once in `config.py`; implement `rebaseline()` and `assert_baseline_consistent()` in `units.py`
+  *Effort: 0.5 day*
+
+- [ ] **Unit assertion at function boundaries**: Implement `assert_units_consistent()` for multi-DataFrame operations
+  *Effort: 0.25 day*
+
+- [ ] **Figure formatting config**: `visualization_config.py` with Nature/PNAS sizing (89 mm / 183 mm), 7–8 pt fonts, colorblind-safe palette, PNG + PDF output
+  *Effort: 0.5 day*
 
 ---
 
 ## Completed Work
 
 <details>
-<summary>Click to expand completed items</summary>
+<summary>Click to expand</summary>
 
-### 0. Update DOLS to WLS — DONE (2026-02-14)
-Unified `calibrate_dols()` with optional `gmsl_sigma` for WLS + HAC standard errors. Unified `DOLSResult` dataclass.
-
-### 1. Volcanic SAOD in DOLS — DONE (2026-02-14)
-`read_glossac()`, `read_mauna_loa_transmission()`, SAOD integration in DOLS. Finding: SAOD NOT significant for static annual DOLS (γ_saod t=0.26); does not alias into α.
-
-### 2. DOLS on IPCC Projections — DONE (2026-02-14)
-Emergent sensitivity test. IPCC thermodynamic component is linear (α₀ ≈ 2 mm/yr/°C), not quadratic. Factor of 2 below observed DOLS sensitivity.
-
-### 2b. Multi-Dataset Robustness — DONE (2026-02-16)
-7 GMSL × 4 GMST = 28 fits. Thermodynamic ensemble (8 pairs, excl. Horwath + Dangendorf sterodynamic): dα/dT = 2.85 ± 0.38 mm/yr/°C². Script: `dols_robustness.py`.
-
-### 2c. Sliding-Window DOLS — DONE (2026-02-17)
-Multi-bandwidth (h=30,40,50,60 yr), cross-dataset. Key findings: α₀–dα/dT tradeoff confirmed; MLO SAOD significant in ~50% of windows; dα/dT increases toward present. Script: `dols_sliding_window.py`.
-
-### 2d. Bayesian Complement — DONE (2026-02-16)
-Three models: (1) Bayesian static DOLS (emcee), (2) DLM with Kalman filter + RTS smoother, (3) Hierarchical multi-dataset. Design matrix bit-for-bit equivalent to `calibrate_dols()`. Key findings: Bayesian static dα/dT ≈ 5.74 [2.86, 8.70] vs freq 5.88 ± 1.39; DLM Q ≈ 0 (coefficients constant); Hierarchical pop. dα/dT ≈ 2.57 ± 0.32 (5 datasets). Scripts: `bayesian_dols.py`, `bayesian_analysis.py`. 7 figures.
-
-### Factorial transform bug fix (2026-02-14)
-Found and fixed critical bug: regressors divided by k! AND coefficients multiplied by k!, causing (k!)² inflation. dalpha_dT was 4× inflated. Created 19-test verification suite (`test_dols.py`).
-
-### Repository cleanup (2026-02-16)
-Removed LaTeX build artifacts, PDFs, HDF5 data, duplicate notebook figures, and `.claude/` from git tracking. Updated `.gitignore`.
+- Refactored component decomposition into 6 per-component notebooks with standardized structure (2026-03-24)
+- Added 3 new plotting functions: `plot_component_projection_twopanel()`, `plot_component_histogram()`, `plot_component_ridge()` (2026-03-24)
+- Archived `component_decomposition_refactor.ipynb` and `component_decomp_sensitivities.ipynb` (2026-03-24)
+- Component decomposition: all stages (1, 2a, 2b, 3, 4) implemented (Mar 2026)
+- All data readers written: IMBIE ×5, GlaMBIE ×2, IPCC FACTS, GRACE TWS, ENSO indices (Mar 2026)
+- Greenland joint SMB+discharge model with Mankoff/Mouginot data (Mar 2026)
+- Surface-to-ocean temperature transfer function (2026-03-22)
+- Projection cell rewrite with all components (2026-03-22)
+- Antarctic sub-component fits: EAIS, Peninsula, WAIS/A4 (2026-03-22)
+- Glaciers subsection written in manuscript (2026-03-22)
+- DOLS calibration, WLS+HAC, SAOD test (2026-02-14)
+- Multi-dataset robustness: 28 fits (2026-02-16)
+- Sliding-window DOLS: multi-bandwidth (2026-02-17)
+- Bayesian static + DLM + hierarchical (2026-02-16)
+- Factorial transform bug fix + 19-test suite (2026-02-14)
+- Repository cleanup + .gitignore (2026-02-16)
 
 </details>

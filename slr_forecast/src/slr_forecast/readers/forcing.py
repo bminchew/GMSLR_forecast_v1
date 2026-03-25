@@ -27,6 +27,35 @@ from slr_forecast.readers._utils import decimal_year_to_datetime, datetime_to_de
 #  NOAA thermosteric sea level
 # =========================================================================
 
+def read_noaa_thermosteric_yearly(filepath: str) -> pd.DataFrame:
+    """Read NOAA NCEI yearly global-mean thermosteric sea level.
+
+    Reads the basin time series .dat files (e.g. ``a-mm-w0-700m.dat``)
+    which contain yearly World Ocean thermosteric SL anomaly in mm.
+
+    Returns DataFrame with columns:
+        - tsl_mm : World Ocean thermosteric SL anomaly (mm)
+        - tsl_se_mm : standard error (mm)
+        - decimal_year : mid-year (e.g. 1955.5)
+
+    Reference
+    ---------
+    Levitus et al. (2012), doi:10.1029/2012GL051106
+    """
+    df = pd.read_csv(filepath, sep=r'\s+')
+    # Columns: YEAR WO WOse NH NHse SH SHse
+    out = pd.DataFrame({
+        'decimal_year': df['YEAR'].values,
+        'tsl_mm': df['WO'].values,
+        'tsl_se_mm': df['WOse'].values,
+    })
+    tag_units(out, {'tsl_mm': 'mm', 'tsl_se_mm': 'mm', 'decimal_year': 'yr'})
+    out.attrs['dataset'] = 'noaa_thermosteric_yearly'
+    out.attrs['reference'] = 'Levitus et al. (2012)'
+    out.attrs['doi'] = '10.1029/2012GL051106'
+    return out
+
+
 def read_noaa_thermosteric(zip_path: str, start_year: int = 1955) -> pd.DataFrame:
     """Read NOAA NCEI thermosteric sea level from ZIP archive.
 

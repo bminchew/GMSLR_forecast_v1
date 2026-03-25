@@ -1967,6 +1967,163 @@ def build_level_design_vectors(
     }
 
 
+# ================================================================
+# Budget closure constraint (two-pass approach)
+# ================================================================
+
+@dataclass
+class BudgetTarget:
+    """Budget-closure constraint for a single component.
+
+    Derived from GMSL_obs - Σ_{j≠k} H_j at satellite-era times.
+    Used as an additional likelihood term in Pass 2.
+    """
+    times: np.ndarray          # (n_budget,) decimal years
+    level_obs: np.ndarray      # (n_budget,) GMSL - other components (meters)
+    level_sigma: np.ndarray    # (n_budget,) combined uncertainty (meters)
+    rate_accel: object         # SatelliteEraQuadraticResult for budget rate+accel
+    component_name: str        # name of the target component
+
+
+def compute_budget_target(
+    gmsl_time: np.ndarray,
+    gmsl_level: np.ndarray,
+    gmsl_sigma: np.ndarray,
+    component_models: dict,
+    exclude: str,
+    rate_accel_gmsl: 'SatelliteEraQuadraticResult' = None,
+    component_rate_accels: dict = None,
+) -> BudgetTarget:
+    """Compute the budget-closure target for one component.
+
+    For component k, the budget "observation" is:
+
+        H_k_budget(t) = GMSL_obs(t) - Σ_{j≠k} H_j(t)
+
+    where each H_j is the Pass 1 posterior-mean model evaluated at
+    the budget times.
+
+    Parameters
+    ----------
+    gmsl_time : (n,)
+        Annual GMSL observation times (decimal year).
+    gmsl_level : (n,)
+        Observed GMSL (meters), rebased to project baseline.
+    gmsl_sigma : (n,)
+        1-σ GMSL uncertainty (meters).
+    component_models : dict
+        {name: (time_array, H_model_array, H_sigma_array)} for each
+        fitted component.  H_model is the posterior-mean model
+        prediction; H_sigma is the posterior predictive σ.
+        Times need not match gmsl_time — linear interpolation is used.
+    exclude : str
+        Name of the component to exclude (the target).
+    rate_accel_gmsl : SatelliteEraQuadraticResult or None
+        Observed GMSL rate + acceleration (from satellite altimetry).
+    component_rate_accels : dict or None
+        {name: (rate, accel, rate_se, accel_se)} for each component.
+        Used to compute the budget rate+accel for the excluded component.
+
+    Returns
+    -------
+    BudgetTarget
+    """
+    from scipy.interpolate import interp1d
+
+    # Sum all components except the excluded one at gmsl_time
+    H_others = np.zeros_like(gmsl_level)
+    sigma2_others = np.zeros_like(gmsl_level)
+
+    for name, (t_comp, H_comp, sigma_comp) in component_models.items():
+        if name == exclude:
+            continue
+        # Interpolate component to budget times
+        f = interp1d(t_comp, H_comp, kind='linear',
+                     bounds_error=False, fill_value=np.nan)
+        H_interp = f(gmsl_time)
+
+        # Interpolate uncertainty
+        f_sig = interp1d(t_comp, sigma_comp, kind='linear',
+                         bounds_error=False, fill_value=np.nan)
+        sig_interp = f_sig(gmsl_time)
+
+        H_others += np.nan_to_num(H_interp, nan=0.0)
+        sigma2_others += np.nan_to_num(sig_interp**2, nan=0.0)
+
+    # Budget target: what the excluded component "should" be
+    level_obs = gmsl_level - H_others
+    level_sigma = np.sqrt(gmsl_sigma**2 + sigma2_others)
+
+    # Budget rate + acceleration (if provided)
+    budget_ra = None
+    if rate_accel_gmsl is not None and component_rate_accels is not None:
+        rate_others = 0.0
+        accel_others = 0.0
+        rate_var_others = 0.0
+        accel_var_others = 0.0
+        for name, (r, a, r_se, a_se) in component_rate_accels.items():
+            if name == exclude:
+                continue
+            rate_others += r
+            accel_others += a
+            rate_var_others += r_se**2
+            accel_var_others += a_se**2
+
+        budget_rate = rate_accel_gmsl.rate - rate_others
+        budget_accel = rate_accel_gmsl.accel - accel_others
+
+        # Propagate covariance: GMSL cov + other-component variances
+        budget_ra_cov = rate_accel_gmsl.rate_accel_cov.copy()
+        budget_ra_cov[0, 0] += rate_var_others
+        budget_ra_cov[1, 1] += accel_var_others
+
+        # Create a lightweight result-like object
+        budget_ra = SatelliteEraQuadraticResult(
+            rate=budget_rate,
+            accel=budget_accel,
+            rate_accel_cov=budget_ra_cov,
+            rate_se=np.sqrt(budget_ra_cov[0, 0]),
+            accel_se=np.sqrt(budget_ra_cov[1, 1]),
+            eval_time=rate_accel_gmsl.eval_time,
+            coefficients=np.zeros(3),
+            cov_params=np.zeros((3, 3)),
+            t_start=rate_accel_gmsl.t_start,
+            t_end=rate_accel_gmsl.t_end,
+            n_obs=0,
+            r2=0.0,
+            fit_result=None,
+            fit_method='budget_residual',
+        )
+
+    return BudgetTarget(
+        times=gmsl_time,
+        level_obs=level_obs,
+        level_sigma=level_sigma,
+        rate_accel=budget_ra,
+        component_name=exclude,
+    )
+
+
+def _budget_level_logp(
+    H_model_at_budget: np.ndarray,
+    budget: BudgetTarget,
+) -> float:
+    """Log-likelihood for the level-space budget constraint.
+
+    Parameters
+    ----------
+    H_model_at_budget : (n_budget,)
+        Model prediction for the target component at budget times.
+    budget : BudgetTarget
+        Contains level_obs and level_sigma.
+    """
+    resid = H_model_at_budget - budget.level_obs
+    return -0.5 * np.sum(
+        (resid / budget.level_sigma)**2
+        + 2.0 * np.log(budget.level_sigma)
+    )
+
+
 @dataclass
 class SatelliteEraQuadraticResult:
     """Result from a quadratic fit to a GMSL record.
@@ -3461,6 +3618,11 @@ class BayesianThermostericResult:
 
     As τ_u → 0, S_u → T and the model reduces to the instantaneous
     quadratic η = a·T² + b·T + c·t + H₀.
+
+    When subsurface ocean T observations are provided, a second likelihood
+    constrains S_u directly:
+
+        T_subsurface(t) = κ·S_u(t) + δ + ε_ocean
     """
     trace: az.InferenceData
     physical_coefficients: np.ndarray    # [a, b, c] (1-layer) or [a, b_u, b_d, c] (2-layer)
@@ -3482,6 +3644,13 @@ class BayesianThermostericResult:
     n_layers: int = 1
     sampler_diagnostics: Optional[dict] = None
     design_info: Optional[dict] = None
+    # ── Ocean T joint calibration (optional) ──
+    kappa_posterior: Optional[np.ndarray] = None   # (n_samples,) scaling S_u → T_subsurface
+    delta_posterior: Optional[np.ndarray] = None   # (n_samples,) offset
+    sigma_ocean_posterior: Optional[np.ndarray] = None  # (n_samples,) extra ocean T noise
+    T_ocean_obs: Optional[np.ndarray] = None       # observed subsurface T at ocean times
+    T_ocean_model: Optional[np.ndarray] = None     # posterior-mean κ·S_u + δ at ocean times
+    r2_ocean: Optional[float] = None               # R² for ocean T fit
 
 
 def _thermosteric_log_prior(theta, prior_scales, H0_prior_mean, n_layers=1):
@@ -3568,6 +3737,8 @@ def _thermosteric_log_prob(
     prior_scales, H0_prior_mean,
     n_layers=1,
     Sd0=None,
+    ocean_obs=None, ocean_sigma=None, ocean_idx_ann=None,
+    ocean_prior_scales=None,
 ):
     """Log-posterior for the physically-motivated thermosteric model.
 
@@ -3576,14 +3747,41 @@ def _thermosteric_log_prob(
 
     Forward model (level-space, no integration needed):
         η = a·S_u² + b·S_u [+ b_d·S_d] + c·I₀ + H₀
+
+    When ocean_obs is provided, theta has 3 extra trailing elements
+    [κ, δ, log_σ_ocean] and a second likelihood constrains S_u:
+        T_subsurface(t) = κ·S_u(t) + δ
     """
-    lp = _thermosteric_log_prior(theta, prior_scales, H0_prior_mean,
+    use_ocean = ocean_obs is not None
+    n_base = 6 if n_layers == 1 else 8
+
+    if use_ocean:
+        theta_base = theta[:n_base]
+        kappa, delta, log_sig_ocean = theta[n_base:]
+        sigma_ocean_extra = np.exp(log_sig_ocean)
+        if sigma_ocean_extra < 1e-12:
+            return -np.inf
+        if log_sig_ocean > 2 or log_sig_ocean < -20:
+            return -np.inf
+    else:
+        theta_base = theta
+
+    lp = _thermosteric_log_prior(theta_base, prior_scales, H0_prior_mean,
                                  n_layers)
     if not np.isfinite(lp):
         return -np.inf
 
+    # ── Ocean T priors (κ, δ, σ_ocean) ──
+    if use_ocean:
+        # ocean_prior_scales = [mu_kappa, sigma_kappa, sigma_delta, gamma_ocean]
+        mu_k, sig_k, sig_d, gamma_oc = ocean_prior_scales
+        lp += -0.5 * ((kappa - mu_k) / sig_k) ** 2
+        lp += -0.5 * (delta / sig_d) ** 2
+        lp += (-np.log(1.0 + (sigma_ocean_extra / gamma_oc) ** 2)
+               + log_sig_ocean)
+
     if n_layers == 1:
-        a, b, c, log_tau_u, log_sigma_extra, H0 = theta
+        a, b, c, log_tau_u, log_sigma_extra, H0 = theta_base
         tau_u = np.exp(log_tau_u)
         sigma_extra = np.exp(log_sigma_extra)
 
@@ -3654,6 +3852,19 @@ def _thermosteric_log_prob(
     if not np.isfinite(ll):
         return -np.inf
 
+    # ── Ocean T likelihood (joint calibration) ──
+    if use_ocean:
+        Su_ocean = Su[ocean_idx_ann]
+        T_model_ocean = kappa * Su_ocean + delta
+        sig_oc = np.sqrt(ocean_sigma**2 + sigma_ocean_extra**2)
+        resid_oc = ocean_obs - T_model_ocean
+        ll_oc = -0.5 * np.sum(
+            (resid_oc / sig_oc)**2 + 2.0 * np.log(sig_oc)
+        )
+        if not np.isfinite(ll_oc):
+            return -np.inf
+        ll += ll_oc
+
     return lp + ll
 
 
@@ -3676,6 +3887,14 @@ def fit_bayesian_thermosteric(
     prior_log_tau_d_sigma: float = 0.5,
     prior_sigma_extra_scale: float = 0.003,
     prior_H0_sigma: float = 0.010,
+    # ── Subsurface ocean T joint calibration (optional) ──
+    T_ocean_obs: Optional[np.ndarray] = None,
+    sigma_ocean_obs: Optional[np.ndarray] = None,
+    time_ocean_obs: Optional[np.ndarray] = None,
+    prior_kappa_mean: float = 0.5,
+    prior_kappa_sigma: float = 0.5,
+    prior_delta_sigma: float = 0.3,
+    prior_sigma_ocean_scale: float = 0.1,
     # ── MCMC settings ──
     n_samples: int = 5000,
     n_walkers: int = 64,
@@ -3750,10 +3969,41 @@ def fit_bayesian_thermosteric(
     ])
     I0_obs = obs_times - obs_times[0]
 
+    # ── Ocean T setup (optional joint calibration) ──
+    use_ocean = T_ocean_obs is not None
+    ocean_obs_ann = None
+    ocean_sigma_ann = None
+    ocean_idx_ann = None
+    ocean_prior_scales = None
+
+    if use_ocean:
+        # Annualize ocean T observations
+        oc_yr = np.floor(time_ocean_obs).astype(int)
+        oc_unique = np.unique(oc_yr)
+        ocean_T_ann = np.array([T_ocean_obs[oc_yr == y].mean()
+                                for y in oc_unique])
+        ocean_sig_ann = np.array([
+            np.sqrt(np.mean(sigma_ocean_obs[oc_yr == y]**2))
+            for y in oc_unique])
+        ocean_time_ann = oc_unique.astype(float) + 0.5
+        # Map to annual grid
+        ocean_idx_ann = np.array([
+            np.argmin(np.abs(time_annual - t)) for t in ocean_time_ann
+        ])
+        ocean_obs_ann = ocean_T_ann
+        ocean_sigma_ann = ocean_sig_ann
+        ocean_prior_scales = np.array([
+            prior_kappa_mean, prior_kappa_sigma,
+            prior_delta_sigma, prior_sigma_ocean_scale,
+        ])
+
     if progress:
         print(f"  Annual grid: {n_ann} points ({time_annual[0]:.0f}–"
               f"{time_annual[-1]:.0f}), "
               f"monthly: {len(t_monthly)} points")
+        if use_ocean:
+            print(f"  Ocean T obs: {len(ocean_obs_ann)} annual pts "
+                  f"({ocean_time_ann[0]:.0f}–{ocean_time_ann[-1]:.0f})")
 
     # ── Prior scales ──
     H0_prior_mean = H_obs[0]
@@ -3779,6 +4029,11 @@ def fit_bayesian_thermosteric(
         ])
         param_names = ['a_therm', 'b_u_therm', 'b_d_therm', 'c_therm',
                         'log_tau_u', 'log_tau_d', 'log_sigma_extra', 'H0']
+
+    n_base = ndim
+    if use_ocean:
+        ndim += 3
+        param_names = param_names + ['kappa', 'delta', 'log_sigma_ocean']
 
     # ── OLS initialization at fixed τ (using monthly for accuracy) ──
     tau_u_init = np.exp(prior_log_tau_u_mean)
@@ -3837,10 +4092,27 @@ def fit_bayesian_thermosteric(
             H0_init,
         ])
 
+    # ── Ocean T OLS initialization: κ, δ from S_u vs ocean T ──
+    if use_ocean:
+        Su_at_ocean = S_u_init[np.array([
+            np.argmin(np.abs(t_monthly - t)) for t in ocean_time_ann
+        ])]
+        X_oc = np.column_stack([Su_at_ocean, np.ones(len(ocean_obs_ann))])
+        beta_oc = np.linalg.lstsq(X_oc, ocean_obs_ann, rcond=None)[0]
+        kappa_init = beta_oc[0]
+        delta_init = beta_oc[1]
+        sig_oc_init = max(np.std(ocean_obs_ann - X_oc @ beta_oc), 0.01)
+        theta0 = np.append(theta0, [kappa_init, delta_init,
+                                     np.log(sig_oc_init)])
+
     if progress:
         print(f"  OLS init: a={a_init:.4f} m/°C², "
               f"b={'%.4f' % b_init if n_layers==1 else '%.4f' % bu_init} m/°C, "
               f"c={c_init*1e3:.3f} mm/yr, τ_u={tau_u_init:.1f} yr")
+        if use_ocean:
+            print(f"  OLS init (ocean): κ={kappa_init:.3f}, "
+                  f"δ={delta_init:.4f} °C, "
+                  f"σ_ocean={sig_oc_init:.3f} °C")
 
     # ── Walker initialization ──
     rng = np.random.default_rng(seed)
@@ -3855,14 +4127,26 @@ def fit_bayesian_thermosteric(
             p[0] = abs(p[0])  # a
             p[1] = abs(p[1])  # b_u
             p[2] = abs(p[2])  # b_d
+        # Ocean params: κ can be any sign, δ any sign, log_σ_ocean perturbed
         pos[i] = p
 
     # ── MCMC (uses annual-resolution ODE for ~12× speedup) ──
+    moves = [
+        (emcee.moves.DESnookerMove(), 0.8),
+        (emcee.moves.DEMove(),        0.2),
+    ]
     sampler = emcee.EnsembleSampler(
         n_walkers, ndim, _thermosteric_log_prob,
         args=(T_avg_ann, dt_ann, Su0_ann, obs_idx_ann, n_ann,
-              I0_obs, H_obs, sigma_obs, prior_scales, H0_prior_mean,
-              n_layers),
+              I0_obs, H_obs, sigma_obs, prior_scales, H0_prior_mean),
+        kwargs={
+            'n_layers': n_layers,
+            'ocean_obs': ocean_obs_ann,
+            'ocean_sigma': ocean_sigma_ann,
+            'ocean_idx_ann': ocean_idx_ann,
+            'ocean_prior_scales': ocean_prior_scales,
+        },
+        moves=moves,
     )
 
     if progress:
@@ -3887,6 +4171,15 @@ def fit_bayesian_thermosteric(
         tau_d_samples = np.exp(flat[:, 5])
         sigma_extra_samples = np.exp(flat[:, 6])
         H0_samples = flat[:, 7]
+
+    if use_ocean:
+        kappa_samples = flat[:, n_base]
+        delta_samples = flat[:, n_base + 1]
+        sigma_ocean_samples = np.exp(flat[:, n_base + 2])
+    else:
+        kappa_samples = None
+        delta_samples = None
+        sigma_ocean_samples = None
 
     phys_mean = np.mean(phys_samples, axis=0)
     phys_cov = np.cov(phys_samples, rowvar=False)
@@ -3920,6 +4213,20 @@ def fit_bayesian_thermosteric(
     ss_res = np.sum(resid**2)
     ss_tot = np.sum((H_obs - np.mean(H_obs))**2)
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    # ── Ocean T posterior-mean prediction ──
+    T_ocean_model_mean = None
+    r2_ocean = None
+    if use_ocean:
+        Su_at_oc_monthly = S_u_mean[np.array([
+            np.argmin(np.abs(t_monthly - t)) for t in ocean_time_ann
+        ])]
+        kappa_m = np.mean(kappa_samples)
+        delta_m = np.mean(delta_samples)
+        T_ocean_model_mean = kappa_m * Su_at_oc_monthly + delta_m
+        ss_res_oc = np.sum((ocean_obs_ann - T_ocean_model_mean)**2)
+        ss_tot_oc = np.sum((ocean_obs_ann - np.mean(ocean_obs_ann))**2)
+        r2_ocean = 1.0 - ss_res_oc / ss_tot_oc if ss_tot_oc > 0 else 0.0
 
     # ── arviz trace ──
     n_post = len(flat)
@@ -3967,6 +4274,17 @@ def fit_bayesian_thermosteric(
         ratio = phys_samples[:, 0] / np.maximum(phys_samples[:, b_col], 1e-8)
         print(f"  a/b ratio: median={np.median(ratio):.4f} °C⁻¹  "
               f"(TEOS-10 expectation ≈ 0.033 °C⁻¹)")
+        if use_ocean:
+            print(f"\n  Ocean T joint calibration:")
+            print(f"    κ = {np.mean(kappa_samples):.3f} "
+                  f"[{np.percentile(kappa_samples, 3):.3f}, "
+                  f"{np.percentile(kappa_samples, 97):.3f}] "
+                  f"°C_subsurface/°C_Su")
+            print(f"    δ = {np.mean(delta_samples):.4f} "
+                  f"[{np.percentile(delta_samples, 3):.4f}, "
+                  f"{np.percentile(delta_samples, 97):.4f}] °C")
+            print(f"    σ_ocean = {np.median(sigma_ocean_samples):.3f} °C")
+            print(f"    R²_ocean = {r2_ocean:.4f}")
 
     return BayesianThermostericResult(
         trace=trace,
@@ -3994,6 +4312,12 @@ def fit_bayesian_thermosteric(
             'H0_prior_mean': H0_prior_mean,
             'n_layers': n_layers,
         },
+        kappa_posterior=kappa_samples,
+        delta_posterior=delta_samples,
+        sigma_ocean_posterior=sigma_ocean_samples,
+        T_ocean_obs=ocean_obs_ann,
+        T_ocean_model=T_ocean_model_mean,
+        r2_ocean=r2_ocean,
     )
 
 
@@ -4137,6 +4461,8 @@ def _greenland_log_prob(
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
     rate_prior_mean=None, rate_prior_sigma=0.0, T_end=0.0,
+    budget=None, budget_I2=None, budget_I1=None, budget_I0=None,
+    budget_idx_ann=None,
 ):
     """Log-posterior for the physics-informed Greenland model.
 
@@ -4158,8 +4484,15 @@ def _greenland_log_prob(
     rate_prior_sigma : float
         1-σ uncertainty on the rate prior (m/yr).
     T_end : float
-        GMST anomaly at end of record (°C).  Only used when
+        Temperature anomaly at end of record (°C).  Only used when
         rate_prior_mean is not None.
+    budget : BudgetTarget or None
+        If provided, adds level-space and rate+accel budget closure
+        constraints (Pass 2 of two-pass approach).
+    budget_I2, budget_I1, budget_I0 : (n_budget,) or None
+        Design vectors at budget times.
+    budget_idx_ann : (n_budget,) int or None
+        Indices into the annual grid for budget times.
     """
     lp = _greenland_log_prior(theta, prior_scales, H0_prior_mean)
     if not np.isfinite(lp):
@@ -4204,6 +4537,8 @@ def _greenland_log_prob(
     if not np.isfinite(ll):
         return -np.inf
 
+    total = lp + ll
+
     # ── Rate prior: penalise model rate that deviates from observed ──
     if rate_prior_mean is not None and rate_prior_sigma > 0:
         # D_eff at end of annual grid is `d` after the ODE loop
@@ -4211,9 +4546,34 @@ def _greenland_log_prob(
         lp_rate = -0.5 * ((rate_model - rate_prior_mean) / rate_prior_sigma)**2
         if not np.isfinite(lp_rate):
             return -np.inf
-        return lp + ll + lp_rate
+        total += lp_rate
 
-    return lp + ll
+    # ── Budget closure constraints (Pass 2) ──
+    if budget is not None and budget_I2 is not None:
+        # Level constraint: model at budget times vs budget target
+        H_smb_budget = a_eff * budget_I2 + b_eff * budget_I1
+        H_dyn_budget = H_dyn_cum[budget_idx_ann]
+        H_budget_model = H_smb_budget + H_dyn_budget + c * budget_I0 + H0
+
+        ll_budget = _budget_level_logp(H_budget_model, budget)
+        if not np.isfinite(ll_budget):
+            return -np.inf
+        total += ll_budget
+
+        # Rate + acceleration constraint (if available in budget)
+        if budget.rate_accel is not None:
+            rate_model_b = (a_eff * T_end**2 + b_eff * T_end
+                            + gamma_dyn * d + c)
+            # For acceleration, need dT/dt — approximate from budget
+            # rate_accel. Use the bivariate penalty on rate only
+            # (accel requires dT/dt which we store in the budget).
+            lp_ra = _rate_accel_prior_logp(
+                rate_model_b, 0.0, budget.rate_accel)
+            if not np.isfinite(lp_ra):
+                return -np.inf
+            total += lp_ra
+
+    return total
 
 
 def _greenland_log_prob_fixc(
@@ -4224,6 +4584,8 @@ def _greenland_log_prob_fixc(
     prior_scales, H0_prior_mean,
     fix_c_val=0.0,
     rate_prior_mean=None, rate_prior_sigma=0.0, T_end=0.0,
+    budget=None, budget_I2=None, budget_I1=None, budget_I0=None,
+    budget_idx_ann=None,
 ):
     """Wrapper for fixed-c Greenland model.
 
@@ -4245,6 +4607,11 @@ def _greenland_log_prob_fixc(
         rate_prior_mean=rate_prior_mean,
         rate_prior_sigma=rate_prior_sigma,
         T_end=T_end,
+        budget=budget,
+        budget_I2=budget_I2,
+        budget_I1=budget_I1,
+        budget_I0=budget_I0,
+        budget_idx_ann=budget_idx_ann,
     )
 
 
@@ -4274,6 +4641,8 @@ def fit_bayesian_greenland(
     # ── Structural options ──
     fix_c: Optional[float] = None,
     T0_init: Optional[float] = None,
+    # ── Budget closure (Pass 2) ──
+    budget: Optional['BudgetTarget'] = None,
     # ── MCMC settings ──
     n_samples: int = 5000,
     n_walkers: int = 64,
@@ -4509,6 +4878,34 @@ def fit_bayesian_greenland(
             p[6] = H0_init + abs(H0_init) * 0.05 * rng.standard_normal()
             pos[i] = p
 
+    # ── Budget closure design vectors (Pass 2) ──
+    budget_kwargs = {}
+    if budget is not None:
+        # Build design vectors at budget times
+        budget_design = build_level_design_vectors(
+            temperature_monthly=T_monthly,
+            time_monthly=time_monthly,
+            obs_times=budget.times,
+        )
+        budget_idx = np.array([
+            np.argmin(np.abs(time_annual - t_b))
+            for t_b in budget.times
+        ])
+        budget_kwargs = {
+            'budget': budget,
+            'budget_I2': budget_design['I2_obs'],
+            'budget_I1': budget_design['I1_obs'],
+            'budget_I0': budget_design['I0_obs'],
+            'budget_idx_ann': budget_idx,
+        }
+        if progress:
+            print(f"  Budget constraint: {len(budget.times)} level points "
+                  f"({budget.times[0]:.0f}–{budget.times[-1]:.0f})")
+            if budget.rate_accel is not None:
+                print(f"  Budget rate+accel: "
+                      f"{budget.rate_accel.rate*1e3:.2f} "
+                      f"± {budget.rate_accel.rate_se*1e3:.2f} mm/yr")
+
     # ── MCMC (annual-resolution ODE for discharge) ──
     moves = [
         (emcee.moves.DESnookerMove(), 0.8),
@@ -4521,6 +4918,7 @@ def fit_bayesian_greenland(
             'rate_prior_mean': rate_prior_mean,
             'rate_prior_sigma': rate_prior_sigma,
             'T_end': T_end_val,
+            **budget_kwargs,
         }
     else:
         log_prob_fn = _greenland_log_prob
@@ -4528,6 +4926,7 @@ def fit_bayesian_greenland(
             'rate_prior_mean': rate_prior_mean,
             'rate_prior_sigma': rate_prior_sigma,
             'T_end': T_end_val,
+            **budget_kwargs,
         }
 
     sampler = emcee.EnsembleSampler(
@@ -4684,4 +5083,1360 @@ def fit_bayesian_greenland(
             'obs_idx_monthly': obs_idx_monthly,
             'tau_dyn_init': tau_dyn_init,
         },
+    )
+
+
+# =====================================================================
+#  Joint Greenland SMB + Discharge model
+# =====================================================================
+
+@dataclass
+class BayesianGreenlandJointResult:
+    """Result from joint SMB + discharge Greenland calibration.
+
+    Model:
+        H_smb = a_smb·I₂_atm + b_smb·I₁_atm + H₀_smb
+        H_dyn = γ_atm·I₁_atm + γ_ocean·∫D_eff dt + D₀·I₀ + H₀_dyn
+        dD_eff/dt = (T_ocean − D_eff) / τ
+
+    Fitted jointly to observed cumulative SMB and cumulative D from
+    Mouginot (1972–2018) and Mankoff (1986–2023).
+    """
+    trace: az.InferenceData
+    # SMB parameters
+    a_smb_posterior: np.ndarray       # (n_samples,)
+    b_smb_posterior: np.ndarray
+    H0_smb_posterior: np.ndarray
+    sigma_extra_smb_posterior: np.ndarray
+    # Discharge parameters
+    gamma_atm_posterior: np.ndarray
+    gamma_ocean_posterior: np.ndarray
+    tau_posterior: np.ndarray
+    D0_posterior: np.ndarray
+    H0_dyn_posterior: np.ndarray
+    sigma_extra_dyn_posterior: np.ndarray
+    # Model predictions at posterior mean
+    H_smb_model: np.ndarray           # (n_smb,) predicted cumulative SMB
+    H_dyn_model: np.ndarray           # (n_dyn,) predicted cumulative D
+    D_eff_mean: np.ndarray            # (n_monthly,) ocean ODE state
+    # Goodness of fit
+    r2_smb: float
+    r2_dyn: float
+    r2_total: float                   # R² of H_smb + H_dyn vs observed total MB
+    # Observations
+    time_smb: np.ndarray
+    time_dyn: np.ndarray
+    H_smb_obs: np.ndarray
+    H_dyn_obs: np.ndarray
+    sigma_smb_obs: np.ndarray
+    sigma_dyn_obs: np.ndarray
+    sampler_diagnostics: Optional[dict] = None
+
+
+def _greenland_joint_log_prob(
+    theta, I2_smb, I1_smb, I0_smb, I1_dyn, I0_dyn,
+    H_smb_obs, sigma_smb, H_dyn_obs, sigma_dyn,
+    prior_scales,
+    use_ocean=False,
+    T_ocean_annual=None, dt_ocean=None, T0_ocean=0.0,
+    obs_idx_ocean_smb=None, obs_idx_ocean_dyn=None, n_ocean=0,
+    budget_rate_accel=None,
+    T_atm_eval=0.0, dTdt_eval=0.0, ocean_eval_idx=None,
+):
+    """Log-posterior for the joint SMB + discharge Greenland model.
+
+    Two modes:
+
+    **Atmospheric only** (use_ocean=False, default):
+        theta = [a_smb, b_smb, log_σ_smb, H0_smb,
+                 γ_atm, D₀, log_σ_dyn, H0_dyn]  (8 params)
+        H_dyn = γ_atm·I₁ + D₀·I₀ + H₀_dyn
+
+    **With ocean ODE** (use_ocean=True):
+        theta = [a_smb, b_smb, log_σ_smb, H0_smb,
+                 γ_atm, γ_ocean, log_τ, D₀, log_σ_dyn, H0_dyn]  (10 params)
+        H_dyn = γ_atm·I₁ + γ_ocean·∫D_eff + D₀·I₀ + H₀_dyn
+
+    **Budget rate+acceleration constraint** (Pass 2):
+        If budget_rate_accel is not None, adds a bivariate Gaussian penalty
+        on (rate_model, accel_model) vs the satellite-era budget residual.
+        rate = dH_smb/dt + dH_dyn/dt; accel = d²H/dt² at eval time.
+        No level constraint (dominated by TWS/deep-ocean budget residual).
+    """
+    # ── Unpack theta ──
+    if use_ocean:
+        (a_smb, b_smb, log_sig_smb, H0_smb,
+         gamma_atm, gamma_ocean, log_tau, D0,
+         log_sig_dyn, H0_dyn) = theta
+        if gamma_ocean < 0:
+            return -np.inf
+        if log_tau < -1 or log_tau > 7:
+            return -np.inf
+        tau = np.exp(log_tau)
+    else:
+        (a_smb, b_smb, log_sig_smb, H0_smb,
+         gamma_atm, D0, log_sig_dyn, H0_dyn) = theta
+
+    # Hard bounds
+    if a_smb < 0 or gamma_atm < 0:
+        return -np.inf
+    if log_sig_smb > 0 or log_sig_smb < -20:
+        return -np.inf
+    if log_sig_dyn > 0 or log_sig_dyn < -20:
+        return -np.inf
+
+    sigma_extra_smb = np.exp(log_sig_smb)
+    sigma_extra_dyn = np.exp(log_sig_dyn)
+
+    # ── Priors ──
+    # prior_scales layout:
+    #  [0] scale_a_smb (Exp mean)
+    #  [1] scale_b_smb (HN σ)
+    #  [2] scale_gamma_atm (HN σ)
+    #  [3] scale_gamma_ocean (HN σ)  — only used when use_ocean=True
+    #  [4] log_tau_mean               — only used when use_ocean=True
+    #  [5] log_tau_sigma              — only used when use_ocean=True
+    #  [6] D0_sigma
+    #  [7] sig_extra_smb_scale (HC γ)
+    #  [8] sig_extra_dyn_scale (HC γ)
+    #  [9] H0_smb_sigma
+    # [10] H0_dyn_sigma
+
+    lp = 0.0
+
+    # a_smb ~ Exp(mean = scale)
+    scale_a = prior_scales[0]
+    lp += -a_smb / scale_a - np.log(scale_a)
+
+    # b_smb ~ Normal(0, σ²)
+    scale_b = prior_scales[1]
+    lp += -0.5 * (b_smb / scale_b) ** 2
+
+    # γ_atm ~ HalfNormal(σ)
+    scale_ga = prior_scales[2]
+    lp += -0.5 * (gamma_atm / scale_ga) ** 2
+
+    if use_ocean:
+        # γ_ocean ~ HalfNormal(σ)
+        scale_go = prior_scales[3]
+        lp += -0.5 * (gamma_ocean / scale_go) ** 2
+        # τ ~ LogNormal(μ, σ)
+        mu_lt = prior_scales[4]
+        sig_lt = prior_scales[5]
+        lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+
+    # D₀ ~ Normal(0, σ)
+    sig_D0 = prior_scales[6]
+    lp += -0.5 * (D0 / sig_D0) ** 2
+
+    # σ_extra ~ HalfCauchy(γ)
+    gamma_hc_smb = prior_scales[7]
+    lp += -np.log(1 + (sigma_extra_smb / gamma_hc_smb) ** 2) + log_sig_smb
+
+    gamma_hc_dyn = prior_scales[8]
+    lp += -np.log(1 + (sigma_extra_dyn / gamma_hc_dyn) ** 2) + log_sig_dyn
+
+    # H₀ ~ Normal(H_obs[0], σ)
+    sig_H0s = prior_scales[9]
+    lp += -0.5 * ((H0_smb - H_smb_obs[0]) / sig_H0s) ** 2
+
+    sig_H0d = prior_scales[10]
+    lp += -0.5 * ((H0_dyn - H_dyn_obs[0]) / sig_H0d) ** 2
+
+    # ── SMB forward model ──
+    H_smb_pred = a_smb * I2_smb + b_smb * I1_smb + H0_smb
+    var_smb = sigma_smb ** 2 + sigma_extra_smb ** 2
+    resid_smb = H_smb_obs - H_smb_pred
+    lp += -0.5 * np.sum(resid_smb ** 2 / var_smb + np.log(var_smb))
+
+    # ── Discharge forward model ──
+    if use_ocean:
+        # Solve ODE: dD_eff/dt = (T_ocean - D_eff) / τ
+        D_eff = np.empty(n_ocean)
+        D_eff[0] = T0_ocean
+        alpha = np.exp(-dt_ocean / tau)
+        for i in range(n_ocean - 1):
+            D_eff[i + 1] = (D_eff[i] * alpha[i]
+                            + T_ocean_annual[i] * (1.0 - alpha[i]))
+        cum_D = np.zeros(n_ocean)
+        for i in range(n_ocean - 1):
+            cum_D[i + 1] = (cum_D[i]
+                            + 0.5 * (D_eff[i] + D_eff[i + 1]) * dt_ocean[i])
+        cum_D_dyn = cum_D[obs_idx_ocean_dyn]
+        H_dyn_pred = (gamma_atm * I1_dyn + gamma_ocean * cum_D_dyn
+                      + D0 * I0_dyn + H0_dyn)
+    else:
+        # Atmospheric only: H_dyn = γ_atm·I₁ + D₀·I₀ + H₀
+        H_dyn_pred = gamma_atm * I1_dyn + D0 * I0_dyn + H0_dyn
+
+    var_dyn = sigma_dyn ** 2 + sigma_extra_dyn ** 2
+    resid_dyn = H_dyn_obs - H_dyn_pred
+    lp += -0.5 * np.sum(resid_dyn ** 2 / var_dyn + np.log(var_dyn))
+
+    # ── Budget rate + acceleration constraint (Pass 2) ──
+    if budget_rate_accel is not None:
+        # Rate: dH/dt = dH_smb/dt + dH_dyn/dt at eval time
+        T = T_atm_eval
+        rate_smb = a_smb * T ** 2 + b_smb * T
+        if use_ocean:
+            rate_dyn = gamma_atm * T + gamma_ocean * D_eff[ocean_eval_idx] + D0
+        else:
+            rate_dyn = gamma_atm * T + D0
+        rate_total = rate_smb + rate_dyn
+
+        # Acceleration: d²H/dt² at eval time
+        dT = dTdt_eval
+        accel_smb = (2.0 * a_smb * T + b_smb) * dT
+        if use_ocean:
+            dDeff_dt = ((T_ocean_annual[ocean_eval_idx]
+                         - D_eff[ocean_eval_idx]) / tau)
+            accel_dyn = gamma_atm * dT + gamma_ocean * dDeff_dt
+        else:
+            accel_dyn = gamma_atm * dT
+        accel_total = accel_smb + accel_dyn
+
+        lp_ra = _rate_accel_prior_logp(rate_total, accel_total,
+                                       budget_rate_accel)
+        if not np.isfinite(lp_ra):
+            return -np.inf
+        lp += lp_ra
+
+    return lp
+
+
+def fit_bayesian_greenland_joint(
+    # ── SMB observations ──
+    H_smb_obs: np.ndarray,
+    sigma_smb_obs: np.ndarray,
+    time_smb: np.ndarray,
+    I2_smb: np.ndarray,
+    I1_smb: np.ndarray,
+    I0_smb: np.ndarray,
+    # ── Discharge observations ──
+    H_dyn_obs: np.ndarray,
+    sigma_dyn_obs: np.ndarray,
+    time_dyn: np.ndarray,
+    I1_dyn: np.ndarray,
+    I0_dyn: np.ndarray,
+    # ── Ocean temperature forcing (optional) ──
+    T_ocean_monthly: Optional[np.ndarray] = None,
+    time_ocean_monthly: Optional[np.ndarray] = None,
+    # ── Budget rate+accel constraint (Pass 2) ──
+    budget_rate_accel: Optional['SatelliteEraQuadraticResult'] = None,
+    T_atm_eval: float = 0.0,
+    dTdt_eval: float = 0.0,
+    # ── Priors ──
+    prior_scale_a_smb: float = 0.002,
+    prior_scale_b_smb: float = 0.004,
+    prior_scale_gamma_atm: float = 0.002,
+    prior_scale_gamma_ocean: float = 0.002,
+    prior_log_tau_mean: float = None,
+    prior_log_tau_sigma: float = 0.5,
+    prior_D0_sigma: float = 0.0001,
+    prior_sigma_extra_smb: float = 0.002,
+    prior_sigma_extra_dyn: float = 0.002,
+    prior_H0_smb_sigma: float = 0.005,
+    prior_H0_dyn_sigma: float = 0.005,
+    # ── MCMC settings ──
+    n_samples: int = 10000,
+    n_walkers: int = 64,
+    n_burnin: int = 5000,
+    thin: int = 1,
+    progress: bool = True,
+    seed: Optional[int] = None,
+) -> BayesianGreenlandJointResult:
+    """Joint Bayesian fit of Greenland SMB and discharge components.
+
+    Two modes:
+
+    **Atmospheric only** (T_ocean_monthly=None, default):
+        H_smb = a_smb·I₂ + b_smb·I₁ + H₀_smb
+        H_dyn = γ_atm·I₁ + D₀·I₀ + H₀_dyn
+        8 parameters.
+
+    **With ocean ODE** (T_ocean_monthly provided):
+        H_smb = a_smb·I₂ + b_smb·I₁ + H₀_smb
+        H_dyn = γ_atm·I₁ + γ_ocean·∫D_eff + D₀·I₀ + H₀_dyn
+        dD_eff/dt = (T_ocean − D_eff) / τ
+        10 parameters.
+
+    Parameters
+    ----------
+    H_smb_obs, sigma_smb_obs, time_smb : (n_smb,)
+        Observed cumulative SMB (m SLE, SLR convention) with σ and times.
+    I2_smb, I1_smb, I0_smb : (n_smb,)
+        Design vectors for SMB (from atmospheric T).
+    H_dyn_obs, sigma_dyn_obs, time_dyn : (n_dyn,)
+        Observed cumulative discharge (m SLE, SLR convention).
+    I1_dyn, I0_dyn : (n_dyn,)
+        Design vectors for discharge (from atmospheric T).
+    T_ocean_monthly, time_ocean_monthly : (n,) or None
+        Monthly subsurface ocean temperature (°C).
+        If None, uses atmospheric-only discharge model.
+    budget_rate_accel : SatelliteEraQuadraticResult or None
+        Budget-closure rate and acceleration constraint for Pass 2.
+        Contains observed Greenland rate, accel, and 2×2 covariance
+        (GMSL minus all other components). No level constraint.
+    T_atm_eval : float
+        Greenland surface temperature (°C, relative to baseline) at the
+        budget evaluation time. Used to compute model rate and accel.
+    dTdt_eval : float
+        Temperature trend (°C/yr) at the budget evaluation time.
+        Used to compute model acceleration.
+    """
+    use_ocean = T_ocean_monthly is not None
+    if prior_log_tau_mean is None:
+        prior_log_tau_mean = np.log(20.0)
+
+    n_smb = len(H_smb_obs)
+    n_dyn = len(H_dyn_obs)
+
+    # ── Ocean T setup (only when use_ocean=True) ──
+    T_ocean_annual = None
+    dt_ocean = None
+    T0_ocean = 0.0
+    obs_idx_ocean_smb = None
+    obs_idx_ocean_dyn = None
+    n_ocean = 0
+
+    if use_ocean:
+        year_floor = np.floor(time_ocean_monthly).astype(int)
+        unique_years = np.unique(year_floor)
+        T_ocean_annual = np.array([
+            np.mean(T_ocean_monthly[year_floor == yr])
+            for yr in unique_years
+        ])
+        time_ocean_annual = unique_years.astype(float) + 0.5
+        n_ocean = len(time_ocean_annual)
+        dt_ocean = np.diff(time_ocean_annual)
+
+        n_spinup = min(10, n_ocean)
+        T0_ocean = float(np.mean(T_ocean_annual[:n_spinup]))
+
+        obs_idx_ocean_smb = np.array([
+            np.argmin(np.abs(time_ocean_annual - t)) for t in time_smb
+        ])
+        obs_idx_ocean_dyn = np.array([
+            np.argmin(np.abs(time_ocean_annual - t)) for t in time_dyn
+        ])
+
+    # ── Budget constraint setup ──
+    ocean_eval_idx = None
+    if budget_rate_accel is not None and use_ocean:
+        ocean_eval_idx = int(np.argmin(
+            np.abs(time_ocean_annual - budget_rate_accel.eval_time)))
+
+    if progress:
+        mode = "atmospheric + ocean" if use_ocean else "atmospheric only"
+        print(f"  Mode: {mode}")
+        print(f"  SMB obs: {n_smb} pts ({time_smb[0]:.0f}–{time_smb[-1]:.0f})")
+        print(f"  Dyn obs: {n_dyn} pts ({time_dyn[0]:.0f}–{time_dyn[-1]:.0f})")
+        if use_ocean:
+            print(f"  Ocean T: {n_ocean} annual pts "
+                  f"({time_ocean_annual[0]:.0f}–{time_ocean_annual[-1]:.0f})")
+            print(f"  ODE init T_ocean(0) = {T0_ocean:.2f} °C")
+        if budget_rate_accel is not None:
+            M = 1e3
+            print(f"  Budget constraint (Pass 2):")
+            print(f"    Target rate: {budget_rate_accel.rate*M:.3f} "
+                  f"± {budget_rate_accel.rate_se*M:.3f} mm/yr "
+                  f"at {budget_rate_accel.eval_time:.1f}")
+            print(f"    Target accel: {budget_rate_accel.accel*M:.4f} "
+                  f"± {budget_rate_accel.accel_se*M:.4f} mm/yr²")
+            print(f"    T_atm_eval = {T_atm_eval:.3f} °C, "
+                  f"dT/dt = {dTdt_eval:.4f} °C/yr")
+
+    # ── Prior scales array ──
+    prior_scales = np.array([
+        prior_scale_a_smb,       # [0]
+        prior_scale_b_smb,       # [1]
+        prior_scale_gamma_atm,   # [2]
+        prior_scale_gamma_ocean, # [3]
+        prior_log_tau_mean,      # [4]
+        prior_log_tau_sigma,     # [5]
+        prior_D0_sigma,          # [6]
+        prior_sigma_extra_smb,   # [7]
+        prior_sigma_extra_dyn,   # [8]
+        prior_H0_smb_sigma,      # [9]
+        prior_H0_dyn_sigma,      # [10]
+        0.0,                     # [11] reserved
+    ])
+
+    if use_ocean:
+        ndim = 10
+        param_names = [
+            'a_smb', 'b_smb', 'log_sigma_smb', 'H0_smb',
+            'gamma_atm', 'gamma_ocean', 'log_tau', 'D0',
+            'log_sigma_dyn', 'H0_dyn',
+        ]
+    else:
+        ndim = 8
+        param_names = [
+            'a_smb', 'b_smb', 'log_sigma_smb', 'H0_smb',
+            'gamma_atm', 'D0', 'log_sigma_dyn', 'H0_dyn',
+        ]
+
+    # ── OLS initialization ──
+    # SMB: H_smb = a·I₂ + b·I₁ + H₀
+    X_smb = np.column_stack([I2_smb, I1_smb, np.ones(n_smb)])
+    W_smb = np.diag(1.0 / sigma_smb_obs ** 2)
+    try:
+        beta_smb = np.linalg.solve(X_smb.T @ W_smb @ X_smb,
+                                   X_smb.T @ W_smb @ H_smb_obs)
+    except np.linalg.LinAlgError:
+        beta_smb = np.linalg.lstsq(X_smb, H_smb_obs, rcond=None)[0]
+
+    if use_ocean:
+        # Discharge ODE at prior median τ for initialization
+        tau_init = np.exp(prior_log_tau_mean)
+        D_eff_init = np.empty(n_ocean)
+        D_eff_init[0] = T0_ocean
+        alpha_init = np.exp(-dt_ocean / tau_init)
+        for i in range(n_ocean - 1):
+            D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
+                                  + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+        cum_D_init = np.zeros(n_ocean)
+        for i in range(n_ocean - 1):
+            cum_D_init[i + 1] = (cum_D_init[i]
+                                  + 0.5 * (D_eff_init[i] + D_eff_init[i + 1])
+                                  * dt_ocean[i])
+        cum_D_dyn_init = cum_D_init[obs_idx_ocean_dyn]
+
+        X_dyn = np.column_stack([I1_dyn, cum_D_dyn_init, I0_dyn,
+                                  np.ones(n_dyn)])
+    else:
+        # Atmospheric only: H_dyn = γ_atm·I₁ + D₀·I₀ + H₀
+        X_dyn = np.column_stack([I1_dyn, I0_dyn, np.ones(n_dyn)])
+
+    W_dyn = np.diag(1.0 / sigma_dyn_obs ** 2)
+    try:
+        beta_dyn = np.linalg.solve(X_dyn.T @ W_dyn @ X_dyn,
+                                   X_dyn.T @ W_dyn @ H_dyn_obs)
+    except np.linalg.LinAlgError:
+        beta_dyn = np.linalg.lstsq(X_dyn, H_dyn_obs, rcond=None)[0]
+
+    a_init = max(beta_smb[0], 1e-6)
+    b_init = beta_smb[1]
+    H0s_init = beta_smb[2]
+
+    ga_init = max(beta_dyn[0], 1e-6)
+    if use_ocean:
+        go_init = max(beta_dyn[1], 1e-6)
+        D0_init = beta_dyn[2]
+        H0d_init = beta_dyn[3]
+        tau_init = np.exp(prior_log_tau_mean)
+    else:
+        go_init = 0.0
+        D0_init = beta_dyn[1]
+        H0d_init = beta_dyn[2]
+        tau_init = 10.0  # unused
+
+    resid_smb_init = H_smb_obs - X_smb @ beta_smb
+    resid_dyn_init = H_dyn_obs - X_dyn @ beta_dyn
+    sig_smb_init = max(np.std(resid_smb_init), 1e-5)
+    sig_dyn_init = max(np.std(resid_dyn_init), 1e-5)
+
+    if use_ocean:
+        theta0 = np.array([
+            a_init, b_init, np.log(sig_smb_init), H0s_init,
+            ga_init, go_init, np.log(tau_init), D0_init,
+            np.log(sig_dyn_init), H0d_init,
+        ])
+    else:
+        theta0 = np.array([
+            a_init, b_init, np.log(sig_smb_init), H0s_init,
+            ga_init, D0_init,
+            np.log(sig_dyn_init), H0d_init,
+        ])
+
+    if progress:
+        M = 1e3
+        print(f"  OLS init (SMB): a={a_init*M:.3f} mm/yr/°C², "
+              f"b={b_init*M:.3f} mm/yr/°C")
+        if use_ocean:
+            print(f"  OLS init (Dyn): γ_atm={ga_init*M:.3f}, "
+                  f"γ_ocean={go_init*M:.3f} mm/yr/°C, "
+                  f"D₀={D0_init*M:.4f} mm/yr, τ={tau_init:.0f} yr")
+        else:
+            print(f"  OLS init (Dyn): γ_atm={ga_init*M:.3f} mm/yr/°C, "
+                  f"D₀={D0_init*M:.4f} mm/yr")
+
+    # ── Walker initialization ──
+    rng = np.random.default_rng(seed)
+    pos = np.empty((n_walkers, ndim))
+    for i in range(n_walkers):
+        p = theta0.copy()
+        p[0] = abs(a_init * (1.0 + 0.1 * rng.standard_normal()))
+        p[1] = b_init + abs(b_init + 1e-4) * 0.1 * rng.standard_normal()
+        p[2] = theta0[2] + 0.1 * rng.standard_normal()
+        p[3] = H0s_init + max(abs(H0s_init), 1e-4) * 0.05 * rng.standard_normal()
+        p[4] = abs(ga_init * (1.0 + 0.1 * rng.standard_normal()))
+        if use_ocean:
+            p[5] = abs(go_init * (1.0 + 0.1 * rng.standard_normal()))
+            p[6] = theta0[6] + 0.1 * rng.standard_normal()
+            p[7] = D0_init + max(abs(D0_init), 1e-5) * 0.1 * rng.standard_normal()
+            p[8] = theta0[8] + 0.1 * rng.standard_normal()
+            p[9] = H0d_init + max(abs(H0d_init), 1e-4) * 0.05 * rng.standard_normal()
+        else:
+            p[5] = D0_init + max(abs(D0_init), 1e-5) * 0.1 * rng.standard_normal()
+            p[6] = theta0[6] + 0.1 * rng.standard_normal()
+            p[7] = H0d_init + max(abs(H0d_init), 1e-4) * 0.05 * rng.standard_normal()
+        pos[i] = p
+
+    # ── MCMC ──
+    moves = [
+        (emcee.moves.DESnookerMove(), 0.8),
+        (emcee.moves.DEMove(),        0.2),
+    ]
+
+    sampler = emcee.EnsembleSampler(
+        n_walkers, ndim, _greenland_joint_log_prob,
+        args=(I2_smb, I1_smb, I0_smb, I1_dyn, I0_dyn,
+              H_smb_obs, sigma_smb_obs, H_dyn_obs, sigma_dyn_obs,
+              prior_scales),
+        kwargs={
+            'use_ocean': use_ocean,
+            'T_ocean_annual': T_ocean_annual,
+            'dt_ocean': dt_ocean,
+            'T0_ocean': T0_ocean,
+            'obs_idx_ocean_smb': obs_idx_ocean_smb,
+            'obs_idx_ocean_dyn': obs_idx_ocean_dyn,
+            'n_ocean': n_ocean,
+            'budget_rate_accel': budget_rate_accel,
+            'T_atm_eval': T_atm_eval,
+            'dTdt_eval': dTdt_eval,
+            'ocean_eval_idx': ocean_eval_idx,
+        },
+        moves=moves,
+    )
+
+    if progress:
+        print(f"  Running emcee: {n_walkers} walkers, "
+              f"{n_burnin} burn-in + {n_samples} production "
+              f"({ndim} params)...")
+
+    sampler.run_mcmc(pos, n_burnin + n_samples, progress=progress)
+
+    # ── Extract chains ──
+    flat = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
+
+    a_smb_s = flat[:, 0]
+    b_smb_s = flat[:, 1]
+    sig_smb_s = np.exp(flat[:, 2])
+    H0s_s = flat[:, 3]
+    ga_s = flat[:, 4]
+
+    if use_ocean:
+        go_s = flat[:, 5]
+        tau_s = np.exp(flat[:, 6])
+        D0_s = flat[:, 7]
+        sig_dyn_s = np.exp(flat[:, 8])
+        H0d_s = flat[:, 9]
+    else:
+        go_s = np.zeros(len(flat))
+        tau_s = np.full(len(flat), np.nan)
+        D0_s = flat[:, 5]
+        sig_dyn_s = np.exp(flat[:, 6])
+        H0d_s = flat[:, 7]
+
+    # ── Posterior-mean predictions ──
+    a_m, b_m = np.mean(a_smb_s), np.mean(b_smb_s)
+    H0s_m = np.mean(H0s_s)
+    ga_m = np.mean(ga_s)
+    D0_m = np.mean(D0_s)
+    H0d_m = np.mean(H0d_s)
+
+    H_smb_pred = a_m * I2_smb + b_m * I1_smb + H0s_m
+
+    D_eff_post = None
+    if use_ocean:
+        go_m = np.mean(go_s)
+        tau_med = np.median(tau_s)
+        D_eff_post = np.empty(n_ocean)
+        D_eff_post[0] = T0_ocean
+        alpha_post = np.exp(-dt_ocean / tau_med)
+        for i in range(n_ocean - 1):
+            D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
+                                  + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+        cum_D_post = np.zeros(n_ocean)
+        for i in range(n_ocean - 1):
+            cum_D_post[i + 1] = (cum_D_post[i]
+                                  + 0.5 * (D_eff_post[i] + D_eff_post[i + 1])
+                                  * dt_ocean[i])
+        cum_D_dyn_post = cum_D_post[obs_idx_ocean_dyn]
+        H_dyn_pred = (ga_m * I1_dyn + go_m * cum_D_dyn_post
+                      + D0_m * I0_dyn + H0d_m)
+    else:
+        H_dyn_pred = ga_m * I1_dyn + D0_m * I0_dyn + H0d_m
+
+    def _r2(obs, pred):
+        ss_res = np.sum((obs - pred) ** 2)
+        ss_tot = np.sum((obs - np.mean(obs)) ** 2)
+        return 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    r2_smb = _r2(H_smb_obs, H_smb_pred)
+    r2_dyn = _r2(H_dyn_obs, H_dyn_pred)
+
+    # Total MB R² (using observations at overlapping times)
+    # Find common times between SMB and D
+    smb_set = set(np.round(time_smb, 1))
+    dyn_set = set(np.round(time_dyn, 1))
+    common_times = sorted(smb_set & dyn_set)
+    if len(common_times) > 5:
+        smb_idx = [i for i, t in enumerate(np.round(time_smb, 1))
+                   if t in common_times]
+        dyn_idx = [i for i, t in enumerate(np.round(time_dyn, 1))
+                   if t in common_times]
+        H_total_obs = H_smb_obs[smb_idx] + H_dyn_obs[dyn_idx]
+        H_total_pred = H_smb_pred[smb_idx] + H_dyn_pred[dyn_idx]
+        r2_total = _r2(H_total_obs, H_total_pred)
+    else:
+        r2_total = np.nan
+
+    # ── Convergence diagnostics ──
+    n_chains_arviz = min(4, n_walkers)
+    chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
+    var_dict = {}
+    for k, name in enumerate(param_names):
+        var_dict[name] = chain_full[:, :n_chains_arviz, k].T
+    trace = az.from_dict(var_dict)
+    conv = check_convergence(trace, quiet=(not progress))
+
+    diag = {
+        'acceptance_fraction': sampler.acceptance_fraction.mean(),
+        'n_walkers': n_walkers,
+        'n_samples': n_samples,
+        'n_burnin': n_burnin,
+        'thin': thin,
+        'convergence': conv,
+    }
+
+    if progress:
+        M = 1e3
+        print(f"\n  SMB posterior: a_smb={np.mean(a_smb_s)*M:.3f} "
+              f"[{np.percentile(a_smb_s, 3)*M:.3f}, "
+              f"{np.percentile(a_smb_s, 97)*M:.3f}] mm/yr/°C²")
+        print(f"    b_smb={np.mean(b_smb_s)*M:.3f} "
+              f"[{np.percentile(b_smb_s, 3)*M:.3f}, "
+              f"{np.percentile(b_smb_s, 97)*M:.3f}] mm/yr/°C")
+        print(f"    σ_extra_smb={np.median(sig_smb_s)*M:.2f} mm, "
+              f"R²={r2_smb:.4f}")
+        print(f"  Dyn posterior: γ_atm={np.mean(ga_s)*M:.3f} "
+              f"[{np.percentile(ga_s, 3)*M:.3f}, "
+              f"{np.percentile(ga_s, 97)*M:.3f}] mm/yr/°C")
+        if use_ocean:
+            print(f"    γ_ocean={np.mean(go_s)*M:.3f} "
+                  f"[{np.percentile(go_s, 3)*M:.3f}, "
+                  f"{np.percentile(go_s, 97)*M:.3f}] mm/yr/°C")
+            print(f"    τ={np.median(tau_s):.1f} "
+                  f"[{np.percentile(tau_s, 3):.1f}, "
+                  f"{np.percentile(tau_s, 97):.1f}] yr")
+        print(f"    D₀={np.mean(D0_s)*M:.4f} mm/yr, "
+              f"σ_extra_dyn={np.median(sig_dyn_s)*M:.2f} mm")
+        print(f"    R²_dyn={r2_dyn:.4f}")
+        print(f"  Total MB: R²={r2_total:.4f}")
+        print(f"  Acceptance: {diag['acceptance_fraction']:.2f}")
+
+        # Component changes
+        H_smb_change = H_smb_pred[-1] - H_smb_pred[0]
+        H_dyn_change = H_dyn_pred[-1] - H_dyn_pred[0]
+        print(f"\n  Component changes (model):")
+        print(f"    SMB:       {H_smb_change*M:+.2f} mm")
+        print(f"    Discharge: {H_dyn_change*M:+.2f} mm")
+        print(f"    Total:     {(H_smb_change + H_dyn_change)*M:+.2f} mm")
+
+        # Acceleration partition
+        # Use linear regression of rate on time to get acceleration
+        dt_smb = time_smb[-1] - time_smb[0]
+        smb_rate_start = a_m * 2 * I2_smb[0] / max(I0_smb[0], 1e-6) + b_m
+        smb_rate_end = a_m * 2 * I2_smb[-1] / max(I0_smb[-1], 1e-6) + b_m
+
+    return BayesianGreenlandJointResult(
+        trace=trace,
+        a_smb_posterior=a_smb_s,
+        b_smb_posterior=b_smb_s,
+        H0_smb_posterior=H0s_s,
+        sigma_extra_smb_posterior=sig_smb_s,
+        gamma_atm_posterior=ga_s,
+        gamma_ocean_posterior=go_s,
+        tau_posterior=tau_s,
+        D0_posterior=D0_s,
+        H0_dyn_posterior=H0d_s,
+        sigma_extra_dyn_posterior=sig_dyn_s,
+        H_smb_model=H_smb_pred,
+        H_dyn_model=H_dyn_pred,
+        D_eff_mean=D_eff_post,
+        r2_smb=r2_smb,
+        r2_dyn=r2_dyn,
+        r2_total=r2_total,
+        time_smb=time_smb,
+        time_dyn=time_dyn,
+        H_smb_obs=H_smb_obs,
+        H_dyn_obs=H_dyn_obs,
+        sigma_smb_obs=sigma_smb_obs,
+        sigma_dyn_obs=sigma_dyn_obs,
+        sampler_diagnostics=diag,
+    )
+
+
+def prepare_greenland_components(
+    mankoff_path: str,
+    mouginot_df: Optional['pd.DataFrame'] = None,
+    baseline_window: tuple = (1995, 2005),
+    start_year: int = 1972,
+    end_year: Optional[int] = None,
+) -> dict:
+    """Prepare Greenland SMB/D cumulative SLE from Mankoff and Mouginot.
+
+    Reads the Mankoff MB_SMB_D_BMB_ann.csv and optionally merges with
+    a Mouginot DataFrame (from ``read_mouginot2019_greenland``).  Both
+    datasets provide independent SMB and discharge rate estimates; when
+    both are supplied the observations are concatenated and sorted by
+    time, giving two independent observations per overlap year.
+
+    Parameters
+    ----------
+    mankoff_path : str
+        Path to ``MB_SMB_D_BMB_ann.csv``.
+    mouginot_df : DataFrame or None
+        Output of ``read_mouginot2019_greenland()``.  Must contain
+        columns ``decimal_year``, ``smb_rate``, ``smb_rate_sigma``,
+        ``discharge_rate``, ``discharge_rate_sigma``, ``mb_rate``,
+        ``mb_rate_sigma`` (all m/yr SLE, SLR convention).
+        If None, uses Mankoff only.
+    baseline_window : tuple
+        (start, end) years for rebaseline.  Default (1995, 2005).
+    start_year : int
+        First year to include.  Default 1972 (Mouginot).
+    end_year : int or None
+        Last year.  None → end of record.
+
+    Returns
+    -------
+    dict with keys:
+        'time_smb', 'H_smb', 'sigma_smb' : SMB cumulative SLE (m)
+        'time_dyn', 'H_dyn', 'sigma_dyn' : Discharge cumulative SLE (m)
+        'time_mb', 'H_mb', 'sigma_mb'    : Total MB cumulative SLE (m)
+        'sources'  : (n,) str array — 'mankoff' or 'mouginot' per obs
+        'df' : raw Mankoff DataFrame (Gt/yr units)
+
+    Notes
+    -----
+    Each dataset is cumulated independently (so baseline-rate subtraction
+    and integration use each dataset's own time grid), then the resulting
+    cumulative series are concatenated and sorted by time.
+    """
+    import pandas as pd
+
+    GT_TO_M_SLE = 1.0 / 362500.0  # 1 Gt = 1/362.5 mm → 1/362500 m
+
+    # ── Helper: cumulate rates into level ──
+    def _cumulate(rate, sigma, times, bl_window):
+        """Subtract baseline mean rate, integrate anomalies, rebase level."""
+        bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
+
+        # Subtract baseline-period mean rate to get anomaly rates
+        if bl_mask.sum() > 0:
+            rate_ref = rate[bl_mask].mean()
+        else:
+            rate_ref = 0.0
+        rate_anom = rate - rate_ref
+
+        dt = np.diff(times, prepend=times[0] - 1)
+        cum = np.cumsum(rate_anom * dt)
+        cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
+
+        # Rebase level: subtract value at baseline midpoint
+        if bl_mask.sum() > 0:
+            bl_mid_idx = np.argmin(np.abs(
+                times - np.mean(bl_window)))
+            cum = cum - cum[bl_mid_idx]
+            # Rebase sigma relative to baseline
+            bl_var = cum_sig[bl_mid_idx]**2
+            cum_sig = np.sqrt(np.maximum(cum_sig**2 - bl_var, 0.0))
+            cum_sig = np.maximum(cum_sig, sigma.mean())
+        return cum, cum_sig
+
+    # ── Mankoff ──
+    df = pd.read_csv(mankoff_path)
+    if end_year is not None:
+        df = df[(df['time'] >= start_year) & (df['time'] <= end_year)].copy()
+    else:
+        df = df[df['time'] >= start_year].copy()
+    df = df.sort_values('time').reset_index(drop=True)
+    man_years = df['time'].values.astype(float)
+
+    man_smb_rate = -df['SMB'].values * GT_TO_M_SLE
+    man_smb_err = df['SMB_err'].values * GT_TO_M_SLE
+    man_dyn_rate = df['D'].values * GT_TO_M_SLE
+    man_dyn_err = df['D_err'].values * GT_TO_M_SLE
+    man_mb_rate = -df['MB'].values * GT_TO_M_SLE
+    man_mb_err = df['MB_err'].values * GT_TO_M_SLE
+
+    H_smb_man, sig_smb_man = _cumulate(man_smb_rate, man_smb_err,
+                                        man_years, baseline_window)
+    H_dyn_man, sig_dyn_man = _cumulate(man_dyn_rate, man_dyn_err,
+                                        man_years, baseline_window)
+    H_mb_man, sig_mb_man = _cumulate(man_mb_rate, man_mb_err,
+                                      man_years, baseline_window)
+
+    if mouginot_df is None:
+        # Mankoff only — same output as before
+        return {
+            'time_smb': man_years, 'H_smb': H_smb_man,
+            'sigma_smb': sig_smb_man,
+            'time_dyn': man_years, 'H_dyn': H_dyn_man,
+            'sigma_dyn': sig_dyn_man,
+            'time_mb': man_years, 'H_mb': H_mb_man,
+            'sigma_mb': sig_mb_man,
+            'sources': np.full(len(man_years), 'mankoff'),
+            'df': df,
+        }
+
+    # ── Mouginot ──
+    mou = mouginot_df.copy()
+    mou_years = mou['decimal_year'].values.astype(float)
+    # Mouginot reader already outputs m/yr SLE, SLR convention
+    mou_smb_rate = mou['smb_rate'].values
+    mou_smb_err = mou['smb_rate_sigma'].values
+    mou_dyn_rate = mou['discharge_rate'].values
+    mou_dyn_err = mou['discharge_rate_sigma'].values
+    mou_mb_rate = mou['mb_rate'].values
+    mou_mb_err = mou['mb_rate_sigma'].values
+
+    # Apply year bounds
+    mask = mou_years >= start_year
+    if end_year is not None:
+        mask &= mou_years <= end_year
+    mou_years = mou_years[mask]
+    mou_smb_rate = mou_smb_rate[mask]
+    mou_smb_err = mou_smb_err[mask]
+    mou_dyn_rate = mou_dyn_rate[mask]
+    mou_dyn_err = mou_dyn_err[mask]
+    mou_mb_rate = mou_mb_rate[mask]
+    mou_mb_err = mou_mb_err[mask]
+
+    H_smb_mou, sig_smb_mou = _cumulate(mou_smb_rate, mou_smb_err,
+                                        mou_years, baseline_window)
+    H_dyn_mou, sig_dyn_mou = _cumulate(mou_dyn_rate, mou_dyn_err,
+                                        mou_years, baseline_window)
+    H_mb_mou, sig_mb_mou = _cumulate(mou_mb_rate, mou_mb_err,
+                                      mou_years, baseline_window)
+
+    # ── Merge: concatenate and sort by time ──
+    def _merge_sorted(t1, h1, s1, t2, h2, s2):
+        t = np.concatenate([t1, t2])
+        h = np.concatenate([h1, h2])
+        s = np.concatenate([s1, s2])
+        idx = np.argsort(t)
+        return t[idx], h[idx], s[idx]
+
+    t_smb, H_smb, sig_smb = _merge_sorted(
+        man_years, H_smb_man, sig_smb_man,
+        mou_years, H_smb_mou, sig_smb_mou)
+    t_dyn, H_dyn, sig_dyn = _merge_sorted(
+        man_years, H_dyn_man, sig_dyn_man,
+        mou_years, H_dyn_mou, sig_dyn_mou)
+    t_mb, H_mb, sig_mb = _merge_sorted(
+        man_years, H_mb_man, sig_mb_man,
+        mou_years, H_mb_mou, sig_mb_mou)
+
+    sources = np.concatenate([
+        np.full(len(man_years), 'mankoff'),
+        np.full(len(mou_years), 'mouginot'),
+    ])
+    sources = sources[np.argsort(np.concatenate([man_years, mou_years]))]
+
+    return {
+        'time_smb': t_smb, 'H_smb': H_smb, 'sigma_smb': sig_smb,
+        'time_dyn': t_dyn, 'H_dyn': H_dyn, 'sigma_dyn': sig_dyn,
+        'time_mb': t_mb, 'H_mb': H_mb, 'sigma_mb': sig_mb,
+        'sources': sources,
+        'df': df,
+    }
+
+
+def prepare_mankoff_components(
+    mankoff_path: str,
+    baseline_window: tuple = (1995, 2005),
+    start_year: int = 1972,
+    end_year: Optional[int] = None,
+) -> dict:
+    """Backward-compatible wrapper around prepare_greenland_components.
+
+    Mankoff only (no Mouginot).  See prepare_greenland_components.
+    """
+    return prepare_greenland_components(
+        mankoff_path=mankoff_path,
+        mouginot_df=None,
+        baseline_window=baseline_window,
+        start_year=start_year,
+        end_year=end_year,
+    )
+
+
+def prepare_mouginot_components(
+    mouginot_df: 'pd.DataFrame',
+    baseline_window: tuple = (1995, 2005),
+    start_year: int = 1972,
+    end_year: Optional[int] = None,
+) -> dict:
+    """Prepare Mouginot SMB/D as cumulative SLE for the joint model.
+
+    Uses the Mouginot DataFrame from ``read_mouginot2019_greenland()``,
+    which provides separate ``smb_rate``, ``discharge_rate`` columns
+    (m/yr SLE, SLR convention) for 1972–2018.
+
+    Parameters
+    ----------
+    mouginot_df : DataFrame
+        From ``read_mouginot2019_greenland()``.
+    baseline_window : tuple
+    start_year, end_year : int
+
+    Returns
+    -------
+    dict with same keys as prepare_greenland_components.
+    """
+    mou = mouginot_df.copy()
+    years = mou['decimal_year'].values.astype(float)
+
+    mask = years >= start_year
+    if end_year is not None:
+        mask &= years <= end_year
+    years = years[mask]
+    smb_rate = mou['smb_rate'].values[mask]
+    smb_err = mou['smb_rate_sigma'].values[mask]
+    dyn_rate = mou['discharge_rate'].values[mask]
+    dyn_err = mou['discharge_rate_sigma'].values[mask]
+    mb_rate = mou['mb_rate'].values[mask]
+    mb_err = mou['mb_rate_sigma'].values[mask]
+
+    def _cumulate(rate, sigma, times, bl_window):
+        bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
+        if bl_mask.sum() > 0:
+            rate_ref = rate[bl_mask].mean()
+        else:
+            rate_ref = 0.0
+        rate_anom = rate - rate_ref
+        dt = np.diff(times, prepend=times[0] - 1)
+        cum = np.cumsum(rate_anom * dt)
+        cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
+        if bl_mask.sum() > 0:
+            bl_mid_idx = np.argmin(np.abs(times - np.mean(bl_window)))
+            cum = cum - cum[bl_mid_idx]
+            bl_var = cum_sig[bl_mid_idx]**2
+            cum_sig = np.sqrt(np.maximum(cum_sig**2 - bl_var, 0.0))
+            cum_sig = np.maximum(cum_sig, sigma.mean())
+        return cum, cum_sig
+
+    H_smb, sig_smb = _cumulate(smb_rate, smb_err, years, baseline_window)
+    H_dyn, sig_dyn = _cumulate(dyn_rate, dyn_err, years, baseline_window)
+    H_mb, sig_mb = _cumulate(mb_rate, mb_err, years, baseline_window)
+
+    return {
+        'time_smb': years, 'H_smb': H_smb, 'sigma_smb': sig_smb,
+        'time_dyn': years, 'H_dyn': H_dyn, 'sigma_dyn': sig_dyn,
+        'time_mb': years, 'H_mb': H_mb, 'sigma_mb': sig_mb,
+        'sources': np.full(len(years), 'mouginot'),
+        'df': mou,
+    }
+
+
+# =========================================================================
+#  Greenland discharge-only model
+# =========================================================================
+
+@dataclass
+class BayesianGreenlandDischargeResult:
+    """Result from discharge-only Greenland calibration.
+
+    Model:
+        H_dyn = γ_atm·I₁ + γ_ocean·∫D_eff dt + D₀·I₀ + H₀_dyn
+        dD_eff/dt = (T_ocean − D_eff) / τ
+
+    SMB is treated as fixed observations (RACMO-derived), not fit.
+    """
+    trace: az.InferenceData
+    # Discharge parameters
+    gamma_atm_posterior: np.ndarray
+    gamma_ocean_posterior: np.ndarray
+    tau_posterior: np.ndarray
+    D0_posterior: np.ndarray
+    H0_dyn_posterior: np.ndarray
+    sigma_extra_dyn_posterior: np.ndarray
+    # Model predictions
+    H_dyn_model: np.ndarray           # (n_dyn,) at obs times
+    D_eff_mean: Optional[np.ndarray]  # ODE state or None
+    # SMB pass-through (not fit)
+    H_smb_obs: np.ndarray
+    sigma_smb_obs: np.ndarray
+    time_smb: np.ndarray
+    # Fit quality
+    r2_dyn: float
+    r2_total: float                   # R² of (H_smb_obs + H_dyn_model) vs (H_smb_obs + H_dyn_obs)
+    # Observations
+    time_dyn: np.ndarray
+    H_dyn_obs: np.ndarray
+    sigma_dyn_obs: np.ndarray
+    sampler_diagnostics: Optional[dict] = None
+
+
+def _greenland_discharge_log_prob(
+    theta, I1_dyn, I0_dyn,
+    H_dyn_obs, sigma_dyn,
+    prior_scales,
+    T_ocean_annual=None, dt_ocean=None, T0_ocean=0.0,
+    obs_idx_ocean_dyn=None, n_ocean=0,
+):
+    """Log-posterior for discharge-only Greenland model.
+
+    theta = [γ_atm, γ_ocean, log_τ, D₀, log_σ_dyn, H₀_dyn]  (6 params)
+    H_dyn = γ_atm·I₁ + γ_ocean·∫D_eff + D₀·I₀ + H₀_dyn
+
+    prior_scales layout:
+        [0] scale_gamma_atm (HN σ)
+        [1] scale_gamma_ocean (HN σ)
+        [2] log_tau_mean
+        [3] log_tau_sigma
+        [4] D0_sigma
+        [5] sig_extra_dyn_scale (HC γ)
+        [6] H0_dyn_sigma
+    """
+    gamma_atm, gamma_ocean, log_tau, D0, log_sig_dyn, H0_dyn = theta
+
+    if gamma_ocean < 0:
+        return -np.inf
+    if log_tau < -1 or log_tau > 7:
+        return -np.inf
+    if gamma_atm < 0:
+        return -np.inf
+    if log_sig_dyn > 0 or log_sig_dyn < -20:
+        return -np.inf
+
+    tau = np.exp(log_tau)
+    sigma_extra_dyn = np.exp(log_sig_dyn)
+
+    # ── Priors ──
+    lp = 0.0
+    scale_ga = prior_scales[0]
+    lp += -0.5 * (gamma_atm / scale_ga) ** 2
+
+    scale_go = prior_scales[1]
+    lp += -0.5 * (gamma_ocean / scale_go) ** 2
+
+    mu_lt = prior_scales[2]
+    sig_lt = prior_scales[3]
+    lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+
+    sig_D0 = prior_scales[4]
+    lp += -0.5 * (D0 / sig_D0) ** 2
+
+    gamma_hc = prior_scales[5]
+    lp += -np.log(1 + (sigma_extra_dyn / gamma_hc) ** 2) + log_sig_dyn
+
+    sig_H0 = prior_scales[6]
+    lp += -0.5 * ((H0_dyn - H_dyn_obs[0]) / sig_H0) ** 2
+
+    # ── Discharge forward model (ODE) ──
+    D_eff = np.empty(n_ocean)
+    D_eff[0] = T0_ocean
+    alpha = np.exp(-dt_ocean / tau)
+    for i in range(n_ocean - 1):
+        D_eff[i + 1] = (D_eff[i] * alpha[i]
+                        + T_ocean_annual[i] * (1.0 - alpha[i]))
+    cum_D = np.zeros(n_ocean)
+    for i in range(n_ocean - 1):
+        cum_D[i + 1] = (cum_D[i]
+                        + 0.5 * (D_eff[i] + D_eff[i + 1]) * dt_ocean[i])
+    cum_D_dyn = cum_D[obs_idx_ocean_dyn]
+    H_dyn_pred = (gamma_atm * I1_dyn + gamma_ocean * cum_D_dyn
+                  + D0 * I0_dyn + H0_dyn)
+
+    var_dyn = sigma_dyn ** 2 + sigma_extra_dyn ** 2
+    resid_dyn = H_dyn_obs - H_dyn_pred
+    lp += -0.5 * np.sum(resid_dyn ** 2 / var_dyn + np.log(var_dyn))
+
+    return lp
+
+
+def fit_bayesian_greenland_discharge(
+    # ── Discharge observations ──
+    H_dyn_obs: np.ndarray,
+    sigma_dyn_obs: np.ndarray,
+    time_dyn: np.ndarray,
+    I1_dyn: np.ndarray,
+    I0_dyn: np.ndarray,
+    # ── SMB observations (pass-through, not fit) ──
+    H_smb_obs: np.ndarray,
+    sigma_smb_obs: np.ndarray,
+    time_smb: np.ndarray,
+    # ── Ocean temperature forcing ──
+    T_ocean_monthly: np.ndarray,
+    time_ocean_monthly: np.ndarray,
+    # ── Priors ──
+    prior_scale_gamma_atm: float = 0.002,
+    prior_scale_gamma_ocean: float = 0.002,
+    prior_log_tau_mean: Optional[float] = None,
+    prior_log_tau_sigma: float = 0.5,
+    prior_D0_sigma: float = 0.0005,
+    prior_sigma_extra_dyn: float = 0.002,
+    prior_H0_dyn_sigma: float = 0.005,
+    # ── MCMC settings ──
+    n_samples: int = 10000,
+    n_walkers: int = 64,
+    n_burnin: int = 5000,
+    thin: int = 1,
+    progress: bool = True,
+    seed: Optional[int] = None,
+) -> BayesianGreenlandDischargeResult:
+    """Discharge-only Bayesian fit for Greenland.
+
+    Fits the ODE discharge model against observed cumulative discharge
+    from Mouginot et al. (2019).  SMB is passed through as fixed
+    observations (RACMO-derived) and is not fit to temperature.
+
+    Parameters
+    ----------
+    H_dyn_obs, sigma_dyn_obs, time_dyn : (n_dyn,)
+        Observed cumulative discharge (m SLE, SLR convention).
+    I1_dyn, I0_dyn : (n_dyn,)
+        Design vectors for discharge (from Greenland surface T).
+    H_smb_obs, sigma_smb_obs, time_smb : (n_smb,)
+        Observed cumulative SMB (not fit, passed through for total MB).
+    T_ocean_monthly, time_ocean_monthly : (n,)
+        Monthly subsurface ocean temperature (°C).
+    """
+    if prior_log_tau_mean is None:
+        prior_log_tau_mean = np.log(10.0)
+
+    n_dyn = len(H_dyn_obs)
+    ndim = 6
+    param_names = ['gamma_atm', 'gamma_ocean', 'log_tau', 'D0',
+                    'log_sigma_dyn', 'H0_dyn']
+
+    # ── Ocean T setup ──
+    year_floor = np.floor(time_ocean_monthly).astype(int)
+    unique_years = np.unique(year_floor)
+    T_ocean_annual = np.array([
+        np.mean(T_ocean_monthly[year_floor == yr])
+        for yr in unique_years
+    ])
+    time_ocean_annual = unique_years.astype(float) + 0.5
+    n_ocean = len(time_ocean_annual)
+    dt_ocean = np.diff(time_ocean_annual)
+
+    n_spinup = min(10, n_ocean)
+    T0_ocean = float(np.mean(T_ocean_annual[:n_spinup]))
+
+    obs_idx_ocean_dyn = np.array([
+        np.argmin(np.abs(time_ocean_annual - t)) for t in time_dyn
+    ])
+
+    if progress:
+        print(f"  Dyn obs: {n_dyn} pts ({time_dyn[0]:.0f}–{time_dyn[-1]:.0f})")
+        print(f"  SMB obs: {len(H_smb_obs)} pts (fixed, not fit)")
+        print(f"  Ocean T: {n_ocean} annual pts "
+              f"({time_ocean_annual[0]:.0f}–{time_ocean_annual[-1]:.0f})")
+        print(f"  ODE init T_ocean(0) = {T0_ocean:.2f} °C")
+
+    # ── Prior scales ──
+    prior_scales = np.array([
+        prior_scale_gamma_atm,    # [0]
+        prior_scale_gamma_ocean,  # [1]
+        prior_log_tau_mean,       # [2]
+        prior_log_tau_sigma,      # [3]
+        prior_D0_sigma,           # [4]
+        prior_sigma_extra_dyn,    # [5]
+        prior_H0_dyn_sigma,       # [6]
+    ])
+
+    # ── OLS initialization ──
+    tau_init = np.exp(prior_log_tau_mean)
+    D_eff_init = np.empty(n_ocean)
+    D_eff_init[0] = T0_ocean
+    alpha_init = np.exp(-dt_ocean / tau_init)
+    for i in range(n_ocean - 1):
+        D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
+                              + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+    cum_D_init = np.zeros(n_ocean)
+    for i in range(n_ocean - 1):
+        cum_D_init[i + 1] = (cum_D_init[i]
+                              + 0.5 * (D_eff_init[i] + D_eff_init[i + 1])
+                              * dt_ocean[i])
+    cum_D_dyn_init = cum_D_init[obs_idx_ocean_dyn]
+
+    X_dyn = np.column_stack([I1_dyn, cum_D_dyn_init, I0_dyn,
+                              np.ones(n_dyn)])
+    W_dyn = np.diag(1.0 / sigma_dyn_obs ** 2)
+    try:
+        beta_dyn = np.linalg.solve(X_dyn.T @ W_dyn @ X_dyn,
+                                   X_dyn.T @ W_dyn @ H_dyn_obs)
+    except np.linalg.LinAlgError:
+        beta_dyn = np.linalg.lstsq(X_dyn, H_dyn_obs, rcond=None)[0]
+
+    ga_init = max(beta_dyn[0], 1e-6)
+    go_init = max(beta_dyn[1], 1e-6)
+    D0_init = beta_dyn[2]
+    H0d_init = beta_dyn[3]
+
+    resid_init = H_dyn_obs - X_dyn @ beta_dyn
+    sig_dyn_init = max(np.std(resid_init), 1e-5)
+
+    theta0 = np.array([
+        ga_init, go_init, np.log(tau_init), D0_init,
+        np.log(sig_dyn_init), H0d_init,
+    ])
+
+    if progress:
+        M = 1e3
+        print(f"  OLS init: γ_atm={ga_init*M:.3f}, "
+              f"γ_ocean={go_init*M:.3f} mm/yr/°C, "
+              f"D₀={D0_init*M:.4f} mm/yr, τ={tau_init:.0f} yr")
+
+    # ── Walker initialization ──
+    rng = np.random.default_rng(seed)
+    pos = np.empty((n_walkers, ndim))
+    for i in range(n_walkers):
+        p = theta0.copy()
+        p[0] = abs(ga_init * (1.0 + 0.1 * rng.standard_normal()))
+        p[1] = abs(go_init * (1.0 + 0.1 * rng.standard_normal()))
+        p[2] = theta0[2] + 0.1 * rng.standard_normal()
+        p[3] = D0_init + max(abs(D0_init), 1e-5) * 0.1 * rng.standard_normal()
+        p[4] = theta0[4] + 0.1 * rng.standard_normal()
+        p[5] = H0d_init + max(abs(H0d_init), 1e-4) * 0.05 * rng.standard_normal()
+        pos[i] = p
+
+    # ── MCMC ──
+    moves = [
+        (emcee.moves.DESnookerMove(), 0.8),
+        (emcee.moves.DEMove(),        0.2),
+    ]
+    sampler = emcee.EnsembleSampler(
+        n_walkers, ndim, _greenland_discharge_log_prob,
+        args=(I1_dyn, I0_dyn, H_dyn_obs, sigma_dyn_obs, prior_scales),
+        kwargs={
+            'T_ocean_annual': T_ocean_annual,
+            'dt_ocean': dt_ocean,
+            'T0_ocean': T0_ocean,
+            'obs_idx_ocean_dyn': obs_idx_ocean_dyn,
+            'n_ocean': n_ocean,
+        },
+        moves=moves,
+    )
+
+    if progress:
+        print(f"  Running emcee: {n_walkers} walkers, "
+              f"{n_burnin} burn-in + {n_samples} production "
+              f"({ndim} params)...")
+
+    sampler.run_mcmc(pos, n_burnin + n_samples, progress=progress)
+
+    # ── Extract chains ──
+    flat = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
+    ga_s = flat[:, 0]
+    go_s = flat[:, 1]
+    tau_s = np.exp(flat[:, 2])
+    D0_s = flat[:, 3]
+    sig_dyn_s = np.exp(flat[:, 4])
+    H0d_s = flat[:, 5]
+
+    # ── Posterior-mean predictions ──
+    ga_m = np.mean(ga_s)
+    go_m = np.mean(go_s)
+    tau_med = np.median(tau_s)
+    D0_m = np.mean(D0_s)
+    H0d_m = np.mean(H0d_s)
+
+    D_eff_post = np.empty(n_ocean)
+    D_eff_post[0] = T0_ocean
+    alpha_post = np.exp(-dt_ocean / tau_med)
+    for i in range(n_ocean - 1):
+        D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
+                              + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+    cum_D_post = np.zeros(n_ocean)
+    for i in range(n_ocean - 1):
+        cum_D_post[i + 1] = (cum_D_post[i]
+                              + 0.5 * (D_eff_post[i] + D_eff_post[i + 1])
+                              * dt_ocean[i])
+    cum_D_dyn_post = cum_D_post[obs_idx_ocean_dyn]
+    H_dyn_pred = (ga_m * I1_dyn + go_m * cum_D_dyn_post
+                  + D0_m * I0_dyn + H0d_m)
+
+    def _r2(obs, pred):
+        ss_res = np.sum((obs - pred) ** 2)
+        ss_tot = np.sum((obs - np.mean(obs)) ** 2)
+        return 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
+
+    r2_dyn = _r2(H_dyn_obs, H_dyn_pred)
+
+    # Total MB R² (SMB is fixed observations)
+    smb_set = set(np.round(time_smb, 1))
+    dyn_set = set(np.round(time_dyn, 1))
+    common_times = sorted(smb_set & dyn_set)
+    if len(common_times) > 5:
+        smb_idx = [i for i, t in enumerate(np.round(time_smb, 1))
+                   if t in common_times]
+        dyn_idx = [i for i, t in enumerate(np.round(time_dyn, 1))
+                   if t in common_times]
+        H_total_obs = H_smb_obs[smb_idx] + H_dyn_obs[dyn_idx]
+        H_total_pred = H_smb_obs[smb_idx] + H_dyn_pred[dyn_idx]
+        r2_total = _r2(H_total_obs, H_total_pred)
+    else:
+        r2_total = np.nan
+
+    # ── Convergence diagnostics ──
+    n_chains_arviz = min(4, n_walkers)
+    chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
+    var_dict = {}
+    for k, name in enumerate(param_names):
+        var_dict[name] = chain_full[:, :n_chains_arviz, k].T
+    trace = az.from_dict(var_dict)
+    conv = check_convergence(trace, quiet=(not progress))
+
+    diag = {
+        'acceptance_fraction': sampler.acceptance_fraction.mean(),
+        'n_walkers': n_walkers,
+        'n_samples': n_samples,
+        'n_burnin': n_burnin,
+        'thin': thin,
+        'convergence': conv,
+    }
+
+    if progress:
+        M = 1e3
+        print(f"\n  Dyn posterior: γ_atm={np.mean(ga_s)*M:.3f} "
+              f"[{np.percentile(ga_s, 3)*M:.3f}, "
+              f"{np.percentile(ga_s, 97)*M:.3f}] mm/yr/°C")
+        print(f"    γ_ocean={np.mean(go_s)*M:.3f} "
+              f"[{np.percentile(go_s, 3)*M:.3f}, "
+              f"{np.percentile(go_s, 97)*M:.3f}] mm/yr/°C")
+        print(f"    τ={np.median(tau_s):.1f} "
+              f"[{np.percentile(tau_s, 3):.1f}, "
+              f"{np.percentile(tau_s, 97):.1f}] yr")
+        print(f"    D₀={np.mean(D0_s)*M:.4f} mm/yr, "
+              f"σ_extra_dyn={np.median(sig_dyn_s)*M:.2f} mm")
+        print(f"    R²_dyn={r2_dyn:.4f}")
+        print(f"  Total MB: R²={r2_total:.4f}")
+        print(f"  Acceptance: {diag['acceptance_fraction']:.2f}")
+
+    return BayesianGreenlandDischargeResult(
+        trace=trace,
+        gamma_atm_posterior=ga_s,
+        gamma_ocean_posterior=go_s,
+        tau_posterior=tau_s,
+        D0_posterior=D0_s,
+        H0_dyn_posterior=H0d_s,
+        sigma_extra_dyn_posterior=sig_dyn_s,
+        H_dyn_model=H_dyn_pred,
+        D_eff_mean=D_eff_post,
+        H_smb_obs=H_smb_obs,
+        sigma_smb_obs=sigma_smb_obs,
+        time_smb=time_smb,
+        r2_dyn=r2_dyn,
+        r2_total=r2_total,
+        time_dyn=time_dyn,
+        H_dyn_obs=H_dyn_obs,
+        sigma_dyn_obs=sigma_dyn_obs,
+        sampler_diagnostics=diag,
     )

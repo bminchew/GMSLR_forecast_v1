@@ -759,6 +759,7 @@ def project_thermosteric_ensemble(
     dict with keys:
         'scenarios': {ssp_name: DataFrame with 'decimal_year', 'steric',
                       'steric_lower', 'steric_upper', 'temperature'}
+        'samples': {ssp_name: ndarray (n_samples, n_proj)} — full MC ensemble
         'n_samples': int
         'n_layers': int
     """
@@ -768,7 +769,8 @@ def project_thermosteric_ensemble(
     n_post = len(posterior_samples)
     idx = rng.choice(n_post, size=min(n_samples, n_post), replace=False)
 
-    results = {'scenarios': {}, 'n_samples': n_samples, 'n_layers': n_layers}
+    results = {'scenarios': {}, 'samples': {}, 'n_samples': n_samples,
+                'n_layers': n_layers}
 
     for ssp_name, df_proj in temperature_projections.items():
         T_proj = df_proj[temp_col].values
@@ -827,6 +829,8 @@ def project_thermosteric_ensemble(
         p95 = np.percentile(steric_ens, 95, axis=0)
         p17 = np.percentile(steric_ens, 17, axis=0)
         p83 = np.percentile(steric_ens, 83, axis=0)
+
+        results['samples'][ssp_name] = steric_ens
 
         results['scenarios'][ssp_name] = pd.DataFrame({
             'decimal_year': time_proj,
