@@ -133,10 +133,10 @@ The effective upper-ocean temperature state $S_u(t)$ evolves as
 \end{equation}
 where $T(t)$ is the monthly global mean surface temperature anomaly (Berkeley Earth; \citealp{Rohde2020}) and $\tau_u$ is the upper-ocean relaxation timescale. The steric sea level is then
 \begin{equation}
-	\eta(t) = a\, S_u(t)^2 + b\, S_u(t) + c\,(t - t_0) + H_0,
+	H_{\mathrm{st}}(t) = a\, S_u(t)^2 + b\, S_u(t) + c\,(t - t_0) + H_0,
 	\label{eq:thermo_level}
 \end{equation}
-where $a$ captures the temperature dependence of the thermal expansion coefficient ($\alpha \propto \alpha_0 + \alpha_1 T$ from the equation of state; \citealp{McDougall2011}), $b$ is the baseline thermal expansion sensitivity, $c$ is a secular drift from halosteric and dynamical contributions not captured by the thermal model, and $H_0$ is the baseline offset. As $\tau_u \to 0$, $S_u \to T$ and the model reduces to the instantaneous quadratic $\eta = a\,T^2 + b\,T + c\,t + H_0$ used in the aggregate semi-empirical framework. The physical model thus nests the simpler model as a limiting case while adding the ocean thermal lag that controls the committed warming signal.
+where $a$ captures the temperature dependence of the thermal expansion coefficient ($\alpha \propto \alpha_0 + \alpha_1 T$ from the equation of state; \citealp{McDougall2011}), $b$ is the baseline thermal expansion sensitivity, $c$ is a secular drift from halosteric and dynamical contributions not captured by the thermal model, and $H_0$ is the baseline offset. As $\tau_u \to 0$, $S_u \to T$ and the model reduces to the instantaneous quadratic $H_{\mathrm{st}} = a\,T^2 + b\,T + c\,t + H_0$ used in the aggregate semi-empirical framework. The physical model thus nests the simpler model as a limiting case while adding the ocean thermal lag that controls the committed warming signal.
 
 \paragraph{Joint calibration.}
 The model is calibrated jointly against two independent observational datasets:
@@ -148,7 +148,7 @@ We use NOAA rather than the thermosteric component of the \citet{Frederikse2020}
 
 The dual likelihood is
 \begin{align}
-	\eta^{\mathrm{obs}}(t_i) &\sim \mathcal{N}\!\left(\eta(t_i),\ \sigma_{\eta}(t_i)^2 + \sigma_{\mathrm{extra}}^2\right), \label{eq:thermo_lik_steric} \\
+	H_{\mathrm{st}}^{\mathrm{obs}}(t_i) &\sim \mathcal{N}\!\left(H_{\mathrm{st}}(t_i),\ \sigma_{\mathrm{st}}(t_i)^2 + \sigma_{\mathrm{extra}}^2\right), \label{eq:thermo_lik_steric} \\
 	T_{\mathrm{sub}}^{\mathrm{obs}}(t_j) &\sim \mathcal{N}\!\left(\kappa\, S_u(t_j) + \delta,\ \sigma_{T}(t_j)^2 + \sigma_{\mathrm{ocean}}^2\right), \label{eq:thermo_lik_ocean}
 \end{align}
 where the first equation constrains the steric expansion parameters and the second constrains the ocean thermal state through the transfer function parameters $\kappa$ and $\delta$. The joint calibration resolves an identifiability problem present in single-likelihood fits: $\tau_u$ trades off with $b$ when only steric sea level is observed (a fast ocean with low sensitivity produces similar trajectories to a slow ocean with high sensitivity), but the subsurface temperature likelihood breaks this degeneracy by directly observing the ocean state.
@@ -174,7 +174,7 @@ As a sensitivity analysis, we extend the model to two ocean layers by adding a d
 	\frac{dS_d}{dt} = \frac{S_u(t) - S_d(t)}{\tau_d},
 	\label{eq:thermo_twolayer}
 \end{equation}
-with $\eta(t) = a\, S_u^2 + b_u\, S_u + b_d\, S_d + c\,(t - t_0) + H_0$. The two-layer model provides a marginal improvement in $R^2$ ($< 0.001$) with $\tau_d$ poorly constrained (posterior rail against the prior upper bound), confirming that the deep-ocean relaxation timescale ($> 100$\,yr) is unresolvable within the $\sim\!70$-year NOAA record. We therefore use the single-layer model for all projections and report the two-layer results as a sensitivity check.
+with $H_{\mathrm{st}}(t) = a\, S_u^2 + b_u\, S_u + b_d\, S_d + c\,(t - t_0) + H_0$. The two-layer model provides a marginal improvement in $R^2$ ($< 0.001$) with $\tau_d$ poorly constrained (posterior rail against the prior upper bound), confirming that the deep-ocean relaxation timescale ($> 100$\,yr) is unresolvable within the $\sim\!70$-year NOAA record. We therefore use the single-layer model for all projections and report the two-layer results as a sensitivity check.
 
 	\subsubsection{Glaciers}
 
@@ -247,10 +247,10 @@ where the discharge component is governed by
 	\label{eq:greenland_ode}
 \end{equation}
 \begin{equation}
-	H_{\mathrm{dyn}}(t) = \gamma_{\mathrm{atm}}\, I_1^{\mathrm{Gr}}(t) + \gamma_{\mathrm{ocean}} \int_{t_0}^{t} D_{\mathrm{eff}}(\tau)\, d\tau + D_0\, I_0(t) + H_0^{\mathrm{dyn}}.
+	H_{\mathrm{dyn}}(t) = \gamma_{\mathrm{atm}}\, I_1^{\mathrm{Gr}}(t) + \gamma_{\mathrm{ocean}} \int_{t_0}^{t} D_{\mathrm{eff}}(\tau)\, d\tau + r_0\, I_0(t) + H_0^{\mathrm{dyn}}.
 	\label{eq:greenland_dyn}
 \end{equation}
-Here $D_{\mathrm{eff}}(t)$ is an effective ocean thermal state that parameterizes the lagged response of calving-front position to subsurface ocean temperature $T_{\mathrm{ocean}}(t)$ (EN4/Argo, 200--500\,m, Greenland peripheral waters; \citealp{Good2013, Roemmich2009}). The timescale $\tau$ represents the delay between ocean warming and grounding-line retreat. The term $\gamma_{\mathrm{atm}}$ allows for residual atmospheric influence on discharge, such as enhanced submarine melting from increased subglacial meltwater discharge \citep{Slater2021}; $D_0$ is a secular drift.
+Here $D_{\mathrm{eff}}(t)$ is an effective ocean thermal state that parameterizes the lagged response of calving-front position to subsurface ocean temperature $T_{\mathrm{ocean}}(t)$ (EN4/Argo, 200--500\,m, Greenland peripheral waters; \citealp{Good2013, Roemmich2009}). The timescale $\tau$ represents the delay between ocean warming and grounding-line retreat. The term $\gamma_{\mathrm{atm}}$ allows for residual atmospheric influence on discharge, such as enhanced submarine melting from increased subglacial meltwater discharge \citep{Slater2021}; $r_0$ is a secular drift.
 
 \paragraph{Independence of SMB and discharge.}
 The model treats SMB and discharge as independent, additive components. Three lines of evidence support this structure. First, \citet{King2020} showed that Greenland's discharge acceleration (2000--2005) was driven by calving-front retreat, with a consistent 4--5\% speedup per km of retreat that has persisted independent of interannual surface melt variability. Second, dynamic thinning propagates inland from the terminus at rates of $\sim$10\,m\,yr$^{-1}$, an order of magnitude larger than SMB-driven thinning in the ablation zone \citep{Felikson2017}; these are spatially separated processes. Third, a potential SMB--discharge feedback through driving stress ($\tau_d = \rho_{\mathrm{ice}} g h \nabla h$)---in which SMB-driven thinning via the kinematic boundary condition $\partial h/\partial t = \dot{b} - \nabla \cdot (\mathbf{u} h)$ modifies glacier dynamics---is not supported by the data. Using the per-glacier records from \citet{Mouginot2019} for all 219 marine-terminating glaciers, we find no significant correlation between area-normalized cumulative SMB deficit and discharge change ($r = +0.12$, $p = 0.08$; wrong sign for the feedback hypothesis) or between cumulative mass balance and discharge change ($r = -0.01$, $p = 0.93$). The meltwater--sliding feedback is further constrained by observations at land-terminating sectors showing that increased melt can produce \emph{deceleration} through efficient subglacial drainage development \citep{Tedstone2015}. Under sustained future warming, cumulative thinning may eventually become large enough to affect discharge, but this is not detectable in the 1972--2018 record.
@@ -263,7 +263,7 @@ The discharge model has 6 free parameters:
 	\gamma_{\mathrm{atm}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 2\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}\right), \label{eq:gr_prior_gamma_atm} \\
 	\gamma_{\mathrm{ocean}} &\sim \mathrm{HalfNormal}\!\left(\sigma = 2\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}\right), \label{eq:gr_prior_gamma_ocean} \\
 	\tau &\sim \mathrm{LogNormal}\!\left(\log 10,\ 0.6\right), \label{eq:gr_prior_tau} \\
-	D_0 &\sim \mathcal{N}\!\left(0,\ 0.5\ \mathrm{mm\,yr^{-1}}\right), \label{eq:gr_prior_D0}
+	r_0 &\sim \mathcal{N}\!\left(0,\ 0.5\ \mathrm{mm\,yr^{-1}}\right), \label{eq:gr_prior_r0}
 \end{align}
 plus a model-inadequacy term $\sigma_{\mathrm{extra}}^{\mathrm{dyn}}$ and baseline offset $H_0^{\mathrm{dyn}}$ with weakly informative priors. The prior on $\tau$ (median 10\,yr, 94\% CI 4--25\,yr) is informed by observed outlet glacier response times \citep{Straneo2015}. The model is calibrated against the discharge component of \citet{Mouginot2019} (1972--2018, 47 annual observations), forced by EN4/Argo subsurface ocean temperature (200--500\,m, 58--80$^\circ$N, 75--5$^\circ$W; \citealp{Straneo2012}). The observation model is
 \begin{equation}
@@ -307,6 +307,27 @@ We define three scenarios for WAIS contributions at 2100, reflecting distinct ph
 
 	\item[\textbf{S3.}] \textbf{MISI + MICI} ($P = 0.10$; 600--2000\,mm; $\alpha = -3$). Marine ice cliff instability \citep{Bassis2012, DeContoP2016} operates in addition to MISI. The lower bound (600\,mm) reflects the Edwards et al.\ emulator estimate for Antarctic SLR with MICI under RCP8.5 \citep[$\sim\!450$\,mm most likely;][]{Edwards2019}, augmented by MISI contributions. The upper bound (2\,m from WAIS alone) represents $\sim\!60\%$ deglaciation of a $\sim\!3.3$\,m SLE reservoir. We assign $\alpha = -3$ (negative skewness in log-space, concentrating probability toward the lower portion of the range), reflecting the accumulating evidence against MICI viability during the 21st century: \citet{Morlighem2024} showed in a multi-model study that Thwaites would not retreat further due to MICI and that calving rates would need to be $\geq\!25\times$ higher than physically motivated models suggest; \citet{Clerc2019} demonstrated that realistic ice-shelf removal timescales raise the critical cliff height from $\sim\!90$\,m to $\sim\!540$\,m; and \citet{Schlemm2022} found MICI to be self-limiting due to m\'{e}lange buttressing. IPCC AR6 assigns low confidence to MICI \citep{Fox-Kemper2021}.
 \end{enumerate}
+
+\noindent Table~\ref{tab:wais_scenarios} summarizes the scenario parameters and the resulting mixture distribution.
+
+\begin{table}[ht]
+\centering
+\caption{WAIS A4 scenario framework. Ranges denote the 5th--95th percentile bounds used to set the skew-normal location and scale in log-space. The skewness parameter $\alpha$ controls the asymmetry of the within-scenario distribution ($\alpha > 0$: heavy right tail; $\alpha < 0$: heavy left tail; $\alpha = 0$: log-normal). A multiplicative rheology correction ($\times\,1.28 \pm 0.07$) is applied to all scenarios. The combined A4 distribution is SSP-independent.}
+\label{tab:wais_scenarios}
+\smallskip
+\begin{tabular}{l c c c c l}
+\toprule
+Scenario & Weight & Range (mm) & $\alpha$ & Distribution & Physical regime \\
+\midrule
+S1: Status quo   & 0.10 & 30--80     & 0    & Log-normal  & No MISI; current rates persist \\
+S2: MISI         & 0.80 & 150--1000  & $+4$ & Right-skewed & Marine ice sheet instability \\
+S3: MISI + MICI  & 0.10 & 600--2000  & $-3$ & Left-skewed  & Ice cliff instability added \\
+\midrule
+\multicolumn{6}{l}{\textit{Post-hoc correction applied to all scenarios:}} \\
+Rheology ($n=4$) & ---  & $\times\,1.28\ [1.14,\,1.42]$ & --- & Gaussian & Glen's law $n=3 \to 4$ bias \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsubsection{Distribution and corrections}
 
