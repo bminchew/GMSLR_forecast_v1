@@ -312,19 +312,19 @@ We define three scenarios for WAIS contributions at 2100, reflecting distinct ph
 
 \begin{table}[ht]
 \centering
-\caption{WAIS A4 scenario framework. Ranges denote the 5th--95th percentile bounds used to set the skew-normal location and scale in log-space. The skewness parameter $\alpha$ controls the asymmetry of the within-scenario distribution ($\alpha > 0$: heavy right tail; $\alpha < 0$: heavy left tail; $\alpha = 0$: log-normal). A multiplicative rheology correction ($\times\,1.28 \pm 0.07$) is applied to all scenarios. The combined A4 distribution is SSP-independent.}
+\caption{WAIS A4 scenario framework. Ranges denote the 5th--95th percentile bounds used to set the skew-normal location and scale in log-space. The skewness parameter $\alpha$ controls the asymmetry of the within-scenario distribution ($\alpha > 0$: heavy right tail; $\alpha < 0$: heavy left tail; $\alpha = 0$: log-normal). The trajectory exponent $\beta$ governs the temporal structure of mass loss: $H(t) = H_{2100}\cdot[(t - t_0)/95]^\beta$, where $\beta = 1$ is linear (constant rate) and $\beta > 1$ produces accelerating (back-loaded) trajectories consistent with the grounding-line flux scaling $q_g \propto h_g^{n+1}$ on retrograde beds \citep{Schoof2007}. A multiplicative rheology correction ($\times\,1.28 \pm 0.07$) is applied to all scenarios. The combined A4 distribution is SSP-independent.}
 \label{tab:wais_scenarios}
 \smallskip
-\begin{tabular}{l c c c c l}
+\begin{tabular}{l c c c c c l}
 \toprule
-Scenario & Weight & Range (mm) & $\alpha$ & Distribution & Physical regime \\
+Scenario & Weight & Range (mm) & $\alpha$ & $\beta$ & Distribution & Physical regime \\
 \midrule
-S1: Status quo   & 0.10 & 30--80     & 0    & Log-normal  & No MISI; current rates persist \\
-S2: MISI         & 0.80 & 150--1000  & $+4$ & Right-skewed & Marine ice sheet instability \\
-S3: MISI + MICI  & 0.10 & 600--2000  & $-3$ & Left-skewed  & Ice cliff instability added \\
+S1: Status quo   & 0.10 & 30--80     & 0    & 1.0 (fixed) & Log-normal  & No MISI; constant rate \\
+S2: MISI         & 0.80 & 150--1000  & $+4$ & LN(1.8, 0.3) & Right-skewed & MISI; accelerating \\
+S3: MISI + MICI  & 0.10 & 600--2000  & $-3$ & LN(2.2, 0.3) & Left-skewed  & MISI + MICI; strongly accel. \\
 \midrule
-\multicolumn{6}{l}{\textit{Post-hoc correction applied to all scenarios:}} \\
-Rheology ($n=4$) & ---  & $\times\,1.28\ [1.14,\,1.42]$ & --- & Gaussian & Glen's law $n=3 \to 4$ bias \\
+\multicolumn{7}{l}{\textit{Post-hoc correction applied to all scenarios:}} \\
+Rheology ($n=4$) & ---  & $\times\,1.28\ [1.14,\,1.42]$ & --- & --- & Gaussian & Glen's law $n=3 \to 4$ bias \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -333,6 +333,14 @@ Rheology ($n=4$) & ---  & $\times\,1.28\ [1.14,\,1.42]$ & --- & Gaussian & Glen'
 
 Within each scenario, samples are drawn from a skew-normal distribution in log-space. This parameterization has three transparent parameters: a location $\xi$ and scale $\omega$ (determined by the requirement that the 5th and 95th percentiles match the scenario bounds) and a shape parameter $\alpha$ that controls skewness. Setting $\alpha = 0$ recovers a log-normal; $\alpha > 0$ produces positive skew (heavy right tail); $\alpha < 0$ produces negative skew. The skew-normal family is chosen because $\alpha$ maps directly to the physical insight of \citet{Robel2019}: MISI creates a systematic asymmetry in which the probability of ice loss exceeding the most likely outcome is substantially greater than the probability of falling below it.
 
+\paragraph{Trajectory exponent.}
+The temporal distribution of mass loss within the century is governed by a power-law ramp $H(t) = H_{2100} \cdot [(t - t_0)/(2100 - t_0)]^\beta$, where $\beta$ is drawn per Monte Carlo sample from a scenario-dependent log-normal distribution (Table~\ref{tab:wais_scenarios}). This parameterization derives from the grounding-line flux condition $q_g \propto h_g^{n+1}$ \citep{Schoof2007}: on a retrograde bed, retreat increases the ice thickness at the grounding line, which increases flux, which drives further retreat. Dimensional analysis of this coupled system shows that cumulative mass loss grows as $(t - t_0)^\beta$ with $\beta > 1$ during the acceleration phase, where the exponent depends on the flux nonlinearity ($n$) and bed slope \citep{Schoof2012, Robel2019}.
+
+For S1 (no MISI), $\beta = 1$ (constant rate). For S2 (MISI), $\beta$ has a median of 1.8: the 2050 cumulative is $\sim\!30\%$ of the 2100 value rather than the $47\%$ that a linear ramp would produce. This back-loading is consistent with the Robel et al.\ ensemble trajectories and with the \citet{Bamber2019} structured expert judgment, in which experts placed only $\sim\!22\%$ of WAIS loss before 2050. The spread in $\beta$ (90\% CI approximately 1.1--3.0) reflects uncertainty in bed geometry across WAIS drainage basins: Thwaites has a deep retrograde bed that supports large $\beta$, while other basins may have flatter or prograde beds that limit acceleration.
+
+The trajectory exponent and the endpoint skewness $\alpha$ encode complementary aspects of the same flux-geometry physics: $\alpha$ captures how the grounding-line nonlinearity amplifies cross-ensemble uncertainty toward worse outcomes, while $\beta$ captures how it concentrates within-trajectory mass loss toward the end of the century. A framework that includes $\alpha$ but assumes $\beta = 1$ would be internally inconsistent---acknowledging the flux nonlinearity for uncertainty quantification but ignoring it for temporal structure.
+
+\paragraph{Rheology correction.}
 A multiplicative rheology correction is applied to all samples from all scenarios. Current ice sheet models universally assume Glen's flow law exponent $n = 3$, but satellite observations yield $n = 4.1 \pm 0.4$ \citep{Millstein2022}, supported by field measurements \citep{Bons2018}, laboratory meta-analysis \citep{Fan2025}, and a theoretical framework connecting laboratory to ice-sheet scales \citep{Ranganathan2024}. \citet{Martin2026} showed that this mismatch causes a 21--35\% underestimation of 100-year SLR in the MISMIP+ benchmark, while \citet{GetraerMorlighem2025} found $32 \pm 14\%$ greater Amundsen Sea Embayment loss with $n = 4$ in the ISMIP6 framework. We apply the correction as a multiplicative factor drawn from $\mathcal{N}(1.28,\, 0.07^2)$, truncated below at 1.0, where the median spans the range from the MISMIP+ result (1.21) to the ABUMIP result (1.35).
 
 The combined A4 distribution is SSP-independent: WAIS dynamics on projection timescales are driven primarily by ocean thermal forcing with long lag times, not by contemporaneous atmospheric warming. \citet{Naughten2023} showed that rapid West Antarctic ice-shelf melting at $\sim\!3\times$ historical rates is unavoidable regardless of emissions scenario.

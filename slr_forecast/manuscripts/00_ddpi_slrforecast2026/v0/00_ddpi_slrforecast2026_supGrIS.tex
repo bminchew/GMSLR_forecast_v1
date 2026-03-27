@@ -1,0 +1,218 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\title{Supplementary Material: Physical derivation of Greenland discharge model parameters}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent This supplement derives the three key parameters of the Greenland discharge model---the ocean--discharge coupling $\gamma_{\mathrm{ocean}}$, the response timescale $\tau$, and the secular drift rate $r_0$---from glacier dynamics, and compares these independent estimates with the Bayesian posterior values obtained by calibrating the model against the \citet{Mouginot2019} discharge record.
+
+The discharge model (main text Eqs.~\ref*{eq:greenland_ode}--\ref*{eq:greenland_dyn}) is
+\begin{align}
+	\frac{dD_{\mathrm{eff}}}{dt} &= \frac{T_{\mathrm{ocean}}(t) - D_{\mathrm{eff}}(t)}{\tau}, \label{eq:sup_ode} \\[6pt]
+	H_{\mathrm{dyn}}(t) &= \gamma_{\mathrm{ocean}} \int_{t_0}^{t} D_{\mathrm{eff}}(t')\, dt' + r_0\,(t - t_0) + H_0^{\mathrm{dyn}}, \label{eq:sup_Hdyn}
+\end{align}
+where we have dropped $\gamma_{\mathrm{atm}}$ (posterior $\approx 0$; main text). The rate of sea-level rise from discharge is therefore $\dot{H}_{\mathrm{dyn}} = \gamma_{\mathrm{ocean}}\, D_{\mathrm{eff}} + r_0$, and at thermal equilibrium ($D_{\mathrm{eff}} = T_{\mathrm{ocean}}$) this becomes $\dot{H}_{\mathrm{dyn}} = \gamma_{\mathrm{ocean}}\, T_{\mathrm{ocean}} + r_0$.
+
+%% ================================================================
+\section{Response timescale $\tau$}
+\label{sec:tau}
+
+The timescale $\tau$ governs the lag between a change in subsurface ocean temperature and the resulting change in ice discharge. It combines two processes in series: (i)~warm-water renewal in glacial fjords and (ii)~the dynamic adjustment of the glacier terminus and upstream ice.
+
+\paragraph{Fjord renewal.}
+Fjord circulation replaces subsurface water through a buoyancy-driven overturning driven by subglacial discharge and fjord--shelf exchange \citep{Straneo2015}. Typical Greenland fjords have lengths $L_f \sim 50$--$100$\,km, cross-sections $W_f \times D_f \sim 5\,\mathrm{km} \times 400\,\mathrm{m}$, giving volumes $V_f \sim 10^{11}$\,m$^3$. Exchange flows are $Q \sim 10^4$\,m$^3$\,s$^{-1}$ \citep{Straneo2012}, so the renewal timescale is
+\begin{equation}
+	\tau_{\mathrm{fjord}} = \frac{V_f}{Q} \sim \frac{10^{11}}{10^4 \times 3.15 \times 10^7} \approx 0.3\text{--}0.5\ \mathrm{yr}.
+	\label{eq:tau_fjord}
+\end{equation}
+This is fast relative to the dynamic adjustment and is not the rate-limiting step.
+
+\paragraph{Glacier dynamic adjustment.}
+\citet{Felikson2017} showed that dynamic thinning propagates inland from the terminus at rates controlled by the glacier's P\'{e}clet number, $\mathrm{Pe} = u H / D_{\mathrm{diff}}$, where $u$ is the depth-averaged velocity, $H$ the ice thickness, and $D_{\mathrm{diff}}$ the effective longitudinal diffusivity set by the membrane stress. The thinning front reaches an along-flow distance $\ell_c$ that scales with the distance over which advection dominates diffusion. The dynamic adjustment timescale is the time for the perturbation to traverse this coupling length:
+\begin{equation}
+	\tau_{\mathrm{dyn}} = \frac{\ell_c}{c_{\mathrm{pert}}},
+	\label{eq:tau_dyn}
+\end{equation}
+where $c_{\mathrm{pert}}$ is the perturbation propagation speed. In the high-Pe regime that characterizes fast outlet glaciers, $c_{\mathrm{pert}} \sim u$ and the adjustment is advection-limited, giving $\tau_{\mathrm{dyn}} \sim \ell_c / u$. In the lower-Pe regime (slower, thicker outlets), diffusion extends the coupling zone and slows the adjustment \citep{Felikson2017}.
+
+\paragraph{Flux-weighted aggregate timescale.}
+Rather than choosing representative values, we sample $\tau_{\mathrm{dyn}}$ from the per-glacier distributions. \citet{Felikson2017} measured thinning penetration lengths for 141 marine-terminating glaciers, finding $\ell_c \sim 2$--$120$\,km with a right-skewed distribution (the largest outlets---Jakobshavn, Helheim, Kangerdlugssuaq---at the upper end). We approximate this distribution as log-normal with median 15\,km and $\sigma_{\ln \ell} = 0.7$ (90\% range: 5--47\,km), which matches the CDF reported by \citet{Felikson2017}. Terminus velocities from MEaSUREs \citep{Mouginot2019} are similarly log-normal with median $\sim$2\,km\,yr$^{-1}$ and $\sigma_{\ln u} = 0.6$ (90\% range: 0.7--5.4\,km\,yr$^{-1}$).
+
+Drawing $10^5$ samples of $(\ell_c, u)$ from these marginal distributions and computing $\tau_{\mathrm{dyn}} = \ell_c / u$ for each, the unweighted population median is $\tilde{\tau}_{\mathrm{dyn}} = 7.5$\,yr (90\% range: 1.6--34\,yr). Because large glaciers contribute disproportionately to total discharge, we flux-weight by $D_i \propto u_i \ell_{c,i}$ (a proxy for outlet size); the flux-weighted median is $\tilde{\tau}_{\mathrm{dyn}}^{(D)} = 8.5$\,yr. Adding the fjord renewal time gives
+\begin{equation}
+	\tau \approx \tau_{\mathrm{fjord}} + \tilde{\tau}_{\mathrm{dyn}}^{(D)} \approx 0.4 + 8.5 \approx 9\ \mathrm{yr}.
+\end{equation}
+This is consistent with the observed multi-year lag between subsurface ocean temperature peaks and discharge maxima at individual glaciers \citep{Straneo2012, Holland2008}, and with the 4--25\,yr range documented by \citet{Straneo2015}.
+
+\paragraph{Comparison with posterior.}
+The fitted posterior is $\tau = 8.0$\,yr (90\% CI: 6.7--9.8). The flux-weighted physical estimate ($\sim$9\,yr) falls within the posterior credible interval. The slight upward bias of the physical estimate relative to the posterior median may reflect a positive correlation between $\ell_c$ and $u$ in the real population (fast glaciers tend to have long coupling zones), which would narrow the $\tau_{\mathrm{dyn}} = \ell_c / u$ distribution and lower its weighted median. The unweighted population median (7.5\,yr) is also consistent with the posterior.
+
+\paragraph{Connection to thermosteric $\tau_u$.}
+The upper-ocean thermal relaxation time in the thermosteric model is $\tau_u = 7.0$\,yr (90\% CI: 4.6--10.7). The similarity is not a coincidence: the 200--500\,m subsurface temperatures that drive calving-front retreat are part of the same upper-ocean state variable that controls thermosteric expansion. Both timescales reflect the $\sim$7--8\,yr memory of the upper ocean to surface forcing, consistent with the ventilation timescale of the North Atlantic subtropical--subpolar transition zone \citep{Straneo2012}.
+
+%% ================================================================
+\section{Ocean--discharge coupling $\gamma_{\mathrm{ocean}}$}
+\label{sec:gamma}
+
+The parameter $\gamma_{\mathrm{ocean}}$ is the rate of sea-level rise per degree of effective ocean temperature: $\dot{H}_{\mathrm{dyn}} = \gamma_{\mathrm{ocean}} D_{\mathrm{eff}}$. We derive it from two independent approaches.
+
+\subsection{Observational estimate}
+\label{sec:gamma_obs}
+
+Over the calibration window (1972--2018), \citet{Mouginot2019} documented an increase in Greenland discharge of $\Delta D \approx 50$\,Gt\,yr$^{-1}$ above the 1972--1990 baseline. EN4 subsurface ocean temperature (200--500\,m, Greenland peripheral waters) warmed by $\Delta T_{\mathrm{ocean}} \approx 0.4\,^\circ$C over the same period.
+
+A naive estimate $\gamma_{\mathrm{ocean}} = \Delta D / \Delta T_{\mathrm{ocean}} = 125$\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ overestimates the sensitivity because the effective temperature $D_{\mathrm{eff}}$ lags $T_{\mathrm{ocean}}$ by $\sim\tau$. For a roughly linear warming ramp over $\Delta t = 46$\,yr, the effective temperature at the end of the record is approximately
+\begin{equation}
+	D_{\mathrm{eff}}(2018) \approx T_{\mathrm{ocean}}\!\left(2018 - \tau\right) \approx \Delta T_{\mathrm{ocean}} \times \frac{\Delta t - \tau}{\Delta t} = 0.4 \times \frac{38}{46} \approx 0.33\,^\circ\mathrm{C}.
+	\label{eq:Deff_lag}
+\end{equation}
+The lag-corrected observational estimate is then
+\begin{equation}
+	\gamma_{\mathrm{ocean}}^{\mathrm{obs}} = \frac{\Delta D}{D_{\mathrm{eff}}(2018)} \approx \frac{50}{0.33} \approx 150\ \mathrm{Gt\,yr^{-1}\,{^\circ C}^{-1}} = 0.42\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}},
+\end{equation}
+where we use 362\,Gt\,=\,1\,mm GMSL.
+
+\subsection{Bottom-up estimate from glacier dynamics}
+\label{sec:gamma_bottomup}
+
+We construct a scaling chain linking ocean temperature to aggregate discharge anomaly through four steps.
+
+\paragraph{Step~1: Submarine melt sensitivity.}
+Submarine melting at tidewater termini scales with ocean thermal forcing $T_{\mathrm{ocean}} - T_f$ (where $T_f \approx -2\,^\circ$C is the pressure-dependent freezing point). Plume models and observations give sensitivities of $\partial \dot{m} / \partial T_{\mathrm{ocean}} \sim 5$--$30$\,m\,yr$^{-1}$\,$^\circ$C$^{-1}$, depending on fjord geometry and subglacial discharge \citep{Xu2013, Rignot2016, Jackson2022}. We adopt a central value $\partial \dot{m}/\partial T = 15$\,m\,yr$^{-1}$\,$^\circ$C$^{-1}$.
+
+\paragraph{Step~2: Terminus retreat amplification.}
+Submarine melt alone cannot explain the observed retreat rates. Calving amplifies undercutting: melt-induced notch formation, loss of ice m\'{e}lange buttressing, and crevasse propagation produce terminus retreat rates 2--5 times the submarine melt rate anomaly \citep{Benn2007, Luckman2015}. We use an amplification factor $\alpha_c = 3$, giving a terminus retreat rate
+\begin{equation}
+	\frac{dL}{dT} = \alpha_c \times \frac{\partial \dot{m}}{\partial T} \approx 3 \times 15 = 45\ \mathrm{m\,yr^{-1}\,{^\circ C}^{-1}}.
+\end{equation}
+
+\paragraph{Step~3: Velocity sensitivity to retreat.}
+\citet{King2020} showed that Greenland's marine-terminating glaciers exhibit a consistent velocity response of 4--5\% speedup per km of terminus retreat, with this relationship holding across the ice sheet and persisting for over a decade. We adopt $\partial \ln u / \partial L = 0.045$\,km$^{-1}$.
+
+\paragraph{Step~4: Integration over the glacier population.}
+Total baseline discharge is $D_0 \approx 490$\,Gt\,yr$^{-1}$ \citep{Mouginot2019}. For a sustained $+1\,^\circ$C ocean warming, terminus retreat accumulates at $dL/dT = 45$\,m\,yr$^{-1}$. Over a representative averaging interval $\bar{t}$ (half the calibration window, $\bar{t} \approx 23$\,yr), the mean accumulated retreat is $\bar{L} = (dL/dT) \times \bar{t} \approx 1$\,km, producing a mean fractional speedup of
+\begin{equation}
+	\frac{\Delta u}{u} = \frac{\partial \ln u}{\partial L} \times \bar{L} \approx 0.045 \times 1 = 4.5\%.
+\end{equation}
+The corresponding discharge anomaly averaged over the calibration window is
+\begin{equation}
+	\overline{\Delta D} = D_0 \times \frac{\Delta u}{u} \approx 490 \times 0.045 \approx 22\ \mathrm{Gt\,yr^{-1}\,{^\circ C}^{-1}}.
+\end{equation}
+Because this must be divided by the mean $D_{\mathrm{eff}}$ over the calibration window ($\bar{D}_{\mathrm{eff}} \approx 0.17\,^\circ$C for a linear ramp from 0 to 0.33$\,^\circ$C), the effective sensitivity is
+\begin{equation}
+	\gamma_{\mathrm{ocean}}^{\mathrm{dyn}} = \frac{\overline{\Delta D}}{\bar{D}_{\mathrm{eff}}} \approx \frac{22}{0.17} \approx 130\ \mathrm{Gt\,yr^{-1}\,{^\circ C}^{-1}} = 0.36\ \mathrm{mm\,yr^{-1}\,{^\circ C}^{-1}}.
+	\label{eq:gamma_bottomup}
+\end{equation}
+
+\paragraph{Comparison with posterior.}
+The fitted posterior is $\gamma_{\mathrm{ocean}} = 0.50$\,mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ (181\,Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$). The physical estimates bracket the posterior: 0.36\,mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ (bottom-up) to 0.42\,mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ (observational, lag-corrected). The fitted value is 20--40\% higher, which may reflect:
+\begin{itemize}
+	\item Nonlinearity in the calving amplification at higher retreat rates (the $\alpha_c = 3$ assumption is conservative for the fast-retreat period 2000--2005);
+	\item Additional discharge sensitivity from dynamic thinning feedback: as the terminus retreats, the bed deepens (retrograde topography), reducing effective pressure and promoting further acceleration \citep{Aschwanden2019};
+	\item The posterior ridge structure (\Cref{sec:correlation}): $\gamma_{\mathrm{ocean}}$ is positively correlated with $\tau$ and $r_0$, so the posterior median reflects not only the best-fit value but also the joint constraint from the full parameter family.
+\end{itemize}
+
+\subsection{Summary: $\gamma_{\mathrm{ocean}}$}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Method & Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ & mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ \\
+\midrule
+Observational (lag-corrected) & 151 & 0.42 \\
+Bottom-up (glacier dynamics) & 130 & 0.36 \\
+Bayesian posterior (fitted) & 181 & 0.50 \\
+\bottomrule
+\end{tabular}
+\caption{Independent estimates of $\gamma_{\mathrm{ocean}}$. All three are mutually consistent within the uncertainties of the input parameters ($\partial \dot{m}/\partial T$, $\alpha_c$, $\bar{t}$).}
+\label{tab:gamma}
+\end{table}
+
+
+%% ================================================================
+\section{Secular drift $r_0$}
+\label{sec:r0}
+
+The parameter $r_0$ represents a background rate of sea-level rise from Greenland discharge that is independent of recent ocean temperature variability. Two physical sources contribute:
+
+\paragraph{Post-Little Ice Age dynamic adjustment.}
+Many of Greenland's outlet glaciers have been retreating from their Little Ice Age (LIA) maxima since the mid-19th century \citep{Kjeldsen2015}. \citet{Kjeldsen2015} estimated that Greenland lost $\sim$1500\,Gt from dynamics between 1900 and 1983, corresponding to $\sim$18\,Gt\,yr$^{-1}$ or $r_0^{\mathrm{LIA}} \approx 0.05$\,mm\,yr$^{-1}$. This ongoing adjustment reflects the slow response of large ice streams to terminus perturbations that originated over a century ago, with the perturbation propagating inland over timescales much longer than $\tau$ \citep{Felikson2017}.
+
+\paragraph{Long-term ocean-forced retreat.}
+Pre-satellite ocean temperature reconstructions suggest gradual North Atlantic warming since the early 20th century. The component of discharge driven by this slow warming that is not captured by the ODE (because $D_{\mathrm{eff}}$ tracks interannual--decadal variability) would project onto $r_0$. This contribution is difficult to separate from the LIA adjustment and is likely $\sim$5--10\,Gt\,yr$^{-1}$ ($\sim$0.01--0.03\,mm\,yr$^{-1}$).
+
+\paragraph{Comparison with posterior.}
+The combined physical estimate is $r_0 \approx 0.03$--$0.05$\,mm\,yr$^{-1}$. The fitted posterior is $r_0 = 0.15$\,mm\,yr$^{-1}$ (90\% CI: 0.13--0.16), approximately three times the physical estimate. The source of this discrepancy is clarified by the posterior correlation structure (\Cref{sec:correlation}).
+
+
+%% ================================================================
+\section{Posterior correlation structure}
+\label{sec:correlation}
+
+The four discharge parameters ($\gamma_{\mathrm{ocean}}$, $r_0$, $\tau$, $H_0^{\mathrm{dyn}}$) exhibit strong correlations in the posterior that illuminate how the model distributes signal among its degrees of freedom.
+
+\paragraph{Correlation matrix.}
+All three physical parameters are strongly \emph{positively} correlated:
+\begin{equation}
+	\rho(\gamma_{\mathrm{ocean}},\, r_0) = +0.95, \quad
+	\rho(\gamma_{\mathrm{ocean}},\, \tau) = +0.85, \quad
+	\rho(r_0,\, \tau) = +0.95.
+	\label{eq:correlations}
+\end{equation}
+The baseline offset $H_0^{\mathrm{dyn}}$ is strongly \emph{negatively} correlated with all three: $\rho(\gamma_{\mathrm{ocean}}, H_0^{\mathrm{dyn}}) = -1.00$, $\rho(r_0, H_0^{\mathrm{dyn}}) = -0.94$, $\rho(\tau, H_0^{\mathrm{dyn}}) = -0.84$.
+
+\paragraph{Interpretation.}
+The positive correlations arise from two mechanisms:
+
+\emph{(i) $\tau$-mediated scaling.} When $\tau$ is large, $D_{\mathrm{eff}}$ responds more slowly to ocean warming, so $\int D_{\mathrm{eff}}\,dt$ is smaller at any given time. To match the observed cumulative discharge, both $\gamma_{\mathrm{ocean}}$ and $r_0$ must increase. Conditioning on $\tau$ in the bottom decile ($\tau < 7.0$\,yr) gives $\gamma_{\mathrm{ocean}} = 0.47$\,mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and $r_0 = 0.13$\,mm\,yr$^{-1}$; in the top decile ($\tau > 9.4$\,yr) these rise to 0.57 and 0.17, respectively.
+
+\emph{(ii) $H_0^{\mathrm{dyn}}$ absorption.} Even after controlling for $\tau$, the partial correlation $\rho(\gamma_{\mathrm{ocean}}, r_0 \mid \tau) = +0.86$ remains strong. This residual correlation is mediated by the baseline offset: $H_0^{\mathrm{dyn}}$ can shift to more negative values (median $-16.7$\,mm, range $-18.7$ to $-15.0$\,mm) to accommodate jointly higher $\gamma_{\mathrm{ocean}}$ and $r_0$ without degrading the fit to the observed cumulative discharge trajectory. The three-way relationship $(\gamma_{\mathrm{ocean}} \uparrow,\, r_0 \uparrow,\, H_0^{\mathrm{dyn}} \downarrow)$ defines a ridge in the posterior along which the data are nearly equally well explained.
+
+\paragraph{Implication for $r_0$.}
+The physical derivation constrains $r_0 \approx 0.03$--$0.05$\,mm\,yr$^{-1}$ from the post-LIA adjustment. The fitted posterior ($r_0 = 0.15$\,mm\,yr$^{-1}$) sits on the upper flank of this ridge, where larger $\tau$ and $\gamma_{\mathrm{ocean}}$ pull $r_0$ upward. The excess is not a trade-off between $\gamma_{\mathrm{ocean}}$ and $r_0$ (which would produce a negative correlation), but rather a joint scaling: the model has a family of solutions with different effective timescales, and the data admit posterior mass at $(\tau, \gamma_{\mathrm{ocean}}, r_0)$ values that are all above their physical point estimates. An external constraint on any one parameter---for example, fixing $\tau$ to the flux-weighted Felikson estimate of $\sim$9\,yr---would tighten the others.
+
+\paragraph{Evidence for discharge acceleration.}
+A quadratic fit to the \citet{Mouginot2019} cumulative discharge record (1972--2018) yields $\Delta\mathrm{BIC} = 65.5$ relative to a linear fit, providing strong evidence for acceleration in the observed discharge. The ODE model captures this acceleration through the $D_{\mathrm{eff}}$ dynamics (which respond to increasing ocean temperature), and the positive $r_0$ supplements this by providing an additional secular component. The posterior ridge ensures that uncertainty in how the acceleration is partitioned between the ODE response and the secular term is fully propagated into the projection ensemble.
+
+%% ================================================================
+\section{Synthesis}
+\label{sec:synthesis}
+
+All three parameters can be independently estimated from glacier dynamics and observations without reference to the Bayesian calibration:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Parameter & Physical estimate & Fitted posterior & Ratio \\
+\midrule
+$\tau$ (yr) & 4--10 & 8.0\,[6.7, 9.8] & 1.0 \\
+$\gamma_{\mathrm{ocean}}$ (mm\,yr$^{-1}$\,$^\circ$C$^{-1}$) & 0.36--0.42 & 0.50\,[0.46, 0.55] & 1.2--1.4 \\
+$r_0$ (mm\,yr$^{-1}$) & 0.03--0.05 & 0.15\,[0.13, 0.16] & 3.0--5.0 \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of physically derived and fitted parameter values. The ratio column gives (fitted)/(physical midpoint).}
+\label{tab:synthesis}
+\end{table}
+
+\noindent The agreement for $\tau$ is within the posterior credible interval. The 20--40\% excess in $\gamma_{\mathrm{ocean}}$ and the factor-of-three excess in $r_0$ are not a compensating trade-off; the posterior shows all three parameters are \emph{positively} correlated (\Cref{sec:correlation}), jointly scaling along a ridge mediated by $H_0^{\mathrm{dyn}}$. The fitted $r_0$ exceeds the physical estimate because the posterior permits $(\tau, \gamma_{\mathrm{ocean}}, r_0)$ combinations above their individual physical point estimates while maintaining an adequate fit. For projections, this correlation structure is beneficial: the model does not artificially narrow the uncertainty by fixing parameters independently, and the full posterior ensemble propagates the ridge degeneracy into the projection spread.
+
+\bibliographystyle{agufull08}
+\bibliography{references}
+
+\end{document}

@@ -777,13 +777,18 @@ def project_thermosteric_ensemble(
         time_proj = df_proj['decimal_year'].values
         n_proj = len(T_proj)
 
-        # Combine historical + projection for ODE spin-up
-        T_full = np.concatenate([historical_temperature, T_proj])
-        time_full = np.concatenate([historical_time, time_proj])
-        n_hist = len(historical_temperature)
+        # Combine historical + projection for ODE spin-up.
+        # Trim historical to before projection start to keep time monotonic.
+        t_proj_start = time_proj[0]
+        hist_mask = historical_time < t_proj_start
+        T_hist_trim = historical_temperature[hist_mask]
+        time_hist_trim = historical_time[hist_mask]
+        T_full = np.concatenate([T_hist_trim, T_proj])
+        time_full = np.concatenate([time_hist_trim, time_proj])
+        n_hist = len(T_hist_trim)
 
         # Time offset from start of historical record
-        t0 = historical_time[0]
+        t0 = time_hist_trim[0] if len(time_hist_trim) > 0 else time_proj[0]
 
         # Find baseline index in projection
         baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
@@ -920,11 +925,16 @@ def project_greenland_ensemble(
         time_proj = df_proj['decimal_year'].values
         n_proj = len(T_proj)
 
-        # Combine historical + projection for ODE spin-up
-        T_full = np.concatenate([historical_temperature, T_proj])
-        time_full = np.concatenate([historical_time, time_proj])
-        n_hist = len(historical_temperature)
-        t0 = historical_time[0]
+        # Combine historical + projection for ODE spin-up.
+        # Trim historical to before projection start to keep time monotonic.
+        t_proj_start = time_proj[0]
+        hist_mask = historical_time < t_proj_start
+        T_hist_trim = historical_temperature[hist_mask]
+        time_hist_trim = historical_time[hist_mask]
+        T_full = np.concatenate([T_hist_trim, T_proj])
+        time_full = np.concatenate([time_hist_trim, time_proj])
+        n_hist = len(T_hist_trim)
+        t0 = time_hist_trim[0] if len(time_hist_trim) > 0 else time_proj[0]
 
         # ── Design vectors on full monthly grid (once per SSP) ──
         dt_full = np.diff(time_full)

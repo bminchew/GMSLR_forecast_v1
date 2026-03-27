@@ -99,6 +99,7 @@ def project_smb_ensemble(
     n_samples: int = 2000,
     seed: Optional[int] = None,
     volume_cap_m: Optional[float] = None,
+    baseline_year: Optional[float] = None,
 ) -> dict:
     """Project SMB contribution to SLE under multiple SSP scenarios.
 
@@ -121,6 +122,9 @@ def project_smb_ensemble(
     volume_cap_m : float or None
         If provided, cap cumulative SLE at this value (meters).
         For glaciers/EAIS where mass gain is bounded.
+    baseline_year : float or None
+        If provided, rebase cumulative SLE so that it is zero at this
+        year.  If None (default), rebases to the year where dT ≈ 0.
 
     Returns
     -------
@@ -162,8 +166,11 @@ def project_smb_ensemble(
 
         cumulative = np.cumsum(slr_rates * dt[None, :], axis=1)
 
-        # Rebase to baseline epoch (t where dT ≈ 0)
-        baseline_idx = np.argmin(np.abs(dT))
+        # Rebase to baseline epoch
+        if baseline_year is not None:
+            baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
+        else:
+            baseline_idx = np.argmin(np.abs(dT))
         cumulative -= cumulative[:, baseline_idx:baseline_idx + 1]
 
         # Apply volume cap if specified

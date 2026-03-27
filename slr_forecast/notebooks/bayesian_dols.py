@@ -3803,7 +3803,7 @@ def _thermosteric_log_prob(
         Su_obs = Su[obs_idx_ann]
         H_model = a * Su_obs**2 + b * Su_obs + c * I0_obs + H0
     else:
-        a, b_u, b_d, c, log_tau_u, log_tau_d, log_sigma_extra, H0 = theta
+        a, b_u, b_d, c, log_tau_u, log_tau_d, log_sigma_extra, H0 = theta_base
         tau_u = np.exp(log_tau_u)
         tau_d = np.exp(log_tau_d)
         sigma_extra = np.exp(log_sigma_extra)

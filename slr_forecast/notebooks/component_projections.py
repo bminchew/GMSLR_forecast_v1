@@ -39,6 +39,13 @@ except ImportError:
 #              alpha > 0: positive skew (heavy right tail, Robel et al. 2019)
 #              alpha < 0: negative skew (mode toward upper range)
 #              alpha = 0: symmetric (reduces to log-normal)
+#   beta_loc – log-mean of trajectory exponent β (power-law time ramp)
+#   beta_scale – log-std of trajectory exponent β
+#              β = 1: linear (constant rate)
+#              β > 1: accelerating (back-loaded, MISI dynamics)
+#              Derived from grounding-line flux scaling q_g ∝ h_g^{n+1}
+#              (Schoof 2007); on retrograde beds, cumulative loss grows
+#              as (t − t₀)^β with β ≈ 1.5–2.5 for n = 3–4.
 #   misi     – whether MISI is active (informational flag)
 #
 # S1: Status quo — current discharge, no instability
@@ -56,16 +63,31 @@ except ImportError:
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.10, 'low_mm': 30,  'high_mm': 80,
-                      'alpha': 0.0, 'misi': False},
+                      'alpha': 0.0,
+                      'beta_loc': 0.0, 'beta_scale': 0.0,
+                      'misi': False},
     'S2_misi':       {'P': 0.80, 'low_mm': 150, 'high_mm': 1000,
-                      'alpha': 4.0, 'misi': True},
+                      'alpha': 4.0,
+                      'beta_loc': np.log(1.8), 'beta_scale': 0.3,
+                      'misi': True},
     'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 2000,
-                      'alpha': -3.0, 'misi': True},
+                      'alpha': -3.0,
+                      'beta_loc': np.log(2.2), 'beta_scale': 0.3,
+                      'misi': True},
 }
 
 # A1 rheology correction (n=3 -> n=4): Martin et al. (in press)
 RHEOLOGY_FACTOR_MEDIAN = 1.28
 RHEOLOGY_FACTOR_SIGMA = 0.07
+
+# Observed Glen's law exponent: Millstein, Minchew, & Goldberg (2022)
+N_OBS_MEAN = 4.1
+N_OBS_SIGMA = 0.4
+N_REF = 3         # reference exponent used by ISMIP6 and literature scenarios
+
+# Rheology sensitivity: fractional increase in SLR per unit increase in n
+# Martin et al. (2026): 21-35% for Δn=1 → r₀ ≈ 0.28
+RHEOLOGY_SENSITIVITY = 0.28
 
 
 def _sample_log_skewnormal(n, low, high, alpha, rng):
@@ -114,26 +136,59 @@ def _sample_log_skewnormal(n, low, high, alpha, rng):
     return np.exp(log_samples)
 
 
-def sample_a4_wais(n_samples, rng, year=2100):
+def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A'):
     """Draw WAIS SLR samples (mm) from A4 scenario mixture at a given year.
 
     Returns array of shape (n_samples,) in **mm**.
-    Scales linearly from 2005 baseline: full values at 2100, prorated for
-    other years.
 
-    Within each scenario, samples are drawn from a skew-normal distribution
-    in log-space whose 5th/95th percentiles match (low_mm, high_mm) and
-    whose shape parameter alpha controls skewness (Robel et al. 2019).
-    A rheology correction (n=3 → n=4, Martin et al.) is applied to all
-    scenarios.
+    Temporal scaling uses a power-law ramp derived from grounding-line
+    flux physics (Schoof 2007):
+
+        H(t) = H_2100 · R · ((t − t₀) / (2100 − t₀))^β
+
+    where β > 1 produces back-loaded (accelerating) trajectories and R is
+    the rheology correction.
+
+    Parameters
+    ----------
+    n_samples : int
+    rng : numpy.random.Generator
+    year : float
+    rheology_mode : {'A', 'B'}
+        How the rheology correction (n=3 → n≈4) is applied:
+
+        **Mode A** — Independent corrections (default).
+          Scenario ranges and β priors are defined at n=3 (matching the
+          literature). Two separate corrections are applied:
+            1. Endpoint: R ~ N(1.28, 0.07²), truncated ≥ 1.
+            2. Trajectory: β_corrected = β_{n=3} · (n_draw + 1) / (n_ref + 1),
+               where n_draw ~ N(4.1, 0.4²).
+          R and the β correction are drawn independently.
+
+        **Mode B** — Unified n-driven corrections.
+          A single draw of n per sample drives both endpoint and trajectory:
+            1. n_draw ~ N(4.1, 0.4²), clipped ≥ n_ref.
+            2. Endpoint: R(n) = 1 + r₀ · (n_draw − n_ref).
+            3. Trajectory: β(n) = β_ref · (n_draw + 1) / (n_ref + 1).
+          Correlates the endpoint and trajectory corrections through n.
     """
-    time_fraction = (year - 2005) / (2100 - 2005)
+    t_norm = (year - 2005) / (2100 - 2005)
+    if t_norm <= 0:
+        return np.zeros(n_samples)
+
+    if rheology_mode not in ('A', 'B'):
+        raise ValueError(f"rheology_mode must be 'A' or 'B', got {rheology_mode!r}")
 
     samples = np.zeros(n_samples)
     scenario_names = list(A4_SCENARIOS.keys())
     probs = np.array([A4_SCENARIOS[s]['P'] for s in scenario_names])
 
     scenario_idx = rng.choice(len(scenario_names), size=n_samples, p=probs)
+
+    # ── Pre-draw n for Mode B (shared across scenarios within each sample) ──
+    if rheology_mode == 'B':
+        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
+        n_draw_all = np.maximum(n_draw_all, N_REF)  # n ≥ n_ref
 
     for i, sname in enumerate(scenario_names):
         mask = scenario_idx == i
@@ -142,18 +197,48 @@ def sample_a4_wais(n_samples, rng, year=2100):
             continue
         s = A4_SCENARIOS[sname]
 
-        # Skew-normal in log-space (alpha=0 reduces to log-normal)
+        # ── Endpoint: draw H_2100 from skew-normal (n=3 ranges) ──
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], rng,
         )
 
-        # A1 rheology correction (all scenarios)
-        rheo = rng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
-                          size=n_s)
-        rheo = np.maximum(rheo, 1.0)
-        base *= rheo
+        if rheology_mode == 'A':
+            # ── Mode A: independent endpoint and trajectory corrections ──
+            # Endpoint correction (same as before)
+            rheo = rng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
+                              size=n_s)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
 
-        samples[mask] = base * time_fraction
+            # Trajectory exponent: draw β at n=3, then correct for n≈4
+            if s['beta_scale'] > 0:
+                beta_n3 = rng.lognormal(s['beta_loc'], s['beta_scale'],
+                                        size=n_s)
+                # β correction: β(n) ≈ β(n_ref) · (n+1)/(n_ref+1)
+                n_draw = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
+                n_draw = np.maximum(n_draw, N_REF)
+                beta = beta_n3 * (n_draw + 1) / (N_REF + 1)
+            else:
+                beta = np.ones(n_s)  # S1: linear ramp, no correction
+
+        else:  # Mode B
+            # ── Mode B: unified n-driven corrections ──
+            n_draw = n_draw_all[mask]
+
+            # Endpoint correction: R(n) = 1 + r₀·(n − n_ref)
+            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
+
+            # Trajectory exponent: β(n) = β_ref · (n+1)/(n_ref+1)
+            if s['beta_scale'] > 0:
+                beta_ref = rng.lognormal(s['beta_loc'], s['beta_scale'],
+                                         size=n_s)
+                beta = beta_ref * (n_draw + 1) / (N_REF + 1)
+            else:
+                beta = np.ones(n_s)
+
+        samples[mask] = base * (t_norm ** beta)
 
     return samples  # mm
 
