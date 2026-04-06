@@ -15,6 +15,11 @@ from pathlib import Path
 BASELINE_YEAR: float = 2005.0
 """Reference year for sea-level and temperature anomalies."""
 
+WAIS_ONSET_YEAR: float = 2010.0
+"""Year at which WAIS contribution begins ramping.  Physically motivated
+by the IMBIE structural break (~2010) when WAIS mass loss accelerated.
+Distinct from BASELINE_YEAR to allow independent adjustment."""
+
 BASELINE_WINDOW: tuple[int, int] = (1995, 2005)
 """Averaging window (inclusive start, inclusive end) used when rebasing
 anomaly series to BASELINE_YEAR.  Width = BASELINE_YEAR ± 5 yr, matching

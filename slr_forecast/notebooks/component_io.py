@@ -16,7 +16,7 @@ File layout (single HDF5 file, one group per component)::
     ├── glacier/
     │   ...
     ├── greenland/
-    │   ├── posteriors/discharge/ discharge ODE posteriors
+    │   ├── posteriors/discharge/ discharge delay-model posteriors
     │   ├── smb_sensitivity/      literature C_T values
     │   ├── ocean_transfer/       surface→ocean T regression
     │   ├── observations/smb/     Mouginot SMB
@@ -304,6 +304,56 @@ def save_ocean(
                                        data=np.asarray(ocean_transfer[arr_key]))
 
 
+def save_ocean_hybrid(
+    obs_years, obs_H, obs_sigma,
+    proj_dict,
+    extra_metadata=None,
+    h5_path=None,
+):
+    """Save thermosteric (ocean) component from hybrid NOAA + IPCC approach.
+
+    Unlike :func:`save_ocean`, this does not require a fitted result object
+    or posteriors.  The hindcast is observational (NOAA + literature depth
+    corrections) and projections come from IPCC AR6 oceandynamics.
+
+    Parameters
+    ----------
+    obs_years, obs_H, obs_sigma : array-like
+        Full-depth observation data (meters, relative to 2005).
+    proj_dict : dict
+        ``{ssp: {'samples': ndarray(N,T), 'median': ndarray(T), ...}}``.
+    extra_metadata : dict or None
+        Scalar metadata (e.g. correction rates, references).
+    h5_path : str or Path or None
+        Output file.  Defaults to ``data/processed/component_results.h5``.
+    """
+    h5_path = _require_file(h5_path or DEFAULT_H5_PATH)
+
+    with h5py.File(h5_path, "a") as f:
+        if "ocean" in f:
+            del f["ocean"]
+        cg = f.create_group("ocean")
+        cg.attrs["model_type"] = "hybrid_noaa_ipcc"
+        cg.attrs["model_order"] = 0
+        cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
+
+        if extra_metadata:
+            for k, v in extra_metadata.items():
+                if isinstance(v, str):
+                    cg.attrs[k] = v
+                elif np.isscalar(v) and np.isfinite(v):
+                    cg.attrs[k] = float(v)
+
+        _save_observations(cg, obs_years, obs_H, obs_sigma)
+
+        prg = cg.create_group("projections")
+        for ssp in proj_dict:
+            _save_projection_ssp(prg, ssp, proj_dict[ssp])
+
+    size_kb = os.path.getsize(h5_path) / 1024
+    print(f"Saved ocean (hybrid) → {h5_path}  ({size_kb:.0f} KB total)")
+
+
 # =========================================================================
 # Glacier
 # =========================================================================
@@ -414,12 +464,13 @@ def save_greenland(
     extra_metadata=None,
     h5_path=None,
 ):
-    """Save Greenland component (SMB from literature + discharge ODE).
+    """Save Greenland component (SMB from literature + discharge delay model).
 
     Parameters
     ----------
-    result_discharge : BayesianGreenlandDischargeResult
-        Discharge ODE fit result.
+    result_discharge : SimpleNamespace
+        Discharge delay-model fit result with gamma_posterior, r0_posterior,
+        delta_posterior arrays.
     smb_sensitivity : SMBSensitivity
         Literature-derived SMB sensitivity parameters.
     ocean_transfer : dict
@@ -445,7 +496,7 @@ def save_greenland(
         if "greenland" in f:
             del f["greenland"]
         cg = f.create_group("greenland")
-        cg.attrs["model_type"] = "smb_literature_plus_discharge_ode"
+        cg.attrs["model_type"] = "smb_literature_plus_discharge_delay"
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
         if extra_metadata:
             for k, v in extra_metadata.items():
@@ -454,10 +505,9 @@ def save_greenland(
                 elif np.isscalar(v) and np.isfinite(v):
                     cg.attrs[k] = float(v)
 
-        # ── Discharge posteriors ──
+        # ── Discharge posteriors (delay model) ──
         dg = cg.create_group("posteriors/discharge")
-        for attr_name in ("gamma_atm_posterior", "gamma_ocean_posterior",
-                          "tau_posterior", "D0_posterior", "H0_dyn_posterior"):
+        for attr_name in ("gamma_posterior", "r0_posterior", "delta_posterior"):
             arr = getattr(result_discharge, attr_name, None)
             if arr is not None:
                 dg.create_dataset(attr_name, data=np.asarray(arr))

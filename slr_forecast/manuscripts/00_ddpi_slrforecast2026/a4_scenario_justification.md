@@ -10,9 +10,9 @@ reviewer with deep expertise in ice sheet modeling.
 
 | Scenario | P | Range (mm, 2100) | α | Physics |
 |----------|---|-------------------|---|---------|
-| S1: Status quo | 0.10 | 30–80 | 0 | No MISI |
-| S2: MISI | 0.80 | 150–1000 | +4 | MISI with amplification |
-| S3: MISI+MICI | 0.10 | 600–2000 | −3 | Full instability cascade |
+| S1: Status quo | 0.10 | 25–85 | 0 | No MISI; linear melt-driven discharge |
+| S2: MISI | 0.80 | 120–1000 | +4 | MISI with amplification |
+| S3: MISI+MICI | 0.10 | 600–1400 | −3 | Full instability cascade |
 
 ### Why three scenarios, not four
 
@@ -160,34 +160,49 @@ in both approaches despite their different methodologies.
 
 ## 3. Scenario Ranges
 
-### S1: 30–80 mm (status quo)
+### S1: 25–85 mm (status quo)
 
-This represents a continuation of current WAIS discharge rates without MISI
-acceleration. The range is anchored to:
+MISI does not operate — bed topography, mélange buttressing, and ice-shelf
+re-formation prevent the runaway grounding-line flux feedback, regardless
+of ocean warming. Discharge responds linearly to ocean thermal forcing.
 
-- **IMBIE observed rates:** WAIS contributes ~0.44 mm/yr at recent peak
-  (2010–2012). Over 95 years (2005–2100), constant rate gives ~42 mm. With
-  moderate deceleration (as observed post-2012): ~30 mm. With continued
-  acceleration at pre-2010 rates: ~80 mm.
-- **ISMIP6 low-end (Seroussi et al., 2020):** Several models show near-zero
-  or slightly positive Antarctic mass balance, consistent with our lower bound.
-- **Bamber et al. (2019) +2°C median:** 80 mm for WAIS, consistent with
-  our upper bound for no-instability.
+The range is derived from a physical scaling chain:
 
-### S2: 150–1000 mm (MISI)
+1. **Melt–discharge linearity (Joughin et al. 2021):** PIG ice loss scales
+   linearly with time-averaged melt volume (r² ≥ 0.98). Holds across ASE
+   sectors in ISMIP6 ensemble (r² ≥ 0.94).
+2. **Quadratic melt scaling:** Melt ∝ (T_ocean − T_f)². Current PIG melt
+   ~67 Gt/yr at ΔT₀ ≈ 2.15°C above freezing.
+3. **Projected ocean warming (Naughten et al. 2023):** Amundsen shelf warms
+   +0.7 to +1.5°C by 2100 (Paris 1.5°C through RCP 8.5).
+4. **Enhancement factor:** f = [(2.15 + ΔT_warm)/2.15]². At +1.5°C: f ≈ 2.9.
+   At +0.7°C: f ≈ 1.7. Consistent with Jourdain et al. (2022): 1.4–2.2×.
+5. **Rate ramp:**
+   - *Lower bound:* IMBIE time-averaged rate (0.24 mm/yr) × 95 yr ≈ 23 mm → **25 mm**.
+   - *Upper bound:* Peak rate (0.44 mm/yr) ramped by f = 2.9 to 1.3 mm/yr.
+     Linear ramp: (0.44 + 1.3)/2 × 95 ≈ 83 mm → **85 mm**.
+
+### S2: 120–1000 mm (MISI)
 
 This merges the former S2 (150–400 mm) and S3 (400–1000 mm) ranges.
 
-**Lower bound (150 mm):**
+**Lower bound (120 mm):**
 
-- Ritz et al. (2015, Nature): Most likely Antarctic contribution ~100 mm,
-  with MISI as the primary mechanism.
-- ISMIP6 upper range for WAIS (Seroussi et al., 2020): Up to ~180 mm
-  dynamic loss under RCP8.5 — and this is without rheology correction.
-- DeConto et al. (2021, Nature): Median total Antarctic ~150 mm under
-  ~3°C warming (before sharp nonlinearity).
-- LARMIP-2 (Levermann et al., 2020): Median Antarctic basal-melt-driven
-  contribution of 170 mm under RCP8.5.
+The minimum physically consistent WAIS contribution if MISI operates,
+representing late-onset instability (~2060) with high residual buttressing,
+limited primarily to the Thwaites basin. Two independent arguments:
+
+1. *Rate separation from S1*: S1's upper bound (85 mm) is the maximum
+   without MISI. The grounding-line flux feedback must produce rates
+   clearly above melt-driven linear response. Even late-triggering
+   MISI that doubles the late-century rate relative to S1 gives ~120 mm.
+
+2. *Bed geometry*: If MISI drives Thwaites' grounding line through even
+   a portion of its retrograde bed (700–2000 m depth over ~250 km;
+   Morlighem et al. 2020), partial traverse (~50%) produces ~50–60 mm
+   SLE from Thwaites alone. Combined with S1-like contributions from
+   other basins (~30–40 mm) and smaller ASE glaciers (PIG, Smith/Kohler),
+   the total exceeds 120 mm.
 
 **Upper bound (1000 mm):**
 
@@ -208,28 +223,39 @@ This merges the former S2 (150–400 mm) and S3 (400–1000 mm) ranges.
   Amundsen Sea Embayment dynamics, ~1 m from WAIS by 2100 is within the
   high-end envelope.
 
-### S3: 600–2000 mm (MISI + MICI)
+### S3: 600–1400 mm (MISI + MICI)
 
 **Lower bound (600 mm):**
 
 - Edwards et al. (2019, Nature): With MICI under RCP8.5, most likely
-  outcome ~450 mm. Our lower bound of 600 mm accounts for the fact that
-  if MICI *does* operate, it adds substantially to MISI-only outcomes —
-  it does not replace them.
+  total Antarctic outcome ~450 mm. WAIS share (~60–80%) gives 360–540 mm;
+  adding MISI from basins where MICI doesn't operate brings the lower
+  end to ~600 mm.
 
-**Upper bound (2000 mm):**
+**Upper bound (1400 mm):**
 
-- DeConto & Pollard (2016, Nature): Total Antarctic contribution of
-  640–1140 mm (mean) under RCP8.5, with MICI as the dominant driver.
-  Some model configurations exceed 1.5 m.
-- Bamber et al. (2019): Total ice sheet 95th percentile at +5°C is
-  1780 mm. Antarctic contribution dominates this, with WAIS the primary
-  source.
-- IPCC AR6 low-likelihood, high-impact storyline: MISI + MICI + other
-  processes "could in combination contribute more than one additional
-  metre of sea level rise by 2100" beyond medium-confidence projections.
-- The 2 m upper bound for WAIS alone is consistent with partial (~60%)
-  WAIS deglaciation (total WAIS potential: ~3.3 m SLE).
+Anchored to the ASE ice volume above flotation with rheology correction:
+
+- **ASE V_af ≈ 1100 mm** (Morlighem et al. 2020, BedMachine Antarctica):
+  The total ice volume above flotation in the Amundsen Sea Embayment.
+- **Rheology correction (×1.28):** Martin et al. (2026), Getraer &
+  Morlighem (2025). Gives ~1400 mm.
+- This represents near-complete ASE deglaciation — the maximum WAIS
+  contribution within the century without requiring mass loss from
+  non-ASE basins (Siple Coast, Marie Byrd Land) that lack retrograde
+  bed geometry and sustained ocean thermal forcing.
+
+Independent cross-checks supporting 1400 mm as an upper bound:
+
+- Bamber et al. (2019) WAIS 95th percentile at +5°C: 930 mm. With
+  rheology correction: ~1190 mm.
+- DeConto & Pollard (2016): 640–1140 mm total Antarctic under RCP8.5
+  with MICI. WAIS is dominant but not sole contributor.
+- Pfeffer et al. (2008): Kinematic upper bound of ~620 mm for total
+  Antarctic — pre-MICI, but drainage-gate constraint remains.
+- van den Akker et al. (2025): Peak WAIS rate ~3 mm/yr under sustained
+  present-day forcing. Reaching 1400 mm over 95 yr requires ~15 mm/yr
+  average — 5× this rate.
 
 ---
 
@@ -262,16 +288,28 @@ numerically that MISI amplifies and skews uncertainty:
   Thwaites collapse within ~300 years; low-frequency ocean variability
   accelerates disintegration by up to 250 years.
 
-Our choice of α = +4 in the skew-normal (log-space) produces:
-- Mode ~270 mm, median ~387 mm, mean ~521 mm
-- The mode-to-mean separation reflects the Robel et al. asymmetry:
-  the most likely outcome is moderate MISI, but the tail toward
-  high-end outcomes is substantially heavier than the low-end tail.
+Our choice of α = +4 is calibrated by two constraints:
+
+1. **Sign and qualitative magnitude from Robel et al. (2019):** MISI
+   with n > 3 produces substantial positive skewness. This prescribes
+   α > 0 with significant magnitude.
+
+2. **Bamber et al. (2019) conditional median cross-check:** The Bamber
+   WAIS median at +5°C is 180 mm (unconditional). Removing ~15% of
+   outcomes corresponding to S1-like stability and ~5% to S3-like
+   extremes, the conditional-on-MISI median is ~250–300 mm. Since both
+   the Bamber elicitation and our bounds are informed by n=3 models,
+   this comparison is at the same reference rheology. With bounds of
+   120–1000 mm, α = 4 produces a pre-correction median of ~263 mm —
+   within this range. After rheology correction (×1.28), the median
+   shifts to ~336 mm, higher than Bamber as expected because the
+   correction captures the n=3→4 bias that postdates the 2018–2019
+   elicitation (Millstein et al. 2022, Martin et al. 2026).
 
 ### Negative skew for S3 (α = −3): MICI skepticism
 
 The negative α in log-space concentrates probability toward the lower
-portion of the 600–2000 mm range, reflecting:
+portion of the 600–1400 mm range, reflecting:
 
 - Morlighem et al. (2024, Science Advances): MICI is unlikely at Thwaites
   during the 21st century; calving rates would need to be ≥25× higher

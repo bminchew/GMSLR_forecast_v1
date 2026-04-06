@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Key Takeaways}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+%% ================================================================
+\section{IPCC sea-level projections are biased low by documented, quantifiable amounts}
+\label{sec:takeaway_bias}
+
+\subsection{Literature context}
+
+IPCC AR6 medium-confidence projections for 2100 range from $\sim$0.3~m (SSP1-2.6) to $\sim$0.7~m (SSP5-8.5) relative to a 1995--2014 baseline \citep{Fox-Kemper2021}. These estimates are built on ISMIP6 ice sheet models \citep{Seroussi2020}, GlacierMIP emulators \citep{Marzeion2020}, and coupled climate model output for thermal expansion.
+
+Multiple independent lines of evidence show that these projections systematically underestimate sea-level rise. ISMIP6 ice sheet models diverge from IMBIE satellite observations almost immediately, with most models producing ice sheets that gain mass under warming rather than losing it \citep{Aschwanden2021, Fricker2025}. Observed trends in global mean sea level under continued warming exceed IPCC medium-confidence projections for all emission scenarios \citep{Hamlington2025}. The universal assumption of Glen's flow law exponent $n = 3$, when satellite and laboratory observations support $n \approx 4$, produces a 21--35\% underestimation of 100-year sea-level rise \citep{Millstein2022, Martin2026, GetraerMorlighem2025, Fan2025}. Calving, subglacial hydrology, and ice damage are absent from most models \citep{Aschwanden2021, Dow2022}, and sensitivity to calibration methodology alone produces factor-of-two differences in projected loss from the same model \citep{Goldberg2026}. Parametric uncertainty, which is omitted from standard intercomparisons, may exceed inter-model spread \citep{Aschwanden2019}.
+
+\subsection{Unique contribution}
+
+Prior work has identified individual sources of low bias in isolation: rheology \citep{Millstein2022, Martin2026}, missing physics \citep{Aschwanden2021}, calibration sensitivity \citep{Goldberg2026}, and observational exceedance \citep{Hamlington2025}. However, no study has constructed a complete, observation-calibrated alternative framework that avoids these biases while producing conditional predictive distributions with propagated uncertainty.
+
+This work provides that alternative. By calibrating exclusively against observational data using physics-informed Bayesian models at the component level, the framework is structurally independent of the process models that produce the low bias. Each component model makes its calibration range, functional form, and extrapolation assumptions explicit. The result is not merely a critique of IPCC projections but a quantitative replacement that identifies where and by how much the process-model estimates depart from what the observations support. For glaciers, the data-driven temperature sensitivity ($b_{\mathrm{gl}} = 0.77$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$) is approximately $6\times$ the value implied by IPCC medians ($b_{\mathrm{IPCC}} \approx 0.13$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$), and the IPCC rate structure is inverted: attributing most mass loss to a committed baseline rather than to ongoing warming. For Greenland discharge, physical derivations of all model parameters from glacier dynamics agree with fitted values to within observational uncertainty, providing independent validation that the data-driven framework captures the governing physics.
+
+%% ================================================================
+\section{West Antarctic uncertainty dominates the projection envelope and is wider than current assessments acknowledge}
+\label{sec:takeaway_wais}
+
+\subsection{Literature context}
+
+The West Antarctic Ice Sheet (WAIS) contains $\sim$3.3~m of sea-level equivalent and is grounded below sea level on retrograde beds, making it susceptible to marine ice sheet instability (MISI). Grounding-line retreat is observed at Thwaites Glacier \citep{Joughin2014}, and ocean thermal forcing sufficient to drive WAIS retreat is committed regardless of emissions pathway \citep{Naughten2023}. Present-day forcing held constant may be sufficient to deglaciate large parts of WAIS \citep{vandenAkker2025}.
+
+\citet{Robel2019} showed analytically that MISI amplifies and skews uncertainty toward worse outcomes: when the grounding-line flux nonlinearity exponent exceeds 3 (realistic values are 4--5), ensemble distributions are systematically right-skewed. \citet{Bamber2019} elicited WAIS-specific probability distributions from 22 ice sheet experts, finding a 5th--95th percentile range of $-50$ to 930~mm under $+5\,^\circ$C warming---far wider than ISMIP6 ranges. Evidence against marine ice cliff instability (MICI) as a 21st-century mechanism has grown \citep{Morlighem2024, Clerc2019, Schlemm2022}, but MISI itself, combined with processes that current models omit (calving, subglacial hydrology, incorrect rheology), produces substantial uncertainty without invoking MICI.
+
+\subsection{Unique contribution}
+
+Existing treatments of WAIS uncertainty either rely on process models that omit the dominant physics \citep{Seroussi2020} or provide expert judgment distributions without temporal structure \citep{Bamber2019}. No prior work has combined (i) a scenario-mixture framework with physically motivated within-scenario skewness derived from MISI dynamics \citep{Robel2019}, (ii) a trajectory exponent that distributes mass loss within the century based on grounding-line flux scaling \citep{Schoof2007}, and (iii) a post-hoc rheology correction reflecting the $n = 3 \to 4$ bias \citep{Martin2026, GetraerMorlighem2025}.
+
+This work constructs a three-scenario mixture (status quo, MISI, MISI+MICI) with scenario weights, skewness parameters, and trajectory exponents each grounded in specific physical mechanisms. The S1 (status quo) bounds are derived from a melt--discharge scaling chain anchored to \citet{Joughin2021} and projected Amundsen shelf warming \citep{Naughten2023}; the S3 (MISI+MICI) upper bound is anchored to the ASE ice volume above flotation ($V_{\mathrm{af}} \approx 1100$~mm; \citealp{Morlighem2020}) with rheology correction, rather than an ad hoc deglaciation fraction. The framework produces a distribution wider than the \citet{Bamber2019} expert judgment (which predates the rheology bias quantification) but in broad distributional agreement, providing independent methodological corroboration. The temporal structure---back-loaded mass loss with $\sim$30\% of the 2100 value realized by 2050---is consistent with expert expectations \citep{Bamber2019} and the grounding-line flux physics \citep{Robel2019}, but is absent from existing probabilistic frameworks. By making the scenario weights, physical justifications, and correction factors explicit and modifiable, the framework is transparent and updatable as new observations and process understanding emerge.
+
+%% ================================================================
+\section{The observed acceleration in sea-level rise originates from specific, identifiable component-level sources}
+\label{sec:takeaway_components}
+
+\subsection{Literature context}
+
+Global mean sea level is accelerating, rising at $\sim$4.5~mm\,yr$^{-1}$ in the most recent decade compared to $\sim$1.4~mm\,yr$^{-1}$ over the 20th century \citep{Frederikse2020, Hamlington2020}. The budget reconstruction of \citet{Frederikse2020} closed the 20th-century sea-level budget by attributing contributions to thermal expansion, glaciers, ice sheets, and land water storage. However, identifying the temperature sensitivities of individual components---and thus the physical drivers of the acceleration---requires fitting rate--temperature relationships to each contributor separately.
+
+For Greenland, \citet{King2020} showed that discharge acceleration was driven by calving-front retreat with a consistent 4--5\% speedup per km of retreat. \citet{Felikson2017} quantified how dynamic thinning propagates inland, setting the timescale for the ice sheet response. Subsurface ocean warming drives submarine melt and terminus retreat \citep{Straneo2012, Holland2008, Xu2013, Rignot2016, Jackson2022}, but the aggregate relationship between ocean temperature and ice-sheet-wide discharge had not been formalized as a calibrated predictive model. For glaciers, the GlaMBIE consensus \citep{GlaMBIE2024} provides the first globally complete, observation-only mass-balance record, but no prior study has extracted a global temperature sensitivity from it and compared that sensitivity against process-model predictions \citep{Rounce2023} and IPCC projections.
+
+\subsection{Unique contribution}
+
+This work provides the first unified component-level decomposition in which every contributor's temperature sensitivity is extracted from observations through a common Bayesian framework, enabling direct comparison of sensitivities across components and against IPCC process-model values.
+
+For Greenland discharge, the time-delay model ($R^2 = 0.995$) identifies a 5--6 year lag between subsurface ocean warming and the discharge response, with the coupling $\gamma = 0.365$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ independently derivable from glacier dynamics---a chain linking submarine melt sensitivity \citep{Xu2013, Rignot2016}, calving amplification \citep{Benn2007, Luckman2015}, and velocity response to retreat \citep{King2020}. The agreement between three independent estimates (observational, bottom-up, and fitted; all within $\pm$10\%) provides confidence that the model captures the governing physics rather than fitting noise. No prior study has closed this parameter-estimation loop for aggregate Greenland discharge.
+
+For glaciers, the data-driven sensitivity $b_{\mathrm{gl}} = 0.77$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ from GlaMBIE is approximately $1.5$--$2\times$ the effective sensitivity of the PyGEM process model \citep{Rounce2023} and $\sim$6$\times$ the value embedded in IPCC medians. This provides an observational benchmark that process models must reproduce to be considered validated at the global aggregate scale---a test that has not previously been applied.
+
+%% ================================================================
+\section{Simpler, observationally anchored models are better suited to the forecasting task than complex process models}
+\label{sec:takeaway_forecasting}
+
+\subsection{Literature context}
+
+The forecasting literature, developed across economics, meteorology, epidemiology, and supply chain management, has established that increasing model complexity beyond the information content of the calibration data degrades out-of-sample skill \citep{Green2015}. Forecast combinations outperform individual methods \citep{Makridakis2018}. Model skill must be demonstrated through out-of-sample validation, not in-sample fit.
+
+Current sea-level projections rely on process models with millions of degrees of freedom constrained by observational records spanning at most a few decades of the relevant forcing range. ISMIP6 models are initialized to the present state and run forward without systematic out-of-sample validation against withheld data \citep{Aschwanden2021, Fricker2025}. The sensitivity of projections to initialization, spin-up, and calibration methodology \citep{Goldberg2026} suggests that these models operate in the regime where complexity degrades rather than enhances forecast skill.
+
+\subsection{Unique contribution}
+
+This work applies established forecasting principles to sea-level prediction for the first time as a systematic framework. The hierarchy of increasing complexity---naive extrapolation, aggregate semi-empirical, component-level physics-informed---follows the forecasting principle that complexity should be added only when it demonstrably improves out-of-sample skill.
+
+Each component model has $\sim$3--6 free parameters calibrated against $\sim$25--70 independent observations, a ratio of data to parameters that the forecasting literature identifies as conducive to reliable out-of-sample prediction. By contrast, ISMIP6 models have millions of degrees of freedom constrained by comparable observational records. The framework validates against independent datasets withheld from calibration: \citet{Mankoff2021} and NOAA Arctic Report Card for Greenland discharge, \citet{Frederikse2020} and \citet{Horwath2022} for glaciers and thermosteric, and IMBIE \citep{Otosaka2023} for total Greenland mass balance.
+
+The structural difference from process models is not merely a matter of parsimony. Each component model makes its calibration range and extrapolation lever arm explicit: the glacier model is calibrated over $\sim$1$\,^\circ$C of warming, and predictions at $+3$--4$\,^\circ$C are identified as extrapolations with corresponding structural risk. Process models embed analogous extrapolation assumptions in their parameterizations without reporting them. The learned model-inadequacy parameter $\sigma_{\mathrm{extra}}$ in each component quantifies the systematic misfit within the calibration range, providing a transparent lower bound on structural uncertainty that process models do not report.
+
+%% ================================================================
+\section{Hierarchical coupling across components propagates uncertainty faithfully and identifies where observations would most reduce it}
+\label{sec:takeaway_uncertainty}
+
+\subsection{Literature context}
+
+Sea-level projection uncertainty is typically reported as a total range without decomposing contributions from individual components or identifying which observations would most reduce that range. IPCC AR6 reports separate component projections \citep{Fox-Kemper2021}, but these are produced by different modeling groups using different assumptions, and the uncertainty propagation from forcing scenarios through component models to the total is not performed within a unified statistical framework.
+
+Sea-level projection uncertainty is typically reported as a total range without decomposing contributions from individual components or identifying which observations would most reduce that range. IPCC AR6 reports separate component projections \citep{Fox-Kemper2021}, but these are produced by different modeling groups using different assumptions, and the uncertainty propagation from forcing scenarios through component models to the total is not performed within a unified statistical framework. Critically, the total GMSL budget has not been used as a top-down diagnostic to test whether independently estimated components are mutually consistent---a standard practice in other fields (e.g., national accounts in economics, energy balance in climate science).
+
+\subsection{Unique contribution}
+
+This work propagates uncertainty through all components within a unified Bayesian framework, enabling a variance-weighted budget closure diagnostic that identifies where the independently estimated components are in tension with observed total GMSL. Each component is calibrated against its own observational dataset without using the total GMSL as a constraint, so the budget residual is a genuine diagnostic of internal consistency rather than a tautology.
+
+The thermosteric component uses NOAA in situ observations (hindcast) and IPCC AR6 projections (future), with a 14\% structural uncertainty reflecting the known low bias in the NOAA product \citep{Li2022}. The Greenland discharge model is forced by subsurface ocean temperature via an independently calibrated transfer function from surface temperature \citep{Good2013, Rohde2020}. The components share a common surface temperature forcing but are calibrated independently, so cross-component correlations arise from the forcing rather than from shared parameters.
+
+The budget attribution reveals that the satellite-era residual (0.37\,mm\,yr$^{-1}$) is consistent with known observational limitations: thermosteric absorbs the largest share (57\%), reflecting the NOAA low bias, and TWS absorbs 23\%, reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. All ice-related components (glaciers, Greenland, WAIS) are within $1.5\sigma$ of their independent estimates. This decomposition is actionable: it identifies WAIS dynamics and thermosteric observational uncertainty as the dominant sources of total projection uncertainty, and it shows where additional observations would most efficiently reduce that uncertainty.
+
+\bibliographystyle{agufull08}
+\bibliography{references}
+
+\end{document}

@@ -526,6 +526,16 @@ test:      pytest tests/
 - [ ] **Assemble multi-panel publication figures**
 - [ ] **Run all three steps end-to-end and produce comparison figure**
 
+## 12. Pre-Publication Checklist
+
+Items to address before final submission. These are not blockers for analysis
+but affect presentation quality and internal consistency.
+
+- [ ] **Unify baseline year to 2000.** Currently `BASELINE_YEAR = 2005` in `config.py` (matching IPCC AR6's 1995–2014 midpoint), but `_cumulate()` in `prepare_mouginot_components` zeros at `np.mean(baseline_window)` = 2000 (midpoint of 1995–2005). This mismatch caused the panel (c) offset bug in `component_greenland.ipynb` (fixed March 2026). For a standalone paper, 2000 is cleaner (start of century, matches the `_cumulate` convention). Change requires: update `config.py`, rebaseline all NOAA/EN4 data loading, verify all fits are unchanged (they operate in anomaly space so posteriors should be invariant), update all plotting code that references `BASELINE_YEAR`, re-run all notebooks end-to-end.
+- [ ] **Frederikse steric depth mismatch.** Frederikse (2020) steric is full-depth; NOAA is 0–700 m. The `component_ocean.ipynb` Stage 1b validation panel has been updated to use NOAA 0–2000 m instead, but verify no downstream code still compares Frederikse steric against 0–700 m model output.
+- [ ] **`component_decomposition.ipynb` has inline `sample_a4_wais`.** The old notebook defines its own copy of `sample_a4_wais` (line ~5872) that does not include the power-law β ramp or rheology mode. Migrate to import from `component_projections.py`.
+- [ ] **Greenland reduced model (§2c).** If the 3-parameter reduced discharge model is adopted, update the projection code and HDF5 save/load to use the reduced posteriors. Currently the reduced model is diagnostic only.
+
 ### Migration Notes
 - **Langsmith pytest plugin conflict**: The environment has a broken `langsmith` install (missing `zstandard`). Use `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest` to run tests cleanly.
 - **Reader migration strategy**: New readers in `src/slr_forecast/readers/` are independent copies of the parsing logic from `notebooks/slr_data_readers.py`, with sign-convention fixes (§1), unit constants from `units.py` (§3), and metadata tagging applied at the point of ingestion. The original `notebooks/slr_data_readers.py` is untouched and still used by notebooks. When notebooks are converted to import from the package, the old file can be archived.

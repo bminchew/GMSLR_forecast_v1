@@ -5832,7 +5832,11 @@ def prepare_greenland_components(
 
     # ── Helper: cumulate rates into level ──
     def _cumulate(rate, sigma, times, bl_window):
-        """Subtract baseline mean rate, integrate anomalies, rebase level."""
+        """Subtract baseline mean rate, integrate anomalies, rebase level.
+
+        Uncertainty is cumulated bidirectionally from the baseline
+        midpoint so that it grows both forward and backward in time.
+        """
         bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
 
         # Subtract baseline-period mean rate to get anomaly rates
@@ -5844,17 +5848,26 @@ def prepare_greenland_components(
 
         dt = np.diff(times, prepend=times[0] - 1)
         cum = np.cumsum(rate_anom * dt)
-        cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
 
         # Rebase level: subtract value at baseline midpoint
         if bl_mask.sum() > 0:
             bl_mid_idx = np.argmin(np.abs(
                 times - np.mean(bl_window)))
             cum = cum - cum[bl_mid_idx]
-            # Rebase sigma relative to baseline
-            bl_var = cum_sig[bl_mid_idx]**2
-            cum_sig = np.sqrt(np.maximum(cum_sig**2 - bl_var, 0.0))
+
+            # Bidirectional uncertainty: cumulate outward from baseline midpoint
+            cum_sig = np.zeros(len(times))
+            sig_dt = sigma * dt
+            # Forward from baseline midpoint
+            for i in range(bl_mid_idx + 1, len(times)):
+                cum_sig[i] = np.sqrt(cum_sig[i - 1]**2 + sig_dt[i]**2)
+            # Backward from baseline midpoint
+            for i in range(bl_mid_idx - 1, -1, -1):
+                cum_sig[i] = np.sqrt(cum_sig[i + 1]**2 + sig_dt[i + 1]**2)
             cum_sig = np.maximum(cum_sig, sigma.mean())
+        else:
+            cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
+
         return cum, cum_sig
 
     # ── Mankoff ──
@@ -5866,12 +5879,21 @@ def prepare_greenland_components(
     df = df.sort_values('time').reset_index(drop=True)
     man_years = df['time'].values.astype(float)
 
-    man_smb_rate = -df['SMB'].values * GT_TO_M_SLE
-    man_smb_err = df['SMB_err'].values * GT_TO_M_SLE
-    man_dyn_rate = df['D'].values * GT_TO_M_SLE
-    man_dyn_err = df['D_err'].values * GT_TO_M_SLE
-    man_mb_rate = -df['MB'].values * GT_TO_M_SLE
-    man_mb_err = df['MB_err'].values * GT_TO_M_SLE
+    # Rename to Mouginot-style columns (m/yr SLE, SLR convention)
+    df['decimal_year'] = man_years
+    df['smb_rate'] = -df['SMB'].values * GT_TO_M_SLE
+    df['smb_rate_sigma'] = np.abs(df['SMB_err'].values) * GT_TO_M_SLE
+    df['discharge_rate'] = df['D'].values * GT_TO_M_SLE
+    df['discharge_rate_sigma'] = np.abs(df['D_err'].values) * GT_TO_M_SLE
+    df['mb_rate'] = -df['MB'].values * GT_TO_M_SLE
+    df['mb_rate_sigma'] = np.abs(df['MB_err'].values) * GT_TO_M_SLE
+
+    man_smb_rate = df['smb_rate'].values
+    man_smb_err = df['smb_rate_sigma'].values
+    man_dyn_rate = df['discharge_rate'].values
+    man_dyn_err = df['discharge_rate_sigma'].values
+    man_mb_rate = df['mb_rate'].values
+    man_mb_err = df['mb_rate_sigma'].values
 
     H_smb_man, sig_smb_man = _cumulate(man_smb_rate, man_smb_err,
                                         man_years, baseline_window)
@@ -6021,13 +6043,19 @@ def prepare_mouginot_components(
         rate_anom = rate - rate_ref
         dt = np.diff(times, prepend=times[0] - 1)
         cum = np.cumsum(rate_anom * dt)
-        cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
         if bl_mask.sum() > 0:
             bl_mid_idx = np.argmin(np.abs(times - np.mean(bl_window)))
             cum = cum - cum[bl_mid_idx]
-            bl_var = cum_sig[bl_mid_idx]**2
-            cum_sig = np.sqrt(np.maximum(cum_sig**2 - bl_var, 0.0))
+            # Bidirectional uncertainty from baseline midpoint
+            cum_sig = np.zeros(len(times))
+            sig_dt = sigma * dt
+            for i in range(bl_mid_idx + 1, len(times)):
+                cum_sig[i] = np.sqrt(cum_sig[i - 1]**2 + sig_dt[i]**2)
+            for i in range(bl_mid_idx - 1, -1, -1):
+                cum_sig[i] = np.sqrt(cum_sig[i + 1]**2 + sig_dt[i + 1]**2)
             cum_sig = np.maximum(cum_sig, sigma.mean())
+        else:
+            cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
         return cum, cum_sig
 
     H_smb, sig_smb = _cumulate(smb_rate, smb_err, years, baseline_window)

@@ -328,6 +328,75 @@ def read_ipcc_ar6_component(
     return df
 
 
+def read_ipcc_ar6_quantiles(
+    component_dir: str,
+    component_type: str,
+    scenario: str = "ssp245",
+    sub_component: Optional[str] = None,
+) -> tuple:
+    """Read raw quantile arrays from an IPCC AR6 FACTS component NetCDF.
+
+    Returns the full quantile distribution (typically 107 quantiles) for
+    Monte Carlo sampling, rather than the summary percentiles returned by
+    :func:`read_ipcc_ar6_component`.
+
+    Parameters
+    ----------
+    component_dir : str
+        Path to ``dist_components/`` directory.
+    component_type : str
+        'glaciers', 'icesheets', 'landwaterstorage', or 'oceandynamics'.
+    scenario : str
+        SSP code (e.g. 'ssp245', 'ssp585').
+    sub_component : str, optional
+        'GIS', 'AIS', 'WAIS', 'EAIS', 'PEN'. Required for icesheets.
+
+    Returns
+    -------
+    years : ndarray, shape (n_years,)
+        Integer years (e.g. 2020, 2030, ..., 2150).
+    quantiles : ndarray, shape (n_quantiles,)
+        Quantile levels from 0 to 1.
+    slc_m : ndarray, shape (n_quantiles, n_years)
+        Sea level change in **meters**, relative to 2005 baseline.
+    """
+    import glob as globmod
+    import xarray as xr
+
+    if sub_component:
+        pattern = os.path.join(
+            component_dir,
+            f"{component_type}-*-{scenario}_{sub_component}_globalsl.nc",
+        )
+    else:
+        pattern = os.path.join(
+            component_dir,
+            f"{component_type}-*-{scenario}_globalsl.nc",
+        )
+
+    matches = sorted(globmod.glob(pattern))
+    if not matches:
+        raise FileNotFoundError(
+            f"No FACTS files for {component_type}/{scenario} "
+            f"in {component_dir}. Pattern: {pattern}"
+        )
+
+    if len(matches) > 1:
+        ipccar6 = [m for m in matches if "ipccar6" in os.path.basename(m)]
+        if ipccar6:
+            matches = ipccar6
+
+    nc_path = matches[0]
+    ds = xr.open_dataset(nc_path)
+    years = ds["years"].values
+    quantiles = ds["quantiles"].values
+    slc_mm = ds["sea_level_change"].values[:, :, 0]  # (n_q, n_years)
+    ds.close()
+
+    slc_m = slc_mm * MM_TO_M
+    return years, quantiles, slc_m
+
+
 def list_ipcc_ar6_components(component_dir: str) -> pd.DataFrame:
     """List all available IPCC AR6 FACTS component files.
 

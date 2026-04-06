@@ -17,11 +17,12 @@ import pandas as pd
 # Constants
 # ---------------------------------------------------------------------------
 try:
-    from slr_forecast.config import BASELINE_YEAR, M_TO_MM, N_SAMPLES
+    from slr_forecast.config import BASELINE_YEAR, M_TO_MM, N_SAMPLES, WAIS_ONSET_YEAR
 except ImportError:
     BASELINE_YEAR = 2005.0
     M_TO_MM = 1000.0
     N_SAMPLES = 2000
+    WAIS_ONSET_YEAR = 2010.0
 
 
 # =========================================================================
@@ -62,15 +63,15 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
-    'S1_status_quo': {'P': 0.10, 'low_mm': 30,  'high_mm': 80,
+    'S1_status_quo': {'P': 0.10, 'low_mm': 25,  'high_mm': 85,
                       'alpha': 0.0,
                       'beta_loc': 0.0, 'beta_scale': 0.0,
                       'misi': False},
-    'S2_misi':       {'P': 0.80, 'low_mm': 150, 'high_mm': 1000,
+    'S2_misi':       {'P': 0.80, 'low_mm': 120, 'high_mm': 1000,
                       'alpha': 4.0,
                       'beta_loc': np.log(1.8), 'beta_scale': 0.3,
                       'misi': True},
-    'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 2000,
+    'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 1400,
                       'alpha': -3.0,
                       'beta_loc': np.log(2.2), 'beta_scale': 0.3,
                       'misi': True},
@@ -136,18 +137,24 @@ def _sample_log_skewnormal(n, low, high, alpha, rng):
     return np.exp(log_samples)
 
 
-def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A'):
+def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
+                   anchor_year=None, anchor_value_mm=None,
+                   anchor_sigma_mm=None, obs_value_mm=None,
+                   obs_sigma_mm=None):
     """Draw WAIS SLR samples (mm) from A4 scenario mixture at a given year.
 
     Returns array of shape (n_samples,) in **mm**.
 
-    Temporal scaling uses a power-law ramp derived from grounding-line
-    flux physics (Schoof 2007):
+    The projection is anchored to the IMBIE observed cumulative value at
+    ``anchor_year``.  Before the anchor year, samples are drawn from
+    N(obs_value, obs_sigma²) to reflect IMBIE measurement uncertainty.
+    After the anchor year, the *remaining* A4 contribution is distributed
+    with a power-law ramp, with the anchor uncertainty propagated:
 
-        H(t) = H_2100 · R · ((t − t₀) / (2100 − t₀))^β
+        H(t) = H_anchor_i + H_remaining_i · ((t − t_a) / (2100 − t_a))^β
 
-    where β > 1 produces back-loaded (accelerating) trajectories and R is
-    the rheology correction.
+    where H_anchor_i ~ N(anchor_value, anchor_sigma²) and
+    H_remaining_i = H_2100 − H_anchor_i.
 
     Parameters
     ----------
@@ -171,13 +178,48 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A'):
             2. Endpoint: R(n) = 1 + r₀ · (n_draw − n_ref).
             3. Trajectory: β(n) = β_ref · (n_draw + 1) / (n_ref + 1).
           Correlates the endpoint and trajectory corrections through n.
+    anchor_year : float or None
+        Year at which the projection is anchored to observations.  If None,
+        uses ``WAIS_ONSET_YEAR`` from config (default 2010).
+    anchor_value_mm : float or None
+        IMBIE observed cumulative WAIS SLR (mm, relative to BASELINE_YEAR)
+        at ``anchor_year``.  If None, defaults to 0.0.
+    anchor_sigma_mm : float or None
+        IMBIE 1-sigma uncertainty (mm) at ``anchor_year``.  If None,
+        defaults to 0.0 (deterministic anchor).
+    obs_value_mm : float or None
+        IMBIE observed cumulative (mm) at ``year``, used for pre-anchor
+        years.  If None, uses ``anchor_value_mm``.
+    obs_sigma_mm : float or None
+        IMBIE 1-sigma uncertainty (mm) at ``year``, used for pre-anchor
+        years.  If None, defaults to 0.0.
     """
-    t_norm = (year - 2005) / (2100 - 2005)
-    if t_norm <= 0:
-        return np.zeros(n_samples)
+    if anchor_year is None:
+        anchor_year = WAIS_ONSET_YEAR
+    if anchor_value_mm is None:
+        anchor_value_mm = 0.0
+    if anchor_sigma_mm is None:
+        anchor_sigma_mm = 0.0
+
+    # Before anchor year: return IMBIE value with measurement uncertainty
+    if year <= anchor_year:
+        val = obs_value_mm if obs_value_mm is not None else anchor_value_mm
+        sig = obs_sigma_mm if obs_sigma_mm is not None else 0.0
+        if sig > 0:
+            return rng.normal(val, sig, size=n_samples)
+        return np.full(n_samples, val)
+
+    t_norm = (year - anchor_year) / (2100 - anchor_year)
 
     if rheology_mode not in ('A', 'B'):
         raise ValueError(f"rheology_mode must be 'A' or 'B', got {rheology_mode!r}")
+
+    # Per-sample anchor with IMBIE uncertainty
+    if anchor_sigma_mm > 0:
+        anchor_draws = rng.normal(anchor_value_mm, anchor_sigma_mm,
+                                  size=n_samples)
+    else:
+        anchor_draws = np.full(n_samples, anchor_value_mm)
 
     samples = np.zeros(n_samples)
     scenario_names = list(A4_SCENARIOS.keys())
@@ -238,7 +280,10 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A'):
             else:
                 beta = np.ones(n_s)
 
-        samples[mask] = base * (t_norm ** beta)
+        # Remaining contribution after anchor: H_2100 - H_anchor_i
+        anchor_i = anchor_draws[mask]
+        h_remaining = np.maximum(base - anchor_i, 0.0)
+        samples[mask] = anchor_i + h_remaining * (t_norm ** beta)
 
     return samples  # mm
 

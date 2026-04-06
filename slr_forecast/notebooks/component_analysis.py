@@ -63,9 +63,8 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
         H[i] = df['cumulative_mass_balance'].values[mask][-1]
         sigma[i] = np.abs(df['cumulative_mass_balance_sigma'].values[mask][-1])
 
-    # Convert mm → m (IMBIE mm files are in mm SLE)
-    H = H / M_TO_MM
-    sigma = sigma / M_TO_MM
+    # Data is already in meters from the reader (read_imbie_* converts
+    # mm → m).  No further unit conversion needed.
 
     # Rebase
     bl_idx = np.argmin(np.abs(years - baseline_year))
