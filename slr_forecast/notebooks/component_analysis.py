@@ -463,6 +463,307 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
     }
 
 
+# =========================================================================
+# Discharge delay model
+# =========================================================================
+
+def fit_discharge_delay_model(
+    dyn_years, H_dyn, sigma_dyn,
+    T_ocean_ann, T_ocean_years,
+    delta_candidates,
+    rate_window_yrs=10,
+    rate_constraint_weight=1,
+    n_samples=2000,
+    seed=None,
+):
+    """Fit the Greenland discharge delay model by demeaned WLS.
+
+    The model is:
+
+        H_dyn(t) = gamma * integral(T_ocean(t' - delta), t0..t) + r0 * t + const
+
+    fitted in demeaned form to eliminate the intercept.  The time delay
+    ``delta`` is selected from ``delta_candidates`` by BIC, and the
+    posterior is a BIC-weighted mixture of Gaussian draws from each
+    candidate's WLS covariance.
+
+    Parameters
+    ----------
+    dyn_years : ndarray
+        Observation times (decimal year) for cumulative discharge.
+    H_dyn : ndarray
+        Cumulative discharge observations (meters SLE, SLR convention).
+    sigma_dyn : ndarray
+        1-sigma uncertainties on H_dyn (meters).
+    T_ocean_ann : ndarray
+        Annual subsurface ocean temperature anomaly (deg C).
+    T_ocean_years : ndarray
+        Mid-year times for T_ocean_ann.
+    delta_candidates : array-like of float
+        Candidate time delays (years) to evaluate.
+    rate_window_yrs : float
+        Number of years at the end of the record used to estimate the
+        observed discharge rate (for the sanity-check rate constraint).
+    rate_constraint_weight : float
+        Weight multiplier for the rate constraint equation (1 = natural
+        measurement uncertainty; >1 inflates the rate weight).
+    n_samples : int
+        Number of posterior MC samples.
+    seed : int or None
+        Random seed for posterior draws.
+
+    Returns
+    -------
+    types.SimpleNamespace with attributes:
+        gamma_posterior, r0_posterior, delta_posterior : ndarray (n_samples,)
+        delta_best : float — BIC-selected delay
+        gamma_best, r0_best : float — WLS point estimates at delta_best
+        r2_dyn : float — R² at delta_best
+        bic_best : float
+        fit_results : dict — per-delta fit details
+        H_mean_cal, int_T_mean_cal, t_mean_cal : float — demeaning constants
+        r_obs_dyn, sigma_r_obs, t_end : float — end-of-record rate
+        xcorr_lags, xcorr_r, peak_lag, peak_r : ndarray/float — cross-corr
+        bic_weights : ndarray — normalised BIC weights
+        DELTA_CANDIDATES : ndarray
+    """
+    from types import SimpleNamespace
+
+    delta_candidates = np.asarray(delta_candidates, dtype=float)
+
+    # ── End-of-record observed discharge rate ──
+    rate_mask = dyn_years >= (dyn_years[-1] - rate_window_yrs)
+    t_rate = dyn_years[rate_mask]
+    H_rate = H_dyn[rate_mask]
+    sig_rate = sigma_dyn[rate_mask]
+    W_rate = 1.0 / sig_rate**2
+    X_rate_fit = np.column_stack([np.ones(len(t_rate)), t_rate])
+    XtWX_rate = X_rate_fit.T @ np.diag(W_rate) @ X_rate_fit
+    XtWy_rate = X_rate_fit.T @ (W_rate * H_rate)
+    beta_rate = np.linalg.solve(XtWX_rate, XtWy_rate)
+    _, r_obs_dyn = beta_rate
+    cov_rate = np.linalg.inv(XtWX_rate)
+    sigma_r_obs = np.sqrt(cov_rate[1, 1])
+    t_end = dyn_years[-1]
+
+    # ── Cross-correlation: ocean T rate vs discharge rate ──
+    dT_ocean = np.diff(T_ocean_ann) / np.diff(T_ocean_years)
+    t_dT = 0.5 * (T_ocean_years[:-1] + T_ocean_years[1:])
+    dH_dyn = np.diff(H_dyn) / np.diff(dyn_years)
+    t_dH = 0.5 * (dyn_years[:-1] + dyn_years[1:])
+
+    max_lag = 12
+    xcorr_lags = np.arange(0, max_lag + 1)
+    xcorr_r = np.zeros(len(xcorr_lags))
+    for k, lag in enumerate(xcorr_lags):
+        dT_shifted = np.interp(t_dH, t_dT + lag, dT_ocean,
+                               left=np.nan, right=np.nan)
+        valid = np.isfinite(dT_shifted)
+        if valid.sum() > 3:
+            xcorr_r[k] = np.corrcoef(dH_dyn[valid], dT_shifted[valid])[0, 1]
+        else:
+            xcorr_r[k] = np.nan
+
+    peak_lag = xcorr_lags[np.nanargmax(xcorr_r)]
+    peak_r = float(np.nanmax(xcorr_r))
+
+    # ── Demeaned WLS fit + rate constraint for each candidate delta ──
+    fit_results = {}
+    for delta in delta_candidates:
+        T_shifted = np.interp(dyn_years, T_ocean_years + delta, T_ocean_ann,
+                              left=np.nan, right=np.nan)
+        valid = np.isfinite(T_shifted)
+        if valid.sum() < 4:
+            continue
+
+        yrs_v = dyn_years[valid]
+        H_v = H_dyn[valid]
+        sig_v = sigma_dyn[valid]
+        T_v = T_shifted[valid]
+
+        dt_v = np.diff(yrs_v, prepend=yrs_v[0] - 1)
+        int_T = np.cumsum(T_v * dt_v)
+
+        H_mean = H_v.mean()
+        int_T_mean = int_T.mean()
+        t_mean = yrs_v.mean()
+
+        H_dm = H_v - H_mean
+        int_T_dm = int_T - int_T_mean
+        t_dm = yrs_v - t_mean
+
+        # Level equations
+        W_level = 1.0 / sig_v**2
+        X_level = np.column_stack([int_T_dm, t_dm])
+
+        # Rate constraint: gamma * T_ocean(t_end - delta) + r0 = r_obs
+        T_ocean_at_end = np.interp(t_end - delta, T_ocean_years, T_ocean_ann)
+        X_rate_eq = np.array([[T_ocean_at_end, 1.0]])
+        y_rate_eq = np.array([r_obs_dyn])
+        W_rate_eq = np.array([rate_constraint_weight / sigma_r_obs**2])
+
+        # Combined WLS
+        X = np.vstack([X_level, X_rate_eq])
+        y = np.concatenate([H_dm, y_rate_eq])
+        W = np.concatenate([W_level, W_rate_eq])
+
+        XtWX = X.T @ np.diag(W) @ X
+        XtWy = X.T @ (W * y)
+        beta_hat = np.linalg.solve(XtWX, XtWy)
+        gamma_fit, r0_fit = beta_hat
+        cov_beta = np.linalg.inv(XtWX)
+
+        # Residuals and R² on level equations only
+        H_pred_dm = X_level @ beta_hat
+        resid = H_dm - H_pred_dm
+        SS_res = np.sum(resid**2)
+        SS_tot = np.sum(H_dm**2)
+        r2 = 1.0 - SS_res / SS_tot
+
+        r_model = gamma_fit * T_ocean_at_end + r0_fit
+
+        n_valid = len(H_dm)
+        log_lik = -0.5 * np.sum(W_level * resid**2 + np.log(sig_v**2))
+        bic = 2 * np.log(n_valid) - 2 * log_lik
+
+        fit_results[float(delta)] = {
+            'gamma': gamma_fit, 'r0': r0_fit,
+            'cov': cov_beta, 'r2': r2, 'bic': bic,
+            'n_valid': n_valid,
+            'H_mean': H_mean, 'int_T_mean': int_T_mean, 't_mean': t_mean,
+            'H_pred_dm': H_pred_dm, 'H_dm': H_dm, 'resid': resid,
+            'yrs_valid': yrs_v, 'valid_mask': valid,
+            'r_model': r_model, 'r_obs': r_obs_dyn,
+            'T_ocean_at_end': T_ocean_at_end,
+        }
+
+    # ── Select best delta by BIC ──
+    bics = np.array([fit_results[d]['bic'] for d in delta_candidates
+                     if d in fit_results])
+    valid_deltas = np.array([d for d in delta_candidates if d in fit_results])
+    bic_min = bics.min()
+    bic_weights = np.exp(-0.5 * (bics - bic_min))
+    bic_weights /= bic_weights.sum()
+
+    delta_best = float(valid_deltas[np.argmin(bics)])
+    best = fit_results[delta_best]
+
+    # ── MC posterior: BIC-weighted Gaussian mixture ──
+    rng_mc = np.random.default_rng(seed)
+    n_per_delta = np.round(n_samples * bic_weights).astype(int)
+    n_per_delta[np.argmax(bic_weights)] += n_samples - n_per_delta.sum()
+
+    gamma_posterior = np.empty(n_samples)
+    r0_posterior = np.empty(n_samples)
+    delta_posterior = np.empty(n_samples)
+
+    idx_start = 0
+    for d, n_d in zip(valid_deltas, n_per_delta):
+        if n_d <= 0:
+            continue
+        fr = fit_results[d]
+        draws = rng_mc.multivariate_normal(
+            [fr['gamma'], fr['r0']], fr['cov'], size=n_d)
+        gamma_posterior[idx_start:idx_start + n_d] = draws[:, 0]
+        r0_posterior[idx_start:idx_start + n_d] = draws[:, 1]
+        delta_posterior[idx_start:idx_start + n_d] = d
+        idx_start += n_d
+
+    # Shuffle to avoid ordering artefacts
+    shuffle_idx = rng_mc.permutation(n_samples)
+    gamma_posterior = gamma_posterior[shuffle_idx]
+    r0_posterior = r0_posterior[shuffle_idx]
+    delta_posterior = delta_posterior[shuffle_idx]
+
+    return SimpleNamespace(
+        gamma_posterior=gamma_posterior,
+        r0_posterior=r0_posterior,
+        delta_posterior=delta_posterior,
+        delta_best=delta_best,
+        gamma_best=best['gamma'],
+        r0_best=best['r0'],
+        r2_dyn=best['r2'],
+        bic_best=best['bic'],
+        fit_results=fit_results,
+        H_mean_cal=best['H_mean'],
+        int_T_mean_cal=best['int_T_mean'],
+        t_mean_cal=best['t_mean'],
+        r_obs_dyn=r_obs_dyn,
+        sigma_r_obs=sigma_r_obs,
+        t_end=t_end,
+        xcorr_lags=xcorr_lags,
+        xcorr_r=xcorr_r,
+        peak_lag=peak_lag,
+        peak_r=peak_r,
+        bic_weights=bic_weights,
+        DELTA_CANDIDATES=valid_deltas,
+    )
+
+
+def compute_arc_cumulative(arc_years, arc_D_gtyr, arc_D_sig,
+                           H_last, t_last, sigma_last,
+                           baseline_drate, last_rate_anom,
+                           gt_to_m_sle):
+    """Compute cumulative ARC discharge from annual rate estimates.
+
+    Extends the Mouginot cumulative discharge record using NOAA Arctic
+    Report Card annual discharge estimates, connected to the end of the
+    Mouginot record by trapezoidal integration with propagated uncertainty.
+
+    Parameters
+    ----------
+    arc_years : ndarray
+        Mid-year decimal times for ARC estimates.
+    arc_D_gtyr : ndarray
+        ARC discharge rates (Gt/yr, absolute, not anomaly).
+    arc_D_sig : ndarray
+        ARC 1-sigma uncertainties (Gt/yr).
+    H_last : float
+        Last cumulative discharge value from calibration record (m SLE).
+    t_last : float
+        Last year of calibration record.
+    sigma_last : float
+        1-sigma uncertainty on H_last (m SLE).
+    baseline_drate : float
+        Baseline-period mean discharge rate (m SLE/yr).
+    last_rate_anom : float
+        Last rate anomaly from calibration record (m SLE/yr).
+    gt_to_m_sle : float
+        Conversion factor Gt -> m SLE.
+
+    Returns
+    -------
+    arc_H : ndarray
+        Cumulative discharge at ARC years (m SLE).
+    arc_H_sig : ndarray
+        1-sigma uncertainty on arc_H (m SLE).
+    arc_rate_anom : ndarray
+        ARC rate anomalies (m SLE/yr).
+    arc_rate_sig : ndarray
+        ARC rate sigma (m SLE/yr).
+    """
+    arc_rate_anom = arc_D_gtyr * gt_to_m_sle - baseline_drate
+    arc_rate_sig = arc_D_sig * gt_to_m_sle
+
+    arc_H = np.empty(len(arc_years))
+    arc_H_sig = np.empty(len(arc_years))
+
+    for j in range(len(arc_years)):
+        if j == 0:
+            dt = arc_years[j] - t_last
+            avg_rate = 0.5 * (last_rate_anom + arc_rate_anom[j])
+            arc_H[j] = H_last + avg_rate * dt
+            arc_H_sig[j] = np.sqrt(sigma_last**2 + (arc_rate_sig[j] * dt)**2)
+        else:
+            dt = arc_years[j] - arc_years[j - 1]
+            avg_rate = 0.5 * (arc_rate_anom[j - 1] + arc_rate_anom[j])
+            arc_H[j] = arc_H[j - 1] + avg_rate * dt
+            arc_H_sig[j] = np.sqrt(arc_H_sig[j - 1]**2
+                                   + (arc_rate_sig[j] * dt)**2)
+
+    return arc_H, arc_H_sig, arc_rate_anom, arc_rate_sig
+
+
 def project_ocean_temperature(transfer, T_surface_proj, time_proj,
                               n_samples=0, rng=None):
     """Project subsurface ocean temperature from surface T using a transfer function.

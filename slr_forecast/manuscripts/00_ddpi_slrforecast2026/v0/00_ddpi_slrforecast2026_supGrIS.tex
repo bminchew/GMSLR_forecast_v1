@@ -10,8 +10,9 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{cleveref}
+\graphicspath{{../../figures/}}
 
-\title{Supplementary Material: Physical derivation of Greenland discharge model parameters}
+\title{Supplementary Material}
 \author{}
 \date{}
 
@@ -173,6 +174,106 @@ Our Greenland SMB observations are taken from \citet{Mouginot2019}, which uses R
 The two cumulative SMB time series agree within observational uncertainties throughout the satellite era and the earlier Mouginot record. The Mankoff three-RCM average is systematically slightly lower (less mass loss) than Mouginot's RACMO-only SMB, consistent with the GrSMBMIP intercomparison \citep{Fettweis2020}, which found MAR produces $\sim$15\,Gt\,yr$^{-1}$ higher mean SMB than RACMO over 1980--2012 (372 vs.\ 357\,Gt\,yr$^{-1}$, a $\sim$4\% difference). The Mankoff values also track more closely to the RCM-independent GRACE-minus-discharge implied SMB, suggesting the multi-RCM average may marginally reduce individual model biases.
 
 Because the RACMO-only versus three-RCM difference ($\sim$15\,Gt\,yr$^{-1}$, or $\sim$0.04\,mm\,yr$^{-1}$ SLE) is small relative to both observational uncertainties and our other structural uncertainties (discharge model, ocean temperature reconstruction), the RCM choice does not materially affect our hindcast or projections. We retain RACMO via \citet{Mouginot2019} for consistency with the discharge calibration, which also uses the Mouginot dataset.
+
+%% ================================================================
+\section{Budget closure and residual attribution}
+\label{sec:budget_closure}
+
+Each component is calibrated against independent observations; the total sea level is a diagnostic sum, not a calibration target. The residual between the component sum and NASA satellite altimetry over the satellite era (1993--2020) provides a consistency check on the framework.
+
+\subsection{Residual trend}
+
+The component sum tracks NASA GMSL with a residual rate of $0.37$\,mm\,yr$^{-1}$ (1993--2020), meaning the component models collectively underpredict the observed rate by this amount. The total observed rate over this period is $\sim$3.1\,mm\,yr$^{-1}$, so the residual represents $\sim$12\% of the signal.
+
+\subsection{Variance-weighted attribution}
+
+We distribute the residual across components in proportion to their variances at each time step:
+\begin{equation}
+	\mathrm{shift}_i(t) = \frac{\sigma_i^2(t)}{\sum_j \sigma_j^2(t)} \times r(t),
+	\label{eq:budget_shift}
+\end{equation}
+where $r(t) = H_{\mathrm{obs}}(t) - \sum_i H_i(t)$ is the residual between NASA GMSL and the component sum, and $\sigma_i(t)$ is the standard deviation of component $i$ from its Monte Carlo ensemble at time $t$. This is the Bayesian posterior update under joint Gaussian assumptions, applied as a diagnostic without modifying the component posteriors. The shift-to-sigma ratio $|\mathrm{shift}_i| / \sigma_i$ for each component tests whether the implied adjustment lies within the stated uncertainty.
+
+\Cref{tab:budget_attribution} summarizes the attribution. The thermosteric component absorbs the largest share of the residual (57\%), consistent with the documented low bias in the NOAA product from interpolation of sparse hydrographic profiles \citep{Li2022, Cheng2017}. The 14\% structural uncertainty applied to NOAA observations in our framework partially accounts for this bias; the remaining excess ($\mathrm{shift}/\sigma = 3.9$ at 2020) reflects the accumulation of this systematic error over the full 1955--2020 record. Terrestrial water storage absorbs 23\%, reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. All ice-related components---glaciers, Greenland, WAIS---have shift-to-sigma ratios below 1.5, indicating that their contributions are consistent with the independently stated uncertainties.
+
+\begin{table}[h]
+\centering
+\caption{Variance-weighted budget residual attribution over the satellite era (1993--2020). The variance fraction gives each component's share of the total ensemble variance, which determines how much of the residual it absorbs. The rate shift is the implied correction to each component's trend. The shift-to-sigma ratio at 2020 tests whether the cumulative correction lies within the component's stated uncertainty ($<1$: well within; $1$--$2$: marginally consistent; $>2$: tension).}
+\label{tab:budget_attribution}
+\smallskip
+\begin{tabular}{l r r r r}
+\toprule
+Component & Var.\ fraction & Rate shift & Shift at 2020 & Shift/$\sigma$ \\
+          & (\%)           & (mm\,yr$^{-1}$) & (mm) & at 2020 \\
+\midrule
+Thermosteric  & 57 & $+0.26$ & $+9.6$  & 3.9 \\
+Glaciers      &  1 & $+0.01$ & $+0.4$  & 0.8 \\
+Greenland     &  8 & $+0.02$ & $+0.1$  & 0.4 \\
+EAIS          &  0 & $+0.00$ & $+0.1$  & 0.4 \\
+Peninsula     &  0 & $+0.00$ & $+0.0$  & 0.2 \\
+WAIS          & 10 & $+0.03$ & $+0.8$  & 1.1 \\
+TWS           & 23 & $+0.04$ & $+1.6$  & 1.6 \\
+\midrule
+Total residual & 100 & $+0.37$ & $+12.6$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Interpretation}
+
+The budget closes without requiring any component to depart from what the observations support. The dominant source of the residual---the thermosteric low bias---is a known property of the NOAA product and does not indicate a missing physical process. The TWS contribution reflects the difficulty of reconstructing pre-GRACE terrestrial water storage from sparse well and reservoir records. The ice-sheet and glacier components, which are the primary sources of forecast uncertainty, are all within $1.5\sigma$ of their independent estimates, providing confidence that the component models are not systematically biased in ways that would compound into the projections.
+
+The EAIS contribution to the budget is negligible ($<0.5$\% of variance), consistent with its exclusion from the forecast sum. Including EAIS in the budget diagnostic confirms that its shift ($+0.1$\,mm at 2020, $\mathrm{shift}/\sigma = 0.4$) is well within uncertainty and does not affect the closure assessment.
+
+\Cref{fig:budget_closure} shows the component sum tracking NASA GMSL over the satellite era and the variance-weighted decomposition of the residual.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{component_budget_closure.png}
+\caption{\textbf{Budget closure diagnostic (1993--2020).}
+\textbf{(A)}~Component sum (blue) vs.\ NASA satellite altimetry (black).
+The component sum tracks the observed GMSL trajectory with a residual
+trend of 0.37\,mm\,yr$^{-1}$.
+\textbf{(B)}~Variance-weighted attribution of the residual across
+components.  The thermosteric component (red) absorbs 57\% of the
+residual, consistent with the documented low bias in NOAA in situ
+observations.  Terrestrial water storage (yellow) absorbs 23\%.  All
+ice-related components are within $1.5\sigma$ of their independent
+estimates.}
+\label{fig:budget_closure}
+\end{figure}
+
+
+%% ================================================================
+\section{IPCC AR6 distribution representation}
+\label{sec:ipcc_distributions}
+
+The IPCC AR6 sea-level projections \citep{Fox-Kemper2021} are distributed as probability boxes (p-boxes) rather than full probability distributions. Each component and total projection is provided at 107 quantile levels $(q = 0, 0.001, 0.005, \ldots, 0.995, 0.999, 1)$ on a decadal time grid. These quantiles are constructed by combining multiple FACTS workflow outputs: for a given quantile $q$, quantiles below the median are taken as the minimum across workflows, quantiles above the median as the maximum, and the median itself as the mean of workflow medians. This p-box construction produces conservative uncertainty bounds but introduces a structural discontinuity at the median: the lower and upper halves of the distribution derive from different workflows, creating a non-physical kink in the implied probability density at $q = 0.5$.
+
+When IPCC projections are used as a comparison distribution---for example, in ridge plots showing the evolution of forecast uncertainty across decades---this artifact manifests as a spurious bimodal bump near the median that does not reflect the assessed uncertainty. Converting the 107 quantiles to samples via linear interpolation (as in the IPCC-provided \texttt{sample\_from\_quantiles.py} script) faithfully reproduces this artifact.
+
+To obtain a smooth, unimodal representation that preserves the IPCC's assessed central estimate and spread, we fit a skew-normal distribution to the five key quantiles at each time step:
+\begin{equation}
+    \{q_{0.05},\, q_{0.17},\, q_{0.50},\, q_{0.83},\, q_{0.95}\}.
+    \label{eq:ipcc_quantiles}
+\end{equation}
+The skew-normal distribution $\mathrm{SN}(\xi, \omega, \alpha)$ has probability density
+\begin{equation}
+    f(x) = \frac{2}{\omega}\,\phi\!\left(\frac{x - \xi}{\omega}\right)\,\Phi\!\left(\alpha\,\frac{x - \xi}{\omega}\right),
+    \label{eq:skewnorm_pdf}
+\end{equation}
+where $\phi$ and $\Phi$ are the standard normal density and distribution function, $\xi$ is the location, $\omega > 0$ the scale, and $\alpha$ the shape parameter controlling asymmetry ($\alpha = 0$ recovers the normal distribution; $\alpha > 0$ produces a heavier right tail).
+
+The three parameters $(\xi, \omega, \alpha)$ are estimated by minimizing the sum of squared quantile residuals:
+\begin{equation}
+    \min_{\xi,\,\omega,\,\alpha} \sum_{i=1}^{5} \left[ F^{-1}_{\mathrm{SN}}(p_i;\, \xi, \omega, \alpha) - q_{p_i}^{\,\mathrm{IPCC}} \right]^2,
+    \label{eq:skewnorm_fit}
+\end{equation}
+where $F^{-1}_{\mathrm{SN}}$ is the skew-normal quantile function and $p_i \in \{0.05, 0.17, 0.50, 0.83, 0.95\}$. To avoid the symmetric local minimum at $\alpha = 0$, the optimization (Nelder--Mead) is run from four starting points with $\alpha_0 \in \{0, \pm 2s, \pm 5s, \pm 10s\}$, where $s = \mathrm{sgn}[(q_{0.95} - q_{0.50}) - (q_{0.50} - q_{0.05})]$ reflects the observed asymmetry direction. The target quantiles are normalized to unit range before optimization for numerical conditioning.
+
+The fitted skew-normal recovers all five IPCC quantiles to within a few millimeters across all components, SSPs, and time steps. The positive shape parameter ($\alpha \approx 6$--$9$ for the total projection) correctly captures the heavier upper tail that characterizes IPCC sea-level projections---a consequence of the right-skewed ice-sheet contribution---while producing a smooth, unimodal density that is straightforward to interpret.
+
+For generating Monte Carlo samples, we draw directly from the fitted $\mathrm{SN}(\xi, \omega, \alpha)$ using standard methods. We precompute these fits and samples for all IPCC components ($N = 2{,}000$ standard samples and $N = 10{,}000$ oversampled draws for kernel density estimation) and store them for use in downstream analyses.
 
 \bibliographystyle{agufull08}
 \bibliography{references}

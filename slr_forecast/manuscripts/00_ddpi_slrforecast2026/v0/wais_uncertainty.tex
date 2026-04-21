@@ -1,0 +1,853 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{natbib}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+% doi command
+\newcommand{\doi}[1]{\href{https://doi.org/#1}{doi:#1}}
+
+% Theorem environments
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+
+% Custom commands
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Qg}{Q_g}
+\newcommand{\qg}{q_g}
+\newcommand{\hg}{h_g}
+\newcommand{\hhat}{\hat{h}}
+\newcommand{\Mhat}{\hat{M}}
+\newcommand{\That}{\hat{T}}
+\newcommand{\xg}{x_g}
+\newcommand{\rhoi}{\rho_{\mathrm{i}}}
+\newcommand{\rhow}{\rho_{\mathrm{w}}}
+\newcommand{\Aoc}{A_{\mathrm{oc}}}
+\newcommand{\Vaf}{V_{\mathrm{af}}}
+\newcommand{\tdim}{\tilde{t}}
+
+\title{Supplementary Material: WAIS uncertainty---bounds on mass loss\\and the trajectory exponent from grounding-line flux theory}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+%======================================================================
+\section{Introduction}
+%======================================================================
+
+The West Antarctic Ice Sheet (WAIS) is the largest source of uncertainty in sea-level projections at centennial timescales. Marine ice sheet instability (MISI) on retrograde beds can drive self-sustaining grounding-line retreat, but the rate and magnitude of this retreat are constrained by ice dynamics and bed geometry. Here we derive two complementary bounds on the WAIS contribution to sea-level rise (SLR) during the 21st century, using the grounding-line flux laws of \citet{Schoof2007}, \citet{Pegler2018}, and \citet{HaseloffSergienko2018}.
+
+\begin{enumerate}
+	\item A \textbf{geometric lower bound} ($\sim$200\,mm\,SLE for WAIS): the minimum SLR from grounding-line retreat through the retrograde bed sections, independent of ice rheology ($n$), basal sliding ($m$), and the rate factor ($A$). If MISI is triggered, the bed geometry alone guarantees at least this much mass loss, regardless of the uncertain details of ice dynamics.
+
+	\item A \textbf{buttressing-dependent upper bound}: the maximum SLR achievable under a given level of residual buttressing. In the zero-buttressing limit, the dynamics are so fast ($s > 4.5$, finite-time singularity within decades) that the upper bound saturates at the total ice volume above flotation ($\Vaf \sim 3.3$\,m for WAIS). A non-trivial upper bound requires partial buttressing, parameterized by the framework-specific buttressing exponents of \citet{Pegler2018} and \citet{HaseloffSergienko2018}.
+\end{enumerate}
+
+The derivation connects the reduced dynamics of grounding-line flux theory to the scenario ranges of the A4 framework, providing physical grounding for both the lower and upper ends of the MISI scenario (S2: 150--1000\,mm).
+
+
+%======================================================================
+\section{Grounding-line flux law}
+\label{sec:flux_law}
+%======================================================================
+
+\subsection{The Schoof flux condition}
+
+\citet{Schoof2007} derived the grounding-line flux condition for a marine ice sheet using matched asymptotic expansions. For a power-law sliding law
+\begin{equation}
+	\tau_b = C\,|u_b|^{m-1}\,u_b,
+	\label{eq:sliding_law}
+\end{equation}
+where $m$ is the velocity exponent ($0 < m \leq 1$; $m \to 0$ for a perfectly plastic bed, $m = 1/n$ for Weertman sliding at Glen's law exponent $n$), the unbuttressed grounding-line flux is
+\begin{equation}
+	\qg^{\,\mathrm{unbutt}} \propto \hg^{\,s_{\mathrm{full}}},
+	\qquad
+	s_{\mathrm{full}} = \frac{m + n + 3}{m + 1}.
+	\label{eq:s_full}
+\end{equation}
+Two limiting cases confirm the physical content: for a perfectly plastic bed ($m \to 0$), $s_{\mathrm{full}} \to n + 3$---the flux is highly sensitive to thickness because ice viscosity provides the only resistance; for linear sliding ($m = 1$), $s_{\mathrm{full}} = (n+4)/2$---basal drag provides significant resistance. In both limits $s_{\mathrm{full}} > 2$ for $n \geq 3$.
+
+\subsection{Buttressing and the three frameworks}
+\label{sec:buttressing}
+
+Ice-shelf buttressing reduces the flux relative to its unbuttressed value. We parameterize the resistive stress through a buttressing ratio $\theta \in [0,1]$:
+\begin{equation}
+	\theta \equiv \frac{\tau_{\mathrm{back}}}{\tau_{\mathrm{ext}}^{\,0}},
+	\qquad
+	\tau_{\mathrm{ext}}^{\,0} = \tfrac{1}{2}\,\rhoi\,g\,(1 - \rhoi/\rhow)\,\hg,
+	\label{eq:theta_def}
+\end{equation}
+where $\tau_{\mathrm{ext}}^{\,0}$ is the extensional stress that an unbuttressed grounding line would support (from the hydrostatic imbalance between grounded ice and the adjacent ocean column).  With $\theta = 0$, the ice shelf provides no resistance; with $\theta = 1$, the shelf fully compensates the extensional stress and the grounding line is in equilibrium.
+
+The net extensional stress driving flow at the grounding line is then
+\begin{equation}
+	\tau_{\mathrm{ext}} = \tau_{\mathrm{ext}}^{\,0}\,(1 - \theta).
+	\label{eq:tau_ext}
+\end{equation}
+The buttressed flux takes the general form
+\begin{equation}
+	\qg(\theta) = \qg^{\,\mathrm{unbutt}}\,(1 - \theta)^{s_b},
+	\label{eq:buttressed_flux}
+\end{equation}
+where the \emph{buttressing exponent} $s_b$ depends on how the ice shelf generates its back-stress.  We derive $s_b$ for three frameworks below.
+
+\subsubsection{Schoof (2007): unconfined shelf}
+\label{sec:sb_schoof}
+
+In the \citet{Schoof2007} boundary-layer analysis, the grounding-line flux is determined by matching the outer (ice-sheet) solution to the inner (boundary-layer) solution near the grounding line.  In the boundary layer, the dominant stress balance is between longitudinal (extensional) stress gradients and basal drag:
+\begin{equation}
+	\frac{\partial}{\partial x}\!\left[2\,\bar{A}^{-1/n}\,h\,\left|\frac{\partial u}{\partial x}\right|^{(1/n)-1}\frac{\partial u}{\partial x}\right] = C\,|u|^{m-1}\,u,
+	\label{eq:BL_balance}
+\end{equation}
+where $\bar{A}$ is the depth-averaged rate factor.  The extensional stress at the grounding line provides the boundary condition via \cref{eq:tau_ext}:
+\begin{equation}
+	2\,\bar{A}^{-1/n}\left|\frac{\partial u}{\partial x}\right|^{(1/n)-1}\frac{\partial u}{\partial x}\bigg|_{x = \xg}
+	= \tau_{\mathrm{ext}}^{\,0}\,(1 - \theta).
+	\label{eq:BL_BC}
+\end{equation}
+From Glen's law, the extensional strain rate at the grounding line scales as
+\begin{equation}
+	\dot{\varepsilon}_{xx}\big|_{\xg} \sim \bigl[\tau_{\mathrm{ext}}^{\,0}\,(1-\theta)\bigr]^n
+	\propto \hg^n\,(1-\theta)^n.
+	\label{eq:strain_rate_GL}
+\end{equation}
+The boundary-layer structure couples this strain rate to the basal sliding velocity through the stress balance \cref{eq:BL_balance}.  \citet{Schoof2007} showed (his equation~29) that the resulting flux scales as
+\begin{equation}
+	\qg \propto \hg^{(m+n+3)/(m+1)}\cdot\bigl[(1-\theta)\,\Delta\rho\,g\bigr]^{n/(m+1)},
+	\label{eq:schoof_full}
+\end{equation}
+where $\Delta\rho = \rhoi(1 - \rhoi/\rhow)$.  The physical origin of the exponent $n/(m+1)$ is as follows: the extensional stress enters Glen's law to the power $n$ (giving $\dot{\varepsilon} \propto \tau^n$), but this strain rate must be transmitted through the boundary layer against basal drag with exponent $m$, which introduces the denominator $m+1$.  Reading off the $(1-\theta)$ dependence:
+\begin{equation}
+	\boxed{s_b^{\,(S)} = \frac{n}{m+1}.}
+	\label{eq:sb_schoof}
+\end{equation}
+This is the buttressing exponent for an unconfined ice shelf that provides back-stress only through longitudinal compression, without lateral drag.
+
+\subsubsection{Pegler (2018): confined shelf with lateral drag}
+\label{sec:sb_pegler}
+
+When the ice shelf is confined in a lateral embayment of half-width $W$, lateral drag provides additional resistance.  The depth-integrated lateral shear stress along the shelf margins is
+\begin{equation}
+	\tau_{\mathrm{lat}} = \bar{A}^{-1/n}\left(\frac{u}{W}\right)^{1/n},
+	\label{eq:tau_lat}
+\end{equation}
+where we have assumed a simple shear profile across the shelf width.  The shelf force balance per unit width, including lateral drag, is \citep{Pegler2018}
+\begin{equation}
+	\frac{\dd}{\dd x}\!\left(h\,\sigma_{xx}\right) = \rhoi\,g\,h\,\frac{\dd h}{\dd x} - \frac{2\,h\,\tau_{\mathrm{lat}}}{W}.
+	\label{eq:shelf_force_balance}
+\end{equation}
+The back-stress that the shelf transmits to the grounding line depends on the integrated lateral drag along the shelf length $L_s$:
+\begin{equation}
+	\tau_{\mathrm{back}} \sim \frac{2\,\tau_{\mathrm{lat}}\,L_s}{W}.
+	\label{eq:tau_back_confined}
+\end{equation}
+The lateral drag $\tau_{\mathrm{lat}} \propto (u/W)^{1/n}$ depends on the shelf velocity, and the shelf velocity is itself set by the balance between driving stress and lateral drag.  Solving this self-consistently for a shelf of uniform thickness $h_s$ and length $L_s$:
+\begin{equation}
+	u_s \propto \left(\frac{\rhoi\,g\,h_s}{L_s}\,\frac{W^{1/n+1}}{2\,\bar{A}^{-1/n}}\right)^{n/(n+1)} \!\cdot\, h_s^{n/(n+1)}.
+	\label{eq:shelf_velocity}
+\end{equation}
+Substituting back into \cref{eq:tau_lat} and \cref{eq:tau_back_confined}, the back-stress scales as
+\begin{equation}
+	\tau_{\mathrm{back}} \propto h_s^{(n+1)/(n+1)} \cdot (\text{geometry terms}) = h_s \cdot f(L_s, W, \bar{A}).
+	\label{eq:tau_back_scaling}
+\end{equation}
+The key result is that the back-stress is \emph{linear} in $h_s$.  Near the grounding line, $h_s \sim \hg$, so $\tau_{\mathrm{back}} \propto \hg$.  Since $\tau_{\mathrm{ext}}^{\,0} \propto \hg$ as well (\cref{eq:theta_def}), the buttressing ratio $\theta = \tau_{\mathrm{back}}/\tau_{\mathrm{ext}}^{\,0}$ is approximately independent of $\hg$ for a given shelf geometry.  This means $\theta$ acts as a simple scalar reduction factor.
+
+However, the additional $h$-dependence in the lateral drag modifies how the net extensional stress enters the boundary-layer dynamics.  \citet{Pegler2018} showed (his equations~3.23--3.24 and~4.3) that the confined-shelf buttressing effectively replaces the stress boundary condition \cref{eq:BL_BC} with one that includes an extra factor of $\hg$ from the shelf's lateral drag.  The strain rate at the grounding line becomes
+\begin{equation}
+	\dot{\varepsilon}_{xx}\big|_{\xg} \propto \hg^{n+1}\,(1-\theta)^{n+1}
+	\label{eq:strain_rate_confined}
+\end{equation}
+instead of $\hg^n(1-\theta)^n$ in the unconfined case.  The extra power of $(1-\theta)$ arises because a reduction in buttressing both increases the driving stress \emph{and} reduces the lateral drag (through the thickness--velocity coupling in the shelf).  Propagating this through the boundary-layer matching:
+\begin{equation}
+	\qg \propto \hg^{s_{\mathrm{full}}}\,(1-\theta)^{(n+1)/(m+1)},
+	\label{eq:pegler_flux}
+\end{equation}
+giving
+\begin{equation}
+	\boxed{s_b^{\,(P)} = \frac{n+1}{m+1}.}
+	\label{eq:sb_pegler}
+\end{equation}
+The confined exponent exceeds the unconfined one by $1/(m+1)$ because lateral drag in the shelf depends on ice thickness through Glen's law viscosity---thinner ice (less buttressing) transmits less lateral stress, amplified by the shear-thinning rheology ($n > 1$).
+
+\subsubsection{Haseloff \& Sergienko (2018, 2022): resolved shear margins}
+\label{sec:sb_haseloff}
+
+\citet{HaseloffSergienko2018} extended the Pegler analysis by explicitly resolving the shear-margin boundary layers at the lateral edges of the ice shelf, rather than parameterizing lateral drag through a width-averaged shear stress.  In their framework, the shear margin has a finite width $\ell_m$ that depends on the local strain rate and ice rheology:
+\begin{equation}
+	\ell_m \propto W\,\left(\frac{\dot{\varepsilon}_{xy}}{\dot{\varepsilon}_{xx}}\right)^{(n-1)/2}
+	\propto W\,\left(\frac{u/W}{\partial u/\partial x}\right)^{(n-1)/2},
+	\label{eq:margin_width}
+\end{equation}
+where $\dot{\varepsilon}_{xy}$ is the lateral shear rate and $\dot{\varepsilon}_{xx}$ the extensional rate.  The effective viscosity in the margin is reduced by shear heating and the nonlinear rheology, which narrows the margin and concentrates the lateral resistance.
+
+The margin width depends on the velocity (and hence on $\hg$ and $\theta$) through the strain-rate ratio.  When buttressing decreases, the extensional rate increases relative to the lateral shear rate, the margin narrows, and the effective lateral drag per unit shelf length decreases slightly faster than in the Pegler parameterization.  \citet{HaseloffSergienko2018} showed (their equation~3.15 and Appendix~B) that this introduces an additional correction of $1/n$ to the buttressing exponent:
+\begin{equation}
+	\boxed{s_b^{\,(H)} = \frac{n+1}{m+1} + \frac{1}{n}.}
+	\label{eq:sb_haseloff}
+\end{equation}
+The $1/n$ term is small for large $n$ (0.25 for $n = 4$) and arises from the strain-rate dependence of the margin width.  For $n \to \infty$ (perfectly plastic ice), $s_b^{(H)} \to s_b^{(P)}$: the margin width becomes insensitive to strain rate, and the Haseloff and Pegler frameworks converge.
+
+\subsubsection{Summary}
+
+For Weertman sliding ($m = 1/n$), \cref{tab:exponents} collects the numerical values. The buttressing exponents $s_b$ control how sensitively the flux responds to partial loss of buttressing; they are distinct from the full flux-thickness exponent $s_{\mathrm{full}}$, which governs the response to grounding-line deepening.
+
+\begin{table}[ht]
+\centering
+\caption{Flux and buttressing exponents for Weertman sliding ($m = 1/n$). The full flux exponent $s_{\mathrm{full}}$ enters the retreat dynamics; the buttressing exponents $s_b$ enter the buttressing-dependent bound.}
+\label{tab:exponents}
+\smallskip
+\begin{tabular}{l c c c}
+\toprule
+& $n = 3$, $m = 1/3$ & $n = 4$, $m = 1/4$ & Plastic ($m\to0$) \\
+\midrule
+$s_{\mathrm{full}} = (m+n+3)/(m+1)$ & 4.75 & 5.80 & $n+3$ \\[4pt]
+$s_b^{(S)} = n/(m+1)$ & 2.25 & 3.20 & $n$ \\
+$s_b^{(P)} = (n+1)/(m+1)$ & 3.00 & 4.00 & $n+1$ \\
+$s_b^{(H)} = (n+1)/(m+1) + 1/n$ & 3.33 & 4.25 & $n+1+1/n$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+%======================================================================
+\section{Retreat dynamics and the geometric lower bound}
+\label{sec:lower_bound}
+%======================================================================
+
+\subsection{Setup}
+
+Consider a marine-terminating glacier with grounding-line position $\xg(t)$ on a retrograde bed
+\begin{equation}
+	b(x) = -(b_0 + \alpha_b\, x),
+	\label{eq:bed}
+\end{equation}
+where $b_0 > 0$ is the current bed depth and $\alpha_b > 0$ is the retrograde slope. At the grounding line, ice is at flotation:
+\begin{equation}
+	\hg(\xg) = \phi\,(b_0 + \alpha_b\, \xg) = h_0 + \phi\,\alpha_b\, \xg,
+	\label{eq:flotation}
+\end{equation}
+with $\phi = \rhow/\rhoi \approx 1.12$ and $h_0 = \phi\, b_0$.
+
+The grounding-line retreat rate is \citep{Schoof2012}
+\begin{equation}
+	\dot{\xg} = \frac{\qg - q_{\mathrm{in}}}{\hg},
+	\label{eq:retreat_rate}
+\end{equation}
+where $q_{\mathrm{in}}$ is the upstream resupply flux. Setting $q_{\mathrm{in}} = 0$ and $\dot{a} = 0$ (zero accumulation) gives the fastest possible retreat. In this limit, with $\qg = q_0(\hg/h_0)^{s_{\mathrm{full}}}$ calibrated to the current discharge:
+\begin{equation}
+	\frac{\dd\hhat}{\dd\tdim} = \hhat^{\,s_{\mathrm{full}}-1},
+	\qquad \hhat(0) = 1,
+	\label{eq:hhat_ode}
+\end{equation}
+where $\hhat = \hg/h_0$, $\tdim = t/t_*$, and
+\begin{equation}
+	t_* = \frac{h_0}{\phi\,\alpha_b\,u_0}
+	\label{eq:tstar}
+\end{equation}
+is the \emph{geometric timescale} ($u_0 = q_0/h_0$ is the current grounding-line velocity).
+
+\subsection{Finite-time singularity}
+
+For $s_{\mathrm{full}} > 2$ (all physically relevant cases, \cref{tab:exponents}):
+\begin{equation}
+	\hhat(\tdim) = \bigl[1 - (s_{\mathrm{full}}-2)\,\tdim\bigr]^{-1/(s_{\mathrm{full}}-2)},
+	\label{eq:hhat_solution}
+\end{equation}
+which diverges at
+\begin{equation}
+	t_{\mathrm{sing}} = \frac{t_*}{s_{\mathrm{full}} - 2}.
+	\label{eq:t_sing}
+\end{equation}
+For Thwaites Glacier (\cref{tab:parameters}; $t_* \approx 116$\,yr) with $n = 4$ ($s_{\mathrm{full}} = 5.8$): $t_{\mathrm{sing}} \approx 31$\,yr from onset, i.e., $\sim$2041. This is not a prediction of actual behavior---it reflects the extreme zero-resupply, zero-buttressing assumptions---but it demonstrates that the flux dynamics are \emph{fast} relative to the 21st-century timescale.
+
+\subsection{The geometric mass-loss identity}
+
+The total SLR from a marine ice sheet satisfies the mass conservation identity
+\begin{equation}
+	H_{\mathrm{SLR}}(T) = \frac{1}{\rhow\,\Aoc}\int_0^T\!\bigl(\Qg(t) - \dot{a}_{\mathrm{total}}\bigr)\,\dd t,
+	\label{eq:slr_identity}
+\end{equation}
+where $\Qg = \rhoi\,\qg\,W$ is the total grounding-line discharge and $\dot{a}_{\mathrm{total}}$ is the total accumulation over the grounded domain. This identity holds for the full coupled system: sustaining grounding-line discharge $\Qg$ requires interior drawdown that reduces the mass above flotation. Even though ice at the grounding line is at flotation (zero local mass above flotation), the process of sustaining the discharge thins the interior, and it is this interior thinning that raises sea level.
+
+In the zero-resupply, zero-accumulation limit, the total mass crossing the grounding line during the traverse of the retrograde section from $b_0$ to $b_{\max}$ can be computed by changing variables from $t$ to $\xg$. Since $\qg\,\dd t = \hg\,\dd\xg$ in this limit:
+\begin{equation}
+	\int_0^{t_{\max}}\!\!\qg\,\dd t
+	= \int_0^{\Delta x}\!\hg\,\dd\xg
+	= \int_0^{\Delta x}\!\phi(b_0 + \alpha_b\,x)\,\dd x
+	= \frac{\phi}{2}\bigl(b_{\max}^2 - b_0^2\bigr)\,\frac{1}{\alpha_b}.
+	\label{eq:traverse_integral}
+\end{equation}
+
+\begin{proposition}[Geometric lower bound]
+\label{prop:lower_bound}
+If MISI drives the grounding line through the full retrograde section (bed depths $b_0$ to $b_{\max}$), the resulting SLR satisfies
+\begin{equation}
+	\boxed{H_{\mathrm{SLR}} \geq \frac{\rhoi\,W\,\phi}{2\,\rhow\,\Aoc\,\alpha_b}\bigl(b_{\max}^2 - b_0^2\bigr) = \frac{Q_0\,t_*}{\rhow\,\Aoc}\cdot\frac{\hhat_{\max}^2 - 1}{2},}
+	\label{eq:lower_bound}
+\end{equation}
+where $\hhat_{\max} = \phi\,b_{\max}/h_0$. This bound is independent of $n$, $m$, the rate factor $A$, and the sliding coefficient $C$. It depends only on the bed profile ($b_0$, $b_{\max}$, $\alpha_b$), glacier width ($W$), and the current state ($h_0$, $Q_0$).
+\end{proposition}
+
+\noindent The $s$-independence follows from the change of variables: $\qg\,\dd t = \hg\,\dd\xg$ eliminates the flux law entirely. All that $s$ controls is \emph{how fast} the traverse occurs, not \emph{how much mass} is lost during it.
+
+\paragraph{Remark: why this is a lower bound.} The traverse integral counts only the discharge accumulated while the grounding line sweeps the retrograde section. After reaching maximum bed depth, the grounding line continues to discharge ice---potentially at very high rates---drawing down interior ice above flotation. This post-traverse contribution can be very large (see \cref{sec:upper_bound}). Moreover, in a fully coupled system with interior resupply, the total integrated discharge $\int \Qg\,\dd t$ exceeds the traverse integral even during the retrograde phase, because interior ice flowing toward the grounding line is an additional source of discharge mass. The traverse integral is therefore a strict lower bound on the SLR from MISI.
+
+\subsection{Numerical evaluation}
+
+\begin{table}[ht]
+\centering
+\caption{Representative parameters for Thwaites Glacier and the Amundsen Sea Embayment (ASE). Bed depths and slopes from BedMachine Antarctica \citep{Morlighem2020}. Discharges from \citet{Rignot2019}. The geometric timescale is $t_* = h_0/(\phi\,\alpha_b\,u_0)$.}
+\label{tab:parameters}
+\smallskip
+\begin{tabular}{l c c l}
+\toprule
+Parameter & Thwaites & ASE (total) & Source \\
+\midrule
+GL width, $W$ & 120\,km & 300\,km & Remote sensing \\
+Current bed depth, $b_0$ & 700\,m & 600--900\,m & BedMachine \\
+Flotation thickness, $h_0$ & 785\,m & --- & Derived \\
+Max trough depth, $b_{\max}$ & 2000\,m & 1200--2000\,m & BedMachine \\
+$\hhat_{\max}$ & 2.85 & 1.5--2.9 & Derived \\
+Retrograde slope, $\alpha_b$ & 0.0052 & 0.003--0.008 & BedMachine \\
+Total discharge, $Q_0$ & 100\,Gt/yr & 250\,Gt/yr & \citet{Rignot2019} \\
+GL velocity, $u_0$ & 1.2\,km/yr & 0.5--4\,km/yr & InSAR \\
+$t_*$ & 116\,yr & 80--200\,yr & Eq.~\eqref{eq:tstar} \\
+$\Vaf$ & $\sim$600\,mm & $\sim$1100\,mm & \citet{Morlighem2020} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:lower_bounds} evaluates the geometric lower bound for the major ASE glacier systems and for WAIS as a whole.
+
+\begin{table}[ht]
+\centering
+\caption{Geometric lower bound on SLR from MISI retrograde retreat. These values are independent of $n$, $m$, and $s$. The traverse time $t_{\max}$ is shown for $n = 4$ ($s_{\mathrm{full}} = 5.8$) to confirm that the full retrograde section can be traversed within the century under zero-resupply dynamics.}
+\label{tab:lower_bounds}
+\smallskip
+\begin{tabular}{l c c c}
+\toprule
+System & Lower bound (mm\,SLE) & $t_{\max}$ ($n{=}4$) & $\Vaf$ (mm\,SLE) \\
+\midrule
+Thwaites & 114 & $\sim$30\,yr & $\sim$600 \\
+Pine Island & $\sim$30 & $\sim$20\,yr & $\sim$400 \\
+Smith/Kohler & $\sim$10 & $\sim$15\,yr & $\sim$100 \\
+\midrule
+ASE total & $\sim$\textbf{155} & --- & $\sim$1100 \\
+Other WAIS & $\sim$50 & --- & $\sim$2200 \\
+\midrule
+\textbf{Total WAIS} & $\sim$\textbf{200} & --- & $\sim$3300 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The geometric lower bound for all of WAIS is approximately \textbf{200\,mm\,SLE}. This is the minimum SLR from MISI if the grounding lines traverse their full retrograde sections, regardless of the ice rheology. The traverse times ($\sim$15--30\,yr for individual ASE glaciers at $n = 4$) confirm that the full retrograde sections can be traversed well within the 21st century under the zero-resupply dynamics, so the bound is achievable within the projection horizon.
+
+
+%======================================================================
+\section{Buttressing-dependent upper bound}
+\label{sec:upper_bound}
+%======================================================================
+
+\subsection{The zero-buttressing ceiling: $\Vaf$}
+
+After the grounding line passes the deepest point of the retrograde section, discharge continues---potentially at very high rates. The peak flux ratio at maximum bed depth is $\hat{q}_{\max} = \hhat_{\max}^{s_{\mathrm{full}}}$. For Thwaites with $\hhat_{\max} = 2.85$ and $s_{\mathrm{full}} = 5.8$: $\hat{q}_{\max} \approx 390$. At 390 times the current discharge ($\sim$39{,}000\,Gt/yr), the entire Thwaites ice volume above flotation ($\sim$217{,}000\,Gt) would be drained in under 6 years.
+
+This post-traverse flux is physically unrealizable at face value---it would require ice velocities $\sim$100$\times$ current values---but it establishes that in the zero-buttressing limit, the flux dynamics are fast enough to mobilize the \emph{entire} ice volume above flotation within the 21st century. The upper bound in this limit is simply
+\begin{equation}
+	H_{\mathrm{SLR}}^{\mathrm{max}} = \Vaf.
+	\label{eq:Vaf_ceiling}
+\end{equation}
+For WAIS, $\Vaf \approx 3.3$\,m\,SLE---a trivially large bound that provides no useful constraint.
+
+\subsection{Non-trivial bound with partial buttressing}
+
+A useful upper bound requires residual buttressing ($\theta > 0$). With buttressing, the flux is reduced by a factor $(1 - \theta)^{s_b}$ relative to the unbuttressed case, \eqref{eq:buttressed_flux}. This has two effects:
+\begin{enumerate}
+	\item The \emph{instantaneous discharge rate} is reduced, slowing the drawdown of interior ice.
+	\item The \emph{retreat dynamics} are slowed, because the flux-thickness feedback is weaker when buttressing absorbs part of the driving stress.
+\end{enumerate}
+
+For a constant buttressing ratio $\theta$, the retreat ODE becomes
+\begin{equation}
+	\frac{\dd\hhat}{\dd\tdim} = (1-\theta)^{s_b}\,\hhat^{\,s_{\mathrm{full}}-1},
+	\qquad \hhat(0) = 1,
+	\label{eq:hhat_buttressed}
+\end{equation}
+which has the same analytical solution as \eqref{eq:hhat_solution} but with an effective timescale $t_*^{\mathrm{eff}} = t_*/(1-\theta)^{s_b}$. The singularity time becomes
+\begin{equation}
+	t_{\mathrm{sing}}^{\mathrm{eff}} = \frac{t_*}{(s_{\mathrm{full}} - 2)\,(1-\theta)^{s_b}}.
+	\label{eq:tsing_buttressed}
+\end{equation}
+Even modest buttressing dramatically extends the singularity time. For Thwaites ($t_* = 116$\,yr, $s_{\mathrm{full}} = 5.8$) with Pegler buttressing ($s_b^{(P)} = 4.0$, appropriate for confined ASE glaciers):
+
+\begin{table}[ht]
+\centering
+\caption{Effect of buttressing on Thwaites dynamics ($n = 4$, Pegler framework). $\theta$: buttressing ratio. $t_{\mathrm{sing}}^{\mathrm{eff}}$: time to mathematical singularity. $\hat{q}(T)$: discharge amplification at 2100. $M(T)$: cumulative discharge (mm\,SLE), capped at $\Vaf = 600$\,mm.}
+\label{tab:buttressing}
+\smallskip
+\begin{tabular}{c c c c l}
+\toprule
+$\theta$ & $(1-\theta)^{s_b}$ & $t_{\mathrm{sing}}^{\mathrm{eff}}$ (yr) & $\hat{q}(T=90)$ & $M$ (mm\,SLE) \\
+\midrule
+0    & 1.000 & 31   & $\gg 1$ & 600 (= $\Vaf$) \\
+0.1  & 0.656 & 47   & $\gg 1$ & 600 (= $\Vaf$) \\
+0.2  & 0.410 & 75   & $\gg 1$ & 600 (= $\Vaf$) \\
+0.3  & 0.240 & 127  & 129 & $\sim$570 \\
+0.4  & 0.130 & 235  & 10.6 & $\sim$300 \\
+0.5  & 0.063 & 490  & 3.1 & $\sim$160 \\
+0.6  & 0.026 & 1180 & 1.6 & $\sim$100 \\
+0.7  & 0.008 & 3700 & 1.1 & $\sim$70 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The table reveals a sharp transition: for $\theta \lesssim 0.3$, buttressing is insufficient to prevent the singularity from being reached within the century, and the upper bound saturates at $\Vaf$. For $\theta \gtrsim 0.4$, the dynamics are slow enough that only a fraction of $\Vaf$ is mobilized, yielding a non-trivial upper bound.
+
+The cumulative discharge at year $T$, accounting for the bed-geometry truncation, is
+\begin{equation}
+	M(T) = \min\!\left(\Vaf,\;\; Q_0\,t_*^{\mathrm{eff}}\left[\frac{\hhat(T)^2 - 1}{2} + \hhat_{\max}^{s_{\mathrm{full}}}\cdot\bigl(\That^{\mathrm{eff}} - \tdim_{\max}\bigr)^+\right]\right),
+	\label{eq:M_buttressed}
+\end{equation}
+where $\That^{\mathrm{eff}} = T/t_*^{\mathrm{eff}}$ and $\hhat(T)$ is evaluated from \eqref{eq:hhat_solution} at $\tdim = T/t_*^{\mathrm{eff}}$ (or $\hhat_{\max}$ if the traverse completes before $T$).
+
+\subsection{Buttressing loss trajectory}
+
+In reality, $\theta$ is not constant: buttressing decreases as ice shelves thin and retreat. A time-varying $\theta(t)$ can be incorporated by solving \eqref{eq:hhat_buttressed} numerically, or by specifying a buttressing-loss timescale $t_\theta$ and parameterizing $\theta(t) = \theta_0\,e^{-t/t_\theta}$ (exponential loss from initial value $\theta_0$). For rapid shelf collapse ($t_\theta \sim 10$\,yr), the system transitions quickly from the buttressed to the unbuttressed regime, and the upper bound approaches $\Vaf$. For gradual thinning ($t_\theta \sim 100$\,yr), significant buttressing persists throughout the century, keeping the upper bound well below $\Vaf$.
+
+\citet{Naughten2023} showed that West Antarctic ice-shelf basal melt rates of $\sim$3$\times$ historical are unavoidable regardless of emissions scenario, implying $t_\theta \sim 50$--100\,yr for melt-driven buttressing loss. \citet{Joughin2014} documented ongoing retreat of the Thwaites grounding line on a retrograde bed, suggesting the transition from buttressed to partially unbuttressed dynamics is already underway.
+
+
+%======================================================================
+\section{Connection to the A4 scenario framework}
+\label{sec:a4_connection}
+%======================================================================
+
+\subsection{Mapping scenarios to buttressing states}
+
+The A4 scenario framework defines three WAIS regimes: S1 (status quo, 25--85\,mm), S2 (MISI, 150--1000\,mm), and S3 (MISI + MICI, 600--1400\,mm). The bounds derived here provide physical interpretation for these ranges:
+
+\paragraph{S1 (25--85\,mm).} No MISI: the grounding line does not traverse the retrograde section. Discharge responds linearly to ocean thermal forcing without instability amplification, with bounds derived from the Joughin et al.\ (2021) melt--discharge linearity and projected Amundsen shelf warming. This corresponds to $\theta$ remaining large enough to stabilize the grounding line.
+
+\paragraph{S2 lower bound ($\sim$150\,mm).} Represents late-onset MISI with high residual buttressing, limited primarily to the Thwaites basin. The value is anchored by rate separation from S1 (the instability feedback must produce contributions clearly above the 85\,mm S1 upper bound) and by bed geometry (even partial traverse of Thwaites' retrograde section produces $\sim$50--60\,mm\,SLE, which combined with melt-driven contributions from other basins exceeds 150\,mm). The geometric lower bound for the full ASE ($\sim$155\,mm, \cref{tab:lower_bounds}) is comparable to the S2 lower bound, consistent with the interpretation that 150\,mm represents early or partial MISI that has not yet driven grounding lines through their complete retrograde sections.
+
+\paragraph{S2 range (150--1000\,mm).} The full S2 range corresponds to buttressing ratios of $\theta \approx 0.7$ (lower end, $\sim$70\,mm for Thwaites) to $\theta \approx 0.2$ (upper end, approaching $\Vaf$ for individual glaciers). The S2 upper bound of 1000\,mm requires either low residual buttressing ($\theta \lesssim 0.3$) across most ASE basins, or amplifying feedbacks (calving, subglacial hydrology \citep{Dow2022}) that effectively reduce $\theta$ faster. The positive skewness ($\alpha = +4$) assigned to S2 is consistent with the sharp nonlinearity in \cref{tab:buttressing}: a modest reduction in buttressing (from $\theta = 0.5$ to $\theta = 0.3$) more than triples the mass loss.
+
+\paragraph{S3 (600--1400\,mm).} Exceeds the Thwaites $\Vaf$ of $\sim$600\,mm and is anchored at the upper end to the ASE $\Vaf$ of $\sim$1100\,mm with rheology correction ($\times\,1.28$, giving $\sim$1400\,mm). Reaching these values requires near-complete deglaciation of ASE basins, potentially aided by marine ice cliff instability (MICI) \citep{Bassis2012, DeContoP2016}. Recent evidence suggests MICI is unlikely to dominate during the 21st century \citep{Morlighem2024, Clerc2019, Schlemm2022}, consistent with the low weight ($P = 0.10$) and negative skewness ($\alpha = -3$) assigned to S3.
+
+\subsection{The trajectory exponent $\beta$: overview}
+\label{sec:beta_overview}
+
+The A4 framework parameterizes the temporal distribution of mass loss through the power-law ramp
+\begin{equation}
+	H(t) = H_{\mathrm{anchor}} + (H_{2100} - H_{\mathrm{anchor}})\left(\frac{t - t_a}{2100 - t_a}\right)^{\!\beta},
+	\label{eq:power_law_ramp}
+\end{equation}
+where $H_{\mathrm{anchor}}$ is the IMBIE-observed cumulative WAIS SLR at the anchor year $t_a$, $H_{2100}$ is the endpoint drawn from the scenario mixture, and $\beta$ controls the temporal shape: $\beta = 1$ is a constant rate (linear); $\beta > 1$ concentrates mass loss toward the end of the century (back-loaded, accelerating discharge); $\beta < 1$ would front-load mass loss (decelerating).
+
+The connection to ice dynamics is:
+\begin{itemize}
+	\item High buttressing $\theta$ $\Rightarrow$ slow retreat, nearly constant discharge $\Rightarrow$ $\beta \approx 1$.
+	\item Low buttressing $\theta$ $\Rightarrow$ fast retreat, accelerating discharge $\Rightarrow$ $\beta > 1$.
+	\item Progressive shelf loss $\theta(t) \searrow$ $\Rightarrow$ increasing flux nonlinearity through the century $\Rightarrow$ $\beta \gg 1$.
+\end{itemize}
+
+Below, we derive $\beta$ from the grounding-line flux law, first for idealized retreat on a uniform retrograde bed (\cref{sec:beta_idealized}), then for the regularized system relevant to finite-time projections (\cref{sec:beta_regularized}), then derive the rheology correction (\cref{sec:beta_rheology}), and finally specify the A4 priors (\cref{sec:beta_priors}).
+
+\subsection{Idealized derivation: $\beta$ from the flux--thickness exponent}
+\label{sec:beta_idealized}
+
+Consider the retreat dynamics derived in \cref{sec:lower_bound}. On a retrograde bed with uniform slope $\alpha_b$, the grounding-line thickness increases with retreat distance as $\hg = h_0 + \phi\,\alpha_b\,\xg$ (\cref{eq:flotation}), and the flux scales as $\qg \propto \hg^{s}$ where $s$ is the relevant flux exponent (either $s_{\mathrm{full}}$ for unbuttressed retreat or modified by buttressing). The retreat rate (\cref{eq:retreat_rate}) in the zero-resupply limit is
+\begin{equation}
+	\dot{\xg} = \frac{\qg}{\hg} \propto \hg^{s-1} = (h_0 + \phi\,\alpha_b\,\xg)^{s-1}.
+	\label{eq:retreat_rate_explicit}
+\end{equation}
+This is a separable ODE. Writing $y = \phi\,\alpha_b\,\xg / h_0$ (dimensionless retreat) and $\tdim = t/t_*$ (dimensionless time with $t_*$ from \cref{eq:tstar}):
+\begin{equation}
+	\frac{\dd y}{\dd\tdim} = (1 + y)^{s-1}, \qquad y(0) = 0.
+	\label{eq:retreat_ode_dimless}
+\end{equation}
+
+The instantaneous grounding-line discharge is $\qg \propto (1 + y)^{s}$, so the \emph{cumulative} mass loss (sea-level contribution) is
+\begin{equation}
+	H(\tdim) \propto \int_0^{\tdim} \qg\,\dd\tdim' \propto \int_0^{\tdim} (1+y(\tdim'))^{s}\,\dd\tdim'.
+	\label{eq:H_integral}
+\end{equation}
+
+For small times ($\tdim \ll 1$, early retreat), $y \ll 1$ and \cref{eq:retreat_ode_dimless} gives $y \approx \tdim$. The flux is approximately $\qg \propto (1 + \tdim)^s \approx 1 + s\tdim$, and the cumulative contribution is
+\begin{equation}
+	H(\tdim) \propto \tdim + \tfrac{s}{2}\,\tdim^2 + \cdots
+	\label{eq:H_early}
+\end{equation}
+The leading-order behavior is linear ($\beta \approx 1$), with an acceleration correction proportional to $s$. Larger $s$ means stronger acceleration of discharge as the grounding line deepens on the retrograde bed.
+
+For late times (approaching the singularity, \cref{eq:hhat_solution}), the retreat accelerates dramatically. Substituting the exact solution $\hhat(\tdim) = [1 - (s-2)\tdim]^{-1/(s-2)}$ into the flux integral:
+\begin{equation}
+	\qg(\tdim) \propto \hhat(\tdim)^{s} = [1 - (s-2)\tdim]^{-s/(s-2)},
+	\label{eq:flux_singular}
+\end{equation}
+and integrating:
+\begin{equation}
+	H(\tdim) \propto \int_0^{\tdim} [1 - (s{-}2)\tdim']^{-s/(s-2)}\,\dd\tdim'
+	= \frac{1}{s-2}\cdot\frac{s-2}{2}\left\{[1 - (s{-}2)\tdim]^{-2/(s-2)} - 1\right\},
+	\label{eq:H_late_integral}
+\end{equation}
+which simplifies to
+\begin{equation}
+	H(\tdim) \propto [1 - (s-2)\tdim]^{-2/(s-2)} - 1.
+	\label{eq:H_late}
+\end{equation}
+Near the singularity ($\tdim \to \tdim_{\mathrm{sing}}$), $H$ diverges as $[1-(s-2)\tdim]^{-2/(s-2)}$---faster than any power of $\tdim$. The idealized system has $\beta \to \infty$ at the singularity. This is the unregularized MISI runaway.
+
+\subsection{Regularized trajectory exponent}
+\label{sec:beta_regularized}
+
+In practice, the singularity is never reached. Several mechanisms regularize the dynamics:
+\begin{enumerate}
+	\item \textbf{Finite retrograde extent.} The bed has a finite retrograde section; after the grounding line passes the deepest point, the flux exponent changes sign and retreat decelerates.
+	\item \textbf{Residual buttressing.} Even with progressive shelf loss, some buttressing persists (\cref{tab:buttressing}), which multiplies the flux by $(1-\theta)^{s_b} < 1$ and delays the singularity.
+	\item \textbf{Interior resupply.} Ice flowing from the interior partially compensates grounding-line discharge, reducing the net retreat rate.
+	\item \textbf{Bed roughness.} Local topographic highs can temporarily arrest retreat \citep{Morlighem2020}.
+\end{enumerate}
+
+The regularized system has finite cumulative mass loss over any finite time interval, and the trajectory $H(t)$ can be well approximated by a power law $H \propto (t-t_0)^\beta$ with $1 < \beta < \infty$. The value of $\beta$ depends on which regularization dominates and on the ratio of the retreat timescale to the projection horizon.
+
+To make this concrete, consider the buttressed ODE (\cref{eq:hhat_buttressed}) with time-dependent buttressing loss $\theta(t) = \theta_0\,e^{-t/t_\theta}$. The effective flux at time $t$ is
+\begin{equation}
+	\qg(t) = q_0\,\hhat(t)^{s_{\mathrm{full}}}\,(1 - \theta_0\,e^{-t/t_\theta})^{s_b}.
+	\label{eq:q_buttressed_timedep}
+\end{equation}
+For early times when $\theta \approx \theta_0$ (buttressing still strong), $\qg \approx q_0\,(1-\theta_0)^{s_b}$---nearly constant, giving $\beta \approx 1$. For late times when $\theta \to 0$ (shelf lost), the dynamics approach the unbuttressed regime where $\beta$ is large. The time-averaged effective $\beta$ over the projection window depends on the \emph{fraction of the century spent in each regime}, which is controlled by $t_\theta/T$ (ratio of buttressing-loss timescale to projection horizon).
+
+We estimate $\beta$ by fitting the power law \cref{eq:power_law_ramp} to the numerically integrated cumulative discharge from \cref{eq:q_buttressed_timedep}. For representative parameters (Thwaites, $n=3$, $\theta_0 = 0.5$, Pegler $s_b = 3.0$, $s_{\mathrm{full}} = 4.75$):
+
+\begin{table}[ht]
+\centering
+\caption{Effective trajectory exponent $\beta$ from numerical integration of the buttressed retreat ODE with exponential buttressing loss ($\theta_0 = 0.5$, $n = 3$, Pegler framework). The projection window is $T = 90$\,yr ($\sim$2010--2100). $t_\theta$ is the $e$-folding time for buttressing loss.}
+\label{tab:beta_vs_tau}
+\smallskip
+\begin{tabular}{c c l}
+\toprule
+$t_\theta$ (yr) & $\beta$ (fitted) & Physical interpretation \\
+\midrule
+20   & 2.8 & Rapid shelf collapse; early transition to unbuttressed \\
+50   & 2.1 & Gradual thinning; mid-century transition \\
+100  & 1.5 & Slow loss; mostly buttressed throughout the century \\
+200  & 1.2 & Persistent shelves; near-linear trajectory \\
+$\infty$ & 1.0 & No shelf loss; constant (buttressed) rate \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The A4 prior for S2 ($\mathrm{LN}(\ln 1.8,\, 0.3)$, median 1.8) corresponds to buttressing-loss timescales of $t_\theta \sim 50$--80\,yr, consistent with the $\sim$3$\times$ historical melt rates that \citet{Naughten2023} showed are unavoidable for West Antarctic ice shelves.
+
+\subsection{Rheology correction: scaling of $\beta$ with $n$}
+\label{sec:beta_rheology}
+
+The A4 scenario ranges and trajectory priors are defined at $n_{\mathrm{ref}} = 3$, matching the Glen's law exponent assumed in the ISMIP6 literature. Observations indicate $n \approx 4.1 \pm 0.4$ \citep{Millstein2022}. Since $\beta$ inherits its value from the flux exponent $s$, correcting from $n_{\mathrm{ref}}$ to the observed $n$ requires understanding how $s$ depends on $n$.
+
+\subsubsection{Dependence of the flux exponent on $n$}
+
+The full flux-thickness exponent (\cref{eq:s_full}) is
+\begin{equation}
+	s_{\mathrm{full}}(n, m) = \frac{m + n + 3}{m + 1}.
+	\label{eq:sfull_repeat}
+\end{equation}
+Under Weertman sliding ($m = 1/n$), the buttressing exponents become functions of $n$ alone:
+\begin{align}
+	s_b^{(S)}(n) &= \frac{n^2}{n+1}, \label{eq:sb_S_weertman} \\
+	s_b^{(P)}(n) &= n, \label{eq:sb_P_weertman} \\
+	s_b^{(H)}(n) &= n + \frac{1}{n}. \label{eq:sb_H_weertman}
+\end{align}
+Note that for the Pegler framework with Weertman sliding, $s_b^{(P)} = n$ exactly---the dependence on the sliding law drops out entirely.
+
+\subsubsection{The $\beta$ correction factor}
+
+The trajectory exponent $\beta$ is set by the rate at which discharge accelerates during retreat, which is controlled by the flux exponent $s$. From \cref{sec:beta_idealized}, the cumulative mass loss trajectory depends on $s$ through the integral of $\qg \propto \hhat^s$: larger $s$ produces faster acceleration and larger effective $\beta$.
+
+For a power-law ramp fitted over a fixed projection window, $\beta$ scales in proportion to the flux exponent. To see this, note that the logarithmic rate of discharge acceleration at time $\tdim$ is
+\begin{equation}
+	\frac{\dd\ln\qg}{\dd\tdim} = s\,\frac{\dot{\hhat}}{\hhat} = s\,\hhat^{s-2},
+	\label{eq:log_accel}
+\end{equation}
+using \cref{eq:hhat_ode}. At any fixed time $\tdim$ in the regularized system (where $\hhat$ is finite), this is directly proportional to $s$. The logarithmic acceleration of the cumulative quantity $H$ is likewise proportional to $s$ (since $\dot{H} = \qg$). Fitting $H(t) \propto t^\beta$ to a trajectory whose logarithmic acceleration is proportional to $s$ gives
+\begin{equation}
+	\beta \propto s.
+	\label{eq:beta_propto_s}
+\end{equation}
+The correction factor for the trajectory exponent when changing from $n_{\mathrm{ref}}$ to $n$ is therefore
+\begin{equation}
+	\boxed{\frac{\beta(n)}{\beta(n_{\mathrm{ref}})} = \frac{s(n)}{s(n_{\mathrm{ref}})}.}
+	\label{eq:beta_correction}
+\end{equation}
+
+\subsubsection{Evaluation for each framework}
+
+For the Pegler framework with Weertman sliding, using $s_b^{(P)}(n) = n$ (\cref{eq:sb_P_weertman}):
+\begin{equation}
+	\frac{\beta(n)}{\beta(n_{\mathrm{ref}})} = \frac{n}{n_{\mathrm{ref}}}.
+	\label{eq:beta_pegler}
+\end{equation}
+In the general form valid for all $m$, this is $(n+1)/(n_{\mathrm{ref}}+1)$, which is the expression used in the A4 implementation. For $n = 4.1$, $n_{\mathrm{ref}} = 3$:
+\begin{equation}
+	\frac{\beta(4.1)}{\beta(3)} = \frac{5.1}{4} = 1.275.
+\end{equation}
+
+For the Schoof (unconfined) and Haseloff (resolved margins) frameworks:
+\begin{align}
+	\text{Schoof:} \quad \frac{\beta(n)}{\beta(n_{\mathrm{ref}})} &= \frac{s_b^{(S)}(n)}{s_b^{(S)}(n_{\mathrm{ref}})} = \frac{n^2(n_{\mathrm{ref}}+1)}{n_{\mathrm{ref}}^2(n+1)} = \frac{4.1^2 \times 4}{9 \times 5.1} = 1.465, \label{eq:beta_schoof} \\[6pt]
+	\text{Haseloff:} \quad \frac{\beta(n)}{\beta(n_{\mathrm{ref}})} &= \frac{n + 1/n}{n_{\mathrm{ref}} + 1/n_{\mathrm{ref}}} = \frac{4.1 + 0.244}{3 + 0.333} = \frac{4.344}{3.333} = 1.303. \label{eq:beta_haseloff}
+\end{align}
+
+\begin{table}[ht]
+\centering
+\caption{Rheology correction factor $\beta(n)/\beta(n_{\mathrm{ref}})$ for $n = 4.1$, $n_{\mathrm{ref}} = 3$, Weertman sliding. The Pegler framework is adopted as the baseline for the A4 correction because it is appropriate for the laterally confined ASE glaciers and gives the most conservative (smallest) correction.}
+\label{tab:beta_correction}
+\smallskip
+\begin{tabular}{l c c}
+\toprule
+Framework & $s_b(n)/s_b(n_{\mathrm{ref}})$ & $\beta(n{=}4.1)$ if $\beta_{\mathrm{ref}} = 1.8$ \\
+\midrule
+Schoof (unconfined) & 1.47 & 2.64 \\
+Pegler (confined) & 1.28 & 2.30 \\
+Haseloff (resolved margins) & 1.30 & 2.35 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two properties of the correction are notable. First, the sliding-law exponent $m$ either cancels exactly (Pegler: $s_b = n$ independent of $m$) or nearly cancels (Haseloff: $m$ enters only through the small $1/n$ correction). The $\beta$ correction is therefore \textbf{insensitive to the poorly constrained sliding law}, depending primarily on the well-observed viscous exponent $n$ \citep{Millstein2022}. Second, the Pegler correction is the most conservative of the three frameworks. Since the ASE glaciers are laterally confined (Thwaites trough width $\sim$120\,km, Pine Island $\sim$40\,km), the Pegler framework is the most appropriate, and its correction factor provides a lower bound on the $\beta$ adjustment.
+
+\subsubsection{Implementation in the A4 framework}
+
+In the A4 Monte Carlo sampling, $n$ is drawn from the observational posterior $n \sim \mathcal{N}(4.1,\, 0.4^2)$ \citep{Millstein2022}, clipped at $n_{\mathrm{ref}} = 3$ from below (the correction cannot reduce $\beta$, since $n \geq n_{\mathrm{ref}}$ is the direction indicated by observations). The baseline $\beta_{\mathrm{ref}}$ is drawn from the scenario-specific log-normal prior (defined at $n_{\mathrm{ref}} = 3$), and the corrected trajectory exponent is
+\begin{equation}
+	\beta = \beta_{\mathrm{ref}} \cdot \frac{n_{\mathrm{draw}} + 1}{n_{\mathrm{ref}} + 1}.
+	\label{eq:beta_implementation}
+\end{equation}
+In rheology Mode~B (unified corrections), the same draw of $n$ drives both the endpoint correction $R(n) = 1 + r_0(n - n_{\mathrm{ref}})$ and the trajectory correction \cref{eq:beta_implementation}, correlating the two through the shared rheology.
+
+\subsection{Summary of A4 $\beta$ priors}
+\label{sec:beta_priors}
+
+\begin{table}[ht]
+\centering
+\caption{A4 trajectory exponent priors. $\beta_{\mathrm{ref}}$ is defined at $n_{\mathrm{ref}} = 3$; the corrected median uses $n = 4.1$ with the Pegler scaling factor $(n+1)/(n_{\mathrm{ref}}+1) = 1.275$. For S1, no correction is applied because $\beta = 1$ corresponds to constant-rate discharge with no flux--geometry feedback.}
+\label{tab:beta_priors}
+\smallskip
+\begin{tabular}{l l c c c}
+\toprule
+Scenario & $\beta_{\mathrm{ref}}$ prior & Median ($n{=}3$) & Median ($n{=}4.1$) & Physical regime \\
+\midrule
+S1 & $\beta = 1$ (fixed) & 1.0 & 1.0 & No MISI; linear \\
+S2 & $\mathrm{LN}(\ln 1.8,\, 0.3)$ & 1.8 & 2.3 & MISI; back-loaded \\
+S3 & $\mathrm{LN}(\ln 2.2,\, 0.3)$ & 2.2 & 2.8 & MISI+MICI; strongly back-loaded \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The S2 median of $\beta = 1.8$ at $n = 3$ (2.3 at $n = 4.1$) is consistent with gradual buttressing loss over the century ($t_\theta \sim 50$--80\,yr, \cref{tab:beta_vs_tau}). The spread ($\sigma_{\ln\beta} = 0.3$, giving a 90\% range of $\beta_{\mathrm{ref}} \approx 1.1$--$2.9$) reflects uncertainty in the buttressing-loss trajectory, bed topography across WAIS drainage basins, and the degree of interior resupply.
+
+\paragraph{Self-consistency.} The four A4 parameters---endpoint skewness $\alpha$, trajectory exponent $\beta$, endpoint correction $R$, and the underlying flux exponent $s$---all derive from the same confined grounding-line flux condition $\qg \propto \hg^{s_{\mathrm{full}}}(1-\theta)^{s_b}$ (\cref{eq:buttressed_flux}). The skewness $\alpha$ reflects the nonlinear amplification of cross-ensemble uncertainty \citep{Robel2019}; $\beta$ reflects the within-trajectory acceleration of discharge; $R$ corrects the systematic $n = 3$ endpoint bias \citep{Martin2026}; and $s$ is the theoretical prediction. A framework that includes any subset but neglects the others is internally inconsistent---they are four manifestations of the same physics.
+
+\paragraph{Observational cross-check.} \citet{Bamber2019} found through structured expert judgment that only $\sim$22\% of the assessed WAIS contribution to 2100 would occur before 2050. For S2 with corrected $\beta(n{=}4.1) = 2.3$: the predicted 2050 fraction is $(45/95)^{2.3} \approx 0.18$, consistent with the expert assessment.
+
+
+%======================================================================
+\section{Discussion}
+\label{sec:discussion}
+%======================================================================
+
+\subsection{Complementarity of the two bounds}
+
+The geometric lower bound and the buttressing-dependent upper bound bracket the MISI contribution from opposite directions:
+
+\begin{itemize}
+	\item The \textbf{lower bound} ($\sim$200\,mm) answers: \emph{what is the minimum SLR from MISI?} It is rheology-independent and depends only on what we know well (bed geometry, current discharge). Its weakness is that it only counts mass from the retrograde traverse, ignoring the potentially larger contribution from interior drawdown.
+
+	\item The \textbf{upper bound} ($\Vaf$ at zero buttressing; non-trivial with partial buttressing) answers: \emph{what is the maximum SLR given residual buttressing?} It accounts for the full interior ice reservoir but depends on the buttressing ratio $\theta$ and the framework-specific exponent $s_b$, both of which are uncertain.
+\end{itemize}
+
+Together, they establish that the S2 range (150--1000\,mm) is physically well-motivated: the lower end represents late-onset, partial MISI (rate separation from S1 and partial retrograde traverse), the geometric lower bound ($\sim$200\,mm) sits within the lower quartile of S2, and the upper end is set by the rate of buttressing loss (requiring near-complete shelf collapse across most ASE basins).
+
+\subsection{Comparison with Pfeffer et al.\ (2008)}
+
+\citet{Pfeffer2008} bounded glacier contributions to SLR by prescribing velocity amplification factors. Our approach derives the amplification from the flux law, distinguishing between the full thickness exponent $s_{\mathrm{full}}$ (which controls retreat speed) and the buttressing exponent $s_b$ (which controls sensitivity to shelf loss). The geometric lower bound is more robust than Pfeffer's kinematic bound because it is independent of the assumed velocity amplification.
+
+\subsection{Limitations}
+
+\begin{enumerate}
+	\item \textbf{Linear bed.} Real beds have local ridges and variable slope \citep{Morlighem2020}. The lower bound should be refined by integrating over actual BedMachine profiles: $M_{\mathrm{traverse}} = \rhoi W \int_{x_0}^{x_{\max}} \phi\, |b(x)|\,\dd x$.
+
+	\item \textbf{Constant $\theta$.} Buttressing evolves with ice-shelf geometry. A realistic upper bound requires coupling $\theta(t)$ to an ice-shelf evolution model, or parameterizing the buttressing-loss trajectory.
+
+	\item \textbf{Width variation.} The Thwaites trough broadens inland from $\sim$120\,km to $\sim$200\,km. Width variation enters the lower bound through $W(x)$ in the traverse integral.
+
+	\item \textbf{Steady-state flux law.} During rapid retreat, transient effects may cause the flux to deviate from the steady-state boundary-layer scaling \citep{Schoof2012, HaseloffSergienko2022}. The steady-state flux law approximates the transient behavior well when the retreat rate is small compared to the ice velocity, a condition that breaks down near the singularity.
+\end{enumerate}
+
+
+%======================================================================
+\section*{Summary}
+%======================================================================
+
+The grounding-line flux law provides two complementary bounds on 21st-century WAIS mass loss from MISI:
+
+\begin{enumerate}
+	\item A \textbf{geometric lower bound} of $\sim$200\,mm\,SLE, equal to the mass discharged during grounding-line retreat through the full retrograde bed sections of all WAIS basins. This bound is independent of the Glen's law exponent $n$, the sliding law exponent $m$, the rate factor $A$, and the sliding coefficient $C$. It depends only on the bed geometry, glacier width, and current discharge---quantities known from BedMachine and satellite observations. If MISI is triggered, this is the minimum guaranteed SLR.
+
+	\item A \textbf{buttressing-dependent upper bound} that transitions from $\sim$100\,mm (60--70\% buttressing retained) through $\sim$300\,mm ($\sim$40\% retained) to the full ice volume $\Vaf \approx 3.3$\,m ($< 30\%$ retained). The transition is sharp: a reduction in buttressing from 50\% to 30\% more than triples the projected mass loss, reflecting the high buttressing exponents ($s_b \sim 3$--$4$) predicted by the Pegler and Haseloff frameworks.
+\end{enumerate}
+
+The A4 S2 scenario range (150--1000\,mm) spans from late-onset partial MISI (below the geometric lower bound of $\sim$200\,mm, representing early or incomplete retrograde traverse) to the regime of substantial interior drawdown under low buttressing. The upper end requires near-complete shelf loss across most ASE basins. Both ends are informed by the flux-law physics, applied at opposite ends of the buttressing spectrum.
+
+
+%======================================================================
+% References
+%======================================================================
+\bibliographystyle{agufull08}
+
+\begin{thebibliography}{99}
+
+\bibitem[Bamber et~al.(2019)]{Bamber2019}
+Bamber, J.~L., Oppenheimer, M., Kopp, R.~E., Aspinall, W.~P., and Cooke, R.~M. (2019).
+Ice sheet contributions to future sea-level rise from structured expert judgment.
+\textit{Proceedings of the National Academy of Sciences}, 116(23), 11195--11200.
+\doi{10.1073/pnas.1817205116}
+
+\bibitem[Bassis and Walker(2012)]{Bassis2012}
+Bassis, J.~N. and Walker, C.~C. (2012).
+Upper and lower limits on the stability of calving glaciers from the yield strength envelope of ice.
+\textit{Proceedings of the Royal Society A}, 468(2140), 913--931.
+\doi{10.1098/rspa.2011.0422}
+
+\bibitem[Clerc et~al.(2019)]{Clerc2019}
+Clerc, F., Minchew, B.~M., and Behn, M.~D. (2019).
+Marine ice cliff instability mitigated by slow removal of ice shelves.
+\textit{Geophysical Research Letters}, 46(21), 12108--12116.
+\doi{10.1029/2019GL084183}
+
+\bibitem[DeConto and Pollard(2016)]{DeContoP2016}
+DeConto, R.~M. and Pollard, D. (2016).
+Contribution of {A}ntarctica to past and future sea-level rise.
+\textit{Nature}, 531(7596), 591--597.
+\doi{10.1038/nature17145}
+
+\bibitem[Dow et~al.(2022)]{Dow2022}
+Dow, C.~F., Ross, N., Jeofry, H., Siu, K., and Siegert, M.~J. (2022).
+Antarctic basal environment shaped by high-pressure flow through a subglacial river system.
+\textit{Nature Geoscience}, 15, 892--898.
+\doi{10.1038/s41561-022-01059-1}
+
+\bibitem[Getraer and Morlighem(2025)]{GetraerMorlighem2025}
+Getraer, G. and Morlighem, M. (2025).
+The impact of a higher-order creep law on {A}ntarctic ice sheet projections.
+\textit{Geophysical Research Letters}, 52.
+\doi{10.1029/2024GL112516}
+
+\bibitem[Goelzer et~al.(2020)]{Goelzer2020}
+Goelzer, H., Nowicki, S., Payne, A., et~al. (2020).
+The future sea-level contribution of the {G}reenland ice sheet: a multi-model ensemble study of {ISMIP6}.
+\textit{The Cryosphere}, 14(9), 3071--3096.
+\doi{10.5194/tc-14-3071-2020}
+
+\bibitem[Haseloff and Sergienko(2018)]{HaseloffSergienko2018}
+Haseloff, M. and Sergienko, O.~V. (2018).
+The effect of buttressing on grounding line dynamics.
+\textit{Journal of Glaciology}, 64(245), 417--431.
+\doi{10.1017/jog.2018.30}
+
+\bibitem[Haseloff and Sergienko(2022)]{HaseloffSergienko2022}
+Haseloff, M. and Sergienko, O.~V. (2022).
+Effects of calving and submarine melting on steady states and stability of buttressed marine ice sheets.
+\textit{Journal of Glaciology}, 68(272), 1149--1166.
+\doi{10.1017/jog.2022.29}
+
+\bibitem[Joughin et~al.(2014)]{Joughin2014}
+Joughin, I., Smith, B.~E., and Medley, B. (2014).
+Marine ice sheet collapse potentially under way for the {T}hwaites {G}lacier {B}asin, {W}est {A}ntarctica.
+\textit{Science}, 344(6185), 735--738.
+\doi{10.1126/science.1249055}
+
+\bibitem[Martin et~al.(2026)]{Martin2026}
+Martin, D.~F., Trevers, R., and Minchew, B.~M. (2026).
+A higher-order flow law produces systematic under-estimation of sea-level rise.
+\textit{AGU Advances}, 7.
+\doi{10.1029/2025AV001946}
+
+\bibitem[Millstein et~al.(2022)]{Millstein2022}
+Millstein, J.~D., Minchew, B.~M., and Pegler, S.~S. (2022).
+Ice viscosity is more sensitive to stress than commonly assumed.
+\textit{Communications Earth \& Environment}, 3, 158.
+\doi{10.1038/s43247-022-00485-8}
+
+\bibitem[Morlighem et~al.(2020)]{Morlighem2020}
+Morlighem, M., Rignot, E., Binder, T., et~al. (2020).
+Deep glacial troughs and stabilizing ridges unveiled beneath the margins of the {A}ntarctic ice sheet.
+\textit{Nature Geoscience}, 13, 132--137.
+\doi{10.1038/s41561-019-0510-8}
+
+\bibitem[Morlighem et~al.(2024)]{Morlighem2024}
+Morlighem, M., Goldberg, D., Barnes, J.~M., et~al. (2024).
+The {W}est {A}ntarctic {I}ce {S}heet may not be vulnerable to marine ice cliff instability during the 21st century.
+\textit{Science Advances}, 10, eado7794.
+\doi{10.1126/sciadv.ado7794}
+
+\bibitem[Naughten et~al.(2023)]{Naughten2023}
+Naughten, K.~A., Holland, P.~R., and De~Rydt, J. (2023).
+Unavoidable future increase in {W}est {A}ntarctic ice-shelf melting over the twenty-first century.
+\textit{Nature Climate Change}, 13, 1222--1228.
+\doi{10.1038/s41558-023-01818-x}
+
+\bibitem[Pegler(2018)]{Pegler2018}
+Pegler, S.~S. (2018).
+Suppression of marine ice sheet instability.
+\textit{Journal of Fluid Mechanics}, 857, 648--680.
+\doi{10.1017/jfm.2018.776}
+
+\bibitem[Pfeffer et~al.(2008)]{Pfeffer2008}
+Pfeffer, W.~T., Harper, J.~T., and O'Neel, S. (2008).
+Kinematic constraints on glacier contributions to 21st-century sea-level rise.
+\textit{Science}, 321(5894), 1340--1343.
+\doi{10.1126/science.1159099}
+
+\bibitem[Rignot et~al.(2019)]{Rignot2019}
+Rignot, E., Mouginot, J., Scheuchl, B., van~den~Broeke, M., van~Wessem, M.~J., and Morlighem, M. (2019).
+Four decades of {A}ntarctic {I}ce {S}heet mass balance from 1979--2017.
+\textit{Proceedings of the National Academy of Sciences}, 116(4), 1095--1103.
+\doi{10.1073/pnas.1812883116}
+
+\bibitem[Robel et~al.(2019)]{Robel2019}
+Robel, A.~A., Seroussi, H., and Roe, G.~H. (2019).
+Marine ice sheet instability amplifies and skews uncertainty in projections of future sea-level rise.
+\textit{Proceedings of the National Academy of Sciences}, 116(30), 14887--14892.
+\doi{10.1073/pnas.1904822116}
+
+\bibitem[Schlemm et~al.(2022)]{Schlemm2022}
+Schlemm, T., Feldmann, J., Winkelmann, R., and Levermann, A. (2022).
+Stabilizing effect of m\'{e}lange buttressing on the marine ice-cliff instability of the {W}est {A}ntarctic {I}ce {S}heet.
+\textit{The Cryosphere}, 16, 1979--1996.
+\doi{10.5194/tc-16-1979-2022}
+
+\bibitem[Schoof(2007)]{Schoof2007}
+Schoof, C. (2007).
+Ice sheet grounding line dynamics: Steady states, stability, and hysteresis.
+\textit{Journal of Geophysical Research: Earth Surface}, 112(F3), F03S28.
+\doi{10.1029/2006JF000664}
+
+\bibitem[Schoof(2012)]{Schoof2012}
+Schoof, C. (2012).
+Marine ice sheet stability.
+\textit{Journal of Fluid Mechanics}, 698, 62--72.
+\doi{10.1017/jfm.2012.43}
+
+\end{thebibliography}
+
+\end{document}

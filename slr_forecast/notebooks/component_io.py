@@ -513,6 +513,12 @@ def save_greenland(
                 dg.create_dataset(attr_name, data=np.asarray(arr))
         if hasattr(result_discharge, "r2_dyn"):
             dg.attrs["r2"] = float(result_discharge.r2_dyn)
+        # Calibration demeaning constants — needed to reconstruct projections
+        # without re-running the fit
+        for cal_attr in ("H_mean_cal", "int_T_mean_cal", "t_mean_cal", "delta_best"):
+            val = getattr(result_discharge, cal_attr, None)
+            if val is not None:
+                dg.attrs[cal_attr] = float(val)
 
         # ── SMB sensitivity (literature values, not posteriors) ──
         sg = cg.create_group("smb_sensitivity")
@@ -565,6 +571,8 @@ def save_wais(
     wais_proj,
     rheology_factor_median=1.28,
     rheology_factor_sigma=0.07,
+    rheology_mode='A',
+    wais_onset_year=None,
     extra_metadata=None,
     h5_path=None,
 ):
@@ -574,7 +582,7 @@ def save_wais(
     ----------
     a4_scenarios : dict
         ``{'S1_status_quo': {'P': ..., 'low_mm': ..., 'high_mm': ...,
-        'alpha': ..., 'misi': ...}, ...}``
+        'alpha': ..., 'beta_loc': ..., 'beta_scale': ..., 'misi': ...}, ...}``
     obs_years, obs_H, obs_sigma : array-like
         IMBIE WAIS observations (meters).
     wais_proj : dict
@@ -582,6 +590,10 @@ def save_wais(
         WAIS is SSP-independent; same samples used for all SSPs.
     rheology_factor_median, rheology_factor_sigma : float
         A1 rheology correction parameters (n=3 → n=4).
+    rheology_mode : str
+        Which rheology correction mode was used ('A' or 'B').
+    wais_onset_year : float or None
+        WAIS onset year for the power-law ramp.
     extra_metadata : dict or None
     h5_path : str or Path or None
     """
@@ -596,6 +608,9 @@ def save_wais(
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
         cg.attrs["rheology_factor_median"] = rheology_factor_median
         cg.attrs["rheology_factor_sigma"] = rheology_factor_sigma
+        cg.attrs["rheology_mode"] = rheology_mode
+        if wais_onset_year is not None:
+            cg.attrs["wais_onset_year"] = float(wais_onset_year)
         if extra_metadata:
             for k, v in extra_metadata.items():
                 if isinstance(v, str):
@@ -611,6 +626,8 @@ def save_wais(
             sg.attrs["low_mm"] = sparams["low_mm"]
             sg.attrs["high_mm"] = sparams["high_mm"]
             sg.attrs["alpha"] = sparams.get("alpha", 0.0)
+            sg.attrs["beta_loc"] = sparams.get("beta_loc", 0.0)
+            sg.attrs["beta_scale"] = sparams.get("beta_scale", 0.0)
             sg.attrs["misi"] = sparams["misi"]
 
         # ── Observations ──
@@ -666,6 +683,21 @@ def load_component(component_name, h5_path=None):
         if "projections" in cg:
             for ssp in cg["projections"]:
                 projections[ssp] = _load_projection_ssp(cg["projections"][ssp])
+
+            # SSP-independent components (e.g. WAIS) store samples only
+            # under the first SSP to avoid redundancy.  Propagate to the
+            # others so downstream code sees a uniform structure.
+            if cg.attrs.get("ssp_independent", False):
+                ref_samples = None
+                for ssp in projections:
+                    if "samples" in projections[ssp]:
+                        ref_samples = projections[ssp]["samples"]
+                        break
+                if ref_samples is not None:
+                    for ssp in projections:
+                        if "samples" not in projections[ssp]:
+                            projections[ssp]["samples"] = ref_samples
+
         out["projections"] = projections
 
         # ── Sub-component projections (Greenland) ──
@@ -788,11 +820,26 @@ def load_all_projections(h5_path=None, components=None):
                 continue
             if "projections" not in f[comp]:
                 continue
+            cg = f[comp]
             all_proj[comp] = {}
-            for ssp in f[comp]["projections"]:
+            for ssp in cg["projections"]:
                 all_proj[comp][ssp] = _load_projection_ssp(
-                    f[comp]["projections"][ssp]
+                    cg["projections"][ssp]
                 )
+
+            # SSP-independent components (e.g. WAIS) store samples only
+            # under the first SSP to avoid redundancy.  Propagate to the
+            # others so downstream code sees a uniform structure.
+            if cg.attrs.get("ssp_independent", False):
+                ref_samples = None
+                for ssp in all_proj[comp]:
+                    if "samples" in all_proj[comp][ssp]:
+                        ref_samples = all_proj[comp][ssp]["samples"]
+                        break
+                if ref_samples is not None:
+                    for ssp in all_proj[comp]:
+                        if "samples" not in all_proj[comp][ssp]:
+                            all_proj[comp][ssp]["samples"] = ref_samples
 
     return proj_years, all_proj
 

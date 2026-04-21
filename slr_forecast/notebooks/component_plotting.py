@@ -937,12 +937,92 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
 
 
 # =========================================================================
+# A4 scenario decomposition plot
+# =========================================================================
+
+def plot_a4_scenario_pdfs(scenario_samples, scenario_labels, scenario_colors,
+                           mixture_samples=None, component_name='WAIS',
+                           year=2100, xlabel=None, xlim=None, save_path=None):
+    """Two-panel figure: per-scenario PDFs (left) and mixture (right).
+
+    Parameters
+    ----------
+    scenario_samples : dict
+        ``{scenario_name: ndarray}`` — MC endpoint samples (meters) per scenario.
+    scenario_labels : dict
+        ``{scenario_name: str}`` — legend label per scenario.
+    scenario_colors : dict
+        ``{scenario_name: str}`` — color per scenario.
+    mixture_samples : ndarray or None
+        Mixture endpoint samples (meters).  If None, panel B is omitted.
+    """
+    n_panels = 2 if mixture_samples is not None else 1
+    fig, axes = plt.subplots(1, n_panels, figsize=(7 * n_panels, 5))
+    if n_panels == 1:
+        axes = [axes]
+
+    if xlabel is None:
+        xlabel = f'{component_name} SLR at {year} (m)'
+
+    if xlim is not None:
+        x_lo, x_hi = xlim
+    else:
+        all_s = np.concatenate(list(scenario_samples.values()))
+        x_lo = np.percentile(all_s, 0.1) - 0.01
+        x_hi = np.percentile(all_s, 99.9) + 0.01
+    x_grid = np.linspace(x_lo, x_hi, 600)
+    dx = x_grid[1] - x_grid[0]
+
+    # Panel A: per-scenario
+    ax = axes[0]
+    for sname in scenario_samples:
+        s = scenario_samples[sname]
+        kde = gaussian_kde(s, bw_method='scott')
+        prob = kde(x_grid) * dx * 100
+        ax.plot(x_grid, prob, lw=2, color=scenario_colors[sname],
+                label=scenario_labels[sname])
+        ax.fill_between(x_grid, prob, alpha=0.15, color=scenario_colors[sname])
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('Probability (%)')
+    ax.set_title(f'A4 Scenario PDFs at {year}')
+    ax.legend(fontsize=7)
+    ax.set_xlim(x_lo, x_hi)
+    ax.grid(True, alpha=0.2)
+
+    # Panel B: mixture
+    if mixture_samples is not None:
+        ax = axes[1]
+        kde_mix = gaussian_kde(mixture_samples, bw_method='scott')
+        prob_mix = kde_mix(x_grid) * dx * 100
+        ax.plot(x_grid, prob_mix, 'k-', lw=2, label='A4 mixture')
+        ax.fill_between(x_grid, prob_mix, alpha=0.3, color='gray')
+        med = np.median(mixture_samples)
+        ax.axvline(med, color='k', ls='--', lw=1, label=f'Median: {med:.2f} m')
+        p5, p95 = np.percentile(mixture_samples, [5, 95])
+        ax.axvline(p5, color='gray', ls=':', lw=1)
+        ax.axvline(p95, color='gray', ls=':', lw=1,
+                   label=f'90% CI: [{p5:.2f}, {p95:.2f}] m')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel('Probability (%)')
+        ax.set_title(f'A4 Mixture Distribution')
+        ax.legend(fontsize=8)
+        ax.set_xlim(x_lo, x_hi)
+        ax.set_ylim(bottom=0)
+        ax.grid(True, alpha=0.2)
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.show()
+
+
+# =========================================================================
 # Component histogram / KDE overlay
 # =========================================================================
 
 def plot_component_histogram(sample_sets, labels, colors, component_name,
                               year=2100, xlabel=None, xlim=None,
-                              save_path=None):
+                              probability=False, save_path=None):
     """KDE overlays at a user-specified year for multiple projection sources.
 
     Parameters
@@ -961,6 +1041,9 @@ def plot_component_histogram(sample_sets, labels, colors, component_name,
         X-axis label. Defaults to '{component_name} SLR at {year} (mm)'.
     xlim : tuple or None
         X-axis limits. Auto-determined if None.
+    probability : bool
+        If True, scale the KDE by dx so the y-axis shows probability
+        (fraction of samples per bin) instead of density.
     save_path : str or None
     """
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -974,19 +1057,23 @@ def plot_component_histogram(sample_sets, labels, colors, component_name,
     x_hi = np.percentile(all_vals, 99.5) + 5
     x_grid = np.linspace(x_lo, x_hi, 300)
 
+    dx = x_grid[1] - x_grid[0]
+
     for samples, label, color in zip(sample_sets, labels, colors):
         if len(samples) < 10:
             continue
         kde = gaussian_kde(samples, bw_method='scott')
-        density = kde(x_grid)
-        ax.fill_between(x_grid, 0, density, color=color, alpha=0.35)
-        ax.plot(x_grid, density, color=color, lw=2, label=label)
+        y = kde(x_grid)
+        if probability:
+            y = y * dx * 100
+        ax.fill_between(x_grid, 0, y, color=color, alpha=0.35)
+        ax.plot(x_grid, y, color=color, lw=2, label=label)
         # Median line
         med = np.median(samples)
         ax.axvline(med, color=color, ls='--', lw=1, alpha=0.7)
 
     ax.set_xlabel(xlabel)
-    ax.set_ylabel('Probability density')
+    ax.set_ylabel('Probability (%)' if probability else 'Probability density')
     ax.set_title(f'{component_name} — Distribution at {year}')
     ax.legend(fontsize=9)
     ax.set_ylim(bottom=0)
@@ -995,6 +1082,92 @@ def plot_component_histogram(sample_sets, labels, colors, component_name,
     else:
         ax.set_xlim(x_lo, x_hi)
     ax.grid(True, alpha=0.2)
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.show()
+
+
+# =========================================================================
+# Component PDF + exceedance plot
+# =========================================================================
+
+def plot_component_pdf_exceedance(sample_sets, labels, colors, component_name,
+                                   year=2100, xlabel=None, xlim=None,
+                                   save_path=None):
+    """Two-panel figure: PDF (left) and exceedance probability (right).
+
+    Parameters
+    ----------
+    sample_sets : list of ndarray
+        Each array contains MC samples at the target year (mm).
+    labels : list of str
+    colors : list of str
+    component_name : str
+    year : int
+    xlabel : str or None
+    xlim : tuple or None
+        View limits for x-axis. Does not affect the calculation.
+    save_path : str or None
+    """
+    fig, (ax_pdf, ax_exc) = plt.subplots(1, 2, figsize=(14, 5))
+
+    if xlabel is None:
+        xlabel = f'{component_name} SLR at {year} (mm)'
+
+    # KDE x range: extend well beyond the data so the PDF tails are
+    # fully resolved and the CDF integrates to ~1.  xlim only controls
+    # the view window.
+    all_vals = np.concatenate([s for s in sample_sets if len(s) > 0])
+    data_range = np.percentile(all_vals, 99.9) - np.percentile(all_vals, 0.1)
+    x_lo = np.percentile(all_vals, 0.1) - 0.5 * data_range
+    x_hi = np.percentile(all_vals, 99.9) + 0.5 * data_range
+    x_grid = np.linspace(x_lo, x_hi, 1000)
+    dx = x_grid[1] - x_grid[0]
+
+    for samples, label, color in zip(sample_sets, labels, colors):
+        if len(samples) < 10:
+            continue
+        kde = gaussian_kde(samples, bw_method='scott')
+        density = kde(x_grid)
+
+        # PDF panel (probability %)
+        prob = density * dx * 100
+        ax_pdf.fill_between(x_grid, 0, prob, color=color, alpha=0.35)
+        ax_pdf.plot(x_grid, prob, color=color, lw=2, label=label)
+        med = np.median(samples)
+        ax_pdf.axvline(med, color=color, ls='--', lw=1, alpha=0.7)
+
+        # Exceedance = 1 - CDF, where CDF = integral of PDF from -inf to x
+        cdf = np.cumsum(density) * dx
+        ax_exc.plot(x_grid, (1.0 - cdf) * 100, color=color, lw=2, label=label)
+
+    # PDF formatting
+    ax_pdf.set_xlabel(xlabel)
+    ax_pdf.set_ylabel('Probability (%)')
+    ax_pdf.set_title(f'{component_name} — Distribution at {year}')
+    ax_pdf.legend(fontsize=9)
+    ax_pdf.set_ylim(bottom=0)
+    ax_pdf.grid(True, alpha=0.2)
+
+    # Exceedance formatting
+    ax_exc.set_xlabel(xlabel)
+    ax_exc.set_ylabel('P(exceedance) (%)')
+    ax_exc.set_title(f'{component_name} — Exceedance at {year}')
+    ax_exc.legend(fontsize=9)
+    ax_exc.set_ylim(0, 100)
+    ax_exc.grid(True, alpha=0.2)
+
+    # View limits
+    if xlim is not None:
+        ax_pdf.set_xlim(*xlim)
+        ax_exc.set_xlim(*xlim)
+    else:
+        view_lo = np.percentile(all_vals, 0.5) - 5
+        view_hi = np.percentile(all_vals, 99.5) + 5
+        ax_pdf.set_xlim(view_lo, view_hi)
+        ax_exc.set_xlim(view_lo, view_hi)
 
     plt.tight_layout()
     if save_path:

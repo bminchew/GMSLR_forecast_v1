@@ -67,7 +67,7 @@ A4_SCENARIOS = {
                       'alpha': 0.0,
                       'beta_loc': 0.0, 'beta_scale': 0.0,
                       'misi': False},
-    'S2_misi':       {'P': 0.80, 'low_mm': 120, 'high_mm': 1000,
+    'S2_misi':       {'P': 0.80, 'low_mm': 150, 'high_mm': 1000,
                       'alpha': 4.0,
                       'beta_loc': np.log(1.8), 'beta_scale': 0.3,
                       'misi': True},
@@ -81,7 +81,7 @@ A4_SCENARIOS = {
 RHEOLOGY_FACTOR_MEDIAN = 1.28
 RHEOLOGY_FACTOR_SIGMA = 0.07
 
-# Observed Glen's law exponent: Millstein, Minchew, & Goldberg (2022)
+# Observed Glen's law exponent: Millstein, Minchew, & Pegler (2022)
 N_OBS_MEAN = 4.1
 N_OBS_SIGMA = 0.4
 N_REF = 3         # reference exponent used by ISMIP6 and literature scenarios
@@ -141,9 +141,9 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
                    anchor_year=None, anchor_value_mm=None,
                    anchor_sigma_mm=None, obs_value_mm=None,
                    obs_sigma_mm=None):
-    """Draw WAIS SLR samples (mm) from A4 scenario mixture at a given year.
+    """Draw WAIS SLR samples (meters) from A4 scenario mixture at a given year.
 
-    Returns array of shape (n_samples,) in **mm**.
+    Returns array of shape (n_samples,) in **meters**.
 
     The projection is anchored to the IMBIE observed cumulative value at
     ``anchor_year``.  Before the anchor year, samples are drawn from
@@ -206,8 +206,8 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         val = obs_value_mm if obs_value_mm is not None else anchor_value_mm
         sig = obs_sigma_mm if obs_sigma_mm is not None else 0.0
         if sig > 0:
-            return rng.normal(val, sig, size=n_samples)
-        return np.full(n_samples, val)
+            return rng.normal(val, sig, size=n_samples) / M_TO_MM
+        return np.full(n_samples, val / M_TO_MM)
 
     t_norm = (year - anchor_year) / (2100 - anchor_year)
 
@@ -232,50 +232,48 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
         n_draw_all = np.maximum(n_draw_all, N_REF)  # n ≥ n_ref
 
+    # Spawn independent child RNGs per scenario
+    child_rngs = rng.spawn(len(scenario_names))
+
     for i, sname in enumerate(scenario_names):
         mask = scenario_idx == i
         n_s = mask.sum()
         if n_s == 0:
             continue
         s = A4_SCENARIOS[sname]
+        crng = child_rngs[i]
 
         # ── Endpoint: draw H_2100 from skew-normal (n=3 ranges) ──
         base = _sample_log_skewnormal(
-            n_s, s['low_mm'], s['high_mm'], s['alpha'], rng,
+            n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
         )
 
         if rheology_mode == 'A':
             # ── Mode A: independent endpoint and trajectory corrections ──
-            # Endpoint correction (same as before)
-            rheo = rng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
-                              size=n_s)
+            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
+                               size=n_s)
             rheo = np.maximum(rheo, 1.0)
             base *= rheo
 
             # Trajectory exponent: draw β at n=3, then correct for n≈4
             if s['beta_scale'] > 0:
-                beta_n3 = rng.lognormal(s['beta_loc'], s['beta_scale'],
-                                        size=n_s)
-                # β correction: β(n) ≈ β(n_ref) · (n+1)/(n_ref+1)
-                n_draw = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
+                beta_n3 = crng.lognormal(s['beta_loc'], s['beta_scale'],
+                                         size=n_s)
+                n_draw = crng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
                 n_draw = np.maximum(n_draw, N_REF)
                 beta = beta_n3 * (n_draw + 1) / (N_REF + 1)
             else:
                 beta = np.ones(n_s)  # S1: linear ramp, no correction
 
         else:  # Mode B
-            # ── Mode B: unified n-driven corrections ──
             n_draw = n_draw_all[mask]
-
-            # Endpoint correction: R(n) = 1 + r₀·(n − n_ref)
             rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
             rheo = np.maximum(rheo, 1.0)
             base *= rheo
 
-            # Trajectory exponent: β(n) = β_ref · (n+1)/(n_ref+1)
             if s['beta_scale'] > 0:
-                beta_ref = rng.lognormal(s['beta_loc'], s['beta_scale'],
-                                         size=n_s)
+                beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
+                                          size=n_s)
                 beta = beta_ref * (n_draw + 1) / (N_REF + 1)
             else:
                 beta = np.ones(n_s)
@@ -285,7 +283,253 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         h_remaining = np.maximum(base - anchor_i, 0.0)
         samples[mask] = anchor_i + h_remaining * (t_norm ** beta)
 
-    return samples  # mm
+    return samples / M_TO_MM  # meters
+
+
+def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
+                             scenario_overrides=None):
+    """Draw WAIS SLR endpoint samples (meters) at 2100 from the A4 mixture.
+
+    This is a lightweight wrapper for sensitivity analyses that need to
+    perturb scenario parameters without trajectory or anchor logic.  Each
+    scenario's endpoint is sampled from the log-skew-normal, multiplied by
+    the rheology correction, and returned directly.
+
+    Parameters
+    ----------
+    n_samples : int
+    rng : numpy.random.Generator
+    rheology_mode : {'A', 'B'}
+    scenario_overrides : dict or None
+        Per-scenario parameter overrides.  Keys are scenario names
+        (e.g. 'S2_misi'); values are dicts that can override any of
+        'P', 'low_mm', 'high_mm', 'alpha'.  Missing keys use defaults
+        from A4_SCENARIOS.  You can also pass a top-level key 'weights'
+        mapping scenario names to new probabilities (must sum to 1).
+
+    Returns
+    -------
+    samples_m : ndarray, shape (n_samples,)
+        Endpoint samples in meters at 2100.
+    """
+    overrides = scenario_overrides or {}
+
+    scenario_names = list(A4_SCENARIOS.keys())
+
+    # Build effective parameters per scenario
+    eff = {}
+    for sname in scenario_names:
+        base = dict(A4_SCENARIOS[sname])
+        if sname in overrides:
+            base.update(overrides[sname])
+        eff[sname] = base
+
+    # Allow top-level weight override
+    if 'weights' in overrides:
+        for sname, w in overrides['weights'].items():
+            eff[sname]['P'] = w
+
+    probs = np.array([eff[s]['P'] for s in scenario_names])
+    probs = probs / probs.sum()  # ensure normalization
+
+    scenario_idx = rng.choice(len(scenario_names), size=n_samples, p=probs)
+
+    # Pre-draw n for Mode B
+    if rheology_mode == 'B':
+        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
+        n_draw_all = np.maximum(n_draw_all, N_REF)
+
+    # Spawn independent child RNGs per scenario so that changing n_s in
+    # one scenario (e.g. via weight perturbation) does not shift the RNG
+    # state for subsequent scenarios.
+    child_rngs = rng.spawn(len(scenario_names))
+
+    samples = np.zeros(n_samples)
+    for i, sname in enumerate(scenario_names):
+        mask = scenario_idx == i
+        n_s = mask.sum()
+        if n_s == 0:
+            continue
+        s = eff[sname]
+        crng = child_rngs[i]
+
+        base = _sample_log_skewnormal(
+            n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
+        )
+
+        if rheology_mode == 'A':
+            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
+                               size=n_s)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
+        else:
+            n_draw = n_draw_all[mask]
+            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
+
+        samples[mask] = base
+
+    return samples / M_TO_MM  # meters
+
+
+def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
+                                 anchor_year=None, anchor_value_mm=None,
+                                 anchor_sigma_mm=None,
+                                 obs_years=None, obs_values_mm=None,
+                                 obs_sigmas_mm=None):
+    """Draw coherent WAIS SLR trajectories from the A4 scenario mixture.
+
+    Unlike ``sample_a4_wais`` (which draws independently at each year),
+    this function draws scenario assignments, endpoint values, rheology
+    factors, and trajectory exponents **once** per sample, then evaluates
+    the power-law ramp deterministically across all years.  This ensures
+    that individual trajectories are smooth and internally consistent.
+
+    Parameters
+    ----------
+    n_samples : int
+    rng : numpy.random.Generator
+    years : array-like
+        Projection years (e.g. 1950–2150).
+    rheology_mode : {'A', 'B'}
+    anchor_year : float or None
+        Defaults to WAIS_ONSET_YEAR.
+    anchor_value_mm : float or None
+        IMBIE cumulative WAIS SLR (mm) at anchor_year.
+    anchor_sigma_mm : float or None
+        IMBIE 1-sigma (mm) at anchor_year.
+    obs_years, obs_values_mm, obs_sigmas_mm : array-like or None
+        IMBIE time series for pre-anchor interpolation (years, mm, mm).
+        If provided, pre-anchor samples are drawn from N(obs(t), sigma(t)²).
+
+    Returns
+    -------
+    samples_m : ndarray, shape (n_samples, len(years))
+        Trajectories in meters relative to BASELINE_YEAR.
+    params : dict
+        Per-sample drawn parameters: 'scenario_idx', 'h2100_mm',
+        'beta', 'anchor_mm'.
+    """
+    from scipy.interpolate import interp1d
+
+    years = np.asarray(years, dtype=float)
+    n_years = len(years)
+
+    if anchor_year is None:
+        anchor_year = WAIS_ONSET_YEAR
+    if anchor_value_mm is None:
+        anchor_value_mm = 0.0
+    if anchor_sigma_mm is None:
+        anchor_sigma_mm = 0.0
+
+    # ── Build obs interpolators for pre-anchor years ──
+    if obs_years is not None and obs_values_mm is not None:
+        obs_interp = interp1d(obs_years, obs_values_mm,
+                              kind='linear', bounds_error=False, fill_value=0.0)
+        if obs_sigmas_mm is not None:
+            sig_interp = interp1d(obs_years, obs_sigmas_mm,
+                                  kind='linear', bounds_error=False, fill_value=0.0)
+        else:
+            sig_interp = lambda t: 0.0
+    else:
+        obs_interp = lambda t: anchor_value_mm
+        sig_interp = lambda t: 0.0
+
+    # ── Draw all per-sample parameters once ──
+    scenario_names = list(A4_SCENARIOS.keys())
+    probs = np.array([A4_SCENARIOS[s]['P'] for s in scenario_names])
+    scenario_idx = rng.choice(len(scenario_names), size=n_samples, p=probs)
+
+    # Per-sample anchor with IMBIE uncertainty
+    if anchor_sigma_mm > 0:
+        anchor_draws = rng.normal(anchor_value_mm, anchor_sigma_mm,
+                                  size=n_samples)
+    else:
+        anchor_draws = np.full(n_samples, anchor_value_mm)
+
+    # Pre-draw n for Mode B
+    if rheology_mode == 'B':
+        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
+        n_draw_all = np.maximum(n_draw_all, N_REF)
+
+    h2100 = np.zeros(n_samples)
+    beta_arr = np.zeros(n_samples)
+
+    # Spawn independent child RNGs per scenario
+    child_rngs = rng.spawn(len(scenario_names))
+
+    for i, sname in enumerate(scenario_names):
+        mask = scenario_idx == i
+        n_s = mask.sum()
+        if n_s == 0:
+            continue
+        s = A4_SCENARIOS[sname]
+        crng = child_rngs[i]
+
+        # Endpoint: draw H_2100 from skew-normal (n=3 ranges)
+        base = _sample_log_skewnormal(
+            n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
+        )
+
+        if rheology_mode == 'A':
+            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
+                               size=n_s)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
+
+            if s['beta_scale'] > 0:
+                beta_n3 = crng.lognormal(s['beta_loc'], s['beta_scale'],
+                                         size=n_s)
+                n_draw = crng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
+                n_draw = np.maximum(n_draw, N_REF)
+                beta_arr[mask] = beta_n3 * (n_draw + 1) / (N_REF + 1)
+            else:
+                beta_arr[mask] = 1.0
+        else:  # Mode B
+            n_draw = n_draw_all[mask]
+            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
+            rheo = np.maximum(rheo, 1.0)
+            base *= rheo
+
+            if s['beta_scale'] > 0:
+                beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
+                                          size=n_s)
+                beta_arr[mask] = beta_ref * (n_draw + 1) / (N_REF + 1)
+            else:
+                beta_arr[mask] = 1.0
+
+        h2100[mask] = base
+
+    # ── Compute trajectories across all years ──
+    samples_mm = np.zeros((n_samples, n_years))
+    t_denom = 2100.0 - anchor_year
+
+    for j, yr in enumerate(years):
+        if yr < (obs_years[0] if obs_years is not None else anchor_year):
+            # Before observations: zero
+            continue
+        elif yr <= anchor_year:
+            # Pre-anchor: IMBIE observation with measurement uncertainty
+            val = float(obs_interp(yr))
+            sig = float(sig_interp(yr))
+            if sig > 0:
+                samples_mm[:, j] = rng.normal(val, sig, size=n_samples)
+            else:
+                samples_mm[:, j] = val
+        else:
+            # Post-anchor: deterministic power-law ramp from drawn parameters
+            t_norm = (yr - anchor_year) / t_denom
+            h_remaining = np.maximum(h2100 - anchor_draws, 0.0)
+            samples_mm[:, j] = anchor_draws + h_remaining * (t_norm ** beta_arr)
+
+    params = {
+        'scenario_idx': scenario_idx,
+        'h2100_mm': h2100,
+        'beta': beta_arr,
+        'anchor_mm': anchor_draws,
+    }
+    return samples_mm / M_TO_MM, params
 
 
 # =========================================================================
