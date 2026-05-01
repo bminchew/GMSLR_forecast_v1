@@ -534,7 +534,7 @@ class TestUnitConsistency:
         """C_T in Gt/yr/C times GT_TO_M_SLE should give m/yr/C."""
         c_t_m = GREENLAND_SMB.C_T * GT_TO_M_SLE
         # -200 Gt/yr/C * (1/362500) m/Gt = -5.5e-4 m/yr/C
-        assert c_t_m == pytest.approx(-200.0 / 362500.0, rel=1e-10)
+        assert c_t_m == pytest.approx(-300.0 / 362500.0, rel=1e-10)
 
 
 # =========================================================================
@@ -1103,9 +1103,9 @@ class TestSMBEnsembleStatistics:
         warming = np.array([1.0])
         result = project_smb_at_warming_levels(
             GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # At +1C: rate = C_T * 1 + C_T2 * 1 = -200 + (-50) = -250 Gt/yr
+        # At +1C: rate = C_T * 1 + C_T2 * 1 = -300 + (-50) = -350 Gt/yr
         # (mass-balance rate, negative = mass loss)
-        assert result['rate_median'][0] == pytest.approx(-250.0, rel=0.02)
+        assert result['rate_median'][0] == pytest.approx(-350.0, rel=0.02)
 
     def test_uncertainty_propagation(self):
         """Spread should reflect C_T_sigma and C_T2_sigma."""
@@ -1125,7 +1125,7 @@ class TestSMBEnsembleStatistics:
         warming = np.array([4.0])
         result = project_smb_at_warming_levels(
             GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # Linear: C_T * 4 = -800 Gt/yr
+        # Linear: C_T * 4 = -1200 Gt/yr
         # Quadratic: C_T2 * 16 = -800 Gt/yr
-        # Total: -1600 Gt/yr
-        assert result['rate_median'][0] == pytest.approx(-1600.0, rel=0.02)
+        # Total: -2000 Gt/yr
+        assert result['rate_median'][0] == pytest.approx(-2000.0, rel=0.02)

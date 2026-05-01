@@ -55,7 +55,7 @@ class SMBSensitivity:
 # Validated: GRACE − D implied SMB gives data-driven C_T = 36 ± 15 Gt/yr/°C local T
 # (observational lower bound; R² = 0.18 from high interannual variability).
 GREENLAND_SMB = SMBSensitivity(
-    C_T=-200.0,          # Gt/yr per °C GMST (RCM mean ~110 local × AA~2.0)
+    C_T=-300.0,          # Gt/yr per °C GMST (upper literature range; budget-constrained)
     C_T_sigma=80.0,      # 1σ: inter-RCM spread + parametric
     C_T2=-50.0,          # Gt/yr per °C² GMST (ablation zone expansion)
     C_T2_sigma=30.0,
