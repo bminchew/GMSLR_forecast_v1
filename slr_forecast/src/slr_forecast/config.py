@@ -12,8 +12,10 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Baseline
 # ---------------------------------------------------------------------------
-BASELINE_YEAR: float = 2005.0
-"""Reference year for sea-level and temperature anomalies."""
+BASELINE_YEAR: float = 2000.0
+"""Reference year for sea-level and temperature anomalies.
+Changed from 2005 to 2000 to align with the manuscript convention
+of reporting 21st-century contributions relative to the year 2000."""
 
 WAIS_ONSET_YEAR: float = 2010.0
 """Year at which WAIS contribution begins ramping.  Physically motivated
@@ -22,8 +24,8 @@ Distinct from BASELINE_YEAR to allow independent adjustment."""
 
 BASELINE_WINDOW: tuple[int, int] = (1995, 2005)
 """Averaging window (inclusive start, inclusive end) used when rebasing
-anomaly series to BASELINE_YEAR.  Width = BASELINE_YEAR ± 5 yr, matching
-the convention established in the Frederikse and IPCC FACTS datasets."""
+anomaly series to BASELINE_YEAR.  Centered on 2000 but extended to 2005
+to include the transition to the Argo era."""
 
 # ---------------------------------------------------------------------------
 # Monte Carlo / sampling
@@ -50,7 +52,16 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 DATA_DIR: Path = PROJECT_ROOT / "data"
 RAW_DATA_DIR: Path = DATA_DIR / "raw"
 PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
-H5_PATH: Path = PROCESSED_DATA_DIR / "slr_processed_data.h5"
+
+H5_OBS_PATH: Path = PROCESSED_DATA_DIR / "slr_processed_data.h5"
+"""Observational data (NASA GMSL, Frederikse, Berkeley Earth, kinematics)."""
+
+H5_COMP_PATH: Path = PROCESSED_DATA_DIR / "component_results.h5"
+"""Per-component projection ensembles and fitted parameters."""
+
+# Keep H5_PATH as alias for backward compatibility
+H5_PATH: Path = H5_OBS_PATH
+
 FIG_DIR: Path = PROJECT_ROOT / "figures"
 
 # ---------------------------------------------------------------------------
@@ -64,3 +75,34 @@ SSPS: list[str] = [
     "SSP5-8.5",
 ]
 """Available SSP scenarios in the IPCC AR6 FACTS projections."""
+
+# ---------------------------------------------------------------------------
+# Physical / unit constants
+# ---------------------------------------------------------------------------
+GT_TO_M_SLE: float = 1.0 / 362500.0
+"""Gigatonnes of ice to metres of sea-level equivalent."""
+
+PREIND_TO_BASELINE_M: float = 0.19
+"""SLR from pre-industrial to BASELINE_YEAR (metres).
+Frederikse et al. (2020): ~0.19 m from pre-industrial to ~2000."""
+
+# ---------------------------------------------------------------------------
+# Statistical constants
+# ---------------------------------------------------------------------------
+Z_94: float = 1.881
+"""z-score for the 94% highest-density interval (two-tailed)."""
+
+Z_90: float = 1.645
+"""z-score for the 90% confidence interval (two-tailed)."""
+
+# ---------------------------------------------------------------------------
+# IPCC AR6 reference
+# ---------------------------------------------------------------------------
+IPCC_CONFIDENCE: str = "medium_confidence"
+"""Confidence tier used when reading IPCC AR6 SLC NetCDF projections."""
+
+IPCC_REF_PERIOD: tuple[int, int] = (1995, 2014)
+"""IPCC AR6 reference period for sea-level projections."""
+
+SAT_ERA_START: float = 1993.0
+"""Start of the satellite altimetry era (TOPEX/Poseidon launch)."""

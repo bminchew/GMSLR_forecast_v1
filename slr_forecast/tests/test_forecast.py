@@ -421,7 +421,7 @@ class TestVarianceDecomposition:
         """within + between should equal total (if present)."""
         if 'total_var_m2' in vd:
             total = vd['within_scenario_var_m2'] + vd['between_scenario_var_m2']
-            assert abs(total - vd['total_var_m2']) < 1e-6
+            assert abs(total - vd['total_var_m2']) < 1e-5  # JSON rounding to 6 dp
 
 
 # =========================================================================

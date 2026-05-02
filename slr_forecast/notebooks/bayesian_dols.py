@@ -2313,14 +2313,19 @@ def fit_satellite_era_quadratic(
         XtX_c_inv = np.linalg.inv(X_c.T @ X_c)
         cov_beta_meas = XtX_c_inv @ (X_c.T @ C_meas @ X_c) @ XtX_c_inv
 
-        # Scale if fitting window extends beyond covariance span
+        # Scale if fitting window extends beyond covariance span.
+        # Anisotropic scaling: for h = c0 + c1*t + c2*t², the uncertainty
+        # on c1 (trend) scales as ~1/T and on c2 (acceleration) as ~1/T².
+        # c0 (intercept at t=0) is insensitive to span extension.
+        # Element-wise: S_ij = r^((p_i + p_j)/2) where r = T_cov/T_fit
+        # and p = [0, 1, 2] are the T-dependence exponents for each param.
         t_cov_span = t_c[-1] - t_c[0]
         t_fit_span = t_fit[-1] - t_fit[0]
         if t_fit_span > t_cov_span * 1.05:
-            # Measurement error on trend scales ~ 1/T;
-            # on acceleration scales ~ 1/T²
-            scale_factor = (t_cov_span / t_fit_span)
-            cov_beta_meas *= scale_factor
+            r = t_cov_span / t_fit_span
+            pwr = np.array([0.0, 1.0, 2.0])
+            scale_mat = r ** ((pwr[:, None] + pwr[None, :]) / 2.0)
+            cov_beta_meas *= scale_mat
 
         ra_cov_meas = J @ cov_beta_meas @ J.T
 
@@ -2384,6 +2389,7 @@ def _rate_accel_prior_logp(
     rate_model: float,
     accel_model: float,
     rate_prior: SatelliteEraQuadraticResult,
+    cov_inv: Optional[np.ndarray] = None,
 ) -> float:
     """Bivariate Gaussian log-prior penalty on (rate, accel).
 
@@ -2395,6 +2401,10 @@ def _rate_accel_prior_logp(
         Model-implied GMSL acceleration (m/yr²).
     rate_prior : SatelliteEraQuadraticResult
         Contains observed rate, accel, and their 2×2 covariance.
+    cov_inv : (2, 2) array or None
+        Pre-computed inverse of ``rate_prior.rate_accel_cov``.
+        If None, the inverse is computed on the fly (convenient but
+        wasteful inside MCMC loops).
 
     Returns
     -------
@@ -2403,7 +2413,8 @@ def _rate_accel_prior_logp(
     """
     delta = np.array([rate_model - rate_prior.rate,
                       accel_model - rate_prior.accel])
-    cov_inv = np.linalg.inv(rate_prior.rate_accel_cov)
+    if cov_inv is None:
+        cov_inv = np.linalg.inv(rate_prior.rate_accel_cov)
     return -0.5 * delta @ cov_inv @ delta
 
 
@@ -2481,7 +2492,8 @@ def _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed):
 
 def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
                     prior_scales, H0_prior_mean, symmetric_a=False,
-                    rate_prior=None, T_end=0.0, dTdt_end=0.0):
+                    rate_prior=None, T_end=0.0, dTdt_end=0.0,
+                    rate_prior_cov_inv=None):
     """Log-posterior for the level-space model.
 
     Parameters
@@ -2509,7 +2521,8 @@ def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
         a, b, c = theta[0], theta[1], theta[2]
         rate_model = a * T_end**2 + b * T_end + c
         accel_model = (2.0 * a * T_end + b) * dTdt_end
-        lp_rate = _rate_accel_prior_logp(rate_model, accel_model, rate_prior)
+        lp_rate = _rate_accel_prior_logp(rate_model, accel_model,
+                                         rate_prior, rate_prior_cov_inv)
         if not np.isfinite(lp_rate):
             return -np.inf
         return lp + ll + lp_rate
@@ -2710,6 +2723,9 @@ def fit_bayesian_level(
     p0[:, 1] = np.abs(p0[:, 1])
 
     # ---- Run emcee ----
+    # Pre-compute covariance inverse once (avoids np.linalg.inv per step)
+    _rp_cov_inv = (np.linalg.inv(rate_prior.rate_accel_cov)
+                   if rate_prior is not None else None)
     sampler = emcee.EnsembleSampler(
         n_walkers, ndim, _level_log_prob,
         args=(I2_obs, I1_obs, I0_obs, H_obs, sigma_obs,
@@ -2717,7 +2733,8 @@ def fit_bayesian_level(
         kwargs={'symmetric_a': symmetric_a,
                 'rate_prior': rate_prior,
                 'T_end': T_end_val,
-                'dTdt_end': dTdt_end_val},
+                'dTdt_end': dTdt_end_val,
+                'rate_prior_cov_inv': _rp_cov_inv},
     )
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
@@ -3046,6 +3063,7 @@ def _state_level_log_prob(
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
     rate_prior=None, idx_eval=None, dTdt_end=0.0,
+    rate_prior_cov_inv=None,
 ):
     """Log-posterior for the rate-and-state level-space model.
 
@@ -3080,6 +3098,9 @@ def _state_level_log_prob(
         Index into the monthly grid at the rate_prior evaluation time.
     dTdt_end : float
         Temperature trend at end of record (°C/yr).
+    rate_prior_cov_inv : (2, 2) array or None
+        Pre-computed inverse of ``rate_prior.rate_accel_cov``.
+        Avoids redundant matrix inversion at every MCMC step.
     """
     # Prior
     lp = _state_level_log_prior(theta, prior_scales, H0_prior_mean)
@@ -3097,9 +3118,9 @@ def _state_level_log_prob(
     # Compute I_S = ∫(S - T) dτ on monthly grid, then extract at obs times
     n = len(T_monthly)
     dt_monthly = np.diff(time_monthly)
-    IS = np.zeros(n)
-    for i in range(n - 1):
-        IS[i + 1] = IS[i] + 0.5 * (diseq[i] + diseq[i + 1]) * dt_monthly[i]
+    IS = np.empty(n)
+    IS[0] = 0.0
+    IS[1:] = np.cumsum(0.5 * (diseq[:-1] + diseq[1:]) * dt_monthly)
 
     IS_obs = IS[obs_idx]
 
@@ -3125,7 +3146,8 @@ def _state_level_log_prob(
         dSdt_end = (T_end - S_end) / tau
         accel_model = ((2.0 * a * T_end + b) * dTdt_end
                        + d * (dSdt_end - dTdt_end))
-        lp_rate = _rate_accel_prior_logp(rate_model, accel_model, rate_prior)
+        lp_rate = _rate_accel_prior_logp(rate_model, accel_model,
+                                         rate_prior, rate_prior_cov_inv)
         if not np.isfinite(lp_rate):
             return -np.inf
         return lp + ll + lp_rate
@@ -3403,6 +3425,9 @@ def fit_bayesian_state_level(
         print(f"  Walker init: {init_method}, {n_walkers} walkers")
 
     # ---- Run emcee ----
+    # Pre-compute covariance inverse once (avoids np.linalg.inv per step)
+    _rp_cov_inv = (np.linalg.inv(rate_prior.rate_accel_cov)
+                   if rate_prior is not None else None)
     sampler = emcee.EnsembleSampler(
         n_walkers, ndim, _state_level_log_prob,
         args=(T_monthly, time_monthly, obs_idx,
@@ -3411,7 +3436,8 @@ def fit_bayesian_state_level(
               prior_scales, H0_prior_mean),
         kwargs={'rate_prior': rate_prior,
                 'idx_eval': idx_eval_rp,
-                'dTdt_end': dTdt_end_rp},
+                'dTdt_end': dTdt_end_rp,
+                'rate_prior_cov_inv': _rp_cov_inv},
     )
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 

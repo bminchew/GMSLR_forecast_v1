@@ -12,6 +12,7 @@ import os
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
+from scipy.special import expit
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -19,7 +20,7 @@ import pandas as pd
 try:
     from slr_forecast.config import BASELINE_YEAR, M_TO_MM, N_SAMPLES, WAIS_ONSET_YEAR
 except ImportError:
-    BASELINE_YEAR = 2005.0
+    BASELINE_YEAR = 2000.0
     M_TO_MM = 1000.0
     N_SAMPLES = 2000
     WAIS_ONSET_YEAR = 2010.0
@@ -1055,3 +1056,83 @@ def ismip6_ensemble_stats(ismip6_data, experiments=None, baseline_year=2015.0):
         'n_models': len(trajectories),
         'labels': labels,
     }
+
+
+# ---------------------------------------------------------------------------
+# Rate-space blending
+# ---------------------------------------------------------------------------
+
+def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples_rb,
+                     sq_time, t_origin, h_origin, t_center, tau_blend):
+    """Blend quadratic and component-sum rates, integrate to level.
+
+    Parameters
+    ----------
+    proj_years : ndarray (T,)
+        Full projection time axis.
+    comp_samples : ndarray (N, T)
+        Component-sum level samples (meters, rel. to baseline).
+    sq_rate_samples : ndarray (N, T_sq)
+        Quadratic rate samples (m/yr) on sq_time grid.
+    sq_level_samples_rb : ndarray (N, T_sq)
+        Quadratic level samples (meters, rel. to baseline) on sq_time grid.
+    sq_time : ndarray (T_sq,)
+        Time axis for quadratic samples.
+    t_origin : float
+        Forecast origin (end of obs record).
+    h_origin : float
+        Observed GMSL at t_origin (meters, rel. to baseline).
+    t_center : float
+        Centre of sigmoid transition.
+    tau_blend : float
+        Width of sigmoid transition (years).
+
+    Returns
+    -------
+    forecast_samples : ndarray (N, T_forecast)
+        Blended level forecast (meters, rel. to baseline).
+    forecast_years : ndarray (T_forecast,)
+        Time axis for the forecast (from t_origin onward).
+    w_t : ndarray (T_forecast,)
+        Sigmoid weight at each forecast year (1 = pure quadratic).
+    """
+    n_samples = comp_samples.shape[0]
+
+    # Forecast grid: from origin onward (annual steps matching proj_years)
+    fmask = proj_years >= t_origin
+    f_years = proj_years[fmask]
+    n_t = len(f_years)
+
+    # Sigmoid weight: w=1 (quadratic) early, w=0 (component) late
+    w_t = 1.0 - expit((f_years - t_center) / tau_blend)
+
+    # Component-sum rate: central difference on annual grid
+    dt_proj = np.diff(proj_years)
+    comp_rate_all = np.diff(comp_samples, axis=1) / dt_proj[None, :]
+    # Rate at midpoints; shift to full-year grid via averaging neighbours
+    comp_rate_full = np.zeros_like(comp_samples)
+    comp_rate_full[:, 1:-1] = 0.5 * (comp_rate_all[:, :-1] + comp_rate_all[:, 1:])
+    comp_rate_full[:, 0] = comp_rate_all[:, 0]
+    comp_rate_full[:, -1] = comp_rate_all[:, -1]
+
+    # Restrict to forecast window
+    comp_rate_f = comp_rate_full[:, fmask]
+
+    # Interpolate quadratic rate onto forecast grid
+    sq_rate_f = np.zeros((n_samples, n_t))
+    for k in range(n_samples):
+        sq_rate_f[k] = np.interp(f_years, sq_time, sq_rate_samples[k])
+
+    # Blended rate (sample-by-sample)
+    blended_rate = w_t[None, :] * sq_rate_f + (1.0 - w_t[None, :]) * comp_rate_f
+
+    # Integrate from h_origin via cumulative trapezoidal rule
+    dt_f = np.diff(f_years)
+    forecast_samples = np.zeros((n_samples, n_t))
+    forecast_samples[:, 0] = h_origin
+    for j in range(1, n_t):
+        forecast_samples[:, j] = (forecast_samples[:, j - 1]
+                                  + 0.5 * (blended_rate[:, j - 1] + blended_rate[:, j])
+                                  * dt_f[j - 1])
+
+    return forecast_samples, f_years, w_t

@@ -41,8 +41,19 @@ PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 CONF_BASE = RAW_DIR / "ipcc_ar6" / "slr" / "ar6" / "global" / "confidence_output_files"
 OUTPUT_PATH = PROCESSED_DIR / "ipcc_distributions.h5"
 
-BASELINE_YEAR = 2005.0
+try:
+    from slr_forecast.config import BASELINE_YEAR
+except ImportError:
+    BASELINE_YEAR = 2000.0
 M_TO_MM = 1000.0
+
+# IPCC AR6 projections are relative to the 1995-2014 mean (~2005).
+# If BASELINE_YEAR != 2005, we shift all quantiles by the observed GMSL
+# difference (mm) between 2000 and 2005.
+# NASA altimetry: ~10.7 mm rise from 2000 to 2005.
+_IPCC_NATIVE_BASELINE = 2005.0
+_GMSL_2000_TO_2005_MM = 10.7  # NASA satellite altimetry
+_IPCC_REBASE_MM = _GMSL_2000_TO_2005_MM if BASELINE_YEAR < _IPCC_NATIVE_BASELINE else 0.0
 
 SSP_TO_CODE = {
     "SSP1-2.6": "ssp126",
@@ -116,7 +127,13 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    with h5py.File(OUTPUT_PATH, "w") as f:
+    # Write to a temp file, then replace — avoids Dropbox/Google Drive
+    # lock conflicts on macOS.
+    import tempfile, shutil
+    _tmp_fd, _tmp_path = tempfile.mkstemp(suffix=".h5", dir=str(PROCESSED_DIR))
+    os.close(_tmp_fd)
+
+    with h5py.File(_tmp_path, "w") as f:
         f.attrs["n_samples"] = n_samples
         f.attrs["n_ridge"] = n_ridge
         f.attrs["seed"] = seed
@@ -139,6 +156,11 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                 )
                 years = ie["years"]
                 n_years = len(years)
+
+                # Rebase from IPCC native (~2005) to BASELINE_YEAR
+                if _IPCC_REBASE_MM != 0.0:
+                    for qk in ("q05", "q17", "q50", "q83", "q95"):
+                        ie[qk] = ie[qk] + _IPCC_REBASE_MM
 
                 # Fit skew-normal at each year
                 alphas = np.zeros(n_years)
@@ -204,6 +226,8 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                 med_2100 = ie["q50"][np.argmin(np.abs(years - 2100))]
                 print(f"  {ssp}: {n_years} years, q50@2100={med_2100:.0f} mm")
 
+    # Atomic replace: move temp file over the target
+    shutil.move(_tmp_path, str(OUTPUT_PATH))
     size_mb = os.path.getsize(OUTPUT_PATH) / 1024**2
     print(f"\nSaved: {OUTPUT_PATH}  ({size_mb:.1f} MB)")
 

@@ -22,6 +22,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
+from slr_forecast.config import Z_90
+
 from slr_forecast.units import (
     MM_TO_M,
     tag_units,
@@ -175,7 +177,7 @@ def read_frederikse2020(filepath: str) -> pd.DataFrame:
     ]:
         lo, hi = f"{var}_lower", f"{var}_upper"
         if lo in df.columns and hi in df.columns:
-            df[f"{var}_sigma"] = (df[hi] - df[lo]) / (2 * 1.645)
+            df[f"{var}_sigma"] = (df[hi] - df[lo]) / (2 * Z_90)
 
     # Convert mm → meters
     value_cols = [c for c in df.columns if c not in ("year", "decimal_year")]

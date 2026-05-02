@@ -1,0 +1,56 @@
+# Arête Glacier Initiative — base matplotlib style
+# Adapted from seaborn-v0_8-ticks aesthetic with Arête brand palette
+#
+# Colors from Arête Brand Guidelines:
+#   Glacier Blue 100: #D8E7F1    Glacier Blue 400: #036C9A
+#   Glacier Blue 200: #B5D5E9    Glacier Blue 500: #07456C
+#   Glacier Blue 300: #72A3C3    Glacier Blue 600: #031D3A
+#   Earth:            #AB6638    White:             #FFFFFF
+
+# ---------- general ----------
+figure.facecolor: white
+text.color:       .15
+axes.labelcolor:  .15
+axes.axisbelow:   True
+image.cmap:       arete_blues
+
+# ---------- fonts ----------
+font.family:      sans-serif
+font.sans-serif:  Outfit, Rubik, Montserrat, Helvetica Neue, Arial, Liberation Sans, DejaVu Sans, sans-serif
+
+# ---------- axes ----------
+axes.facecolor:   white
+axes.edgecolor:   .15
+axes.linewidth:   1.25
+axes.grid:        False
+
+# Arête color cycle: six distinguishable colours anchored to brand palette
+#   GB400   Earth   teal    muted-red  GB300   amber
+axes.prop_cycle: cycler('color', ['036C9A', 'AB6638', '2A9D8F', 'C44E52', '72A3C3', 'D4A24E'])
+
+# ---------- grid ----------
+grid.color:       .85
+grid.linestyle:   -
+grid.linewidth:   0.8
+
+# ---------- lines ----------
+lines.solid_capstyle: round
+lines.markeredgewidth: 0
+
+# ---------- patches ----------
+patch.facecolor:  036C9A
+
+# ---------- ticks ----------
+xtick.direction:  out
+ytick.direction:  out
+xtick.color:      .15
+ytick.color:      .15
+xtick.major.size: 6
+ytick.major.size: 6
+xtick.minor.size: 3
+ytick.minor.size: 3
+
+# ---------- legend ----------
+legend.frameon:       False
+legend.numpoints:     1
+legend.scatterpoints: 1

@@ -20,7 +20,7 @@ from bayesian_dols import (
 try:
     from slr_forecast.config import BASELINE_YEAR, M_TO_MM, N_SAMPLES
 except ImportError:
-    BASELINE_YEAR = 2005.0
+    BASELINE_YEAR = 2000.0
     M_TO_MM = 1000.0
     N_SAMPLES = 2000
 

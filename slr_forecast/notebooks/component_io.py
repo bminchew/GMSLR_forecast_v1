@@ -45,7 +45,7 @@ import numpy as np
 try:
     from slr_forecast.config import BASELINE_YEAR, N_SAMPLES, PROCESSED_DATA_DIR
 except ImportError:
-    BASELINE_YEAR = 2005.0
+    BASELINE_YEAR = 2000.0
     N_SAMPLES = 2000
     PROCESSED_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 

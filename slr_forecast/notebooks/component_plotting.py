@@ -822,7 +822,9 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
                                         ipcc_data=None, ipcc_key=None,
                                         obs_years=None, obs_vals=None,
                                         obs_sigma=None, obs_label=None,
-                                        save_path=None):
+                                        temp_obs_years=None, temp_obs_vals=None,
+                                        temp_obs_label=None,
+                                        units='m', save_path=None):
     """Two-panel figure: upper panel shows component SLR projections under
     multiple SSPs with CI bands; lower panel shows the temperature forcing.
 
@@ -852,11 +854,19 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
         Observational data to overlay on the upper panel (meters).
     obs_label : str or None
         Label for observational data.
+    units : str
+        Display units: 'm' (default), 'cm', or 'mm'.  All SLR data
+        (comp_proj, obs_vals, obs_sigma) are assumed to be in meters
+        and are scaled accordingly.
     save_path : str or None
     """
     has_temp = temperature_scenarios is not None
     n_panels = 2 if has_temp else 1
     height_ratios = [2, 1] if has_temp else [1]
+
+    # Unit conversion: data is in meters
+    _unit_scale = {'m': 1.0, 'cm': 100.0, 'mm': M_TO_MM}
+    scale = _unit_scale.get(units, 1.0)
 
     fig = plt.figure(figsize=(10, 5 + 2.5 * has_temp))
     gs = gridspec.GridSpec(n_panels, 1, height_ratios=height_ratios, hspace=0.28)
@@ -870,12 +880,12 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
 
     # Observations
     if obs_years is not None and obs_vals is not None:
-        ax_sl.plot(obs_years, obs_vals * M_TO_MM, color='#444444', lw=2,
+        ax_sl.plot(obs_years, obs_vals * scale, color='#444444', lw=2,
                    label=obs_label or 'Observed', zorder=5)
         if obs_sigma is not None:
             ax_sl.fill_between(obs_years,
-                               (obs_vals - 1.645 * obs_sigma) * M_TO_MM,
-                               (obs_vals + 1.645 * obs_sigma) * M_TO_MM,
+                               (obs_vals - 1.645 * obs_sigma) * scale,
+                               (obs_vals + 1.645 * obs_sigma) * scale,
                                color='#444444', alpha=0.12, zorder=4)
 
     # Projections per SSP
@@ -884,11 +894,11 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
             continue
         p = comp_proj[ssp]
         color = SSP_COLORS.get(ssp, 'gray')
-        med = p['median'][proj_mask] * M_TO_MM
-        lo17 = p['p17'][proj_mask] * M_TO_MM
-        hi83 = p['p83'][proj_mask] * M_TO_MM
-        lo5 = p['p5'][proj_mask] * M_TO_MM
-        hi95 = p['p95'][proj_mask] * M_TO_MM
+        med = p['median'][proj_mask] * scale
+        lo17 = p['p17'][proj_mask] * scale
+        hi83 = p['p83'][proj_mask] * scale
+        lo5 = p['p5'][proj_mask] * scale
+        hi95 = p['p95'][proj_mask] * scale
 
         ax_sl.plot(yr_plot, med, color=color, lw=2, label=ssp)
         ax_sl.fill_between(yr_plot, lo17, hi83, color=color, alpha=0.20)
@@ -907,7 +917,7 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
                                slc[q05_idx], slc[q95_idx],
                                color=color, alpha=0.05)
 
-    ax_sl.set_ylabel(f'{component_name} SLR (mm)')
+    ax_sl.set_ylabel(f'{component_name} SLR ({units})')
     ax_sl.set_title(f'{component_name} — Projections')
     ax_sl.legend(fontsize=8, loc='upper left', ncol=2)
     ax_sl.axhline(0, color='k', lw=0.5, ls='--')
@@ -923,6 +933,10 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
             ts = temperature_scenarios[ssp]
             color = SSP_COLORS.get(ssp, 'gray')
             ax_t.plot(ts['years'], ts['temperature'], color=color, lw=1.5)
+        if temp_obs_years is not None and temp_obs_vals is not None:
+            ax_t.plot(temp_obs_years, temp_obs_vals, color='#444444', lw=2,
+                      label=temp_obs_label or 'Observed', zorder=5)
+            ax_t.legend(fontsize=8, loc='upper left')
         ax_t.set_ylabel(temp_label)
         ax_t.set_xlabel('Year')
         ax_t.axhline(0, color='k', lw=0.5, ls='--')
@@ -1180,17 +1194,19 @@ def plot_component_pdf_exceedance(sample_sets, labels, colors, component_name,
 # =========================================================================
 
 def plot_component_ridge(samples_by_year, component_name, ssp_label,
-                          years=None, source_labels=None,
+                          years=None, source_labels=None, legend_labels=None,
                           source_colors=None, bw_factor=0.9,
-                          xlabel=None, save_path=None):
+                          xlabel=None, xlim=None, title=None,
+                          units='m', save_path=None):
     """Ridge plot showing density evolution across decades for one or more
     projection sources at a single SSP.
 
     Parameters
     ----------
     samples_by_year : dict
-        ``{year: {source_label: ndarray_mm}}`` — MC samples in mm for
-        each (year, source) combination.
+        ``{year: {source_label: ndarray}}`` — MC samples in **meters** for
+        each (year, source) combination.  Converted to display units via
+        the *units* parameter.
     component_name : str
         Component name for title.
     ssp_label : str
@@ -1204,7 +1220,10 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
     bw_factor : float
         Bandwidth scaling factor for KDE.
     xlabel : str or None
-        X-axis label. Defaults to '{component_name} SLR (mm)'.
+        X-axis label. Defaults to '{component_name} SLR ({units})'.
+    units : str
+        Display units: 'm' (default), 'cm', or 'mm'.  Samples are assumed
+        to be in meters and are scaled accordingly.
     save_path : str or None
     """
     if years is None:
@@ -1216,16 +1235,23 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         source_colors = {s: default_colors[i % len(default_colors)]
                          for i, s in enumerate(source_labels)}
     if xlabel is None:
-        xlabel = f'{component_name} SLR (mm)'
+        xlabel = f'{component_name} SLR ({units})'
+
+    # Unit conversion: samples assumed to be in meters
+    _unit_scale = {'m': 1.0, 'cm': 100.0, 'mm': M_TO_MM}
+    scale = _unit_scale.get(units, 1.0)
 
     n_yrs = len(years)
 
     # Determine shared x range
-    all_vals = np.concatenate([samples_by_year[yr][src]
-                               for yr in years for src in source_labels
-                               if src in samples_by_year.get(yr, {})])
-    x_lo = float(np.percentile(all_vals, 0.5)) - 5
-    x_hi = float(np.percentile(all_vals, 99.5)) + 5
+    if xlim is not None:
+        x_lo, x_hi = xlim
+    else:
+        all_vals = np.concatenate([np.asarray(samples_by_year[yr][src]) * scale
+                                   for yr in years for src in source_labels
+                                   if src in samples_by_year.get(yr, {})])
+        x_lo = float(np.percentile(all_vals, 0.5)) - 5
+        x_hi = float(np.percentile(all_vals, 99.5)) + 5
     x_grid = np.linspace(x_lo, x_hi, 400)
 
     # Precompute KDEs
@@ -1235,7 +1261,7 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         for src in source_labels:
             if src not in samples_by_year.get(yr, {}):
                 continue
-            vals = np.asarray(samples_by_year[yr][src])
+            vals = np.asarray(samples_by_year[yr][src]) * scale
             if len(vals) < 10:
                 continue
             kde = gaussian_kde(vals, bw_method='scott')
@@ -1272,13 +1298,15 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         ax.set_ylim(ymin, ymax / perspective)
 
     axes[-1].set_xlabel(xlabel)
-    fig.suptitle(f'{component_name} — Density evolution ({ssp_label})',
-                 fontsize=12, fontweight='bold', y=0.98)
+    _title = title if title is not None else f'{component_name} — Density evolution ({ssp_label})'
+    fig.suptitle(_title, fontsize=12, fontweight='bold', y=0.98)
 
     # Legend
     from matplotlib.patches import Patch
+    _legend_names = legend_labels if legend_labels is not None else source_labels
     legend_elements = [Patch(facecolor=source_colors.get(s, 'gray'),
-                             alpha=0.4, label=s) for s in source_labels]
+                             alpha=0.4, label=leg)
+                       for s, leg in zip(source_labels, _legend_names)]
     axes[0].legend(handles=legend_elements, fontsize=8, loc='upper right',
                    framealpha=0.8)
 
