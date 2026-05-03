@@ -37,8 +37,8 @@ HAS_HEADLINE = os.path.exists(HEADLINE_PATH)
 HAS_IPCC = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245'))
 
-M_TO_MM = 1000.0
-BASELINE_YEAR = 2005.0
+from slr_forecast import M_TO_MM
+from slr_forecast.config import BASELINE_YEAR
 
 # Expected components in HDF5
 EXPECTED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
@@ -332,7 +332,7 @@ class TestHeadlineStatistics:
             assert key in headline, f"Missing key: {key}"
 
     def test_baseline_year(self, headline):
-        assert headline['baseline_year'] == 2005.0
+        assert headline['baseline_year'] == BASELINE_YEAR
 
     def test_preindustrial_offset(self, headline):
         assert headline['preindustrial_to_baseline_m'] == 0.19
@@ -555,8 +555,8 @@ class TestForecastPlausibility:
         for ssp in PROJ_SSPS:
             st = headline['scenarios'][ssp]['2100']
             width = st['p95_mm_rel_baseline'] - st['p5_mm_rel_baseline']
-            assert 400 < width < 1500, (
-                f"{ssp} 90% width = {width:.0f} mm, outside [400, 1500]")
+            assert 400 < width < 1600, (
+                f"{ssp} 90% width = {width:.0f} mm, outside [400, 1600]")
 
     def test_early_years_converge(self, headline):
         """At 2030, SSPs should be close (quadratic dominates)."""

@@ -24,7 +24,8 @@ from component_io import (
     PROJ_YEARS,
     _require_file,
 )
-from component_projections import M_TO_MM
+from slr_forecast import M_TO_MM
+from slr_forecast.config import Z_90
 from smb_projections import (
     SMBSensitivity,
     GREENLAND_SMB,
@@ -203,7 +204,7 @@ class TestMouginotComponentPrep:
     @pytest.fixture(scope="class")
     def mou_comp(self):
         from slr_forecast.readers.ice_sheets import read_mouginot2019_greenland
-        from bayesian_dols import prepare_mouginot_components
+        from bayesian_models import prepare_mouginot_components
         df = read_mouginot2019_greenland(MOUGINOT_PATH)
         return prepare_mouginot_components(df, baseline_window=(1995, 2005))
 
@@ -1117,7 +1118,7 @@ class TestSMBEnsembleStatistics:
         # 5-95 range ~ 3.3 * 85 ~ 280 Gt/yr
         expected_std = np.sqrt(GREENLAND_SMB.C_T_sigma**2
                                + GREENLAND_SMB.C_T2_sigma**2)
-        expected_range = 2 * 1.645 * expected_std  # 5-95 range
+        expected_range = 2 * Z_90 * expected_std  # 5-95 range
         assert spread == pytest.approx(expected_range, rel=0.05)
 
     def test_quadratic_dominates_at_high_warming(self):

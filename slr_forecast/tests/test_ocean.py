@@ -35,7 +35,7 @@ HAS_H5 = os.path.exists(H5_PATH)
 HAS_IPCC = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245'))
 
-M_TO_MM = 1000.0
+from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 
@@ -95,7 +95,7 @@ class TestTwoLayerODE:
 
     @pytest.fixture(scope="class")
     def ode_solver(self):
-        from bayesian_dols import solve_twolayer_ode
+        from bayesian_models import solve_twolayer_ode
         return solve_twolayer_ode
 
     def test_step_response_equilibrium(self, ode_solver):
@@ -355,7 +355,7 @@ class TestDesignVectors:
 
     def test_constant_temperature(self):
         """Constant T: I1 should grow linearly, I2 quadratically."""
-        from bayesian_dols import build_level_design_vectors
+        from bayesian_models import build_level_design_vectors
         n = 120  # 10 years of monthly
         T = np.ones(n) * 1.0
         time = np.arange(n) / 12.0
@@ -369,7 +369,7 @@ class TestDesignVectors:
 
     def test_zero_temperature(self):
         """Zero T: I1 and I2 should be zero, I0 should grow."""
-        from bayesian_dols import build_level_design_vectors
+        from bayesian_models import build_level_design_vectors
         n = 120
         T = np.zeros(n)
         time = np.arange(n) / 12.0
@@ -380,7 +380,7 @@ class TestDesignVectors:
         assert d['I0_obs'][0] > 4.0
 
     def test_output_keys(self):
-        from bayesian_dols import build_level_design_vectors
+        from bayesian_models import build_level_design_vectors
         n = 60
         T = np.random.randn(n)
         time = np.arange(n) / 12.0

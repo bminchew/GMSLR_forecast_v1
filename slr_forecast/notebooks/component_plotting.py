@@ -16,9 +16,11 @@ from scipy.stats import gaussian_kde
 # Constants
 # ---------------------------------------------------------------------------
 try:
-    from slr_forecast.config import M_TO_MM
+    from slr_forecast.config import Z_90
+    from slr_forecast import M_TO_MM
 except ImportError:
     M_TO_MM = 1000.0
+    Z_90 = 1.645
 
 # ---------------------------------------------------------------------------
 # Standard colour palettes
@@ -29,9 +31,13 @@ SSP_COLORS = {
 }
 
 COMP_COLORS = {
-    'Thermosteric': '#1b7837', 'Glaciers': '#762a83',
-    'Greenland': '#e08214', 'EAIS': '#542788',
-    'Peninsula': '#b35806', 'WAIS': '#c51b7d', 'TWS': '#4d4d4d',
+    'Thermosteric': '#B22222',  # firebrick red (complementary warm)
+    'Glaciers':     '#808080',  # grey
+    'Greenland':    '#2E8B57',  # sea green (complementary to red)
+    'TWS':          '#AB6638',  # Arete Earth (brown/copper)
+    'WAIS':         '#036C9A',  # Glacier Blue 400 (darkest blue)
+    'EAIS':         '#B5D5E9',  # Glacier Blue 200 (lightest blue)
+    'Peninsula':    '#72A3C3',  # Glacier Blue 300 (mid blue)
 }
 
 ARETE_COLORS = {
@@ -884,8 +890,8 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
                    label=obs_label or 'Observed', zorder=5)
         if obs_sigma is not None:
             ax_sl.fill_between(obs_years,
-                               (obs_vals - 1.645 * obs_sigma) * scale,
-                               (obs_vals + 1.645 * obs_sigma) * scale,
+                               (obs_vals - Z_90 * obs_sigma) * scale,
+                               (obs_vals + Z_90 * obs_sigma) * scale,
                                color='#444444', alpha=0.12, zorder=4)
 
     # Projections per SSP
@@ -1035,8 +1041,9 @@ def plot_a4_scenario_pdfs(scenario_samples, scenario_labels, scenario_colors,
 # =========================================================================
 
 def plot_component_histogram(sample_sets, labels, colors, component_name,
-                              year=2100, xlabel=None, xlim=None,
-                              probability=False, save_path=None):
+                              year=2100, title=None, xlabel=None, ylabel=None,
+                              xlim=None, probability=False, fontsize=None,
+                              save_path=None):
     """KDE overlays at a user-specified year for multiple projection sources.
 
     Parameters
@@ -1060,15 +1067,29 @@ def plot_component_histogram(sample_sets, labels, colors, component_name,
         (fraction of samples per bin) instead of density.
     save_path : str or None
     """
+    # Font sizes: accept int (uniform) or dict with keys title/xlabel/ylabel/legend/xtick/ytick
+    _fs_defaults = {'title': None, 'xlabel': None, 'ylabel': None,
+                    'legend': 9, 'xtick': None, 'ytick': None}
+    if fontsize is None:
+        _fs = _fs_defaults
+    elif isinstance(fontsize, (int, float)):
+        _fs = {k: fontsize for k in _fs_defaults}
+    else:
+        _fs = {**_fs_defaults, **fontsize}
+
     fig, ax = plt.subplots(figsize=(8, 5))
 
     if xlabel is None:
         xlabel = f'{component_name} SLR at {year} (mm)'
 
-    # Determine shared x range
+    # Determine shared x range — use xlim if provided so KDE covers
+    # the full requested range; otherwise auto from data percentiles.
     all_vals = np.concatenate([s for s in sample_sets if len(s) > 0])
-    x_lo = np.percentile(all_vals, 0.5) - 5
-    x_hi = np.percentile(all_vals, 99.5) + 5
+    if xlim is not None:
+        x_lo, x_hi = xlim
+    else:
+        x_lo = np.percentile(all_vals, 0.5) - 5
+        x_hi = np.percentile(all_vals, 99.5) + 5
     x_grid = np.linspace(x_lo, x_hi, 300)
 
     dx = x_grid[1] - x_grid[0]
@@ -1086,10 +1107,16 @@ def plot_component_histogram(sample_sets, labels, colors, component_name,
         med = np.median(samples)
         ax.axvline(med, color=color, ls='--', lw=1, alpha=0.7)
 
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel('Probability (%)' if probability else 'Probability density')
-    ax.set_title(f'{component_name} — Distribution at {year}')
-    ax.legend(fontsize=9)
+    ax.set_xlabel(xlabel, fontsize=_fs['xlabel'])
+    _ylabel = ylabel if ylabel is not None else ('Probability (%)' if probability else 'Probability density')
+    ax.set_ylabel(_ylabel, fontsize=_fs['ylabel'])
+    _title = title if title is not None else f'{component_name} — Distribution at {year}'
+    ax.set_title(_title, fontsize=_fs['title'])
+    ax.legend(fontsize=_fs['legend'])
+    if _fs['xtick'] is not None:
+        ax.tick_params(axis='x', labelsize=_fs['xtick'])
+    if _fs['ytick'] is not None:
+        ax.tick_params(axis='y', labelsize=_fs['ytick'])
     ax.set_ylim(bottom=0)
     if xlim is not None:
         ax.set_xlim(*xlim)
@@ -1197,6 +1224,8 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                           years=None, source_labels=None, legend_labels=None,
                           source_colors=None, bw_factor=0.9,
                           xlabel=None, xlim=None, title=None,
+                          legend_loc=None, legend_bbox=None,
+                          top=0.90, fontsize=None,
                           units='m', save_path=None):
     """Ridge plot showing density evolution across decades for one or more
     projection sources at a single SSP.
@@ -1236,6 +1265,15 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                          for i, s in enumerate(source_labels)}
     if xlabel is None:
         xlabel = f'{component_name} SLR ({units})'
+
+    # Font sizes: accept int (uniform) or dict with keys year/title/legend/xlabel
+    _fs_defaults = {'year': 10, 'title': 12, 'legend': 8, 'xlabel': None, 'xtick': None}
+    if fontsize is None:
+        _fs = _fs_defaults
+    elif isinstance(fontsize, (int, float)):
+        _fs = {k: fontsize for k in _fs_defaults}
+    else:
+        _fs = {**_fs_defaults, **fontsize}
 
     # Unit conversion: samples assumed to be in meters
     _unit_scale = {'m': 1.0, 'cm': 100.0, 'mm': M_TO_MM}
@@ -1285,7 +1323,7 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                             clip_on=False)
             ax.plot(x_grid, density, color=color, lw=1.0, clip_on=False)
         ax.text(0.0, 0.2, str(yr), fontweight='bold', color='0.5',
-                ha='left', va='center', transform=ax.transAxes, fontsize=10)
+                ha='left', va='center', transform=ax.transAxes, fontsize=_fs['year'])
         ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
@@ -1297,9 +1335,11 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         ymin, ymax = ax.get_ylim()
         ax.set_ylim(ymin, ymax / perspective)
 
-    axes[-1].set_xlabel(xlabel)
+    axes[-1].set_xlabel(xlabel, fontsize=_fs['xlabel'])
+    if _fs['xtick'] is not None:
+        axes[-1].tick_params(axis='x', labelsize=_fs['xtick'])
     _title = title if title is not None else f'{component_name} — Density evolution ({ssp_label})'
-    fig.suptitle(_title, fontsize=12, fontweight='bold', y=0.98)
+    fig.suptitle(_title, fontsize=_fs['title'], fontweight='bold', y=0.98)
 
     # Legend
     from matplotlib.patches import Patch
@@ -1307,10 +1347,14 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
     legend_elements = [Patch(facecolor=source_colors.get(s, 'gray'),
                              alpha=0.4, label=leg)
                        for s, leg in zip(source_labels, _legend_names)]
-    axes[0].legend(handles=legend_elements, fontsize=8, loc='upper right',
-                   framealpha=0.8)
+    _loc = legend_loc if legend_loc is not None else 'upper right'
+    _legend_kw = dict(handles=legend_elements, fontsize=_fs['legend'], loc=_loc,
+                      framealpha=1.0, edgecolor='0.8')
+    if legend_bbox is not None:
+        _legend_kw['bbox_to_anchor'] = legend_bbox
+    axes[0].legend(**_legend_kw)
 
-    fig.subplots_adjust(hspace=-0.4, bottom=0.08, top=0.90)
+    fig.subplots_adjust(hspace=-0.4, bottom=0.08, top=top)
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()

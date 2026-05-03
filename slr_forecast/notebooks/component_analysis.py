@@ -8,7 +8,7 @@ function definitions.  All functions operate in SLR convention
 
 import numpy as np
 import pandas as pd
-from bayesian_dols import (
+from bayesian_models import (
     build_level_design_vectors, fit_bayesian_level,
     calibrate_exponential_prior,
 )
@@ -18,7 +18,8 @@ from bayesian_dols import (
 # so the module works standalone from the notebooks/ directory)
 # ---------------------------------------------------------------------------
 try:
-    from slr_forecast.config import BASELINE_YEAR, M_TO_MM, N_SAMPLES
+    from slr_forecast.config import BASELINE_YEAR, N_SAMPLES
+    from slr_forecast import M_TO_MM
 except ImportError:
     BASELINE_YEAR = 2000.0
     M_TO_MM = 1000.0

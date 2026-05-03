@@ -434,7 +434,7 @@ def project_gmsl_ensemble(
 def _solve_state_ode_projection(temperature, time_years, tau, S0=None):
     """Solve dS/dt = (T - S)/τ for projection (standalone, no import needed).
 
-    Duplicates the analytical exponential integrator from bayesian_dols.py
+    Duplicates the analytical exponential integrator from bayesian_models.py
     to keep slr_projections.py self-contained.
     """
     n = len(temperature)
@@ -763,7 +763,7 @@ def project_thermosteric_ensemble(
         'n_samples': int
         'n_layers': int
     """
-    from bayesian_dols import solve_twolayer_ode
+    from bayesian_models import solve_twolayer_ode
 
     rng = np.random.default_rng(seed)
     n_post = len(posterior_samples)
@@ -912,7 +912,7 @@ def project_greenland_ensemble(
             'temperature'}
         'n_samples': int
     """
-    from bayesian_dols import solve_twolayer_ode
+    from bayesian_models import solve_twolayer_ode
 
     rng = np.random.default_rng(seed)
     n_post = len(posterior_samples)
@@ -1126,7 +1126,7 @@ def project_component_level_ensemble(
 
     # Build design vectors with scaled temperature
     T_scaled = temperature_monthly * temp_scale
-    from bayesian_dols import build_level_design_vectors
+    from bayesian_models import build_level_design_vectors
     design = build_level_design_vectors(
         temperature_monthly=T_scaled,
         time_monthly=time_monthly,

@@ -38,6 +38,12 @@ M_TO_MM: float = 1000.0
 MM_TO_M: float = 1.0 / M_TO_MM
 """Multiply millimeters by this to get meters."""
 
+M_TO_CM: float = 100.0
+"""Multiply meters by this to get centimeters."""
+
+CM_TO_M: float = 1.0 / M_TO_CM
+"""Multiply centimeters by this to get meters."""
+
 GT_TO_MM_SLE: float = 1.0 / 362.5
 """Multiply Gt of ice/water by this to get mm of sea-level equivalent.
    1 Gt distributed over 362.5 × 10⁶ km² ≈ 1/362.5 mm."""

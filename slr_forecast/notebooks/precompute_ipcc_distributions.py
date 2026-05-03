@@ -45,7 +45,10 @@ try:
     from slr_forecast.config import BASELINE_YEAR
 except ImportError:
     BASELINE_YEAR = 2000.0
-M_TO_MM = 1000.0
+try:
+    from slr_forecast import M_TO_MM
+except ImportError:
+    M_TO_MM = 1000.0
 
 # IPCC AR6 projections are relative to the 1995-2014 mean (~2005).
 # If BASELINE_YEAR != 2005, we shift all quantiles by the observed GMSL

@@ -106,3 +106,25 @@ IPCC_REF_PERIOD: tuple[int, int] = (1995, 2014)
 
 SAT_ERA_START: float = 1993.0
 """Start of the satellite altimetry era (TOPEX/Poseidon launch)."""
+
+# ---------------------------------------------------------------------------
+# Hamlington et al. (2024) satellite-era quadratic fit
+# Comm. Earth Environ. 5:601, doi:10.1038/s43247-024-01761-5
+# Quadratic fit to NASA altimetry 1993–2024.
+# Rate at time t:  rate(t) = HAMLINGTON_ACCEL * (t - HAMLINGTON_T_REF) + HAMLINGTON_RATE
+# All uncertainties are 90% CI.
+# ---------------------------------------------------------------------------
+HAMLINGTON_RATE: float = 3.3
+"""Mean rate of GMSL rise over 1993–2024 (mm/yr), ref. to midpoint of record."""
+
+HAMLINGTON_RATE_UNC: float = 0.3
+"""90% CI half-width on HAMLINGTON_RATE (mm/yr)."""
+
+HAMLINGTON_ACCEL: float = 0.08
+"""Acceleration of GMSL rise (mm/yr²)."""
+
+HAMLINGTON_ACCEL_UNC: float = 0.06
+"""90% CI half-width on HAMLINGTON_ACCEL (mm/yr²)."""
+
+HAMLINGTON_T_REF: float = 2008.5
+"""Reference time (midpoint of 1993–2024 record)."""

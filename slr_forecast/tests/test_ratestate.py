@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
-from bayesian_dols import (
+from bayesian_models import (
     solve_state_ode,
     build_state_level_design_vectors,
     _state_level_log_prior,
@@ -27,7 +27,7 @@ from bayesian_dols import (
 )
 from slr_projections import project_gmsl_state_ensemble
 
-M_TO_MM = 1000.0
+from slr_forecast import M_TO_MM
 
 
 # =========================================================================

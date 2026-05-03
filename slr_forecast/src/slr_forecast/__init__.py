@@ -27,6 +27,8 @@ from slr_forecast.config import (
 from slr_forecast.units import (
     M_TO_MM,
     MM_TO_M,
+    M_TO_CM,
+    CM_TO_M,
     GT_TO_MM_SLE,
     GT_TO_M_SLE,
     OCEAN_AREA_KM2,
