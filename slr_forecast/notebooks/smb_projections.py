@@ -88,7 +88,10 @@ PENINSULA_SMB = SMBSensitivity(
 )
 
 
-GT_TO_M_SLE = 1.0 / 362500.0  # 1 Gt = 1/362500 m SLE
+try:
+    from slr_forecast.config import GT_TO_M_SLE
+except ImportError:
+    GT_TO_M_SLE = 1.0 / 362500.0
 
 
 def project_smb_ensemble(

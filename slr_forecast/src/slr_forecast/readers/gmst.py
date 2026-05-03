@@ -17,6 +17,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from slr_forecast.config import Z_90
 from slr_forecast.units import tag_units
 
 
@@ -67,7 +68,7 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     df.index.name = "time"
 
     # 95% CI → 1-sigma
-    df["temperature_sigma"] = df["temperature_unc"] / 1.645
+    df["temperature_sigma"] = df["temperature_unc"] / Z_90
 
     tag_units(df, {
         "temperature": "degC",

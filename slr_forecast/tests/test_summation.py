@@ -19,6 +19,7 @@ from component_io import (
 )
 from component_analysis import compute_variance_fractions
 from component_projections import read_ipcc_component_nc, ipcc_extract
+from slr_forecast.config import Z_90
 
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -35,7 +36,7 @@ HAS_IPCC = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245'))
 HAS_IPCC_DIST = os.path.exists(IPCC_DIST_PATH)
 
-M_TO_MM = 1000.0
+from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 
 # Components that should be summed (EAIS excluded by design)
@@ -259,7 +260,7 @@ class TestTWSSyntheticSamples:
         rng = np.random.default_rng(777)
         n = 2000
         sigma_mm = np.maximum(
-            (ex['q95'] - ex['q05']) / (2 * 1.645), 0.1)
+            (ex['q95'] - ex['q05']) / (2 * Z_90), 0.1)
         samples = rng.normal(ex['q50'], sigma_mm, size=(n, len(ex['years'])))
         assert samples.shape == (n, len(ex['years']))
 
@@ -271,7 +272,7 @@ class TestTWSSyntheticSamples:
         ex = ipcc_extract(data, quantiles_target=(0.05, 0.17, 0.5, 0.83, 0.95))
         rng = np.random.default_rng(777)
         sigma_mm = np.maximum(
-            (ex['q95'] - ex['q05']) / (2 * 1.645), 0.1)
+            (ex['q95'] - ex['q05']) / (2 * Z_90), 0.1)
         samples = rng.normal(ex['q50'], sigma_mm, size=(2000, len(ex['years'])))
         idx = np.argmin(np.abs(ex['years'] - 2100))
         mc_median = np.median(samples[:, idx])

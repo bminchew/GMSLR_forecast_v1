@@ -30,7 +30,7 @@ HAS_IMBIE_AP = os.path.exists(IMBIE_AP_PATH)
 HAS_H5 = os.path.exists(H5_PATH)
 HAS_ISMIP6 = os.path.exists(ISMIP6_BASE)
 
-M_TO_MM = 1000.0
+from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 

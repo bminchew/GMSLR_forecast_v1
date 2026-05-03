@@ -67,8 +67,12 @@ GRIDDED_T_PATH = os.path.join(RAW_DIR, 'gmst',
 
 BASELINE_YEAR = 2005.0
 BASELINE_WINDOW = (1995, 2005)
-GT_TO_M_SLE = 1.0 / 362500.0   # 1 Gt = 1/362.5 mm = 1/362500 m SLE
-M_TO_MM = 1000.0
+try:
+    from slr_forecast import M_TO_MM
+    from slr_forecast.config import GT_TO_M_SLE
+except ImportError:
+    M_TO_MM = 1000.0
+    GT_TO_M_SLE = 1.0 / 362500.0
 
 # =========================================================================
 # 1. Load IMBIE Greenland total mass balance

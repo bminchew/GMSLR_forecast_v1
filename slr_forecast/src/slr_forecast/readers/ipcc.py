@@ -21,6 +21,7 @@ from slr_forecast.units import (
     tag_units,
     tag_sign_convention,
 )
+from slr_forecast.config import Z_90
 from slr_forecast.readers._utils import decimal_year_to_datetime
 
 
@@ -64,7 +65,7 @@ def read_ipcc_ar6_projected_temperature(data_dir: str) -> dict[str, pd.DataFrame
 
         # 90% CI → 1-sigma
         df["temperature_sigma"] = (
-            (df["temperature_upper"] - df["temperature_lower"]) / (2 * 1.645)
+            (df["temperature_upper"] - df["temperature_lower"]) / (2 * Z_90)
         )
 
         tag_units(df, {c: "degC" for c in [

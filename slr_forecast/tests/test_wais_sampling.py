@@ -21,7 +21,6 @@ from component_projections import (
     RHEOLOGY_FACTOR_MEDIAN,
     RHEOLOGY_FACTOR_SIGMA,
     RHEOLOGY_SENSITIVITY,
-    M_TO_MM,
     N_OBS_MEAN,
     N_OBS_SIGMA,
     N_REF,
@@ -29,6 +28,8 @@ from component_projections import (
 )
 from component_io import save_wais, load_component, PROJ_YEARS
 from component_analysis import annualize_imbie
+from slr_forecast import M_TO_MM
+from slr_forecast.config import Z_90
 
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -609,7 +610,7 @@ class TestIPCCUnitConversion:
         """Gaussian sigma estimated from quantiles should be positive and finite."""
         ex = ipcc_extract(ipcc_ais)
         idx_2100 = np.argmin(np.abs(ex['years'] - 2100))
-        sig_mm = (ex['q95'][idx_2100] - ex['q05'][idx_2100]) / (2 * 1.645)
+        sig_mm = (ex['q95'][idx_2100] - ex['q05'][idx_2100]) / (2 * Z_90)
         sig_m = sig_mm / M_TO_MM
         assert sig_m > 0
         assert np.isfinite(sig_m)

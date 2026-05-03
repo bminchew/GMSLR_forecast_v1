@@ -48,6 +48,11 @@ import pandas as pd
 from datetime import datetime
 from typing import Optional, Union
 
+try:
+    from slr_forecast.config import Z_90
+except ImportError:
+    Z_90 = 1.645
+
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -770,11 +775,11 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
     
     # Calculate 1-sigma uncertainties from 90% CI bounds
     # Frederikse lower/upper are 5th/95th percentiles (90% CI),
-    # so half-width = 1.645 * sigma for a normal distribution.
+    # so half-width = Z_90 * sigma for a normal distribution.
     for var in ['gmsl', 'steric', 'glaciers', 'greenland', 'antarctica', 'tws',
                 'sum_contributors', 'reservoir', 'groundwater', 'tws_natural', 'altimetry']:
         if f'{var}_lower' in df.columns and f'{var}_upper' in df.columns:
-            df[f'{var}_sigma'] = (df[f'{var}_upper'] - df[f'{var}_lower']) / (2 * 1.645)
+            df[f'{var}_sigma'] = (df[f'{var}_upper'] - df[f'{var}_lower']) / (2 * Z_90)
     
     # Convert mm to meters if requested
     if convert_to_meters:
@@ -1482,7 +1487,7 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     df = df.set_index('time')[['temperature', 'temperature_unc']]
     df.index.name = 'time'
 
-    df['temperature_sigma'] = df['temperature_unc']/1.645
+    df['temperature_sigma'] = df['temperature_unc'] / Z_90
 
     # Attach unit metadata
     df.attrs = {
@@ -1825,7 +1830,7 @@ def read_ipcc_ar6_projected_temperature(
     ----
     - Temperature anomalies are relative to 1850-1900 pre-industrial baseline.
     - The 5%–95% range spans the IPCC "very likely" range (90% CI).
-      temperature_sigma is approximated as half this range divided by 1.645
+      temperature_sigma is approximated as half this range divided by Z_90
       (the z-score for 90% CI), giving approximate 1-sigma for a normal
       distribution.
     - Historical period covers 1950-2014; SSP projections cover 2015-2099.
@@ -1875,9 +1880,9 @@ def read_ipcc_ar6_projected_temperature(
         df.index.name = 'time'
 
         # Approximate 1-sigma from 90% CI (5%-95%)
-        # z-score for 90% CI = 1.645
+        # z-score for 90% CI
         df['temperature_sigma'] = (
-            (df['temperature_upper'] - df['temperature_lower']) / (2 * 1.645)
+            (df['temperature_upper'] - df['temperature_lower']) / (2 * Z_90)
         )
 
         # Attach unit metadata to each scenario DataFrame

@@ -57,7 +57,10 @@ FIG_DIR = os.path.join(os.path.dirname(__file__), "..", "figures")
 os.makedirs(FIG_DIR, exist_ok=True)
 
 # Display constants
-M_TO_MM = 1000.0
+try:
+    from slr_forecast import M_TO_MM
+except ImportError:
+    M_TO_MM = 1000.0
 BASELINE_YEAR = 2005.0
 
 

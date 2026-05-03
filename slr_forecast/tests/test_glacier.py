@@ -15,7 +15,8 @@ import pytest
 # Notebook modules live in notebooks/, not the installed package
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
-from component_projections import apply_glacier_volume_cap, M_TO_MM
+from component_projections import apply_glacier_volume_cap
+from slr_forecast import M_TO_MM
 from component_io import (
     save_glacier,
     load_component,
