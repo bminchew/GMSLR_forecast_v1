@@ -1226,7 +1226,9 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                           xlabel=None, xlim=None, title=None,
                           legend_loc=None, legend_bbox=None,
                           top=0.90, fontsize=None,
-                          units='m', save_path=None):
+                          units='m', hspace=-0.4, show_median=True,
+                          show_impact_pop=False, show_impact_cost=False,
+                          impact_spacing=25, figsize=None, save_path=None):
     """Ridge plot showing density evolution across decades for one or more
     projection sources at a single SSP.
 
@@ -1306,10 +1308,16 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
             kde.set_bandwidth(kde.factor * bw_factor)
             kde_data[yr][src] = kde(x_grid)
 
-    fig, axes = plt.subplots(n_yrs, 1, figsize=(8, n_yrs * 0.6 + 1),
+    _figsize = figsize if figsize is not None else (8, n_yrs * 0.6 + 1)
+    fig, axes = plt.subplots(n_yrs, 1, figsize=_figsize,
                               sharex=True)
     if n_yrs == 1:
         axes = [axes]
+
+    # Remove auto x-margins so ridge axes xlim matches impact axes exactly
+    for ax in axes:
+        ax.margins(x=0)
+    axes[-1].set_xlim(x_lo, x_hi)
 
     for i, yr in enumerate(years):
         ax = axes[i]
@@ -1322,22 +1330,34 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
             ax.fill_between(x_grid, density, alpha=0.4, color=color,
                             clip_on=False)
             ax.plot(x_grid, density, color=color, lw=1.0, clip_on=False)
+            if show_median:
+                vals = np.asarray(samples_by_year[yr][src]) * scale
+                med = float(np.median(vals))
+                med_height = float(np.interp(med, x_grid, density))
+                ax.plot([med, med], [0, med_height], ls='--', lw=0.8,
+                        color=color, alpha=0.7, clip_on=False)
         ax.text(0.0, 0.2, str(yr), fontweight='bold', color='0.5',
                 ha='left', va='center', transform=ax.transAxes, fontsize=_fs['year'])
         ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
+        ax.spines['bottom'].set_visible(True)
+        ax.spines['bottom'].set_color('#666666')
+        ax.tick_params(axis='x', length=3, pad=4, colors='#666666',
+                       labelcolor='#666666')
 
     # Perspective scaling (later years = taller)
     for i, ax in enumerate(axes):
         p = i / max(n_yrs - 1, 1)
         perspective = 0.25 + 0.75 * p
         ymin, ymax = ax.get_ylim()
-        ax.set_ylim(ymin, ymax / perspective)
+        ax.set_ylim(0, ymax / perspective)
 
-    axes[-1].set_xlabel(xlabel, fontsize=_fs['xlabel'])
+    # xlabel only on the bottom panel
+    axes[-1].set_xlabel(xlabel, fontsize=_fs['xlabel'], color='#666666')
     if _fs['xtick'] is not None:
-        axes[-1].tick_params(axis='x', labelsize=_fs['xtick'])
+        for ax in axes:
+            ax.tick_params(axis='x', labelsize=_fs['xtick'])
     _title = title if title is not None else f'{component_name} — Density evolution ({ssp_label})'
     fig.suptitle(_title, fontsize=_fs['title'], fontweight='bold', y=0.98)
 
@@ -1354,7 +1374,79 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         _legend_kw['bbox_to_anchor'] = legend_bbox
     axes[0].legend(**_legend_kw)
 
-    fig.subplots_adjust(hspace=-0.4, bottom=0.08, top=top)
+    # --- Impact axes on the bottom panel ---
+    # Input samples are in meters; impact functions expect meters.
+    # xlim is in display units, so convert back to meters for the functions.
+    if show_impact_pop or show_impact_cost:
+        from slr_data_readers import people_displaced_kulpstrauss2019, slr_cost_jevrejeva2018
+        _xlim_m = (x_lo / scale, x_hi / scale)  # display units -> meters
+        n_impact_ticks = 6
+        _tick_slr_display = np.linspace(x_lo, x_hi, n_impact_ticks)
+        _tick_slr_m = _tick_slr_display / scale
+
+    # Impact axes use smaller fonts to stay compact
+    _fs_impact_tick = 7
+    _fs_impact_label = 8
+
+    _bottom = 0.08
+    if show_impact_pop:
+        _pop_baseline = people_displaced_kulpstrauss2019(0.0)
+        _pop_targets = np.array([people_displaced_kulpstrauss2019(v) - _pop_baseline
+                                 for v in _tick_slr_m])
+        ax_pop = axes[-1].twiny()
+        ax_pop.xaxis.set_ticks_position('bottom')
+        ax_pop.xaxis.set_label_position('bottom')
+        for sp in ax_pop.spines.values():
+            sp.set_visible(False)
+        ax_pop.spines['bottom'].set_visible(True)
+        ax_pop.spines['bottom'].set_position(('outward', impact_spacing))
+        ax_pop.spines['bottom'].set_color('#666666')
+        ax_pop.set_xlim(x_lo, x_hi)
+        ax_pop.set_xticks(_tick_slr_display)
+        ax_pop.set_xticklabels([f'{int(10 * round(v / 10))}' for v in _pop_targets],
+                               color='#666666', fontsize=_fs_impact_tick)
+        ax_pop.set_xlabel('Additional People on Land Below Flood Level [Millions]',
+                          color='#666666', fontsize=_fs_impact_label)
+        ax_pop.tick_params(bottom=True, top=False, length=3, pad=4, colors='#666666')
+        _bottom = 0.10
+
+    if show_impact_cost:
+        _cost_targets = np.array([1e-3 * slr_cost_jevrejeva2018(v)
+                                  for v in _tick_slr_m])
+        ax_cost = axes[-1].twiny()
+        ax_cost.xaxis.set_ticks_position('bottom')
+        ax_cost.xaxis.set_label_position('bottom')
+        for sp in ax_cost.spines.values():
+            sp.set_visible(False)
+        _offset_cost = 2 * impact_spacing if show_impact_pop else impact_spacing
+        ax_cost.spines['bottom'].set_visible(True)
+        ax_cost.spines['bottom'].set_position(('outward', _offset_cost))
+        ax_cost.spines['bottom'].set_color('#999999')
+        ax_cost.set_xlim(x_lo, x_hi)
+        ax_cost.set_xticks(_tick_slr_display)
+        ax_cost.set_xticklabels([f'{int(round(v))}' for v in _cost_targets],
+                                color='#999999', fontsize=_fs_impact_tick)
+        ax_cost.set_xlabel('Global Annual Flood Costs [Trillions US\\$]',
+                           color='#999999', fontsize=_fs_impact_label)
+        ax_cost.tick_params(bottom=True, top=False, length=3, pad=4, colors='#999999')
+        _bottom = 0.12
+
+    fig.subplots_adjust(hspace=hspace, bottom=_bottom, top=top)
+
+    # Align edge tick labels inward so they don't protrude past the axes,
+    # preventing bbox_inches='tight' from cropping asymmetrically.
+    fig.canvas.draw()
+    _axes_with_ticks = [axes[-1]]
+    if show_impact_pop:
+        _axes_with_ticks.append(ax_pop)
+    if show_impact_cost:
+        _axes_with_ticks.append(ax_cost)
+    for _ax in _axes_with_ticks:
+        _ticks = _ax.xaxis.get_major_ticks()
+        if len(_ticks) >= 2:
+            _ticks[0].label1.set_ha('left')
+            _ticks[-1].label1.set_ha('right')
+
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()

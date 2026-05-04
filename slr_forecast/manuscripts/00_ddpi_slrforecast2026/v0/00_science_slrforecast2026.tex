@@ -11,7 +11,7 @@
 \usepackage{hyperref}
 \graphicspath{{../../../figures/}}
 
-\title{Observational evidence for a meter or more of sea-level rise by 2100}
+\title{Observational evidence for more than a meter of 21st century sea-level rise}
 \author{Minchew et al.}
 \date{}
 
@@ -20,7 +20,7 @@
 
 %% ================================================================
 \begin{abstract}
-Every centimeter of sea-level rise exposes roughly one million additional people to coastal flooding, yet the projections guiding adaptation planning rely on ice-sheet models known to under-predict. We construct a data-driven baseline forecast by calibrating individual sea-level contributors with independent observations and validating against observed global mean sea level (GMSL). Our forecasts show that GMSL will likely rise 1.0--1.3~m (medians across policy-relevant pathways) by 2100, exceeding IPCC estimates by 69--79\% for the same warming, with a 72\% probability of exceeding one meter averaged across scenarios. West Antarctic glacier dynamics, largely decoupled from 21st century emissions, accounts for 92.1\% of forecast uncertainty. The world is planning for roughly two-thirds of the sea-level rise the observations support.
+Every centimeter of sea-level rise exposes roughly one million additional people to coastal flooding, yet the projections guiding adaptation planning rely on complex ice-sheet models that have yet to reproduce observations. We construct a simple, physical, data-driven baseline forecast by calibrating individual sea-level contributors with independent observations and validating against observed global mean sea level (GMSL). Our forecasts show that GMSL will likely rise 1.0--1.3~m (medians across policy-relevant pathways) by 2100, exceeding IPCC estimates by 69--79\% for the same warming, with a 72\% probability of exceeding one meter averaged across all policy-relevant scenarios. West Antarctic glacier dynamics accounts for 92\% of forecast uncertainty, underscoring the importance of both rapid reductions in CO$_2$ emissions and planning for rapid loss of ice in West Antarctica.
 \end{abstract}
 
 %% ================================================================
@@ -31,19 +31,16 @@ Rates of global mean sea-level rise have doubled twice since in the past 50 year
 %% ---- Figure 1: Observations ----
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{fig1v2_observations.png}
+\includegraphics[width=0.9\textwidth]{fig1v2_observations.png}
 \caption{\textbf{Observed global mean sea-level rise and its response to global mean surface temperature.}
-\textbf{(a)}~Observed GMSL (blue, 5-year smooth; Frederikse et~al.~\cite{Frederikse2020})
-and NASA satellite altimetry (light blue) since 1900, with the satellite-era
-quadratic extrapolation (dashed) and GMST (red, 15-year smooth;
-Berkeley Earth \cite{Rohde2020}) on the right axis.
-\textbf{(b)}~GMSL rate versus GMST anomaly.  Observations (circles,
-colored by year) and the Bayesian rate-and-state semi-empirical model
-of this study (colored by instantaneous transient sensitivity
-$\alpha = d\dot{S}/dT$). Previous semi-empirical model results are shown as dashed \citep{Rahmstorf2007} and dash-dot lines \citep{Vermeer2009}. Horizontal and vertical lines mark the
+\textbf{(a)}~GMSL (blue, 5-year smooth;~\cite{Frederikse2020}) and NASA satellite altimetry (light blue; \cite{Beckley2017}), with the satellite-era
+quadratic extrapolation (dashed; \cite{Hamlington2024}) and GMST (red, 15-year smooth~\cite{Rohde2020}) on the right axis.
+\textbf{(b)}~Rate of change in GMSL ($\dot{S}=dS/dt$) versus GMST anomaly, $T$.  Observed values are shown in circles,
+colored by year, and the Bayesian rate-and-state semi-empirical model
+of this study are colored by instantaneous transient sensitivity
+$\alpha = d\dot{S}/dT$. Other semi-empirical model results are shown as dashed \citep{Rahmstorf2007} and dash-dot lines \citep{Vermeer2009}. Horizontal and vertical blue lines mark the
 1--2 and 2--4~mm\,yr$^{-1}$ rate doublings that occurred during 1976--1992 (1959--1993, $\pm 1\sigma$) and 1992--2013 (1992--2014, $\pm 1\sigma$), respectively. The corresponding warming
-increments ($\Delta T$) show that the first doubling required
-slightly less warming ($0.34\pm0.04\ ^\circ$C) than the second ($0.41\pm0.03\ ^\circ$C).}
+increments ($\Delta T$) show that the first doubling required less warming ($0.34\pm0.04\ ^\circ$C) than the second ($0.41\pm0.03\ ^\circ$C). The vertical red band indicates the transition from thermosteric-dominated sea-level rise and barystatic-dominated (ocean mass change due to glaciers, ice sheets, and terrestrial water storage). The sinuous tail in the early observations is largely due to dam impoundment of water rather than a thermodynamic signal~\citep{Frederikse2020}. }
 \label{fig:observations}
 \end{figure}
 
@@ -114,7 +111,21 @@ The forecast blends two independent constraints: a satellite-era quadratic extra
 %\label{fig:forecast_total}
 %\end{figure}
 
-%% ---- Figure 2: Per-component breakdown ----
+%% ---- Figure 2: Ridge plot of projection distributions ----
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig2_ridge_projections.png}
+\caption{\textbf{Distribution of global mean sea-level projections under SSP2-4.5.}
+Probability densities at 2040, 2060, 2080, and 2100 for the composite forecast
+(blue), satellite-era quadratic extrapolation (grey), and IPCC AR6 process-model
+projections (red). Dashed lines indicate medians. Lower axes show the
+corresponding number of additional people on land below flood level
+\citep{Kulp2019} and global annual flood costs \citep{Jevrejeva2018}, both
+assuming no additional coastal adaptation.}
+\label{fig:ridge_projections}
+\end{figure}
+
+%% ---- Figure 3: Per-component breakdown ----
 %\begin{figure}[t]
 %\centering
 %\includegraphics[width=\textwidth]{component_forecast_per_component.png}
