@@ -1228,7 +1228,8 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                           top=0.90, fontsize=None,
                           units='m', hspace=-0.4, show_median=True,
                           show_impact_pop=False, show_impact_cost=False,
-                          impact_spacing=25, figsize=None, save_path=None):
+                          impact_spacing=25, figsize=None, dpi=150,
+                          save_path=None):
     """Ridge plot showing density evolution across decades for one or more
     projection sources at a single SSP.
 
@@ -1448,7 +1449,7 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
             _ticks[-1].label1.set_ha('right')
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
     plt.show()
 
 
