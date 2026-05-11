@@ -11,7 +11,7 @@
 \usepackage{hyperref}
 \graphicspath{{../../../figures/}}
 
-\title{Supplementary Materials for:\\Observational evidence for a meter or more of sea-level rise by 2100}
+\title{Supplementary Materials for:\\Observational evidence for more than a meter of 21st century sea-level rise}
 \author{Minchew et al.}
 \date{}
 
@@ -21,51 +21,443 @@
 %% ================================================================
 %% MATERIALS AND METHODS
 %% ================================================================
-\section*{Materials and Methods}
+\setcounter{secnumdepth}{3}
 
-\subsection*{GMSL rate estimates}
+\section{Materials and Methods}
+
+Unless otherwise noted, all reported intervals are 90\% Bayesian credible intervals (equal-tailed), and where $1\sigma$ is reported (e.g., the rheology correction factor), we state explicitly that it is a standard deviation.
+
+\subsection{Global mean sea level (GMSL) rate estimates}
 
 The satellite-era GMSL rates and 90\% confidence intervals reported in Figure~1 are derived from the quadratic trajectory methodology of Hamlington et~al.~\citep{Hamlington2024}. A quadratic is fit to the NASA satellite altimetry record (1993--2023) and the instantaneous rate at any time $t$ is given by $\dot{H}(t) = a + bt$, where $a$ and $b$ are the linear and quadratic coefficients. The 90\% confidence intervals are determined via a 10,000-member Monte Carlo simulation in which each realization perturbs the rate and acceleration by three independent error sources: (i)~serially correlated residuals after removing the quadratic trajectory, following Maul \& Martin~\citep{Maul1993}; (ii)~glacial isostatic adjustment (GIA) uncertainty from a Bayesian inversion of ice loading histories; and (iii)~satellite mission-specific measurement errors including altimeter noise, orbit determination, wet troposphere corrections, and inter-mission biases. The resulting 90\% CIs at the endpoints of the record are $2.1 \pm 1.0$~mm\,yr$^{-1}$ at 1993 and $4.5 \pm 1.0$~mm\,yr$^{-1}$ at 2024.
 
 The pre-satellite rate of 1.1~mm\,yr$^{-1}$ (0.8--1.3~mm\,yr$^{-1}$, 90\% CI) averaged over 1900--1940 is computed from the Frederikse et~al.~\citep{Frederikse2020} tide-gauge reconstruction using a local polynomial regression (tricube kernel, 30-year bandwidth) that estimates instantaneous rates and their standard errors at each year. The narrower confidence interval reflects the longer averaging period and the lower sensitivity of tide-gauge uncertainties to the error sources that dominate the satellite record. Temperature changes between rate-doubling epochs are from Berkeley Earth \citep{Rohde2020}.
 
-\subsection*{Observational datasets}
+\subsection{Observational datasets}
 
-All component models are calibrated against published observational products (Table~S1). We use:
+All component models are calibrated against published observational products (Table~\ref{tab:obs_datasets}). We use:
 \begin{itemize}
 \item \textbf{Global mean sea level:} NASA satellite altimetry (TOPEX/Jason, 1993--present; Hamlington et~al.~\cite{Hamlington2020}), with the Frederikse et~al.~\citep{Frederikse2020} tide-gauge reconstruction (1900--2018) and Dangendorf et~al.~\citep{Dangendorf2019} reconstruction for pre-satellite validation.
-\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level, 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. A 14\% structural uncertainty is applied to account for the documented low bias from vertical interpolation of sparse profiles \citep{Li2022}. Depth corrections for 700--2000\,m ($0.15 \pm 0.05$~mm\,yr$^{-1}$; \cite{Levitus2012, Cheng2017}) and below 2000\,m ($0.07 \pm 0.04$~mm\,yr$^{-1}$; \cite{Purkey2010, Desbruyeres2016}) are applied cumulatively for years before full-depth data are available.
-\item \textbf{Glaciers:} GlaMBIE global consensus (2000--2024; GlaMBIE~\cite{GlaMBIE2024}), combining glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 RGI regions.
-\item \textbf{Greenland:} Mouginot et~al.~\citep{Mouginot2019} SMB and discharge (1972--2018), with Mankoff et~al.~\citep{Mankoff2021} (1986--2023) withheld for validation. Subsurface ocean temperature from EN4 (200--500\,m, Greenland peripheral waters; Good et~al.~\cite{Good2013}). Surface temperature from Berkeley Earth \citep{Rohde2020}.
+\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. A 14\% structural uncertainty is applied to account for the documented low bias from vertical interpolation of sparse profiles \citep{Li2022}. Depth corrections for 700--2000\,m ($0.15 \pm 0.05$~mm\,yr$^{-1}$; \cite{Levitus2012, Cheng2017}) and below 2000\,m ($0.07 \pm 0.04$~mm\,yr$^{-1}$; \cite{Purkey2010, Desbruyeres2016}) are applied cumulatively for years before full-depth data are available.
+\item \textbf{Glaciers:} GlaMBIE global consensus (2000--2024; GlaMBIE~\cite{GlaMBIE2025}), combining glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 RGI regions. We use 2000--2023 (24 annual points) for calibration.
+\item \textbf{Greenland:} Mouginot et~al.~\citep{Mouginot2019} SMB and discharge (1972--2018), with Mankoff et~al.~\citep{Mankoff2021} (1986--2023) withheld for validation. Subsurface ocean temperature from EN4 v4.2.2 with g10 bias corrections (200--500\,m, Greenland peripheral waters; Good et~al.~\cite{Good2013}). Surface temperature from Berkeley Earth \citep{Rohde2020}.
 \item \textbf{Antarctica:} IMBIE satellite-era mass balance (1992--2020; Otosaka et~al.~\cite{Otosaka2023}), partitioned by region.
 \item \textbf{Terrestrial water storage:} Frederikse et~al.~\citep{Frederikse2020} reconstruction (1900--2018).
+\item \textbf{Temperature scenarios:} IPCC AR6 assessed GMST projections (SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5; \cite{Lee2021}).
 \end{itemize}
 
-\subsection*{Component models}
+\begin{table}[ht]
+\centering
+\caption{Observational and projection datasets used in the component models. A complete dataset inventory including versions, spatial domains, and processing details is provided in \texttt{data/dataset\_inventory.xlsx}.}
+\label{tab:obs_datasets}
+\small
+\begin{tabular}{llll}
+\toprule
+Component & Dataset & Time range & Reference \\
+\midrule
+GMSL & NASA satellite altimetry & 1993--present & Hamlington et~al.~\cite{Hamlington2020} \\
+GMSL & Frederikse GMSL reconstruction & 1900--2018 & Frederikse et~al.~\cite{Frederikse2020} \\
+Thermosteric & NOAA thermosteric SL (0--700\,m) & 1955--present & Levitus et~al.~\cite{Levitus2012} \\
+Thermosteric & NOAA thermosteric SL (0--2000\,m) & 2005--present & Levitus et~al.~\cite{Levitus2012} \\
+Glaciers & GlaMBIE global consensus & 2000--2023 & Hock et~al.~\cite{GlaMBIE2025} \\
+Greenland & Mouginot SMB \& discharge & 1972--2018 & Mouginot et~al.~\cite{Mouginot2019} \\
+Greenland (val.) & Mankoff PROMICE & 1986--present & Mankoff et~al.~\cite{Mankoff2021} \\
+Greenland & EN4 subsurface ocean T (v4.2.2) & 1970--2021 & Good et~al.~\cite{Good2013} \\
+Temperature & Berkeley Earth GMST & 1850--present & Rohde \& Hausfather~\cite{Rohde2020} \\
+WAIS & IMBIE West Antarctica & 1992--2020 & Otosaka et~al.~\cite{Otosaka2023} \\
+EAIS & IMBIE East Antarctica & 1992--2020 & Otosaka et~al.~\cite{Otosaka2023} \\
+Peninsula & IMBIE Antarctic Peninsula & 1992--2020 & Otosaka et~al.~\cite{Otosaka2023} \\
+TWS & Frederikse reconstruction & 1900--2018 & Frederikse et~al.~\cite{Frederikse2020} \\
+Projections & IPCC AR6 FACTS (med.\ \& low conf.) & 2020--2150 & Garner et~al.~\cite{Garner2023} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{Thermosteric.} NOAA observations with literature depth corrections (hindcast, 1950--2020) are spliced with IPCC AR6 \texttt{oceandynamics} projections (2020--2150; Fox-Kemper et~al.~\cite{Fox-Kemper2021}). The IPCC projections are generated from a two-layer energy balance model \citep{Geoffroy2013} emulated by FaIR \citep{Smith2021}, with the ensemble filtered against observed global temperature and ocean heat content. Monte Carlo samples (2000) are drawn from the IPCC 107-quantile distributions using rank-preserving uniform draws, level-matched to observations at 2020.
+\subsection{Component models}
 
-\paragraph{Glaciers.} The rate of glacier sea level contribution is modeled as $\dot{H}_{\mathrm{gl}} = b\,T + c$, where $T$ is GMST anomaly, calibrated against GlaMBIE using Bayesian inference with weakly informative priors. A quadratic term $a\,T^2$ is included in the prior but the posterior is centered near zero, confirming linearity over the observed range. Cumulative loss is capped at total glacier volume.
+\subsubsection{Thermosteric}
+We fit a two-layer energy balance model \citep{Geoffroy2013} jointly to NOAA in situ thermosteric sea level at 0--700\,m (1956--2026, 71 annual points) and 0--2000\,m (2005--2025, 21 points) \citep{Levitus2012}. The governing equations are:
+\begin{align}
+\frac{dS_u}{dt} &= \frac{T(t) - S_u}{\tau_u}, \qquad
+\frac{dS_d}{dt} = \frac{S_u - S_d}{\tau_d}, \\
+H_{\mathrm{upper}}(t) &= a\,S_u^2 + b_u\,S_u + c\,(t - t_0), \\
+H_{\mathrm{total}}(t) &= H_{\mathrm{upper}}(t) + b_d\,S_d + h_{2000},
+\end{align}
+where $S_u$ and $S_d$ are upper- and deep-ocean thermal state variables driven by GMST $T(t)$, $\tau_u$ is the upper-ocean relaxation time, and $\tau_d = 150$\,yr is the deep-ocean relaxation time fixed at the CMIP5 multi-model mean \citep{Geoffroy2013}. The below-2000\,m contribution, $h_{2000} = 0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010, Desbruyeres2016}. We apply a 14\% upward correction to NOAA observations to account for the documented low bias from interpolation of sparse hydrographic profiles, primarily in the Southern Ocean \citep{Li2022}, and carry a 5\% residual structural uncertainty.
 
-\paragraph{Greenland SMB.} Observed RACMO-derived SMB \citep{Mouginot2019} for the hindcast. Forecasts use a quadratic temperature scaling $\Delta\dot{H}_{\mathrm{smb}} = C_T\,\Delta T + C_{T^2}\,\Delta T^2$ with sensitivities drawn from the inter-RCM spread \citep{Fettweis2020, Noel2021, Glaude2024}. The linear sensitivity $C_T \sim \mathcal{N}(-200, 80^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST encompasses the MAR, RACMO, and HIRHAM estimates.
+The six free parameters ($a$, $b_u$, $b_d$, $c$, $\log\tau_u$, $\log\sigma_{\mathrm{extra}}$) are sampled via MCMC (emcee; 48 walkers, 4000 burn-in + 12000 production steps). The posterior median and 90\% credible intervals are: $a = 19.2$~[9.4, 29.3]~mm\,$^\circ$C$^{-2}$, $b_u = 50.2$~[40.2, 71.7]~mm\,$^\circ$C$^{-1}$, $b_d = 67.8$~[36.3, 101.8]~mm\,$^\circ$C$^{-1}$, $c = 0.021$~[$-0.112$, 0.135]~mm\,yr$^{-1}$, $\tau_u = 11.1$~[6.0, 23.3]~yr. The model achieves $R^2 = 0.965$ (0--700\,m) and $R^2 = 0.978$ (0--2000\,m).
 
-\paragraph{Greenland discharge.} Time-delay model (Eq.~1) calibrated against Mouginot et~al.~\citep{Mouginot2019} discharge by weighted least squares with BIC-weighted mixing across candidate delays $\delta \in \{4, 5, 6, 7, 8\}$~yr. Ocean temperature forcing under SSP scenarios is obtained from an independently calibrated linear transfer function mapping surface temperature to EN4 subsurface temperature. Each Monte Carlo sample draws a single set of physical parameters $(\gamma, r_0, \delta, \alpha, \beta)$ and evaluates all SSP scenarios under that draw, so that inter-SSP differences isolate the effect of the emissions pathway from parameter uncertainty.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_ocean_priors_posteriors.png}
+\caption{\textbf{Two-layer thermosteric model: priors and posteriors.} Prior distributions (black curves) and posterior histograms (teal) for the six free parameters of the two-layer energy balance model fitted jointly to NOAA 0--700\,m and 0--2000\,m thermosteric sea level. Dashed vertical lines indicate the posterior median; panel titles report the median and 90\% credible interval. The deep-ocean relaxation time $\tau_d = 150$\,yr is fixed. For all parameters the posteriors are substantially narrower than and displaced from the priors, indicating that the observations---not the prior assumptions---are driving the inference. The one exception is $b_d$, whose posterior is wider than the others, reflecting the shorter 0--2000\,m record (21 years vs 71 years for 0--700\,m).}
+\label{fig:ocean_priors_posteriors}
+\end{figure}
 
-\paragraph{WAIS.} Scenario-mixture framework with three outcomes weighted by assessed probabilities: (S1)~continued present-day rates extrapolated from IMBIE, (S2)~MISI-driven acceleration (15--100~cm) with trajectory exponent and right-skewed uncertainty from grounding-line flux nonlinearity \citep{Robel2019, Schoof2007}, (S3)~MISI plus additional cliff instability. The S2 lower bound is anchored to transient-calibrated ice sheet model projections: Goldberg et~al.~\citep{Goldberg2026} constrained two independent models against observed surface elevation changes at Thwaites and found $V_{af}$ loss rates of 180--200~Gt/a by 2067 from the trunk subdomain alone, using $n = 3$ with no calving or subglacial hydrology. Integrating this trajectory to 2100, scaling to the full Thwaites catchment, and adding comparable contributions from Pine Island Glacier (33~km grounding-line retreat since 1992; Rignot et~al.~\cite{Rignot2026}), Smith/Kohler, and S1-like non-ASE basins gives a conservative total of 13~cm; the 15~cm floor accounts for the known low biases in the underlying models. Within each scenario, the 2100 endpoint is drawn from a skew-normal distribution in log-space. The log-space formulation is motivated by the multiplicative structure of the dominant uncertainties (bed geometry, basal friction, ocean thermal forcing, buttressing loss all enter as multiplicative factors on grounding-line flux $q_g \propto h_g^{\,s}$), by the positivity constraint on mass loss, and by scale invariance across scenarios spanning two orders of magnitude. The skew-normal extension captures the asymmetry arising from flux nonlinearity \citep{Robel2019}. A multiplicative rheology correction $\sim\mathcal{N}(1.28, 0.07^2)$ is applied to all scenarios \citep{Martin2026, GetraerMorlighem2025}.
+\textit{Parameter identifiability.} Because $a$ and $b_u$ multiply functions of $S_u$, which itself depends on $\tau_u$, a potential concern is parameter degeneracy: changing $\tau_u$ rescales $S_u$, which could in principle be compensated by rescaling $a$ and $b_u$. Under full degeneracy, $b_u \propto \tau_u$ and $a \propto \tau_u^2$. The posterior does not exhibit this: $\tau_u$ varies by a factor of 3.9 across the 90\% CI, while $b_u$ varies by only a factor of 1.8 (not 3.9) and $a$ by a factor of 3.1 (not 15). This partial independence arises from four sources: (1)~the joint fit to two depth ranges with different time spans, where the deep-ocean response $b_d\,S_d$ provides an independent constraint on $\tau_u$ through the $S_u \to S_d$ coupling; (2)~the quadratic term $a\,S_u^2$, whose shape (curvature) changes with $\tau_u$ and cannot be compensated by a simple rescaling of $a$; (3)~the interannual and decadal variability in GMST, which constrains the phase lag of $S_u$ relative to $T(t)$ independently of amplitude; and (4)~the trend term $c\,(t - t_0)$, which is entirely $\tau_u$-independent. Pairwise posterior correlations are moderate ($|r| < 0.7$ for all parameter pairs), and no bimodal structure is evident in the posterior. Corner plots are provided in the analysis notebook.
 
-\paragraph{EAIS, Peninsula.} Bayesian rate--temperature models calibrated against IMBIE regional records \citep{Otosaka2023}. EAIS is dominated by accumulation increase under warming; the Peninsula by combined SMB and discharge. EAIS is excluded from the forecast sum because the 28-year satellite record cannot reliably distinguish the accumulation response from interannual variability ($R^2 = 0.57$), making forward projections poorly constrained. The EAIS contribution is small ($-13$ to $-30$~mm at 2100, depending on scenario) and its exclusion is conservative---it would reduce the total forecast if included.
+The ODE system is solved via an exponential integrator (piecewise-linear forcing, analytical decay) with initial conditions $S_u(0) = S_d(0) = T(0)$ (equilibrium assumption). To generate projections, we drive the fitted model with IPCC AR6 SSP temperature trajectories, propagating posterior parameter uncertainty via 2,000 Monte Carlo samples drawn from the posterior.
 
-\subsection*{Budget closure diagnostic}
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_ocean_twopanel.png}
+\caption{\textbf{Thermosteric sea-level projections.} Upper panel: median and 66\%/90\% credible intervals for the two-layer model under four SSP scenarios, with full-depth observations (black). Lower panel: GMST forcing trajectories (relative to year 2000) with Berkeley Earth observations.}
+\label{fig:ocean_twopanel}
+\end{figure}
 
-The residual between the component sum and NASA altimetry is distributed across components in proportion to their variances: $\mathrm{shift}_i = (\sigma_i^2 / \sum_j \sigma_j^2) \times r$, where $r$ is the total residual and $\sigma_i$ is the standard deviation of component $i$ from its Monte Carlo ensemble. This is the Bayesian posterior update under joint Gaussian assumptions, applied as a diagnostic without modifying the component posteriors. The shift-to-sigma ratio for each component tests whether the implied adjustment is within the stated uncertainty.
+\subsubsection{Glaciers}
+We fit both linear ($\dot{H}_{\mathrm{gl}} = b\,T + c$) and quadratic ($\dot{H}_{\mathrm{gl}} = a\,T^2 + b\,T + c$) rate--temperature models to the GlaMBIE record (2000--2023, 24 annual points) using Bayesian inference with weakly informative priors (emcee; 32 walkers, 2000 burn-in + 4000 production steps). The linear model has 4 free parameters (with the quadratic coefficient $a$ set to zero) and the quadratic model has 5. BIC model selection favors the linear model ($\Delta\mathrm{BIC} = \mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}} = -3.6$), constituting positive evidence for the more parsimonious linear model. The data detect nonzero curvature---the posterior probability $P(a > 0) = 100\%$ with $a = 0.009$~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$---but the quadratic coefficient is small ($a \ll b$) and BIC favors the linear model, so we adopt the linear model for projections. The posterior median sensitivity is $b = 0.66$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and the committed rate is $c = 0.57$~mm\,yr$^{-1}$, with $R^2 = 0.995$. Cumulative loss is capped at the total glacier volume of 0.32~m SLE \citep{Farinotti2019}.
 
-\subsection*{Temperature scenarios}
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_glacier_diagnostics.png}
+\caption{\textbf{Glacier model diagnostics.} (a)~Glacier mass loss rate vs GMST anomaly with the fitted linear relationship. (b)~Cumulative glacier SLR: GlaMBIE observations (circles) with the linear model fit (black line) and 90\% credible interval (grey shading); $R^2 = 0.995$. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:glacier_diagnostics}
+\end{figure}
 
-SSP temperature trajectories (SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5) are from IPCC AR6 assessed warming projections. Historical forcing uses Berkeley Earth monthly GMST \citep{Rohde2020}. All anomalies are relative to a 1995--2005 baseline ($\approx$2005 reference year). Forecasts extend from 2020 to 2150, with pre-2020 values from the observational record.
+\subsubsection{Greenland SMB}
+Observed RACMO-derived SMB \citep{Mouginot2019} for the hindcast. Forecasts use a quadratic temperature scaling $\Delta\dot{H}_{\mathrm{smb}} = C_T\,\Delta T + C_{T^2}\,\Delta T^2$ with sensitivities drawn from the inter-RCM spread \citep{Fettweis2020, Noel2021, Glaude2024}. The linear sensitivity $C_T \sim \mathcal{N}(-300, 80^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST encompasses the MAR, RACMO, and HIRHAM estimates. The quadratic sensitivity is $C_{T^2} \sim \mathcal{N}(-50, 30^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-2}$. The cumulative SMB contribution is obtained by integrating the rate anomaly:
+\begin{equation}
+	\Delta H_{\mathrm{smb}}(t) = \int_{t_0}^{t} \bigl[C_T \,\Delta T(t') + C_{T^2}\,\Delta T(t')^2\bigr]\, dt',
+	\label{eq:greenland_smb_cumulative}
+\end{equation}
+where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline.
+
+\subsubsection{Greenland discharge}
+The cumulative discharge contribution is modeled as the time-delayed integral of subsurface ocean warming:
+\begin{equation}
+	\Delta H_{\mathrm{dyn}}(t) = \gamma \int_{t_0}^{t} T_{\mathrm{ocean}}(t' - \delta)\, dt' + r_0\,(t - \bar{t}),
+	\label{eq:greenland_dyn}
+\end{equation}
+where $\gamma$ is the discharge sensitivity to ocean temperature, $\delta$ is the time delay between ocean warming and the ice sheet response, and $r_0$ is a secular drift from post--Little Ice Age adjustment. The model is calibrated against Mouginot et~al.~\citep{Mouginot2019} discharge by weighted least squares with BIC-weighted mixing across candidate delays $\delta \in \{4, 5, 6, 7, 8\}$~yr, yielding $\gamma = 0.365$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$ (90\% CI: 0.352--0.379~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$), $r_0 = 0.104$~mm\,SLE\,yr$^{-1}$ (90\% CI: 0.099--0.108~mm\,SLE\,yr$^{-1}$), and $\delta = 5$~yr ($R^2 = 0.995$).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_greenland_discharge_delay_fit.png}
+\caption{\textbf{Greenland discharge delay model fit.} (a)~EN4 subsurface ocean temperature (200--500\,m, annual) and the delayed signal $T_{\mathrm{ocean}}(t - \delta)$ with $\delta = 5$\,yr. (b)~Discharge rate anomaly: Mouginot (calibration), Mankoff (validation), and NOAA Arctic Report Card (validation) observations compared with the model rate and 90\% posterior CI. (c)~Cumulative discharge: model fit (solid, calibration period) and forward projection (dashed), with Mouginot calibration data and NOAA ARC validation data.}
+\label{fig:greenland_delay_fit}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_greenland_discharge_posteriors.png}
+\caption{\textbf{Greenland discharge model posteriors.} Posterior distributions for the three parameters of the delay model: ocean thermal forcing sensitivity $\gamma$, background rate $r_0$, and time delay $\delta$. The delay $\delta$ is discrete (BIC-weighted mixture over $\delta \in \{4,5,6,7,8\}$\,yr); the remaining parameters are continuous.}
+\label{fig:greenland_posteriors}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_greenland_smb_d_fit.png}
+\caption{\textbf{Greenland SMB, discharge, and total mass balance diagnostics.} (a)~Cumulative SMB from Mouginot (RACMO-derived), Mankoff, and GRACE\,$-$\,D implied SMB. SMB is used as observations, not fit to temperature. (b)~Cumulative discharge from the delay model with 90\% posterior CI, validated against Mouginot (calibration) and NOAA ARC (validation). (c)~Total Greenland mass balance: SMB(obs)\,$+$\,D(model) compared with Mouginot (calibration) and Mankoff (validation) total mass balance records.}
+\label{fig:greenland_smb_d}
+\end{figure}
+
+We derive a simple scaling to contextualize the inferred value $\gamma = 0.37$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. Taking the time derivative of Eq.~\eqref{eq:greenland_dyn}, the discharge rate anomaly is
+\begin{equation}
+	\dot{D} = \gamma\,T_{\mathrm{ocean}}(t - \delta),
+	\label{eq:greenland_rate}
+\end{equation}
+so $\gamma$ is the change in discharge rate per degree of subsurface ocean warming. The physical chain linking ocean temperature to discharge is: (i)~ocean thermal forcing drives submarine melt at marine-terminating glacier termini, (ii)~melt-driven undercutting thins the ice near the grounding line, and (iii)~the resulting loss of buttressing increases ice flux across the grounding line. These steps can be combined into a scaling for the aggregate discharge sensitivity $\gamma$.
+
+\textit{Submarine melt.} For a single outlet glacier, the submarine melt rate scales approximately linearly with ocean thermal forcing above a reference temperature $T_f$:
+\begin{equation}
+	\dot{m} = \kappa\,(T_{\mathrm{ocean}} - T_f),
+	\label{eq:melt_rate}
+\end{equation}
+where $\kappa \sim 10$--$100$~m\,yr$^{-1}$\,$^\circ$C$^{-1}$ depending on fjord geometry, subglacial discharge, and circulation \citep{Xu2013, Rignot2016, Slater2020}.
+
+\textit{Dynamic amplification.} Submarine melt thins and undercuts the terminus, triggering calving and grounding-line retreat that increase ice flux by a factor $\mu$ beyond the direct melt loss. For Greenland's tidewater glaciers, observations and models suggest $\mu \sim 3$--$10$ \citep{Enderlin2013, Wood2021}. The total mass flux perturbation from a single glacier of effective calving-front cross-section $A_f$ is then
+\begin{equation}
+	\Delta \dot{M}_i \sim \mu\,\rho_i\,A_{f,i}\,\kappa_i\,\Delta T_{\mathrm{ocean}},
+	\label{eq:single_glacier_flux}
+\end{equation}
+where $\rho_i$ is the mass density of ice.
+
+\textit{Aggregation.} Summing over Greenland's $N \approx 200$ marine-terminating outlets and converting to sea-level equivalent ($1~\mathrm{Gt} = 1/362{,}500$~m\,SLE):
+\begin{equation}
+	\gamma_{\mathrm{phys}} = \frac{1}{A_{\mathrm{ocean}}\,\rho_w}\sum_{i=1}^{N} \mu_i\,\rho_i\,A_{f,i}\,\kappa_i,
+	\label{eq:gamma_aggregate}
+\end{equation}
+where $A_{\mathrm{ocean}} = 3.625 \times 10^{14}$~m$^2$ is the ocean area and $\rho_w$ is seawater density. Using representative values ($\bar{\kappa} \sim 30$~m\,yr$^{-1}$\,$^\circ$C$^{-1}$, $\bar{\mu} \sim 5$, mean cross-section $\bar{A}_f \sim 0.15$~km$^2$, $\rho_i = 917$~kg\,m$^{-3}$) gives
+\begin{equation}
+	\gamma_{\mathrm{phys}} \sim 0.22\text{--}0.55~\mathrm{mm\,SLE\,yr}^{-1}\,{}^\circ\mathrm{C}^{-1},
+	\label{eq:gamma_estimate}
+\end{equation}
+which brackets the calibrated $\gamma = 0.37$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. The range reflects the large spread in $\kappa$ and $\mu$ across individual glaciers.
+
+As an independent check, over 1997--2018, Mouginot et~al.~\citep{Mouginot2019} observed a discharge increase of ${\sim}0.19$--$0.28$~mm\,SLE\,yr$^{-1}$ while EN4 subsurface temperatures (200--500\,m) in Greenland peripheral waters warmed by ${\sim}0.5$--$1\,^\circ$C \citep{Good2013}, giving an observed bulk sensitivity of $0.19$--$0.55$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. The calibrated $\gamma$ at the median ocean warming of ${\sim}0.7\,^\circ$C predicts a rate increase of $0.37 \times 0.7 \approx 0.26$~mm\,SLE\,yr$^{-1}$, consistent with both the scaling and the observed acceleration.
+
+\textit{Surface-to-ocean transfer function.} The discharge model (Eq.~\eqref{eq:greenland_dyn}) requires subsurface ocean temperature $T_{\mathrm{ocean}}$, which is available from EN4 during the historical period (1970--2021) but not under SSP scenarios. To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
+\begin{equation}
+	T_{\mathrm{ocean}}(t) = \alpha\,T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
+	\label{eq:ocean_transfer}
+\end{equation}
+where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), $T_{\mathrm{ocean}}$ is the EN4 subsurface temperature anomaly (200--500\,m depth, 58--80$^\circ$N, 75--5$^\circ$W), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $n = 52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
+
+For projections, SSP GMST trajectories are converted to Greenland regional surface temperature using an Arctic amplification factor of 3, consistent with the observed ratio of Greenland-to-global warming over 1970--2021. SSP Greenland regional surface temperatures (CMIP6, rebaselined to Berkeley Earth over 2015--2024) are passed through Eq.~\eqref{eq:ocean_transfer} to obtain projected $T_{\mathrm{ocean}}$, which then enters Eq.~\eqref{eq:greenland_dyn} via the delayed integral. Each of the 2,000 Monte Carlo samples draws $\alpha \sim \mathcal{N}(0.148, 0.027^2)$ and $\beta \sim \mathcal{N}(-0.051, 0.031^2)$ jointly with $(\gamma, r_0, \delta)$ from the discharge posterior, so that transfer-function uncertainty propagates into the discharge projections. A single draw of $(\alpha, \beta, \gamma, r_0, \delta)$ is applied to all SSP scenarios, so that inter-SSP differences isolate the effect of the emissions pathway from parameter uncertainty.
+
+\subsubsection{WAIS}
+
+The West Antarctic Ice Sheet (WAIS) dominates forecast uncertainty (92\% of within-scenario variance at 2100, cf. main text). Because the ice dynamics governing WAIS mass loss involve instability mechanisms that current process models cannot fully represent \citep{Seroussi2020,Aschwanden2021}, we construct a scenario-mixture framework that represents this deep uncertainty, is grounded in the scholarly literature, and provides an accounting for recent discoveries, like the higher value of the viscous stress-exponent $n$ \citep{Millstein2022,Ranganathan2024} and sensitivity of sea-level rise projections to that value \citep{GetraerMorlighem2025, Martin2026}. Our framework comprises three physically motivated scenarios, each characterized by a probability weight, an endpoint distribution at 2100, a temporal trajectory, and a multiplicative rheology ($n$) correction. We choose to set all WAIS scenarios to be independent of the warming trajectory because there are vanishingly few data to constrain the sensitivity of WAIS to ocean thermal forcing in a time when large calving events are rapidly changing ice shelves -- the floating extension of the ice sheet -- and because evidence suggests ocean thermal forcing sufficient to sustain WAIS retreat is committed regardless of emissions pathway \citep{Naughten2023}.
+
+\subsubsection{Observational context}
+
+The IMBIE satellite-era record (1992--2020; \cite{Otosaka2023}) shows WAIS cumulative mass loss of ${\sim}6.6$~mm SLE, with the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in 1992 to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012. The mass loss signal emerges from measurement noise (signal-to-noise ratio $> 2$) by approximately 1998. A structural break at ${\sim}2010$ separates a period of acceleration (0.015~mm\,yr$^{-2}$, 1992--2010) from a period of apparent deceleration ($-0.031$~mm\,yr$^{-2}$, 2010--2020). This recent deceleration may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018} rather than a reversal of the ice-dynamical trend. The WAIS contribution represents ${\sim}8$--9\% of the total GMSL rate and ${\sim}35$--70\% of the barystatic (non-thermosteric) contribution.
+
+Few if any runs in the 188-member ISMIP6 ensemble \citep{Seroussi2020} reproduce the observed trajectory of WAIS mass loss through 2020 (Fig.~\ref{fig:calibration}f). The ensemble 95th percentile merely tracks the lower bound of observations, and the ensemble median implies near-zero or slightly positive mass change under warming---a result that is difficult to reconcile with satellite measurements and reflects known structural biases in the underlying models (see ``Known biases in ice sheet model projections'' below).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_observations.png}
+\caption{\textbf{WAIS observational record.} Left: cumulative WAIS sea-level contribution from IMBIE (1992--2020; \cite{Otosaka2023}) with measurement uncertainties, relative to the year-2000 baseline. The structural break at ${\sim}2010$ (red dashed line) separates a period of acceleration from apparent deceleration. Right: WAIS mass loss rate evolution, showing the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in the early 1990s to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012, followed by a decline that may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018}.}
+\label{fig:wais_observations}
+\end{figure}
+
+\subsubsection{Framework structure: three scenarios}
+
+The framework comprises three scenarios spanning the range from stable WAIS (no instability) through marine ice sheet instability (MISI) to the combination of MISI with marine ice cliff instability (MICI):
+
+\begin{itemize}
+\item \textbf{S1: Status quo} ($P = 0.10$; 25--85~mm at 2100; $\alpha = 0$). No marine ice sheet instability operates. Discharge responds linearly to ocean thermal forcing, and grounding-line retreat does not trigger the positive feedback characteristic of MISI. The range is derived from a physical scaling: the lower bound extrapolates the IMBIE time-averaged rate (0.24~mm\,yr$^{-1}$) over 95~yr (${\sim}23$~mm); the upper bound applies the projected Amundsen Sea ocean warming enhancement factor ($f = [(2.15 + \Delta T_{\mathrm{warm}})/2.15]^2 \approx 2.9$ for $+1.5\,^\circ$C warming; \cite{Naughten2023}) to the peak observed rate, yielding a linear ramp to ${\sim}85$~mm.
+
+\item \textbf{S2: MISI} ($P = 0.80$; 150--1000~mm at 2100; $\alpha = +4$). Marine ice sheet instability drives accelerating grounding-line retreat on retrograde beds, with amplification from processes that current models omit (calving, subglacial hydrology, ice damage). The positive skewness ($\alpha = +4$) is motivated by the analytical and numerical results of Robel et~al.~\citep{Robel2019}, who showed that the grounding-line flux nonlinearity ($q_g \propto h_g^{\,n+1}$, where $h_g$ is grounding-line thickness; \cite{Schoof2007}) amplifies and skews the uncertainty distribution toward greater ice loss when the nonlinearity exponent exceeds 3 (realistic values are 4--5). In their 500-member Thwaites ensemble, fractional projection uncertainty ranges from 0.25 to 0.50 depending on forcing persistence, with systematic positive skew. The trajectory follows a power-law ramp $H(t) = H_{\mathrm{anchor}} + H_{\mathrm{remaining}} \cdot [(t - t_a)/(2100 - t_a)]^\beta$, where the trajectory exponent $\beta$ is drawn from a log-normal distribution with median 1.8 and log-standard deviation 0.3 (i.e., back-loaded, reflecting the accelerating character of MISI dynamics).
+
+\item \textbf{S3: MISI + MICI} ($P = 0.10$; 600--1400~mm at 2100; $\alpha = -3$). Full instability cascade including marine ice cliff instability, in which loss of buttressing ice shelves exposes ice cliffs that exceed the yield strength of ice, triggering structural failure and rapid retreat \citep{Bassis2012, DeContoP2016}. The negative skewness ($\alpha = -3$) in log-space concentrates probability toward the upper portion of the range with a thin lower tail, reflecting the assessment that if MICI operates at all, it is more likely to produce substantial contributions than minimal ones; the limited weight ($P = 0.10$) assigned to S3 separately captures the substantial evidence against efficient MICI operation during the 21st century (see below). The trajectory exponent has median 2.2, reflecting the more rapid acceleration expected under combined instabilities.
+\end{itemize}
+
+An earlier version of the framework used four scenarios, separating ``moderate MISI'' from ``MISI with amplifiers.'' We merged these because the distinction is not physically defensible: if MISI is triggered, the amplifying processes that current models omit---calving \citep{Aschwanden2021, Fricker2025}, subglacial hydrology \citep{Dow2022}, and ice damage---necessarily accompany it. A scenario in which MISI proceeds exactly as models predict is an artifact of model limitations, not a distinct physical regime. The merged S2 uses its skewed distribution to span the full range from moderate to amplified MISI outcomes.
+
+\subsubsection{Scenario weights}
+
+The 10--80--10 weight split reflects the following assessments:
+
+\textit{S1 = 10\% (no MISI).} Sustained WAIS stability requires grounding lines to stabilize despite ongoing retreat on retrograde slopes, committed ocean warming \citep{Naughten2023}, and observed acceleration. IPCC AR6 states that MISI ``may be underway'' in the Amundsen Sea Embayment (medium confidence; \cite{Fox-Kemper2021}); Joughin et~al.~\citep{Joughin2014} concluded that early-stage collapse of Thwaites is already underway; and van den Akker et~al.~\citep{vandenAkker2025} showed that present-day ocean thermal forcing, held constant, is sufficient to deglaciate large parts of WAIS within 300--2500~yr. The 10\% weight reflects the small but non-zero possibility that observed trends are reversible or dominated by internal variability.
+
+\textit{S2 = 80\% (MISI).} MISI is the most physically supported instability mechanism, included in IPCC medium-confidence projections \citep{Fox-Kemper2021}, and is arguably already initiated \citep{Joughin2014, Rignot2026}. Ritz et~al.~\citep{Ritz2015} found MISI to be the dominant instability pathway in a probabilistic treatment of Antarctic contributions; Bamber et~al.~\citep{Bamber2019} structured expert judgment produced WAIS distributions dominated by MISI-type dynamics with strongly positive skew; and DeConto et~al.~\citep{DeConto2021} obtained total Antarctic median ${\sim}340$~mm under RCP8.5 without MICI but with nonlinear acceleration above 3$\,^\circ$C. The 80\% weight reflects the consensus position that MISI is the baseline expectation for WAIS evolution.
+
+\textit{S3 = 10\% (MISI + MICI).} IPCC AR6 assigns low confidence to MICI and excludes it from medium-confidence projections \citep{Fox-Kemper2021}. Several studies have challenged the efficiency of MICI during the 21st century: Morlighem et~al.~\citep{Morlighem2024} found that dynamic thinning prevents cliffs from growing tall enough for sustained structural failure, requiring calving rates $\geq 25\times$ higher than physically motivated models suggest; Clerc et~al.~\citep{Clerc2019} showed that realistic ice-shelf removal timescales (days or longer) raise the critical cliff height from ${\sim}90$~m to ${\sim}540$~m via viscous relaxation; and Schlemm et~al.~\citep{Schlemm2022} demonstrated that m\'{e}lange buttressing and embayment geometry changes are self-limiting. However, MICI cannot be entirely excluded: ice cliffs exceeding ${\sim}100$~m (with crevasses) are structurally unstable \citep{Bassis2012}, DeConto \& Pollard~\citep{DeContoP2016} calibrated MICI against Pliocene and last-interglacial constraints, and Edwards et~al.~\citep{Edwards2019} showed that while MICI is not required to reproduce paleo sea-level changes, it remains consistent with them. The 10\% weight is consistent with AR6's low-confidence assessment.
+
+\subsubsection{Scenario endpoint ranges}
+
+\textit{S1: 25--85~mm.} Derived from a physical scaling chain: (i)~the lower bound extrapolates the IMBIE time-averaged WAIS rate (0.24~mm\,yr$^{-1}$) over 95~yr; (ii)~the upper bound applies the quadratic melt scaling $f = [(T_0 + \Delta T_{\mathrm{warm}})/T_0]^2$ \citep{Holland2008} with projected Amundsen Sea shelf warming of $+0.7$ to $+1.5\,^\circ$C \citep{Naughten2023}, yielding an enhancement factor of 1.7--2.9 applied to the peak observed rate (0.44~mm\,yr$^{-1}$), then linearly ramped. This range is consistent with IPCC AR6 medium-confidence projections under stable-WAIS assumptions.
+
+\textit{S2: 150--1000~mm.} The lower bound is anchored to transient-calibrated ice sheet model projections. Goldberg et~al.~\citep{Goldberg2026} constrained two independent models (STREAMICE and ISSM) against observed surface elevation changes at Thwaites Glacier and found volume-above-flotation loss rates of 180--200~Gt\,yr$^{-1}$ by 2067 from the trunk subdomain alone, using $n = 3$ with no calving or subglacial hydrology. Their surface-elevation-only calibration produced the largest mass loss and the best match to observed volume-above-flotation trends, while velocity-only calibration systematically underestimated inland thinning---a result that highlights calibration-method uncertainty as a source of bias comparable to inter-model spread. Integrating this trajectory to 2100 (with rates still accelerating at their projection endpoint), scaling to the full Thwaites catchment, and adding comparable contributions from Pine Island Glacier (33~km of grounding-line retreat since 1992; \cite{Rignot2026}), Smith/Kohler, and S1-like contributions from non-ASE basins gives a conservative total of ${\sim}130$~mm; the 150~mm floor accounts for the documented low biases in the underlying models (see below). The upper bound of 1000~mm matches the Bamber et~al.~\citep{Bamber2019} WAIS 95th percentile under $+5\,^\circ$C warming (930~mm) and is consistent with partial (${\sim}30$\%) deglaciation of the WAIS marine-based sectors \citep{Robel2019}. Van den Akker et~al.~\citep{vandenAkker2025} found peak WAIS loss rates of ${\sim}3$~mm\,yr$^{-1}$ under sustained present-day forcing during rapid collapse phases, consistent with reaching the upper S2 range within the century.
+
+\textit{S3: 600--1400~mm.} The lower bound is guided by Edwards et~al.~\citep{Edwards2019}, who found that with MICI under RCP8.5, the most likely total Antarctic outcome is ${\sim}450$~mm; taking the WAIS share (60--80\%) and adding MISI from basins where MICI does not operate gives ${\sim}600$~mm. The upper bound of 1400~mm corresponds to near-complete Amundsen Sea Embayment deglaciation ($V_{af} \approx 1100$~mm; \cite{Morlighem2020}) with the rheology correction ($\times 1.28$), representing the maximum physically plausible WAIS contribution within the 21st century without requiring mass loss from non-ASE basins (Siple Coast, Marie Byrd Land) that lack both retrograde bed geometry and sustained ocean thermal forcing. We note that achieving 1400~mm over 95~yr requires an average rate of ${\sim}15$~mm\,yr$^{-1}$, well above the peak rates of ${\sim}3$~mm\,yr$^{-1}$ found by van den Akker et~al.~\citep{vandenAkker2025} under sustained present-day forcing; the 1400~mm upper bound represents near-complete ASE deglaciation (a kinematic limit from ice volume), not a rate-consistent extrapolation, and would require sustained rates well above those in any published simulation.
+
+\subsubsection{Statistical model for endpoint distributions}
+
+Within each scenario, the 2100 endpoint is drawn from a skew-normal distribution in log-space, $\mathrm{SN}_{\log}(\xi, \omega, \alpha)$, where $\xi$ and $\omega$ are solved such that the 5th and 95th percentiles match the scenario bounds. The log-space formulation is motivated by three physical considerations: (i)~the dominant uncertainties (bed geometry, basal friction, ocean thermal forcing, buttressing loss) enter as multiplicative factors on grounding-line flux $q_g \propto h_g^{\,n+1}$ \citep{Schoof2007}, making a multiplicative (log-space) distribution natural; (ii)~mass loss is strictly positive, which log-space enforces without truncation; and (iii)~the scenarios span two orders of magnitude (25--1400~mm), and a log-space family provides scale-invariant behavior across this range. For $\alpha = 0$, the distribution reduces to a log-normal.
+
+The skew-normal extension captures the asymmetry arising from flux nonlinearity. Robel et~al.~\citep{Robel2019} showed analytically that when the grounding-line flux exponent $n + 1 > 3$, ensemble distributions of retreating grounding lines are systematically skewed toward greater retreat: more-retreated members retreat faster (positive feedback), while less-retreated members experience weaker instability, creating a heavy right tail. Verjans et~al.~\citep{Verjans2024} extended this result, showing that noise-induced drift from calving variability is equivalent to ${\sim}1$~cm GMSL in the first century; reproducing this drift deterministically requires a 270\% increase in mean calving rate, indicating that deterministic models are systematically biased low.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_a4_scenarios.png}
+\caption{\textbf{A4 scenario endpoint distributions at 2100.} Left: probability density functions for the three individual scenarios---S1 (status quo, $P = 0.10$, $\alpha = 0$), S2 (MISI, $P = 0.80$, $\alpha = +4$), and S3 (MISI+MICI, $P = 0.10$, $\alpha = -3$)---after the rheology correction. Right: the resulting A4 mixture distribution, showing the median (0.41~m, dashed) and 90\% credible interval ([0.07, 1.56]~m, dotted). The strong positive skew of the mixture reflects the dominance of S2, whose right-skewed endpoint distribution ($\alpha = +4$) is motivated by the grounding-line flux nonlinearity \citep{Robel2019}.}
+\label{fig:wais_a4_scenarios}
+\end{figure}
+
+\subsubsection{Temporal trajectory}
+
+The cumulative WAIS contribution at year $t$ is given by
+\begin{equation}
+H(t) = H_{\mathrm{anchor}} + (H_{2100} - H_{\mathrm{anchor}}) \cdot \left(\frac{t - t_a}{2100 - t_a}\right)^\beta,
+\label{eq:wais_trajectory}
+\end{equation}
+where $H_{\mathrm{anchor}}$ is the IMBIE observed cumulative value at the anchor year $t_a = 2020$ (the final year of the IMBIE record; $H_{\mathrm{anchor}} = 5.8 \pm 0.7$~mm, $1\sigma$), $H_{2100}$ is the scenario endpoint, and $\beta$ is a trajectory exponent drawn from a log-normal distribution. For years before the anchor ($t \leq t_a$), the framework returns IMBIE observations with their measurement uncertainties rather than scenario projections. For S1 (no instability), $\beta = 1$ (constant rate, linear ramp). For S2, $\beta$ has log-mean $\ln(1.8)$ and log-standard deviation 0.3, reflecting the accelerating, back-loaded character of MISI dynamics. The power-law trajectory form is motivated by the Schoof~\citep{Schoof2007} grounding-line flux scaling $q_g \propto h_g^{\,n+1}$: if grounding-line retreat proceeds at roughly constant rate on a retrograde bed with slope $s$, then $h_g$ decreases approximately linearly, $h_g(t) \sim h_0 - s \cdot v \cdot (t - t_0)$, and the cumulative flux integral grows faster than linearly because $q_g$ increases as $h_g$ decreases. For a power-law flux, dimensional analysis gives cumulative loss scaling as $(t - t_0)^\beta$ with $\beta > 1$, where the exact value depends on bed geometry and $n$; for $n = 3$--4, this yields $\beta \approx 1.5$--2.5. This motivates the parameterization without claiming an exact derivation. For S3, $\beta$ has log-mean $\ln(2.2)$ and log-standard deviation 0.3, reflecting the more rapid acceleration expected when MICI supplements MISI.
+
+The trajectory exponent is corrected for rheology: the reference $\beta$ is drawn assuming $n = 3$ (matching the literature from which the scaling is derived) and then adjusted to $\beta_{\mathrm{corrected}} = \beta_{n=3} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$, where $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$ is drawn from the observed Glen's law exponent distribution \citep{Millstein2022, Ranganathan2024}. This correction increases $\beta$ by ${\sim}28\%$ at the median, producing more back-loaded (accelerating) trajectories when the ice is more stress-sensitive, as is expected from grounding-line dynamics.
+
+\subsubsection{Rheology correction}
+
+A multiplicative rheology correction is applied to all scenario endpoints. All ISMIP6 models and the literature scenarios from which our endpoint ranges are derived assume Glen's flow law with $n = 3$, but satellite observations indicate $n = 4.1 \pm 0.4$ in fast-flowing Antarctic ice \citep{Millstein2022}, supported by laboratory measurements ($n \approx 3.5$--3.7; \cite{Fan2025}), Greenland field observations ($n \approx 4$; \cite{Bons2018}), and theoretical analysis of the dislocation creep regime \citep{Ranganathan2024}. The consequence for projections has been quantified: Martin et~al.~\citep{Martin2026} found that using $n = 3$ when the true value is $n = 4$ underestimates 100-year sea-level rise by 21--35\% in the MISMIP+ and ABUMIP benchmarks, and Getraer \& Morlighem~\citep{GetraerMorlighem2025} found $32 \pm 14$\% greater Amundsen Sea Embayment loss with $n = 4$ in an ISMIP6-framework experiment. The bias grows nonlinearly with forcing strength \citep{Martin2026}.
+
+We implement the rheology correction in Mode~B (unified $n$-driven corrections), in which a single draw of the Glen's law exponent $n$ per Monte Carlo sample drives both corrections through the physical link to $n$:
+\begin{enumerate}
+\item $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$, clipped at $n_{\mathrm{draw}} \geq n_{\mathrm{ref}} = 3$.
+\item Endpoint: $R(n) = 1 + r_0\,(n_{\mathrm{draw}} - n_{\mathrm{ref}})$, where $r_0 = 0.28$ ($1\sigma$) is the fractional change in endpoint per unit change in $n$, calibrated from Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025}.
+\item Trajectory: $\beta(n) = \beta_{\mathrm{ref}} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$.
+\end{enumerate}
+This couples the endpoint and trajectory corrections through $n$, which is more physically consistent than drawing $R$ and the $\beta$ correction independently (Mode~A). At the median observed exponent $n = 4.1$, $R = 1 + 0.28 \times 1.1 = 1.31$; at $\pm 1\sigma$ in $n$, the correction spans from $R = 1.20$ ($n = 3.7$) to $R = 1.42$ ($n = 4.5$), consistent with the literature range of 1.21--1.35 from Martin et~al.~\citep{Martin2026}. The correction is applied to all scenarios because the rheology bias affects every ice sheet model regardless of which instability mechanism operates. Importantly, $R$ and $\beta$ correct conceptually independent quantities: the endpoint ranges are defined at $n = 3$, and $R$ scales the total ice lost (the endpoint magnitude), while the $\beta$ correction changes when that ice is lost (the trajectory shape). These corrections are not double-counting because Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025} report the ratio of total sea-level change at $n = 4$ to $n = 3$---a cumulative endpoint quantity---not the trajectory shape.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_projection.png}
+\caption{\textbf{WAIS A4 projections.} Cumulative WAIS sea-level contribution from the A4 scenario mixture (SSP-independent), showing the median (solid), 66\% credible interval (dark shading), and 90\% credible interval (light shading). IMBIE observations (1992--2020) are shown as grey circles. The total WAIS volume above flotation ($V_{af} = 3.3$~m SLE) is indicated by the dotted line. The back-loaded trajectory ($\beta > 1$ for S2 and S3) produces accelerating mass loss, with the uncertainty fan widening rapidly after mid-century as the MISI scenarios diverge.}
+\label{fig:wais_projection}
+\end{figure}
+
+\subsubsection{Known biases in ice sheet model projections}
+
+Our scenario ranges exceed IPCC AR6 medium-confidence projections for WAIS. This is expected and physically justified by multiple documented biases in the ISMIP6 ensemble:
+
+\begin{enumerate}
+\item \textit{Rheology bias.} All ISMIP6 models assume $n = 3$; observed $n \approx 4$ produces 21--35\% more sea-level rise \citep{Martin2026, GetraerMorlighem2025}. Models initialized with $n = 3$ can match $n = 4$ observations in the short term by tuning a viscosity multiplier, but this compensation breaks down on projection timescales \citep{Martin2026}.
+
+\item \textit{Missing calving.} No ISMIP6 model adequately represents iceberg calving \citep{Aschwanden2021, Fricker2025}, which is a first-order control on grounding-line retreat rate. The sensitivity of glacier flow to major calving events is well documented (e.g., 2--8$\times$ speedup after Larsen~B collapse; \cite{Scambos2004}).
+
+\item \textit{Initialization uncertainty.} Goldberg et~al.~\citep{Goldberg2026} showed that the choice of calibration data (velocity vs.\ surface elevation) produces a factor-of-two spread in projected Thwaites loss rates---comparable to the inter-model spread in ISMIP6. Surface-elevation calibration, which better captures inland thinning signatures of MISI, consistently produces larger mass loss than velocity calibration.
+
+\item \textit{Incomplete uncertainty quantification.} ISMIP6 integrates over model structure but not over parametric uncertainty within individual models, which alone could produce an interquartile range of up to 12.9~cm SLE for RCP8.5 at 2100 \citep{Aschwanden2019}.
+
+\item \textit{Biased ensemble.} ISMIP6 models share numerical methods, parameterizations, and jointly omit key physics---they are not independent samples from the space of possible models \citep{Aschwanden2021}.
+
+\item \textit{Historical validation failure.} Few if any ISMIP6 models reproduce the observed trajectory of WAIS mass loss; the ensemble 95th percentile merely tracks the lower bound of IMBIE observations \citep{Aschwanden2021}. Under continued warming, IPCC models show slower sea-level rise rates than extrapolation of modern observations \citep{Hamlington2024}.
+\end{enumerate}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_ipcc_comparison.png}
+\caption{\textbf{WAIS A4 projections compared with IPCC AR6 total Antarctic projections.} Our WAIS-only A4 projection (teal, median and 66\%/90\% CI) compared with IPCC AR6 total Antarctic Ice Sheet projections under SSP2-4.5 (blue dashed) and SSP5-8.5 (red dashed) with their respective uncertainty bands. The A4 median exceeds the IPCC total AIS projection by mid-century, and the A4 uncertainty is substantially wider, reflecting the deep uncertainty from MISI, rheology, and missing processes that the ISMIP6 ensemble does not capture.}
+\label{fig:wais_ipcc_comparison}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_pdf_exceedance_ipcc.png}
+\caption{\textbf{WAIS endpoint distributions and exceedance probabilities: A4 vs IPCC.} Left: probability density at 2100 for the A4 WAIS framework (blue) compared with the IPCC AR6 total Antarctic projection (red). The A4 distribution is wider, with a higher median and a heavier right tail arising from the MISI skewness and rheology correction. Right: exceedance probability curves, showing that the A4 framework assigns substantially higher probability to exceeding any given threshold above ${\sim}0.1$~m. The IPCC distribution assigns near-zero probability to outcomes exceeding 0.5~m, whereas the A4 framework assigns ${\sim}40$\% probability to this threshold.}
+\label{fig:wais_pdf_exceedance_ipcc}
+\end{figure}
+
+\subsubsection{Independent cross-check: structured expert judgment}
+
+The Bamber et~al.~\citep{Bamber2019} structured expert judgment (SEJ) provides an independent, methodology-orthogonal validation target. Their WAIS-specific results under $+5\,^\circ$C warming give a median of 180~mm and 95th percentile of 930~mm, with strong positive skew. Our A4 mixture (median ${\sim}410$~mm, 90\% CI: 70--1560~mm, after rheology correction) is wider and shifted higher than the Bamber estimates. This is expected because: (a)~Bamber was published before the rheology bias was quantified \citep{Martin2026}; (b)~the SEJ was conducted before Morlighem et~al.~\citep{Morlighem2024} and recent Thwaites observations that have sharpened the evidence for ongoing instability; and (c)~our framework explicitly applies the rheology correction, which shifts the entire distribution upward by ${\sim}28\%$. The agreement in the broad distributional shape---strongly right-skewed, with median in the hundreds of millimeters---strengthens confidence in both approaches despite their different methodologies.
+
+As a second cross-check, Rosier et~al.~\citep{Rosier2025} calibrated an ice sheet model (\'Ua) against ASE observations using Bayesian inference with deep surrogates and projected Amundsen Sea sector contributions of $19.0 \pm 2.2$~mm (Paris 2$\,^\circ$C) and $18.9 \pm 2.7$~mm (RCP8.5) by 2100---statistically indistinguishable across scenarios, supporting the SSP-independence assumption adopted here. Their calibrated contribution falls within our S1 range (25--85~mm), consistent with the expectation that process models calibrated against the short observational record produce estimates at the lower end of our framework. Rosier et~al.\ include both cliff-height- and hydrofracture-driven calving but find no evidence of unstable calving-front retreat in any simulation, and their creep-exponent prior ($n \in [2, 5]$, uniform) is broad but centered lower than the satellite-derived $n = 4.1 \pm 0.4$ \citep{Millstein2022}. Their narrow uncertainty range (${\sim}5$~mm, $1\sigma$) reflects the structural constraints of a single model rather than the epistemic uncertainty that the A4 framework is designed to represent.
+
+\subsubsection{Sensitivity to scenario weights}
+
+To assess the robustness of the A4 mixture to the assigned scenario weights, we perturb each weight by $\pm 5$ percentage points (redistributing the change proportionally among the remaining scenarios) and examine the effect on the mixture median at 2100 (Fig.~\ref{fig:wais_tornado}). The median is most sensitive to the S2 (MISI) weight, which shifts it by less than $\pm 0.01$~m---an order of magnitude smaller than the 90\% credible interval. Perturbations to S1 and S3 produce larger fractional shifts but in opposite directions, so that the median remains within a ${\sim}0.04$~m range across all perturbations. The insensitivity to weight perturbations reflects the dominance of within-scenario uncertainty (controlled by the endpoint ranges and skewness) over the between-scenario weighting.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_wais_tornado.png}
+\caption{\textbf{Scenario weight sensitivity.} Tornado plot showing the effect of $\pm 5$ percentage-point perturbations to each scenario weight on the median WAIS SLR at 2100. Dark bars show the inner perturbation range; light bars extend to the full $\pm 5$\% range. The dashed vertical line indicates the baseline median (0.41~m). The mixture median is insensitive to weight perturbations, varying by less than 0.04~m across all perturbations---an order of magnitude smaller than the 90\% credible interval of the mixture distribution.}
+\label{fig:wais_tornado}
+\end{figure}
+
+\subsubsection{EAIS}
+The EAIS component uses the same level-space Bayesian framework as glaciers and the Peninsula. The rate--temperature model is
+\begin{equation}
+	\dot{H}_{\mathrm{eais}}(t) = a\,T(t)^2 + b\,T(t) + c,
+	\label{eq:eais_rate}
+\end{equation}
+where $T(t)$ is the GMST anomaly. This is fit to the IMBIE EAIS record (1992--2020, 29 annual points; \cite{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). The quadratic model yields $R^2 = 0.66$ (posterior mean: $a = 0.054$, $b = 0.035$, $c = -0.023$~mm\,yr$^{-1}$), and the linear model yields $R^2 = 0.56$ ($b = 0.021$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$, $c = -0.018$~mm\,yr$^{-1}$). BIC weakly favors the quadratic ($\Delta\mathrm{BIC} = +4.1$), but both $R^2$ values are too low for reliable projections given the 29-year record and large interannual variability (Fig.~\ref{fig:eais_diagnostics}). EAIS projections instead use the literature-derived accumulation sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST \citep{Frieler2015, Ligtenberg2013}, reflecting the Clausius--Clapeyron scaling of snowfall with warming ($C_T > 0$ corresponds to mass gain, i.e., negative SLR). The EAIS contribution is small ($-13$ to $-30$~mm at 2100, depending on scenario) and is excluded from the forecast sum as a conservative choice---it would reduce the total forecast if included.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_eais_diagnostics.png}
+\caption{\textbf{EAIS model diagnostics.} (a)~EAIS mass loss rate vs GMST anomaly with the fitted quadratic relationship. (b)~Cumulative EAIS SLR: IMBIE observations with the model fit and 90\% credible interval. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:eais_diagnostics}
+\end{figure}
+
+\subsubsection{Peninsula}
+The Antarctic Peninsula component uses the same level-space Bayesian framework, with the rate--temperature model $\dot{H}_{\mathrm{pen}}(t) = a\,T(t)^2 + b\,T(t) + c$ calibrated against the IMBIE Peninsula record (1992--2020, 29 annual points; \cite{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). BIC favors the linear model ($\Delta\mathrm{BIC} = -3.5$). The adopted linear model achieves $R^2 = 0.94$ with posterior median sensitivity $b = 0.055$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and committed rate $c = 0.028$~mm\,yr$^{-1}$ (Fig.~\ref{fig:apeninsula_diagnostics}). The Peninsula contribution reflects combined SMB and discharge responses to warming and is small relative to other components (${\sim}10$--15~mm at 2100).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_apeninsula_diagnostics.png}
+\caption{\textbf{Peninsula model diagnostics.} (a)~Peninsula mass loss rate vs GMST anomaly with the fitted linear relationship. (b)~Cumulative Peninsula SLR: IMBIE observations with the model fit and 90\% credible interval; $R^2 = 0.94$. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:apeninsula_diagnostics}
+\end{figure}
+
+\subsubsection{Terrestrial water storage}
+TWS projections are adopted directly from the IPCC AR6 \texttt{landwaterstorage} component rather than independently modeled, as the processes governing groundwater depletion, reservoir impoundment, and land hydrology changes are outside the scope of this framework. At each decadal interval in the IPCC projections, we fit a skew-normal distribution to the reported quantiles (5th, 17th, 50th, 83rd, 95th percentiles) and draw 2,000 Monte Carlo samples, which are then linearly interpolated to annual resolution. For the hindcast period (pre-2020), we use the Frederikse et~al.~\citep{Frederikse2020} TWS observations with Monte Carlo sampling from their reported uncertainties. TWS is SSP-dependent but the contribution is small (${\sim}40$~mm at 2100 under SSP2-4.5) and does not materially affect the total uncertainty budget.
+
+\subsection{MCMC convergence diagnostics}
+
+For all MCMC fits (thermosteric, glaciers, EAIS, Peninsula), we verified convergence using the Gelman--Rubin diagnostic ($\hat{R}$) and effective sample size (ESS). For the glacier and Peninsula models, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS exceeding 120 and tail ESS exceeding 230; mean acceptance fractions are 0.46 (glaciers) and 0.50 (Peninsula). For the EAIS diagnostic fit, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $> 120$ and acceptance fraction 0.47. For the thermosteric two-layer model, the mean acceptance fraction is 0.455 across 48 walkers with 576,000 posterior samples (after burn-in); convergence diagnostics are not computed via the standard $\hat{R}$ formula (the thermosteric model uses a custom MCMC loop rather than the shared level-space fitting routine), but the large sample size and stable trace plots confirm convergence. Components share a common temperature driver, introducing positive correlations in the projection ensemble. This correlation is captured sample-by-sample (each Monte Carlo realization uses the same SSP temperature trajectory for all components) but the structural uncertainty in the temperature trajectories introduces additional correlation not explicitly modeled.
+
+\subsection{Rate-space blending}
+
+The total GMSL forecast is constructed by blending the satellite-era quadratic extrapolation with the component-model sum in rate space:
+\begin{equation}
+	\dot{H}_{\mathrm{forecast}}(t) = w(t)\,\dot{H}_{\mathrm{quad}}(t) + \bigl[1 - w(t)\bigr]\,\dot{H}_{\mathrm{comp}}(t),
+	\label{eq:blend_rate}
+\end{equation}
+where $\dot{H}_{\mathrm{quad}}$ is the rate from the satellite-era quadratic fit (Section~``GMSL rate estimates''), $\dot{H}_{\mathrm{comp}}$ is the rate of the component sum (finite differences of the annual-resolution component projections), and $w(t)$ is a sigmoid blending weight
+\begin{equation}
+	w(t) = 1 - \sigma\!\left(\frac{t - t_c}{\tau}\right),
+	\label{eq:sigmoid_weight}
+\end{equation}
+with $\sigma(x) = (1 + e^{-x})^{-1}$ the standard logistic function, $t_c = 2035$, and $\tau = 5$~yr. At $t \ll t_c$, $w \approx 1$ and the forecast follows the observed quadratic trajectory; at $t \gg t_c$, $w \approx 0$ and the forecast follows the component-model physics. The transition spans approximately 20~yr (10\%--90\% of the weight shift occurs over $\pm 2.2\,\tau \approx \pm 11$~yr around $t_c$).
+
+The level forecast is obtained by integrating Eq.~\eqref{eq:blend_rate} forward from the observed GMSL at the forecast origin $t_0 = 2025.3$ (the end of the NASA altimetry record) using the trapezoidal rule:
+\begin{equation}
+	H_{\mathrm{forecast}}(t) = H_{\mathrm{obs}}(t_0) + \int_{t_0}^{t} \dot{H}_{\mathrm{forecast}}(t')\,dt'.
+	\label{eq:blend_level}
+\end{equation}
+The blending is performed sample-by-sample across the 2{,}000-member Monte Carlo ensemble, preserving correlations between the quadratic-fit parameter uncertainty and the component-model uncertainty.
+
+Because the quadratic extrapolation is derived entirely from the satellite altimetry record, it carries no dependence on emissions pathway. The component sum is SSP-dependent through the temperature-forced component models. Consequently, the blended forecast is SSP-independent in the near term (where $w \approx 1$) and becomes progressively SSP-dependent as the component physics dominate at longer lead times.
+
+\subsection{Budget closure diagnostic}
+
+The residual between the component sum and NASA altimetry is distributed across components in proportion to their variances: $\mathrm{shift}_i = (\sigma_i^2 / \sum_j \sigma_j^2) \times r$, where $r$ is the total residual and $\sigma_i$ is the standard deviation of component $i$ from its Monte Carlo ensemble (the Gaussian assumption is approximate for WAIS, whose distribution is skewed; however, the diagnostic is applied to the hindcast period where the WAIS contribution is small and approximately linear). This is the Bayesian posterior update under joint Gaussian assumptions, applied as a diagnostic without modifying the component posteriors. The shift-to-sigma ratio for each component tests whether the implied adjustment is within the stated uncertainty.
+
+\subsection{Variance decomposition}
+
+Cross-component covariances are small ($-0.0002$~m$^2$, representing $< 0.1\%$ of total variance), confirming that the independent calibration approach does not introduce material correlations.
+
+\subsection{Temperature scenarios}
+
+SSP temperature trajectories (SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5) are from IPCC AR6 assessed warming projections. Historical forcing uses Berkeley Earth monthly GMST \citep{Rohde2020}. All anomalies are relative to a 1995--2005 baseline ($\approx$2000 reference year). Forecasts extend from 2020 to 2150, with pre-2020 values from the observational record. SSP GMST trajectories are converted to Greenland regional surface temperature using an Arctic amplification factor of 3, consistent with the observed ratio of Greenland-to-global warming over 1970--2021.
+
+\subsection{Prior specifications}
+
+Table~\ref{tab:priors} lists the prior distributions used in each Bayesian component model. All priors are weakly informative and are chosen to regularize the posterior without dominating the likelihood. Units are in meters unless otherwise noted (the code operates in meters internally; multiply by 1000 for mm equivalents).
+
+\begin{table}[h]
+\centering
+\caption{Prior distributions for all component models. Exp = Exponential, HN = Half-Normal, HC = Half-Cauchy, LN = Log-Normal, N = Normal, SN$_{\log}$ = Skew-Normal in log-space. Parameters $a$, $b$, $c$ in the level-space models correspond to the quadratic, linear, and constant coefficients of the rate--temperature relationship, respectively.}
+\label{tab:priors}
+\small
+\begin{tabular}{llll}
+\toprule
+Component & Parameter & Prior & Source / justification \\
+\midrule
+\multicolumn{4}{l}{\textit{Thermosteric (two-layer ODE, 6 free parameters)}} \\
+ & $a$ (quadratic) & $\mathrm{Exp}(\mu = 22\text{ mm}/{}^\circ\text{C}^2)$ & Positive curvature; regularizes toward linear \\
+ & $b_u$ (upper sensitivity) & $\mathrm{HN}(\sigma = 150\text{ mm}/{}^\circ\text{C})$ & Weakly informative; encompasses literature range \\
+ & $b_d$ (deep sensitivity) & $\mathrm{HN}(\sigma = 100\text{ mm}/{}^\circ\text{C})$ & Weakly informative; smaller than upper layer \\
+ & $c$ (secular trend) & $\mathrm{N}(0.3, 0.5^2)\text{ mm\,yr}^{-1}$ & Centered near zero; allows small drift \\
+ & $\log\tau_u$ & $\mathrm{N}(\log 8, 0.5^2)$ & LN median 8~yr; Geoffroy et~al.\ range \\
+ & $\sigma_\mathrm{extra}$ & $\mathrm{HC}(\gamma = 3\text{ mm})$ & Model inadequacy; weakly informative \\
+\midrule
+\multicolumn{4}{l}{\textit{Glaciers, EAIS, Peninsula (level-space Bayesian, 5 free parameters each)}} \\
+ & $a$ ($d\alpha/dT$) & $\mathrm{Exp}(\mu = 0.04\text{ mm\,yr}^{-1}\,{}^\circ\text{C}^{-2})$ & PC prior; $P(a > 0.10) = 10\%$ \\
+ & $b$ ($\alpha_0$) & $\mathrm{HN}(\sigma = 0.10\text{ mm\,yr}^{-1}\,{}^\circ\text{C}^{-1})$ & $P(b > 0.20) = 10\%$ \\
+ & $c$ (trend) & $\mathrm{N}(0.3, 1.0^2)\text{ mm\,yr}^{-1}$ & Weakly informative; centered on observed rate \\
+ & $\sigma_\mathrm{extra}$ & $\mathrm{HC}(\gamma = 5\text{ mm})$ & Model inadequacy \\
+ & $H_0$ (baseline offset) & $\mathrm{N}(H_\mathrm{obs}(t_1), 5^2)\text{ mm}$ & Centered on first observation \\
+\midrule
+\multicolumn{4}{l}{\textit{Greenland SMB (literature sensitivities, not MCMC)}} \\
+ & $C_T$ (linear) & $\mathrm{N}(-300, 80^2)\text{ Gt\,yr}^{-1}\,{}^\circ\text{C}^{-1}$ & Inter-RCM spread (MAR, RACMO, HIRHAM) \\
+ & $C_{T^2}$ (quadratic) & $\mathrm{N}(-50, 30^2)\text{ Gt\,yr}^{-1}\,{}^\circ\text{C}^{-2}$ & RCM nonlinearity estimates \\
+\midrule
+\multicolumn{4}{l}{\textit{Greenland discharge (WLS, no explicit priors)}} \\
+ & $\gamma, r_0$ & WLS point estimates & Implicit uniform prior via least squares \\
+ & $\delta$ (delay) & BIC-weighted mixture & $\delta \in \{4,5,6,7,8\}$~yr; data-driven \\
+\midrule
+\multicolumn{4}{l}{\textit{WAIS (scenario mixture, 3 scenarios)}} \\
+ & $P(\mathrm{S1})$ & 0.10 & Assessed: continued present-day rates \\
+ & $P(\mathrm{S2})$ & 0.80 & Assessed: MISI-driven acceleration \\
+ & $P(\mathrm{S3})$ & 0.10 & Assessed: MISI + cliff instability \\
+ & S1 endpoint & $\mathrm{SN}_{\log}$, 25--85~mm & IMBIE extrapolation \\
+ & S2 endpoint & $\mathrm{SN}_{\log}(\alpha=4)$, 150--1000~mm & Goldberg et~al.\ lower bound; right-skewed \\
+ & S3 endpoint & $\mathrm{SN}_{\log}(\alpha=-3)$, 600--1400~mm & MISI + MICI; left-skewed \\
+ & S2 trajectory $\beta$ & $\mathrm{LN}(\ln 1.8, 0.3^2)$ & MISI acceleration; Schoof (2007) scaling \\
+ & S3 trajectory $\beta$ & $\mathrm{LN}(\ln 2.2, 0.3^2)$ & MISI + MICI; more back-loaded \\
+ & $n_{\mathrm{draw}}$ (Mode~B) & $\mathrm{N}(4.1, 0.4^2)$, $n \geq 3$ & Millstein et~al.; Ranganathan \& Minchew \\
+ & $r_0$ (endpoint sensitivity) & $0.28$ & Martin et~al.; $R(n) = 1 + r_0\,(n - 3)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 %% ================================================================
-\subsection*{Budget closure and validation}
+\subsection{Budget closure and validation}
 
 Each component is calibrated independently; the total sea level is a diagnostic sum, not a calibration target. We evaluate budget closure by comparing the temperature-forced component hindcast (excluding EAIS; see main text) against NASA satellite altimetry over three epochs (Table~\ref{tab:budget_closure}).
 
@@ -84,7 +476,7 @@ Epoch & NASA (mm\,yr$^{-1}$) & Sum (mm\,yr$^{-1}$) & Residual (mm\,yr$^{-1}$) & 
 \end{tabular}
 \end{table}
 
-A variance-weighted attribution distributes the residual across components in proportion to their uncertainties (Fig.~\ref{fig:budget_closure}). The thermosteric component absorbs the largest share (61\%), consistent with the known low bias in the NOAA product \citep{Li2022, Cheng2017}. Terrestrial water storage absorbs 21\%, reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. All components are within 1.3 standard deviations of their independent estimates. The framework closes the observed budget without requiring any component to depart from what the observations support.
+A variance-weighted attribution distributes the residual across components in proportion to their uncertainties (Fig.~\ref{fig:budget_closure}). The thermosteric component absorbs the largest share (61\%), consistent with the residual structural uncertainty (5\%) retained after the Li et~al.~\citep{Li2022} bias correction. Terrestrial water storage absorbs 21\%, reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. All components are within 1.4 standard deviations of their independent estimates. The framework closes the observed budget without requiring any component to depart from what the observations support. We note that observed GMSL rates in the most recent epoch (2010--2025) outpace the component-sum hindcast, suggesting that our framework may have a modest low-end bias during the period of most rapid change.
 
 \begin{figure}[h]
 \centering

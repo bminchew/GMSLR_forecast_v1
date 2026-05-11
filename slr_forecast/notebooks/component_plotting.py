@@ -925,7 +925,8 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
 
     ax_sl.set_ylabel(f'{component_name} SLR ({units})')
     ax_sl.set_title(f'{component_name} — Projections')
-    ax_sl.legend(fontsize=8, loc='upper left', ncol=2)
+    _tick_fs = plt.rcParams.get('xtick.labelsize', 8)
+    ax_sl.legend(fontsize=_tick_fs, loc='upper left', ncol=2)
     ax_sl.axhline(0, color='k', lw=0.5, ls='--')
     ax_sl.set_xlim(*xlim)
     ax_sl.grid(True, alpha=0.2)
@@ -942,7 +943,7 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
         if temp_obs_years is not None and temp_obs_vals is not None:
             ax_t.plot(temp_obs_years, temp_obs_vals, color='#444444', lw=2,
                       label=temp_obs_label or 'Observed', zorder=5)
-            ax_t.legend(fontsize=8, loc='upper left')
+            ax_t.legend(fontsize=_tick_fs, loc='upper left')
         ax_t.set_ylabel(temp_label)
         ax_t.set_xlabel('Year')
         ax_t.axhline(0, color='k', lw=0.5, ls='--')
@@ -1227,9 +1228,12 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                           legend_loc=None, legend_bbox=None,
                           top=0.90, fontsize=None,
                           units='m', hspace=-0.4, show_median=True,
+                          source_linestyles=None, source_fill=None,
+                          source_alpha=None,
                           show_impact_pop=False, show_impact_cost=False,
                           impact_spacing=25, figsize=None, dpi=150,
-                          save_path=None):
+                          perspective=True,
+                          return_fig=False, save_path=None):
     """Ridge plot showing density evolution across decades for one or more
     projection sources at a single SSP.
 
@@ -1320,6 +1324,11 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         ax.margins(x=0)
     axes[-1].set_xlim(x_lo, x_hi)
 
+    # Per-source style defaults
+    _src_ls = source_linestyles or {}
+    _src_fill = source_fill or {}
+    _src_alpha = source_alpha or {}
+
     for i, yr in enumerate(years):
         ax = axes[i]
         ax.set_facecolor((0, 0, 0, 0))
@@ -1328,15 +1337,24 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                 continue
             density = kde_data[yr][src]
             color = source_colors.get(src, 'gray')
-            ax.fill_between(x_grid, density, alpha=0.4, color=color,
-                            clip_on=False)
-            ax.plot(x_grid, density, color=color, lw=1.0, clip_on=False)
-            if show_median:
+            ls = _src_ls.get(src, '-')
+            do_fill = _src_fill.get(src, True)
+            alpha = _src_alpha.get(src, 0.4)
+            if do_fill:
+                ax.fill_between(x_grid, density, alpha=alpha, color=color,
+                                clip_on=False)
+            ax.plot(x_grid, density, color=color, lw=1.0, ls=ls,
+                    alpha=alpha if not do_fill else 1.0, clip_on=False)
+            # show_median: bool (all sources) or dict {source: bool}
+            _do_median = (show_median.get(src, True)
+                          if isinstance(show_median, dict) else show_median)
+            if _do_median:
                 vals = np.asarray(samples_by_year[yr][src]) * scale
                 med = float(np.median(vals))
                 med_height = float(np.interp(med, x_grid, density))
                 ax.plot([med, med], [0, med_height], ls='--', lw=0.8,
-                        color=color, alpha=0.7, clip_on=False)
+                        color=color, alpha=0.7 * (alpha if not do_fill else 1.0),
+                        clip_on=False)
         ax.text(0.0, 0.2, str(yr), fontweight='bold', color='0.5',
                 ha='left', va='center', transform=ax.transAxes, fontsize=_fs['year'])
         ax.set_yticks([])
@@ -1348,11 +1366,12 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
                        labelcolor='#666666')
 
     # Perspective scaling (later years = taller)
-    for i, ax in enumerate(axes):
-        p = i / max(n_yrs - 1, 1)
-        perspective = 0.25 + 0.75 * p
-        ymin, ymax = ax.get_ylim()
-        ax.set_ylim(0, ymax / perspective)
+    if perspective:
+        for i, ax in enumerate(axes):
+            p = i / max(n_yrs - 1, 1)
+            _persp = 0.25 + 0.75 * p
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim(0, ymax / _persp)
 
     # xlabel only on the bottom panel
     axes[-1].set_xlabel(xlabel, fontsize=_fs['xlabel'], color='#666666')
@@ -1364,16 +1383,28 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
 
     # Legend
     from matplotlib.patches import Patch
+    from matplotlib.lines import Line2D
     _legend_names = legend_labels if legend_labels is not None else source_labels
-    legend_elements = [Patch(facecolor=source_colors.get(s, 'gray'),
-                             alpha=0.4, label=leg)
-                       for s, leg in zip(source_labels, _legend_names)]
-    _loc = legend_loc if legend_loc is not None else 'upper right'
-    _legend_kw = dict(handles=legend_elements, fontsize=_fs['legend'], loc=_loc,
-                      framealpha=1.0, edgecolor='0.8')
-    if legend_bbox is not None:
-        _legend_kw['bbox_to_anchor'] = legend_bbox
-    axes[0].legend(**_legend_kw)
+    legend_elements = []
+    for s, leg in zip(source_labels, _legend_names):
+        if leg is None:
+            continue
+        _c = source_colors.get(s, 'gray')
+        _ls = _src_ls.get(s, '-')
+        _fill = _src_fill.get(s, True)
+        _a = _src_alpha.get(s, 0.4)
+        if _fill:
+            legend_elements.append(Patch(facecolor=_c, alpha=_a, label=leg))
+        else:
+            legend_elements.append(Line2D([0], [0], color=_c, ls=_ls, lw=1.0,
+                                          alpha=_a, label=leg))
+    if legend_elements:
+        _loc = legend_loc if legend_loc is not None else 'upper right'
+        _legend_kw = dict(handles=legend_elements, fontsize=_fs['legend'], loc=_loc,
+                          framealpha=1.0, edgecolor='0.8')
+        if legend_bbox is not None:
+            _legend_kw['bbox_to_anchor'] = legend_bbox
+        axes[0].legend(**_legend_kw)
 
     # --- Impact axes on the bottom panel ---
     # Input samples are in meters; impact functions expect meters.
@@ -1447,6 +1478,9 @@ def plot_component_ridge(samples_by_year, component_name, ssp_label,
         if len(_ticks) >= 2:
             _ticks[0].label1.set_ha('left')
             _ticks[-1].label1.set_ha('right')
+
+    if return_fig:
+        return fig, axes
 
     if save_path:
         plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
