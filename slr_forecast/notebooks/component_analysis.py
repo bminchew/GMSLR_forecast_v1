@@ -519,7 +519,7 @@ def fit_discharge_delay_model(
         gamma_posterior, r0_posterior, delta_posterior : ndarray (n_samples,)
         delta_best : float — BIC-selected delay
         gamma_best, r0_best : float — WLS point estimates at delta_best
-        r2_dyn : float — R² at delta_best
+        r2_dyn : float — rate-space R² at delta_best
         bic_best : float
         fit_results : dict — per-delta fit details
         H_mean_cal, int_T_mean_cal, t_mean_cal : float — demeaning constants
@@ -614,12 +614,18 @@ def fit_discharge_delay_model(
         gamma_fit, r0_fit = beta_hat
         cov_beta = np.linalg.inv(XtWX)
 
-        # Residuals and R² on level equations only
+        # Residuals on level equations (for BIC likelihood)
         H_pred_dm = X_level @ beta_hat
         resid = H_dm - H_pred_dm
-        SS_res = np.sum(resid**2)
-        SS_tot = np.sum(H_dm**2)
-        r2 = 1.0 - SS_res / SS_tot
+
+        # R² in rate space: how well does gamma*T_ocean(t-delta) + r0
+        # explain the observed discharge rate?
+        rate_obs = np.diff(H_v) / np.diff(yrs_v)
+        rate_pred = gamma_fit * T_v[1:] + r0_fit
+        rate_mean = rate_obs.mean()
+        SS_res_rate = np.sum((rate_obs - rate_pred)**2)
+        SS_tot_rate = np.sum((rate_obs - rate_mean)**2)
+        r2_rate = 1.0 - SS_res_rate / SS_tot_rate
 
         r_model = gamma_fit * T_ocean_at_end + r0_fit
 
@@ -629,7 +635,7 @@ def fit_discharge_delay_model(
 
         fit_results[float(delta)] = {
             'gamma': gamma_fit, 'r0': r0_fit,
-            'cov': cov_beta, 'r2': r2, 'bic': bic,
+            'cov': cov_beta, 'r2_rate': r2_rate, 'bic': bic,
             'n_valid': n_valid,
             'H_mean': H_mean, 'int_T_mean': int_T_mean, 't_mean': t_mean,
             'H_pred_dm': H_pred_dm, 'H_dm': H_dm, 'resid': resid,
@@ -683,7 +689,7 @@ def fit_discharge_delay_model(
         delta_best=delta_best,
         gamma_best=best['gamma'],
         r0_best=best['r0'],
-        r2_dyn=best['r2'],
+        r2_dyn=best['r2_rate'],
         bic_best=best['bic'],
         fit_results=fit_results,
         H_mean_cal=best['H_mean'],
