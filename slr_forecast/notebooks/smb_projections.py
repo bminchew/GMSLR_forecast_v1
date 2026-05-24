@@ -59,7 +59,7 @@ GREENLAND_SMB = SMBSensitivity(
     C_T_sigma=80.0,      # 1σ: inter-RCM spread + parametric
     C_T2=-50.0,          # Gt/yr per °C² GMST (ablation zone expansion)
     C_T2_sigma=30.0,
-    SMB_0=0.0,           # anomaly at baseline T (by definition)
+    SMB_0=380.0,         # rate at baseline T in Gt/yr 
     reference='Hanna et al. (2021); Fettweis et al. (2013); Glaude et al. (2024)',
     temperature_frame='GMST',
     AA_factor=1.0,       # sensitivity already in GMST frame
@@ -70,22 +70,14 @@ EAIS_SMB = SMBSensitivity(
     C_T_sigma=20.0,      # Clausius-Clapeyron: ~5%/°C of ~1200 Gt/yr accumulation
     C_T2=0.0,
     C_T2_sigma=0.0,
-    SMB_0=0.0,
+    SMB_0=0.0,           # set to zero because IMBIE shows EAIS ~ balance; 
+                         # retaining SMB label for code hygene, but it should be read as MB
     reference='Frieler et al. (2015); Ligtenberg et al. (2013)',
     temperature_frame='GMST',
     AA_factor=1.0,
 )
 
-PENINSULA_SMB = SMBSensitivity(
-    C_T=-15.0,           # Gt/yr per °C GMST — small net loss (melt > accumulation gain)
-    C_T_sigma=10.0,
-    C_T2=0.0,
-    C_T2_sigma=0.0,
-    SMB_0=0.0,
-    reference='Estimated from IMBIE trend and RACMO sensitivity',
-    temperature_frame='GMST',
-    AA_factor=1.0,
-)
+
 
 
 try:

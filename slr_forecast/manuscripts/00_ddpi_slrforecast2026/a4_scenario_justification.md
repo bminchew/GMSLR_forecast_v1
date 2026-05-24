@@ -12,7 +12,7 @@ reviewer with deep expertise in ice sheet modeling.
 |----------|---|-------------------|---|---------|
 | S1: Status quo | 0.10 | 25–85 | 0 | No MISI; linear melt-driven discharge |
 | S2: MISI | 0.80 | 120–1000 | +4 | MISI with amplification |
-| S3: MISI+MICI | 0.10 | 600–1400 | −3 | Full instability cascade |
+| S3: MISI+MICI | 0.10 | 600–1300 | −3 | Full instability cascade |
 
 ### Why three scenarios, not four
 
@@ -223,39 +223,54 @@ limited primarily to the Thwaites basin. Two independent arguments:
   Amundsen Sea Embayment dynamics, ~1 m from WAIS by 2100 is within the
   high-end envelope.
 
-### S3: 600–1400 mm (MISI + MICI)
+### S3: 600–1300 mm (MISI + MICI)
+
+S3 spans the upper portion of the IPCC AR6 low-confidence Antarctic
+ice sheet projection under SSP5-8.5 (Fox-Kemper et al., 2021). The AR6
+low-confidence AIS distribution at 2100 under SSP5-8.5 has:
+
+| Quantile | AIS contribution (mm) |
+|----------|----------------------|
+| p83      | 559                  |
+| p95      | 1309                 |
+
+Our S3 bounds (600–1300 mm) map directly onto this range, rounded
+to clean values. This anchoring is appropriate because the AR6
+low-confidence projection is precisely the one that incorporates the
+deep-uncertainty processes (MISI + MICI) that define S3.
+
+For GMSL forecasting purposes, it is immaterial whether ice loss
+originates from WAIS or from the marine basins of EAIS — both
+contribute to the same global ocean. In the AR6 low-confidence
+storyline (and in DeConto & Pollard 2016), WAIS dominates but EAIS
+marine basins (e.g., Wilkes, Aurora) also contribute. Our S3
+therefore represents total Antarctic instability contribution, labeled
+"WAIS" as shorthand because WAIS dynamics drive the instability.
 
 **Lower bound (600 mm):**
 
-- Edwards et al. (2019, Nature): With MICI under RCP8.5, most likely
-  total Antarctic outcome ~450 mm. WAIS share (~60–80%) gives 360–540 mm;
-  adding MISI from basins where MICI doesn't operate brings the lower
-  end to ~600 mm.
+- Corresponds to the AR6 low-confidence AIS 83rd percentile under
+  SSP5-8.5 (~559 mm, rounded to 600 mm). This represents the
+  threshold above which instability processes excluded from
+  medium-confidence projections must be active.
+- Cross-check: Edwards et al. (2019, Nature) find total Antarctic
+  outcome ~450 mm with MICI under RCP8.5; adding MISI from basins
+  where MICI doesn't operate brings the total to ~600 mm.
 
-**Upper bound (1400 mm):**
+**Upper bound (1300 mm):**
 
-Anchored to the ASE ice volume above flotation with rheology correction:
-
-- **ASE V_af ≈ 1100 mm** (Morlighem et al. 2020, BedMachine Antarctica):
-  The total ice volume above flotation in the Amundsen Sea Embayment.
-- **Rheology correction (×1.28):** Martin et al. (2026), Getraer &
-  Morlighem (2025). Gives ~1400 mm.
-- This represents near-complete ASE deglaciation — the maximum WAIS
-  contribution within the century without requiring mass loss from
-  non-ASE basins (Siple Coast, Marie Byrd Land) that lack retrograde
-  bed geometry and sustained ocean thermal forcing.
-
-Independent cross-checks supporting 1400 mm as an upper bound:
-
-- Bamber et al. (2019) WAIS 95th percentile at +5°C: 930 mm. With
-  rheology correction: ~1190 mm.
+- Corresponds to the AR6 low-confidence AIS 95th percentile under
+  SSP5-8.5 (1309 mm, rounded to 1300 mm).
+- Cross-checked against the ASE ice volume above flotation
+  (V_af ≈ 1100 mm; Morlighem et al. 2020, BedMachine Antarctica);
+  the ~200 mm excess is consistent with contributions from EAIS
+  marine basins (Wilkes, Aurora) in the AR6 low-confidence storyline.
 - DeConto & Pollard (2016): 640–1140 mm total Antarctic under RCP8.5
-  with MICI. WAIS is dominant but not sole contributor.
-- Pfeffer et al. (2008): Kinematic upper bound of ~620 mm for total
-  Antarctic — pre-MICI, but drainage-gate constraint remains.
-- van den Akker et al. (2025): Peak WAIS rate ~3 mm/yr under sustained
-  present-day forcing. Reaching 1400 mm over 95 yr requires ~15 mm/yr
-  average — 5× this rate.
+  with MICI — our upper bound is slightly above their range,
+  consistent with the rheology correction that postdates their work.
+- Bamber et al. (2019) WAIS 95th percentile at +5°C: 930 mm — below
+  our upper bound, as expected since Bamber predates the rheology
+  correction literature.
 
 ---
 

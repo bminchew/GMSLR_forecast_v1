@@ -5804,6 +5804,36 @@ def fit_bayesian_greenland_joint(
         sampler_diagnostics=diag,
     )
 
+def _cumulate(rate, sigma, times, bl_window):
+    """Integrate rates, rebase level.
+
+    Uncertainty is cumulated bidirectionally from the baseline
+    midpoint so that it grows both forward and backward in time.
+    """
+    bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
+    dt = np.diff(times, prepend=times[0] - 1)
+    cum = np.cumsum(rate * dt)
+
+    # Rebase level: subtract value at baseline midpoint
+    if bl_mask.sum() > 0:
+        bl_mid_idx = np.argmin(np.abs(
+            times - np.mean(bl_window)))
+        cum = cum - cum[bl_mid_idx]
+
+        # Bidirectional uncertainty: cumulate outward from baseline midpoint
+        cum_sig = np.zeros(len(times))
+        sig_dt = sigma * dt
+        # Forward from baseline midpoint
+        for i in range(bl_mid_idx + 1, len(times)):
+            cum_sig[i] = np.sqrt(cum_sig[i - 1]**2 + sig_dt[i]**2)
+        # Backward from baseline midpoint
+        for i in range(bl_mid_idx - 1, -1, -1):
+            cum_sig[i] = np.sqrt(cum_sig[i + 1]**2 + sig_dt[i + 1]**2)
+        cum_sig = np.maximum(cum_sig, sigma.mean())
+    else:
+        cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
+
+    return cum, cum_sig
 
 def prepare_greenland_components(
     mankoff_path: str,
@@ -5852,70 +5882,17 @@ def prepare_greenland_components(
     and integration use each dataset's own time grid), then the resulting
     cumulative series are concatenated and sorted by time.
     """
-    import pandas as pd
-
-    try:
-        from slr_forecast.config import GT_TO_M_SLE
-    except ImportError:
-        GT_TO_M_SLE = 1.0 / 362500.0
-
-    # ── Helper: cumulate rates into level ──
-    def _cumulate(rate, sigma, times, bl_window):
-        """Subtract baseline mean rate, integrate anomalies, rebase level.
-
-        Uncertainty is cumulated bidirectionally from the baseline
-        midpoint so that it grows both forward and backward in time.
-        """
-        bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
-
-        # Subtract baseline-period mean rate to get anomaly rates
-        if bl_mask.sum() > 0:
-            rate_ref = rate[bl_mask].mean()
-        else:
-            rate_ref = 0.0
-        rate_anom = rate - rate_ref
-
-        dt = np.diff(times, prepend=times[0] - 1)
-        cum = np.cumsum(rate_anom * dt)
-
-        # Rebase level: subtract value at baseline midpoint
-        if bl_mask.sum() > 0:
-            bl_mid_idx = np.argmin(np.abs(
-                times - np.mean(bl_window)))
-            cum = cum - cum[bl_mid_idx]
-
-            # Bidirectional uncertainty: cumulate outward from baseline midpoint
-            cum_sig = np.zeros(len(times))
-            sig_dt = sigma * dt
-            # Forward from baseline midpoint
-            for i in range(bl_mid_idx + 1, len(times)):
-                cum_sig[i] = np.sqrt(cum_sig[i - 1]**2 + sig_dt[i]**2)
-            # Backward from baseline midpoint
-            for i in range(bl_mid_idx - 1, -1, -1):
-                cum_sig[i] = np.sqrt(cum_sig[i + 1]**2 + sig_dt[i + 1]**2)
-            cum_sig = np.maximum(cum_sig, sigma.mean())
-        else:
-            cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
-
-        return cum, cum_sig
+    from slr_forecast.readers.ice_sheets import read_mankoff2021_greenland
 
     # ── Mankoff ──
-    df = pd.read_csv(mankoff_path)
+    df = read_mankoff2021_greenland(mankoff_path, obs_only=False)
+    df = df.reset_index(drop=True)
+    years = df['decimal_year'].values
+    mask = years >= start_year
     if end_year is not None:
-        df = df[(df['time'] >= start_year) & (df['time'] <= end_year)].copy()
-    else:
-        df = df[df['time'] >= start_year].copy()
-    df = df.sort_values('time').reset_index(drop=True)
-    man_years = df['time'].values.astype(float)
-
-    # Rename to Mouginot-style columns (m/yr SLE, SLR convention)
-    df['decimal_year'] = man_years
-    df['smb_rate'] = -df['SMB'].values * GT_TO_M_SLE
-    df['smb_rate_sigma'] = np.abs(df['SMB_err'].values) * GT_TO_M_SLE
-    df['discharge_rate'] = df['D'].values * GT_TO_M_SLE
-    df['discharge_rate_sigma'] = np.abs(df['D_err'].values) * GT_TO_M_SLE
-    df['mb_rate'] = -df['MB'].values * GT_TO_M_SLE
-    df['mb_rate_sigma'] = np.abs(df['MB_err'].values) * GT_TO_M_SLE
+        mask &= years <= end_year
+    df = df[mask].copy().reset_index(drop=True)
+    man_years = df['decimal_year'].values
 
     man_smb_rate = df['smb_rate'].values
     man_smb_err = df['smb_rate_sigma'].values
@@ -6063,30 +6040,6 @@ def prepare_mouginot_components(
     mb_rate = mou['mb_rate'].values[mask]
     mb_err = mou['mb_rate_sigma'].values[mask]
 
-    def _cumulate(rate, sigma, times, bl_window):
-        bl_mask = (times >= bl_window[0]) & (times <= bl_window[1])
-        if bl_mask.sum() > 0:
-            rate_ref = rate[bl_mask].mean()
-        else:
-            rate_ref = 0.0
-        rate_anom = rate - rate_ref
-        dt = np.diff(times, prepend=times[0] - 1)
-        cum = np.cumsum(rate_anom * dt)
-        if bl_mask.sum() > 0:
-            bl_mid_idx = np.argmin(np.abs(times - np.mean(bl_window)))
-            cum = cum - cum[bl_mid_idx]
-            # Bidirectional uncertainty from baseline midpoint
-            cum_sig = np.zeros(len(times))
-            sig_dt = sigma * dt
-            for i in range(bl_mid_idx + 1, len(times)):
-                cum_sig[i] = np.sqrt(cum_sig[i - 1]**2 + sig_dt[i]**2)
-            for i in range(bl_mid_idx - 1, -1, -1):
-                cum_sig[i] = np.sqrt(cum_sig[i + 1]**2 + sig_dt[i + 1]**2)
-            cum_sig = np.maximum(cum_sig, sigma.mean())
-        else:
-            cum_sig = np.sqrt(np.cumsum((sigma * dt) ** 2))
-        return cum, cum_sig
-
     H_smb, sig_smb = _cumulate(smb_rate, smb_err, years, baseline_window)
     H_dyn, sig_dyn = _cumulate(dyn_rate, dyn_err, years, baseline_window)
     H_mb, sig_mb = _cumulate(mb_rate, mb_err, years, baseline_window)
@@ -6098,6 +6051,68 @@ def prepare_mouginot_components(
         'sources': np.full(len(years), 'mouginot'),
         'df': mou,
     }
+
+
+def extend_with_arc(mou_comp, arc_years, arc_D_gtyr, arc_D_sig_gtyr,
+                    gt_to_m_sle):
+    """Extend Mouginot discharge cumulative with NOAA Arctic Report Card data.
+
+    Connects ARC annual discharge estimates to the end of the Mouginot
+    record by trapezoidal integration with propagated uncertainty.
+    ARC rates are absolute (Gt/yr), converted to m/yr SLE internally.
+
+    Parameters
+    ----------
+    mou_comp : dict
+        Output of ``prepare_mouginot_components()``.  Uses keys
+        ``time_dyn``, ``H_dyn``, ``sigma_dyn``, and ``df``
+        (for the last discharge rate).
+    arc_years : ndarray
+        Mid-year decimal times for ARC estimates.
+    arc_D_gtyr : ndarray
+        ARC discharge rates (Gt/yr, absolute).
+    arc_D_sig_gtyr : ndarray
+        ARC 1-sigma uncertainties (Gt/yr).
+    gt_to_m_sle : float
+        Conversion factor Gt → m SLE.
+
+    Returns
+    -------
+    arc_H : ndarray
+        Cumulative discharge at ARC years (m SLE, same baseline as mou_comp).
+    arc_H_sig : ndarray
+        1-sigma uncertainty on arc_H (m SLE).
+    arc_rate : ndarray
+        ARC discharge rates (m SLE/yr).
+    arc_rate_sig : ndarray
+        ARC rate sigma (m SLE/yr).
+    """
+    # Convert ARC rates to m/yr SLE 
+    arc_rate = arc_D_gtyr * gt_to_m_sle
+    arc_rate_sig = arc_D_sig_gtyr * gt_to_m_sle
+
+    # Last Mouginot values
+    H_last = mou_comp['H_dyn'][-1]
+    t_last = mou_comp['time_dyn'][-1]
+    sigma_last = mou_comp['sigma_dyn'][-1]
+
+    # Last Mouginot discharge rate (full rate from reader)
+    last_mou_rate = mou_comp['df']['discharge_rate'].values[-1]  # m/yr SLE
+
+    # Build combined rate and time arrays for trapezoidal integration
+    all_times = np.concatenate([[t_last], arc_years])
+    all_rates = np.concatenate([[last_mou_rate], arc_rate])
+    all_sigs = np.concatenate([[0.0], arc_rate_sig])  # Mouginot rate unc already in H_last
+
+    dt = np.diff(all_times)
+    avg_rates = 0.5 * (all_rates[:-1] + all_rates[1:])
+    arc_H = H_last + np.cumsum(avg_rates * dt)
+
+    # Uncertainty: cumulative root-sum-of-squares from H_last
+    arc_H_sig = np.sqrt(sigma_last**2
+                        + np.cumsum((all_sigs[1:] * dt)**2))
+
+    return arc_H, arc_H_sig, arc_rate, arc_rate_sig
 
 
 # =========================================================================

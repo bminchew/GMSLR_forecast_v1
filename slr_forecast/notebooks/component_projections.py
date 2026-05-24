@@ -73,7 +73,7 @@ A4_SCENARIOS = {
                       'alpha': 4.0,
                       'beta_loc': np.log(1.8), 'beta_scale': 0.3,
                       'misi': True},
-    'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 1400,
+    'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 1300,
                       'alpha': -3.0,
                       'beta_loc': np.log(2.2), 'beta_scale': 0.3,
                       'misi': True},

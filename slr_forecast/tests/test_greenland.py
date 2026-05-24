@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
 from component_analysis import (
     annualize_imbie, apply_sigma_taper, compute_component_rates,
-    fit_discharge_delay_model, compute_arc_cumulative,
+    fit_discharge_delay_model,
 )
 from component_io import (
     save_greenland,
@@ -357,14 +357,16 @@ class TestProjectSMBEnsemble:
         samples = result['SSP2-4.5']['samples']
         assert samples.shape == (N_SMALL, len(time_proj))
 
-    def test_positive_slr(self, smb_projection):
-        """With warming, Greenland SMB contribution should be positive
-        (mass loss = sea level rise) after baseline."""
+    def test_slr_increases_with_warming(self, smb_projection):
+        """With warming, cumulative SMB SLR should increase over time.
+        Note: with SMB_0 > 0 (baseline accumulation), the cumulative may
+        be negative at 2050 (accumulation dominates early) but positive
+        by 2100 (warming-driven melt wins)."""
         result, time_proj = smb_projection
         med = result['SSP2-4.5']['median']
         idx_2050 = np.argmin(np.abs(time_proj - 2050.0))
         idx_2100 = np.argmin(np.abs(time_proj - 2100.0))
-        assert med[idx_2050] > 0, "Median SMB SLR at 2050 should be positive"
+        assert med[idx_2100] > 0, "Median SMB SLR at 2100 should be positive"
         assert med[idx_2100] > med[idx_2050], "SLR should increase 2050 to 2100"
 
     def test_zero_at_baseline(self, smb_projection):
@@ -862,70 +864,65 @@ class TestDischargeDelayModelWLS:
         assert fitted_result.peak_r > 0  # should find some positive correlation
 
 
-class TestComputeArcCumulative:
-    """Test the ARC cumulative discharge computation."""
+class TestExtendWithArc:
+    """Test the ARC cumulative discharge extension."""
+
+    @staticmethod
+    def _make_mou_comp(H_last=0.01, t_last=2018.5, sigma_last=0.001,
+                       last_discharge_rate=0.00138):
+        """Build a minimal mou_comp dict for testing."""
+        import pandas as pd
+        df = pd.DataFrame({
+            'decimal_year': [t_last],
+            'discharge_rate': [last_discharge_rate],
+        })
+        return {
+            'time_dyn': np.array([t_last]),
+            'H_dyn': np.array([H_last]),
+            'sigma_dyn': np.array([sigma_last]),
+            'df': df,
+        }
 
     def test_single_point(self):
-        """With one ARC year, cumulative should be H_last + avg_rate * dt."""
-        gt_to_m = 1.0 / 362500.0
-        arc_H, arc_sig, _, _ = compute_arc_cumulative(
-            arc_years=np.array([2020.5]),
+        """With one ARC year, cumulative should increase from H_last."""
+        from bayesian_models import extend_with_arc
+        from slr_forecast.units import GT_TO_M_SLE
+        mou = self._make_mou_comp()
+        arc_H, arc_sig, _, _ = extend_with_arc(
+            mou, arc_years=np.array([2020.5]),
             arc_D_gtyr=np.array([500.0]),
-            arc_D_sig=np.array([50.0]),
-            H_last=0.01, t_last=2018.5,
-            sigma_last=0.001,
-            baseline_drate=0.0005,
-            last_rate_anom=0.0003,
-            gt_to_m_sle=gt_to_m,
+            arc_D_sig_gtyr=np.array([50.0]),
+            gt_to_m_sle=GT_TO_M_SLE,
         )
         assert len(arc_H) == 1
         assert arc_H[0] > 0.01  # should be above starting value
         assert arc_sig[0] > 0   # uncertainty should be positive
 
     def test_monotonic_cumulative(self):
-        """If all ARC rates exceed baseline, cumulative should increase."""
-        gt_to_m = 1.0 / 362500.0
-        arc_H, _, _, _ = compute_arc_cumulative(
-            arc_years=np.array([2020.5, 2023.5]),
+        """With positive discharge rates, cumulative should increase."""
+        from bayesian_models import extend_with_arc
+        from slr_forecast.units import GT_TO_M_SLE
+        mou = self._make_mou_comp()
+        arc_H, _, _, _ = extend_with_arc(
+            mou, arc_years=np.array([2020.5, 2023.5]),
             arc_D_gtyr=np.array([500.0, 510.0]),
-            arc_D_sig=np.array([50.0, 50.0]),
-            H_last=0.01, t_last=2018.5,
-            sigma_last=0.001,
-            baseline_drate=0.0003,
-            last_rate_anom=0.0002,
-            gt_to_m_sle=gt_to_m,
+            arc_D_sig_gtyr=np.array([50.0, 50.0]),
+            gt_to_m_sle=GT_TO_M_SLE,
         )
         assert arc_H[1] > arc_H[0]
 
     def test_uncertainty_grows(self):
         """Cumulative uncertainty should grow with time."""
-        gt_to_m = 1.0 / 362500.0
-        _, arc_sig, _, _ = compute_arc_cumulative(
-            arc_years=np.array([2020.5, 2023.5]),
+        from bayesian_models import extend_with_arc
+        from slr_forecast.units import GT_TO_M_SLE
+        mou = self._make_mou_comp()
+        _, arc_sig, _, _ = extend_with_arc(
+            mou, arc_years=np.array([2020.5, 2023.5]),
             arc_D_gtyr=np.array([500.0, 500.0]),
-            arc_D_sig=np.array([50.0, 50.0]),
-            H_last=0.01, t_last=2018.5,
-            sigma_last=0.001,
-            baseline_drate=0.0005,
-            last_rate_anom=0.0003,
-            gt_to_m_sle=gt_to_m,
+            arc_D_sig_gtyr=np.array([50.0, 50.0]),
+            gt_to_m_sle=GT_TO_M_SLE,
         )
         assert arc_sig[1] > arc_sig[0]
-
-    def test_rate_anomaly_sign(self):
-        """Rate anomaly should be positive when ARC rate exceeds baseline."""
-        gt_to_m = 1.0 / 362500.0
-        _, _, arc_rate_anom, _ = compute_arc_cumulative(
-            arc_years=np.array([2020.5]),
-            arc_D_gtyr=np.array([500.0]),
-            arc_D_sig=np.array([50.0]),
-            H_last=0.01, t_last=2018.5,
-            sigma_last=0.001,
-            baseline_drate=500.0 * gt_to_m * 0.5,  # half the ARC rate
-            last_rate_anom=0.0,
-            gt_to_m_sle=gt_to_m,
-        )
-        assert arc_rate_anom[0] > 0
 
 
 class TestBICWeightedMixture:
@@ -1100,13 +1097,14 @@ class TestSMBEnsembleStatistics:
     """Statistical tests on SMB ensemble with large sample size."""
 
     def test_median_C_T_recovered(self):
-        """Median sensitivity at +1C should approximate C_T."""
+        """Median rate at +1C should approximate C_T + C_T2 + SMB_0."""
         warming = np.array([1.0])
         result = project_smb_at_warming_levels(
             GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # At +1C: rate = C_T * 1 + C_T2 * 1 = -300 + (-50) = -350 Gt/yr
-        # (mass-balance rate, negative = mass loss)
-        assert result['rate_median'][0] == pytest.approx(-350.0, rel=0.02)
+        # At +1C: rate = C_T * 1 + C_T2 * 1 + SMB_0
+        #       = -300 + (-50) + 380 = +30 Gt/yr
+        expected = GREENLAND_SMB.C_T + GREENLAND_SMB.C_T2 + GREENLAND_SMB.SMB_0
+        assert result['rate_median'][0] == pytest.approx(expected, rel=0.02)
 
     def test_uncertainty_propagation(self):
         """Spread should reflect C_T_sigma and C_T2_sigma."""
@@ -1128,5 +1126,9 @@ class TestSMBEnsembleStatistics:
             GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
         # Linear: C_T * 4 = -1200 Gt/yr
         # Quadratic: C_T2 * 16 = -800 Gt/yr
-        # Total: -2000 Gt/yr
-        assert result['rate_median'][0] == pytest.approx(-2000.0, rel=0.02)
+        # Baseline: SMB_0 = +380 Gt/yr
+        # Total: -1620 Gt/yr
+        expected = (GREENLAND_SMB.C_T * 4
+                    + GREENLAND_SMB.C_T2 * 16
+                    + GREENLAND_SMB.SMB_0)
+        assert result['rate_median'][0] == pytest.approx(expected, rel=0.02)

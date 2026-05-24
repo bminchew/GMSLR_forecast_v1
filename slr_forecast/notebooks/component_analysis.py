@@ -701,69 +701,6 @@ def fit_discharge_delay_model(
     )
 
 
-def compute_arc_cumulative(arc_years, arc_D_gtyr, arc_D_sig,
-                           H_last, t_last, sigma_last,
-                           baseline_drate, last_rate_anom,
-                           gt_to_m_sle):
-    """Compute cumulative ARC discharge from annual rate estimates.
-
-    Extends the Mouginot cumulative discharge record using NOAA Arctic
-    Report Card annual discharge estimates, connected to the end of the
-    Mouginot record by trapezoidal integration with propagated uncertainty.
-
-    Parameters
-    ----------
-    arc_years : ndarray
-        Mid-year decimal times for ARC estimates.
-    arc_D_gtyr : ndarray
-        ARC discharge rates (Gt/yr, absolute, not anomaly).
-    arc_D_sig : ndarray
-        ARC 1-sigma uncertainties (Gt/yr).
-    H_last : float
-        Last cumulative discharge value from calibration record (m SLE).
-    t_last : float
-        Last year of calibration record.
-    sigma_last : float
-        1-sigma uncertainty on H_last (m SLE).
-    baseline_drate : float
-        Baseline-period mean discharge rate (m SLE/yr).
-    last_rate_anom : float
-        Last rate anomaly from calibration record (m SLE/yr).
-    gt_to_m_sle : float
-        Conversion factor Gt -> m SLE.
-
-    Returns
-    -------
-    arc_H : ndarray
-        Cumulative discharge at ARC years (m SLE).
-    arc_H_sig : ndarray
-        1-sigma uncertainty on arc_H (m SLE).
-    arc_rate_anom : ndarray
-        ARC rate anomalies (m SLE/yr).
-    arc_rate_sig : ndarray
-        ARC rate sigma (m SLE/yr).
-    """
-    arc_rate_anom = arc_D_gtyr * gt_to_m_sle - baseline_drate
-    arc_rate_sig = arc_D_sig * gt_to_m_sle
-
-    arc_H = np.empty(len(arc_years))
-    arc_H_sig = np.empty(len(arc_years))
-
-    for j in range(len(arc_years)):
-        if j == 0:
-            dt = arc_years[j] - t_last
-            avg_rate = 0.5 * (last_rate_anom + arc_rate_anom[j])
-            arc_H[j] = H_last + avg_rate * dt
-            arc_H_sig[j] = np.sqrt(sigma_last**2 + (arc_rate_sig[j] * dt)**2)
-        else:
-            dt = arc_years[j] - arc_years[j - 1]
-            avg_rate = 0.5 * (arc_rate_anom[j - 1] + arc_rate_anom[j])
-            arc_H[j] = arc_H[j - 1] + avg_rate * dt
-            arc_H_sig[j] = np.sqrt(arc_H_sig[j - 1]**2
-                                   + (arc_rate_sig[j] * dt)**2)
-
-    return arc_H, arc_H_sig, arc_rate_anom, arc_rate_sig
-
 
 def project_ocean_temperature(transfer, T_surface_proj, time_proj,
                               n_samples=0, rng=None):
