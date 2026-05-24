@@ -95,6 +95,9 @@ Z_94: float = 1.881
 Z_90: float = 1.645
 """z-score for the 90% confidence interval (two-tailed)."""
 
+Z_95: float = 1.96
+"""z-score for the 95% confidence interval (two-tailed)."""
+
 # ---------------------------------------------------------------------------
 # IPCC AR6 reference
 # ---------------------------------------------------------------------------

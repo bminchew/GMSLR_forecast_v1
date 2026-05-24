@@ -57,8 +57,8 @@ def read_en4_regional(
     reference_period : tuple of float
         (start, end) decimal years for computing anomalies.
         Temperature is returned as anomaly relative to the mean
-        over this period.  Default (1995, 2006) matches the project
-        baseline (1995–2005).
+        over this period.  Default (1995, 2006) spans the project
+        baseline window with exclusive upper bound.
 
     Returns
     -------
@@ -393,7 +393,7 @@ def read_argo_rg_regional(
     df.index.name = "time"
 
     # Rebaseline to reference period.
-    # Argo climatological regional mean (2004-2018 area-weighted mean).
+    # Argo climatological regional mean (area-weighted mean over climatology period).
     T_clim_depth_avg = np.nanmean(T_clim_region, axis=0)
     cos_2d_clim = cos_wt[:, np.newaxis]
     valid_clim = ~np.isnan(T_clim_depth_avg)
@@ -408,14 +408,14 @@ def read_argo_rg_regional(
         ref_mean = df.loc[ref_mask, "temperature"].mean()
     elif en4_baseline_offset is not None:
         # Use EN4 to bridge: ref_mean = clim_mean + offset
-        # where offset = EN4_mean(ref_period) - EN4_mean(2004-2019)
+        # where offset = EN4_mean(ref_period) - EN4_mean(climatology_period)
         ref_mean = clim_regional_mean + en4_baseline_offset
     else:
         raise ValueError(
             f"Argo data do not cover reference_period "
             f"{reference_period}, and en4_baseline_offset was not "
             f"provided.  Compute it from EN4 as: "
-            f"EN4_mean(ref_period) - EN4_mean(2004, 2019).")
+            f"EN4_mean(ref_period) - EN4_mean(climatology_period).")
 
     df["temperature"] = df["temperature"] - ref_mean
 

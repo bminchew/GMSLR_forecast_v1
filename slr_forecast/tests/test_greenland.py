@@ -523,7 +523,7 @@ class TestUnitConsistency:
     """Verify conversion constants are self-consistent."""
 
     def test_gt_to_m_via_mm(self):
-        """GT_TO_M_SLE should equal (1/362.5) * (1/1000)."""
+        """GT_TO_M_SLE = 1/362500 (1 Gt over 362.5e6 km² ocean → mm, then /1000 → m)."""
         expected = 1.0 / 362.5 / 1000.0
         assert GT_TO_M_SLE == pytest.approx(expected, rel=1e-10)
 

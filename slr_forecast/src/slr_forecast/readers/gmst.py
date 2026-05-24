@@ -17,7 +17,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from slr_forecast.config import Z_90
+from slr_forecast.config import Z_90, Z_95
 from slr_forecast.units import tag_units
 
 
@@ -67,8 +67,8 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     df = df.set_index("time")[["temperature", "temperature_unc"]]
     df.index.name = "time"
 
-    # 95% CI → 1-sigma
-    df["temperature_sigma"] = df["temperature_unc"] / Z_90
+    # 95% CI → 1-sigma (Berkeley Earth documents 95% CI)
+    df["temperature_sigma"] = df["temperature_unc"] / Z_95
 
     tag_units(df, {
         "temperature": "degC",
@@ -213,8 +213,8 @@ def read_hadcrut5(filepath: str) -> pd.DataFrame:
         "Upper confidence limit (97.5%)": "temperature_upper",
     })
     df["temperature_unc"] = (df["temperature_upper"] - df["temperature_lower"]) / 2
-    # 95% CI → 1-sigma (z = 1.96)
-    df["temperature_sigma"] = df["temperature_unc"] / 1.96
+    # 95% CI → 1-sigma (HadCRUT5 reports 2.5%–97.5% bounds)
+    df["temperature_sigma"] = df["temperature_unc"] / Z_95
     df.index.name = "time"
 
     tag_units(df, {c: "degC" for c in [

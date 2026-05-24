@@ -646,7 +646,7 @@ def harmonize_baseline(
         Input DataFrame with datetime index.
     value_col : str
         Column containing anomaly values.
-    new_baseline : Tuple[int, int], default (1981, 2010)
+    new_baseline : Tuple[int, int], default (1995, 2005)
         New reference period (start_year, end_year).
     
     Returns
@@ -683,9 +683,9 @@ def compute_thermodynamic_signal(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute thermodynamic sea level signal from budget components.
     
-    Thermodynamic signal = Steric + Barystatic - TWS
-    
-    where Barystatic = Glaciers + Greenland + Antarctica
+    Thermodynamic signal = GMSL - TWS
+
+    Also computes Barystatic = Glaciers + Greenland + Antarctica + TWS
     
     Parameters
     ----------

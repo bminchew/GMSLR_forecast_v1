@@ -49,9 +49,10 @@ from datetime import datetime
 from typing import Optional, Union
 
 try:
-    from slr_forecast.config import Z_90
+    from slr_forecast.config import Z_90, Z_95
 except ImportError:
     Z_90 = 1.645
+    Z_95 = 1.96
 
 
 # =============================================================================
@@ -1347,8 +1348,9 @@ def read_imbie_west_antarctica(filepath: str, convert_to_meters: bool = True) ->
     ----------
     filepath : str
         Path to CSV file (imbie_west_antarctica_2021_mm.csv)
-    sl_unit : str, default 'meters'
-        Output unit for sea level: 'meters', 'm', 'mm', 'cm'
+    convert_to_meters : bool, default True
+        If True, convert from mm to meters sea-level equivalent.
+        If False, return values in mm.
 
     Returns
     -------
@@ -1487,7 +1489,8 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     df = df.set_index('time')[['temperature', 'temperature_unc']]
     df.index.name = 'time'
 
-    df['temperature_sigma'] = df['temperature_unc'] / Z_90
+    # 95% CI → 1-sigma (Berkeley Earth documents 95% CI)
+    df['temperature_sigma'] = df['temperature_unc'] / Z_95
 
     # Attach unit metadata
     df.attrs = {
@@ -1645,8 +1648,8 @@ def read_hadcrut5(filepath: str) -> pd.DataFrame:
     })
     # temperature_unc = half-width of the 95% CI (2.5%–97.5% bounds)
     df['temperature_unc'] = (df['temperature_upper'] - df['temperature_lower']) / 2
-    # Convert to 1-sigma: 95% CI half-width = 1.96 * sigma
-    df['temperature_sigma'] = df['temperature_unc'] / 1.96
+    # 95% CI → 1-sigma (HadCRUT5 reports 2.5%–97.5% bounds)
+    df['temperature_sigma'] = df['temperature_unc'] / Z_95
 
     df.index.name = 'time'
 
