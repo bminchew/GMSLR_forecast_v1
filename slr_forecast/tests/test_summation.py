@@ -74,11 +74,16 @@ class TestSampleSummation:
 
     @pytest.fixture(scope="class")
     def comp_samples(self):
-        """Load all summed components with proper sample propagation."""
+        """Load all summed components, downsampling to N_SAMPLES if needed."""
         samples = {}
         for comp in SUMMED_COMPONENTS:
             loaded = load_component(comp)
-            samples[comp] = loaded['projections']
+            proj = loaded['projections']
+            # Downsample components with more than N_SAMPLES (e.g., WAIS=10000)
+            for ssp in proj:
+                if proj[ssp]['samples'].shape[0] > N_SAMPLES:
+                    proj[ssp]['samples'] = proj[ssp]['samples'][:N_SAMPLES]
+            samples[comp] = proj
         return samples
 
     def test_all_shapes_match(self, comp_samples):
@@ -162,7 +167,11 @@ class TestVarianceDecomposition:
                     'greenland': 'Greenland', 'apeninsula': 'Peninsula',
                     'wais': 'WAIS',
                 }
-                proj[ssp][labels[comp]] = loaded['projections'][ssp]
+                entry = loaded['projections'][ssp]
+                # Downsample to N_SAMPLES if needed (WAIS has 10000)
+                if entry['samples'].shape[0] > N_SAMPLES:
+                    entry = dict(entry, samples=entry['samples'][:N_SAMPLES])
+                proj[ssp][labels[comp]] = entry
         return proj
 
     def test_fractions_sum_to_one(self, comp_proj):
@@ -361,7 +370,8 @@ class TestConsistencyWithForecast:
         total2 = np.zeros(N_SAMPLES)
         for comp in SUMMED_COMPONENTS:
             loaded = load_component(comp)
-            total1 += loaded['projections'][ssp]['samples'][:, idx]
-            total2 += loaded['projections'][ssp]['samples'][:, idx]
+            s = loaded['projections'][ssp]['samples'][:N_SAMPLES, idx]
+            total1 += s
+            total2 += s
 
         assert np.allclose(total1, total2)

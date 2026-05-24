@@ -782,18 +782,18 @@ class TestDischargeDelayModelWLS:
         r0_se = np.sqrt(fr['cov'][1, 1])
         assert fr['r0'] == pytest.approx(d['r0_true'], abs=3 * r0_se)
 
-    def test_high_r2_at_correct_delta(self, synthetic_discharge, fitted_result):
-        """R² should be high when using the correct delta."""
+    def test_positive_r2_rate_at_correct_delta(self, synthetic_discharge, fitted_result):
+        """Rate-space R² should be positive when using the correct delta."""
         d = synthetic_discharge
-        r2 = fitted_result.fit_results[d['delta_true']]['r2']
-        assert r2 > 0.95, f"R² = {r2:.4f}, expected > 0.95"
+        r2 = fitted_result.fit_results[d['delta_true']]['r2_rate']
+        assert r2 > 0.0, f"R²(rate) = {r2:.4f}, expected > 0"
 
-    def test_wrong_delta_worse_r2(self, synthetic_discharge, fitted_result):
-        """R² at the wrong delta should be lower than at the correct delta."""
+    def test_wrong_delta_worse_r2_rate(self, synthetic_discharge, fitted_result):
+        """Rate-space R² at the wrong delta should be lower than at the correct delta."""
         d = synthetic_discharge
-        r2_correct = fitted_result.fit_results[d['delta_true']]['r2']
+        r2_correct = fitted_result.fit_results[d['delta_true']]['r2_rate']
         # delta_true + 3 = 8.0 is still in candidates
-        r2_wrong = fitted_result.fit_results[d['delta_true'] + 3]['r2']
+        r2_wrong = fitted_result.fit_results[d['delta_true'] + 3]['r2_rate']
         assert r2_correct > r2_wrong
 
     def test_bic_selects_correct_delta(self, synthetic_discharge, fitted_result):

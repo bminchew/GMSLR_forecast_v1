@@ -89,8 +89,10 @@ class TestLoadAllProjections:
             for ssp in PROJ_SSPS:
                 if 'samples' in all_proj[comp][ssp]:
                     samples = all_proj[comp][ssp]['samples']
-                    assert samples.shape == (N_SAMPLES, len(proj_years)), (
+                    assert samples.shape[1] == len(proj_years), (
                         f"{comp}/{ssp} shape = {samples.shape}")
+                    assert samples.shape[0] >= N_SAMPLES, (
+                        f"{comp}/{ssp} has {samples.shape[0]} samples, need >= {N_SAMPLES}")
                     found = True
                     break
             assert found, f"{comp} has no samples in any SSP"
@@ -112,11 +114,15 @@ class TestComponentSummation:
 
     @pytest.fixture(scope="class")
     def comp_samples(self):
-        """Load all components with proper sample propagation."""
+        """Load all components, downsampling to N_SAMPLES if needed."""
         samples = {}
         for comp in EXPECTED_COMPONENTS:
             loaded = load_component(comp)
-            samples[comp] = loaded['projections']
+            proj = loaded['projections']
+            for ssp in proj:
+                if proj[ssp]['samples'].shape[0] > N_SAMPLES:
+                    proj[ssp]['samples'] = proj[ssp]['samples'][:N_SAMPLES]
+            samples[comp] = proj
         return samples
 
     def test_sum_positive_at_2100(self, comp_samples):
