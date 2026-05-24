@@ -38,7 +38,7 @@ The pre-satellite rate of 1.1~mm\,yr$^{-1}$ (0.8--1.3~mm\,yr$^{-1}$, 90\% CI) av
 All component models are calibrated against published observational products (Table~\ref{tab:obs_datasets}). We use:
 \begin{itemize}
 \item \textbf{Global mean sea level:} NASA satellite altimetry (TOPEX/Jason, 1993--present; Hamlington et~al.~\cite{Hamlington2020}), with the Frederikse et~al.~\citep{Frederikse2020} tide-gauge reconstruction (1900--2018) and Dangendorf et~al.~\citep{Dangendorf2019} reconstruction for pre-satellite validation.
-\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1956--2026) and 0--2000\,m (2006--2026) \citep{Levitus2012}. A 14\% upward bias correction is applied to account for the documented low bias from vertical interpolation of sparse profiles \citep{Li2022}. Depth corrections for 700--2000\,m ($0.15 \pm 0.05$~mm\,yr$^{-1}$; \cite{Levitus2012, Cheng2017}) and below 2000\,m ($0.07 \pm 0.04$~mm\,yr$^{-1}$; \cite{Purkey2010, Desbruyeres2016}) are applied cumulatively for years before full-depth data are available.
+\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. A 14\% upward bias correction is applied to account for the documented low bias from vertical interpolation of sparse profiles \citep{Li2022}. Depth corrections for 700--2000\,m ($0.15 \pm 0.05$~mm\,yr$^{-1}$; \cite{Levitus2012, Cheng2017}) and below 2000\,m ($0.07 \pm 0.04$~mm\,yr$^{-1}$; \cite{Purkey2010, Desbruyeres2016}) are applied cumulatively for years before full-depth data are available.
 \item \textbf{Glaciers:} GlaMBIE global consensus (2000--2023; GlaMBIE~\cite{GlaMBIE2025}), combining glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 RGI regions. We use 2000--2023 (23 annual points) for calibration.
 \item \textbf{Greenland:} Mouginot et~al.~\citep{Mouginot2019} SMB and discharge (1972--2018), with Mankoff et~al.~\citep{Mankoff2021} (1986--2023) withheld for validation. Subsurface ocean temperature from EN4 v4.2.2 with g10 bias corrections (200--500\,m, Greenland peripheral waters; Good et~al.~\cite{Good2013}). Surface temperature from Berkeley Earth \citep{Rohde2020}.
 \item \textbf{Antarctica:} IMBIE satellite-era mass balance (1992--2020; Otosaka et~al.~\cite{Otosaka2023}), partitioned by region.
@@ -57,8 +57,8 @@ Component & Dataset & Time range & Reference \\
 \midrule
 GMSL & NASA satellite altimetry & 1993--present & Hamlington et~al.~\cite{Hamlington2020} \\
 GMSL & Frederikse GMSL reconstruction & 1900--2018 & Frederikse et~al.~\cite{Frederikse2020} \\
-Thermosteric & NOAA thermosteric SL (0--700\,m) & 1956--present & Levitus et~al.~\cite{Levitus2012} \\
-Thermosteric & NOAA thermosteric SL (0--2000\,m) & 2006--present & Levitus et~al.~\cite{Levitus2012} \\
+Thermosteric & NOAA thermosteric SL (0--700\,m) & 1955--present & Levitus et~al.~\cite{Levitus2012} \\
+Thermosteric & NOAA thermosteric SL (0--2000\,m) & 2005--present & Levitus et~al.~\cite{Levitus2012} \\
 Glaciers & GlaMBIE global consensus & 2000--2023 & Zemp et~al.~\cite{GlaMBIE2025} \\
 Greenland & Mouginot SMB \& discharge & 1972--2018 & Mouginot et~al.~\cite{Mouginot2019} \\
 Greenland (val.) & Mankoff PROMICE & 1986--present & Mankoff et~al.~\cite{Mankoff2021} \\
@@ -76,7 +76,7 @@ Projections & IPCC AR6 FACTS (med.\ \& low conf.) & 2020--2150 & Garner et~al.~\
 \subsection{Component models}
 
 \subsubsection{Thermosteric}
-We fit a two-layer energy balance model \citep{Geoffroy2013} jointly to NOAA in situ thermosteric sea level at 0--700\,m (1956--2026, 71 annual points) and 0--2000\,m (2006--2026, 21 points) \citep{Levitus2012}. The governing equations are:
+We fit a two-layer energy balance model \citep{Geoffroy2013} jointly to NOAA in situ thermosteric sea level at 0--700\,m (1955--2025, 71 annual points) and 0--2000\,m (2005--2025, 21 points) \citep{Levitus2012}. The governing equations are:
 \begin{align}
 \frac{dS_u}{dt} &= \frac{T(t) - S_u}{\tau_u}, \qquad
 \frac{dS_d}{dt} = \frac{S_u - S_d}{\tau_d}, \\
