@@ -39,8 +39,8 @@ HAS_IPCC_DIST = os.path.exists(IPCC_DIST_PATH)
 from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 
-# Components that should be summed (EAIS excluded by design)
-SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais']
+# Components that should be summed (EAIS included for completeness)
+SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais']
 ALL_HDF5_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
 
 
@@ -57,11 +57,11 @@ class TestComponentInventory:
         for comp in ALL_HDF5_COMPONENTS:
             assert comp in comps, f"Missing component: {comp}"
 
-    def test_eais_present_but_excluded(self):
-        """EAIS should be in HDF5 but excluded from summation."""
+    def test_eais_present_and_included(self):
+        """EAIS should be in HDF5 and included in summation."""
         comps = list_components()
         assert 'eais' in comps
-        assert 'eais' not in SUMMED_COMPONENTS
+        assert 'eais' in SUMMED_COMPONENTS
 
 
 # =========================================================================
@@ -164,8 +164,8 @@ class TestVarianceDecomposition:
                 # Map hdf key to display label
                 labels = {
                     'ocean': 'Thermosteric', 'glacier': 'Glaciers',
-                    'greenland': 'Greenland', 'apeninsula': 'Peninsula',
-                    'wais': 'WAIS',
+                    'greenland': 'Greenland', 'eais': 'EAIS',
+                    'apeninsula': 'Peninsula', 'wais': 'WAIS',
                 }
                 entry = loaded['projections'][ssp]
                 # Downsample to N_SAMPLES if needed (WAIS has 10000)
@@ -356,7 +356,7 @@ class TestConsistencyWithForecast:
     def test_same_components_as_forecast(self):
         """Summation notebook should use same components as forecast."""
         # Forecast COMP_LABELS (from test_forecast.py knowledge):
-        forecast_comps = {'ocean', 'glacier', 'greenland', 'apeninsula', 'wais'}
+        forecast_comps = {'ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais'}
         # tws is added separately in both notebooks
         summation_comps = set(SUMMED_COMPONENTS)
         assert summation_comps == forecast_comps
