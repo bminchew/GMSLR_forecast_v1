@@ -214,7 +214,7 @@ The EAIS component uses the same level-space Bayesian framework as glaciers and 
 	\dot{H}_{\mathrm{eais}}(t) = a\,T(t)^2 + b\,T(t) + c,
 	\label{eq:eais_rate}
 \end{equation}
-where $T(t)$ is the GMST anomaly. This is fit to the IMBIE EAIS record (1992--2020, 29 annual points; \cite{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). The quadratic model yields $R^2 = 0.66$ (posterior mean: $a = 0.054$, $b = 0.035$, $c = -0.023$~mm\,yr$^{-1}$), and the linear model yields $R^2 = 0.56$ ($b = 0.021$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$, $c = -0.018$~mm\,yr$^{-1}$). BIC weakly favors the quadratic ($\Delta\mathrm{BIC} = +4.1$ ($\mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}}$, same convention as above)), but both $R^2$ values are too low for reliable projections given the 29-year record and large interannual variability (Fig.~\ref{fig:eais_diagnostics}). EAIS projections instead use the literature-derived accumulation sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST \citep{Frieler2015, Ligtenberg2013}, reflecting the Clausius--Clapeyron scaling of snowfall with warming ($C_T > 0$ corresponds to mass gain, i.e., negative SLR). The EAIS contribution is small ($-13$ to $-30$~mm at 2100, depending on scenario) and is excluded from the forecast sum as a conservative choice---it would reduce the total forecast if included.
+where $T(t)$ is the GMST anomaly. This is fit to the IMBIE EAIS record (1992--2020, 29 annual points; \cite{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). The quadratic model yields $R^2 = 0.66$ (posterior mean: $a = 0.054$, $b = 0.035$, $c = -0.023$~mm\,yr$^{-1}$), and the linear model yields $R^2 = 0.56$ ($b = 0.021$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$, $c = -0.018$~mm\,yr$^{-1}$). BIC weakly favors the quadratic ($\Delta\mathrm{BIC} = +4.1$ ($\mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}}$, same convention as above)), but both $R^2$ values are too low for reliable projections given the 29-year record and large interannual variability (Fig.~\ref{fig:eais_diagnostics}). EAIS projections instead use the literature-derived accumulation sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST \citep{Frieler2015, Ligtenberg2013}, reflecting the Clausius--Clapeyron scaling of snowfall with warming ($C_T > 0$ corresponds to mass gain, i.e., negative SLR). The EAIS contribution is small ($-13$ to $-30$~mm at 2100, depending on scenario).
 
 \begin{figure}[ht]
 \centering
@@ -374,6 +374,15 @@ To assess the robustness of the A4 mixture to the assigned scenario weights, we 
 \includegraphics[width=0.85\textwidth]{component_wais_tornado.png}
 \caption{\textbf{Scenario weight sensitivity.} Tornado plot showing the effect of $\pm 10$ percentage-point perturbations to each scenario weight on the median WAIS SLR at 2100. Dark bars show the inner perturbation range; light bars extend to the full $\pm 10$\% range. The dashed vertical line indicates the baseline median (0.40~m). The mixture median is insensitive to weight perturbations, varying by less than 0.09~m across all perturbations---small relative to the 90\% credible interval of the mixture distribution (${\sim}1.4$~m).}
 \label{fig:wais_tornado}
+\end{figure}
+
+Repeating this analysis for the 95th percentile (5\% exceedance probability)---which represents the upper tail of the distribution---yields a similar conclusion (Fig.~\ref{fig:wais_tornado_p95}). The largest sensitivity is again to the S3 weight, which shifts the 95th percentile by approximately $\pm 12$\%, while S1 and S2 perturbations produce shifts of only $\pm 3$\%. These variations remain a small fraction of the 95th-percentile value itself (${\sim}1.5$~m), confirming that the tail behavior is governed by within-scenario uncertainty rather than the assigned weights.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_wais_tornado_p95.png}
+\caption{\textbf{Scenario weight sensitivity---95th percentile.} As in Fig.~\ref{fig:wais_tornado}, but for the 95th percentile (5\% exceedance) of the WAIS SLR distribution at 2100. The upper axis shows the percentage change from the baseline value (${\sim}1.5$~m). The tail of the distribution is similarly insensitive to weight perturbations, with the largest shift (${\sim}\pm 12$\% from S3) remaining a small fraction of the total.}
+\label{fig:wais_tornado_p95}
 \end{figure}
 
 \subsection{MCMC convergence diagnostics}
