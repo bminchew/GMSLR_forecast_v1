@@ -31,14 +31,14 @@ SSP = 'SSP2-4.5'
 # 3.4% of the entire global coastline (~1.6M km) warrants dike heightening
 # under a cost-benefit optimality criterion, at a unit cost of $7M per km
 # per meter of dike height (based on New Orleans; Bos 2008).
-# This gives 54,400 km × $7M/km/m = $381B per meter of SLR as a one-time
+# This gives 54,400 km × $7M/km/m ≈ $400B per meter of SLR as a one-time
 # capital cost for dike raising alone. That covers only the 3.4% of
 # coastline where dike economics are favorable; the remaining 96.6% still
 # faces SLR via managed retreat, nature-based solutions, or absorbed
-# losses. Scaling by ~12× and rounding to a clean number gives $200B/m
-# as a conservative estimate of the full societal adaptation burden per
-# meter of SLR, encompassing all adaptation pathways.
-ADAPT_COST_PER_M = 200    # $B/yr per meter of SLR (see derivation above)
+# losses. A conservative 10× multiplier for the full societal adaptation
+# burden (seawalls, green barriers, managed retreat, etc.) across a
+# broader fraction of coastline gives $4T/m = $4000B/m.
+ADAPT_COST_PER_M = 4000   # $B/yr per meter of SLR (see derivation above)
 P_STABLE = 0.10           # AR6 prior
 D_GRID = np.arange(0.3, 3.0, 0.05)
 DR = 0.03                 # discount rate
