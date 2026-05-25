@@ -78,8 +78,8 @@ Projections & IPCC AR6 FACTS (med.\ \& low conf.) & 2020--2150 & Garner et~al.~\
 \subsubsection{Thermosteric}
 We fit a two-layer energy balance model \citep{Geoffroy2013} jointly to NOAA in situ thermosteric sea level at 0--700\,m (1955--2025, 71 annual points) and 0--2000\,m (2005--2025, 21 points) \citep{Levitus2012}. The governing equations are:
 \begin{align}
-\frac{dS_u}{dt} &= \frac{T(t) - S_u}{\tau_u}, \qquad
-\frac{dS_d}{dt} = \frac{S_u - S_d}{\tau_d}, \\
+\frac{dS_u}{dt} &= \frac{T(t) - S_u}{\tau_u} \\
+\frac{dS_d}{dt} &= \frac{S_u - S_d}{\tau_d} \\
 H_{\mathrm{upper}}(t) &= a\,S_u^2 + b_u\,S_u + c\,(t - t_0), \\
 H_{\mathrm{total}}(t) &= H_{\mathrm{upper}}(t) + b_d\,S_d,
 \end{align}
@@ -106,7 +106,12 @@ The ODE system is solved via an exponential integrator (piecewise-constant midpo
 \end{figure}
 
 \subsubsection{Glaciers}
-We fit both linear ($\dot{H}_{\mathrm{gl}} = b\,T + c$) and quadratic ($\dot{H}_{\mathrm{gl}} = a\,T^2 + b\,T + c$) rate--temperature models to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors (emcee; linear fit: 32 walkers, 2000 burn-in + 4000 production steps, thinning by 2; quadratic fit: 64 walkers, 4000 burn-in + 12000 production steps, thinning by 2). The linear model has 4 free parameters (with the quadratic coefficient $a$ set to zero) and the quadratic model has 5. BIC model selection favors the linear model ($\Delta\mathrm{BIC} = \mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}} = -63.8$), constituting decisive evidence for the more parsimonious linear model. The data detect nonzero curvature---the posterior probability $P(a > 0) > 99\%$ with $a = 0.009$~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$---but the quadratic coefficient is small ($a \ll b$) and BIC favors the linear model, so we adopt the linear model for projections. The posterior median sensitivity is $b = 0.66$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and the committed rate is $c = 0.57$~mm\,yr$^{-1}$, with $R^2 = 0.995$. Cumulative loss is capped at the total glacier volume of 0.32~m SLE \citep{Farinotti2019}.
+We model cumulative glacier sea-level contribution in level space as
+\begin{equation}
+	H_{\mathrm{gl}}(t) = a\!\int_{t_0}^{t}\!T^2\,d\tau \;+\; b\!\int_{t_0}^{t}\!T\,d\tau \;+\; c\,(t - t_0) \;+\; H_0 \;+\; \varepsilon(t),
+	\label{eq:glacier_level}
+\end{equation}
+where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and evaluated at annual observation times, $H_0$ is a baseline offset, and $\varepsilon(t) \sim \mathcal{N}(0,\, \sigma_{\mathrm{obs}}^2 + \sigma_{\mathrm{extra}}^2)$ with $\sigma_{\mathrm{extra}}$ an additional model-inadequacy noise term learned from the data. The corresponding rate model is $\dot{H}_{\mathrm{gl}} = a\,T^2 + b\,T + c$. We fit both the quadratic (5 free parameters: $a$, $b$, $c$, $\sigma_{\mathrm{extra}}$, $H_0$) and linear (4 free parameters, with $a = 0$) models to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors (emcee; linear fit: 32 walkers, 2000 burn-in + 4000 production steps, thinning by 2; quadratic fit: 64 walkers, 4000 burn-in + 12000 production steps, thinning by 2). BIC model selection favors the linear model ($\Delta\mathrm{BIC} = \mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}} = -63.8$), constituting decisive evidence for the more parsimonious linear model. The data detect nonzero curvature---the posterior probability $P(a > 0) > 99\%$ with $a = 0.009$~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$---but the quadratic coefficient is small ($a \ll b$) and BIC favors the linear model, so we adopt the linear model for projections. The posterior median sensitivity is $b = 0.66$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and the committed rate is $c = 0.57$~mm\,yr$^{-1}$, with $R^2 = 0.995$. Cumulative loss is capped at the total glacier volume of 0.32~m SLE \citep{Farinotti2019}.
 
 \begin{figure}[ht]
 \centering
@@ -116,12 +121,12 @@ We fit both linear ($\dot{H}_{\mathrm{gl}} = b\,T + c$) and quadratic ($\dot{H}_
 \end{figure}
 
 \subsubsection{Greenland SMB}
-Observed RACMO-derived SMB \citep{Mouginot2019} for the hindcast. Forecasts use a quadratic temperature scaling $\Delta\dot{H}_{\mathrm{smb}} = C_T\,\Delta T + C_{T^2}\,\Delta T^2$ with sensitivities drawn from the inter-RCM spread \citep{Fettweis2020, Noel2021, Glaude2024}. The linear sensitivity $C_T \sim \mathcal{N}(-300, 80^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST encompasses the MAR, RACMO, and HIRHAM estimates. The quadratic sensitivity is $C_{T^2} \sim \mathcal{N}(-50, 30^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-2}$. The cumulative SMB contribution is obtained by integrating the rate anomaly:
+We use RACMO-derived SMB \citep{Mouginot2019} for the hindcast. Forecasts use a quadratic temperature scaling $\Delta\dot{H}_{\mathrm{smb}} = C_T\,\Delta T + C_{T^2}\,\Delta T^2$ with sensitivities drawn from the inter-RCM spread \citep{Fettweis2020, Noel2021, Glaude2024}. The linear sensitivity $C_T \sim \mathcal{N}(-300, 80^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST encompasses the MAR, RACMO, and HIRHAM estimates. The quadratic sensitivity is $C_{T^2} \sim \mathcal{N}(-50, 30^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-2}$. The cumulative SMB contribution is obtained by integrating the rate anomaly:
 \begin{equation}
 	\Delta H_{\mathrm{smb}}(t) = \int_{t_0}^{t} \bigl[\dot{M}_0 + C_T \,\Delta T(t') + C_{T^2}\,\Delta T(t')^2\bigr]\, dt',
 	\label{eq:greenland_smb_cumulative}
 \end{equation}
-where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline and $\dot{M}_0 = 380$~Gt\,yr$^{-1}$ is the baseline SMB accumulation rate. The $\dot{M}_0$ term ensures that the projection includes the ongoing background accumulation, which partially offsets warming-driven mass loss.
+where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline and $\dot{M}_0 = 380$~Gt\,yr$^{-1}$ is the baseline SMB. 
 
 \subsubsection{Greenland discharge}
 The cumulative discharge contribution is modeled as the time-delayed integral of subsurface ocean warming:
@@ -129,7 +134,7 @@ The cumulative discharge contribution is modeled as the time-delayed integral of
 	\Delta H_{\mathrm{dyn}}(t) = \gamma \int_{t_0}^{t} T_{\mathrm{ocean}}(t' - \delta)\, dt' + r_0\,(t - \bar{t}),
 	\label{eq:greenland_dyn}
 \end{equation}
-where $\gamma$ is the discharge sensitivity to ocean temperature, $\delta$ is the time delay between ocean warming and the ice sheet response, and $r_0$ is the background discharge rate at the baseline ocean temperature. The model is calibrated against Mouginot et~al.~\citep{Mouginot2019} discharge by weighted least squares with BIC-weighted mixing across candidate delays $\delta \in \{4, 5, 6, 7, 8\}$~yr, yielding $\gamma = 0.365$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$ (90\% CI: 0.354--0.377~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$), $r_0 = 1.383$~mm\,SLE\,yr$^{-1}$ (90\% CI: 1.379--1.387~mm\,SLE\,yr$^{-1}$), and $\delta = 5$~yr (rate-space $R^2 = 0.794$).
+where $\gamma$ is the discharge sensitivity to ocean temperature, $\delta$ is the time delay between ocean warming and the ice sheet response, and $r_0$ is the background discharge rate at the baseline ocean temperature. $T_{\mathrm{ocean}}$ is from EN4 v4.2.2 with g10 bias corrections \citep{Good2013}, averaged over 200--500\,m depth in Greenland peripheral waters (58--80$^\circ$N, 75--5$^\circ$W). For each candidate delay $\delta \in \{4, 5, 6, 7, 8\}$~yr, we fit $(\gamma, r_0)$ by weighted least squares against demeaned cumulative discharge from Mouginot et~al.~\citep{Mouginot2019}, with an additional rate constraint at the end of the record. Posterior samples are drawn from a BIC-weighted Gaussian mixture over the per-$\delta$ WLS covariance matrices, yielding $\gamma = 0.365$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$ (90\% CI: 0.354--0.377~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$), $r_0 = 1.383$~mm\,SLE\,yr$^{-1}$ (90\% CI: 1.379--1.387~mm\,SLE\,yr$^{-1}$), and $\delta = 5$~yr (rate-space $R^2 = 0.794$).
 
 \begin{figure}[ht]
 \centering
@@ -157,7 +162,7 @@ We derive a simple scaling to contextualize the inferred value $\gamma = 0.37$~m
 	\dot{D} = \gamma\,T_{\mathrm{ocean}}(t - \delta),
 	\label{eq:greenland_rate}
 \end{equation}
-so $\gamma$ is the change in discharge rate per degree of subsurface ocean warming. The physical chain linking ocean temperature to discharge is: (i)~ocean thermal forcing drives submarine melt at marine-terminating glacier termini, (ii)~melt-driven undercutting thins the ice near the grounding line, and (iii)~the resulting loss of buttressing increases ice flux across the grounding line. These steps can be combined into a scaling for the aggregate discharge sensitivity $\gamma$.
+so $\gamma$ is the change in discharge rate per degree of subsurface ocean warming. The physical chain linking ocean temperature to discharge is: (i)~ocean thermal forcing drives submarine melt at tidewater glacier termini, (ii)~melt-driven undercutting promotes calving and terminus retreat, and (iii)~the resulting reduction in resistive stress at the terminus increases ice flux. These steps can be combined into a scaling for the aggregate discharge sensitivity $\gamma$.
 
 \textit{Submarine melt.} For a single outlet glacier, the submarine melt rate scales approximately linearly with ocean thermal forcing above a reference temperature $T_f$:
 \begin{equation}
@@ -192,7 +197,7 @@ As an independent check, over 1997--2018, Mouginot et~al.~\citep{Mouginot2019} o
 	T_{\mathrm{ocean}}(t) = \alpha\,T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
 	\label{eq:ocean_transfer}
 \end{equation}
-where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), $T_{\mathrm{ocean}}$ is the EN4 subsurface temperature anomaly (200--500\,m depth, 58--80$^\circ$N, 75--5$^\circ$W), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $n = 52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
+where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), $T_{\mathrm{ocean}}$ is the EN4 subsurface temperature anomaly (200--500\,m depth, 58--80$^\circ$N, 75--5$^\circ$W), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
 
 For projections, SSP GMST trajectories are converted to Greenland regional surface temperature using an Arctic amplification factor of $3.0 \pm 0.5$ ($1\sigma$), consistent with the observed ratio of Greenland-to-global warming over 1970--2021. SSP Greenland regional surface temperatures (CMIP6, rebaselined to Berkeley Earth over 1995--2005) are passed through Eq.~\eqref{eq:ocean_transfer} to obtain projected $T_{\mathrm{ocean}}$, which then enters Eq.~\eqref{eq:greenland_dyn} via the delayed integral. Each of the 2,000 Monte Carlo samples draws $\mathrm{AA} \sim \mathcal{N}(3.0, 0.5^2)$, $\alpha \sim \mathcal{N}(0.148, 0.027^2)$, and $\beta \sim \mathcal{N}(-0.051, 0.031^2)$ jointly with $(\gamma, r_0, \delta)$ from the discharge posterior, so that Arctic amplification, transfer-function, and discharge parameter uncertainties all propagate into the projections. A single draw of $(\alpha, \beta, \gamma, r_0, \delta)$ is applied to all SSP scenarios, so that inter-SSP differences isolate the effect of the emissions pathway from parameter uncertainty.
 
