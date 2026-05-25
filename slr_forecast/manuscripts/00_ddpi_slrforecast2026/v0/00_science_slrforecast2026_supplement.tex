@@ -7,9 +7,16 @@
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pdflscape}
 \usepackage{xcolor}
 \usepackage{hyperref}
 \graphicspath{{../../../figures/}}
+
+% Define \subsubsubsection (paragraph-level heading, unnumbered)
+\makeatletter
+\newcommand{\subsubsubsection}[1]{\paragraph{#1}\mbox{}\par}
+\makeatother
 
 \title{Supplementary Materials for:\\Observational evidence for more than a meter of 21st century sea-level rise}
 \author{Minchew et al.}
@@ -173,174 +180,33 @@ where $\kappa \sim 10$--$100$~m\,yr$^{-1}$\,$^\circ$C$^{-1}$ depending on fjord 
 
 \textit{Dynamic amplification.} Submarine melt thins and undercuts the terminus, triggering calving and grounding-line retreat that increase ice flux by a factor $\mu$ beyond the direct melt loss. For Greenland's tidewater glaciers, observations and models suggest $\mu \sim 3$--$10$ \citep{Enderlin2013, Wood2021}. The total mass flux perturbation from a single glacier of effective calving-front cross-section $A_f$ is then
 \begin{equation}
-	\Delta \dot{M}_i \sim \mu\,\rho_i\,A_{f,i}\,\kappa_i\,\Delta T_{\mathrm{ocean}},
+	\Delta \dot{Q}_i \sim \mu\,\rho_{ice}\,A_{f,i}\,\kappa_i\,\Delta T_{\mathrm{ocean}},
 	\label{eq:single_glacier_flux}
 \end{equation}
-where $\rho_i$ is the mass density of ice.
+where $\rho_{ice}$ is the mass density of ice.
 
-\textit{Aggregation.} Summing over Greenland's $N \approx 200$ marine-terminating outlets and converting to sea-level equivalent ($1~\mathrm{Gt} = 1/362{,}500$~m\,SLE):
+\textit{Aggregation.} Summing over Greenland's $N \approx 200$ marine-terminating outlets:
 \begin{equation}
-	\gamma_{\mathrm{phys}} = \frac{1}{A_{\mathrm{ocean}}\,\rho_w}\sum_{i=1}^{N} \mu_i\,\rho_i\,A_{f,i}\,\kappa_i,
+	\gamma_{\mathrm{phys}} = \frac{1}{A_{\mathrm{ocean}}\,\rho_w}\sum_{i=1}^{N} \mu_i\,\rho_{ice}\,A_{f,i}\,\kappa_i,
 	\label{eq:gamma_aggregate}
 \end{equation}
-where $A_{\mathrm{ocean}} = 3.625 \times 10^{14}$~m$^2$ is the ocean area and $\rho_w$ is seawater density. Using representative values ($\bar{\kappa} \sim 30$~m\,yr$^{-1}$\,$^\circ$C$^{-1}$, $\bar{\mu} \sim 5$, mean cross-section $\bar{A}_f \sim 0.15$~km$^2$, $\rho_i = 917$~kg\,m$^{-3}$) gives
+where $A_{\mathrm{ocean}} = 3.625 \times 10^{14}$~m$^2$ is the ocean area and $\rho_w$ is seawater density. Using representative values ($\bar{\kappa} \sim 30$~m\,yr$^{-1}$\,$^\circ$C$^{-1}$, $\bar{\mu} \sim 5$, mean cross-section $\bar{A}_f \sim 0.15$~km$^2$, $\rho_{ice} = 900$~kg\,m$^{-3}$) gives
 \begin{equation}
 	\gamma_{\mathrm{phys}} \sim 0.22\text{--}0.55~\mathrm{mm\,SLE\,yr}^{-1}\,{}^\circ\mathrm{C}^{-1},
 	\label{eq:gamma_estimate}
 \end{equation}
-which brackets the calibrated $\gamma = 0.37$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. The range reflects the large spread in $\kappa$ and $\mu$ across individual glaciers.
+which brackets the calibrated $\gamma = 0.37$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$.
 
-As an independent check, over 1997--2018, Mouginot et~al.~\citep{Mouginot2019} observed a discharge increase of ${\sim}0.19$--$0.28$~mm\,SLE\,yr$^{-1}$ while EN4 subsurface temperatures (200--500\,m) in Greenland peripheral waters warmed by ${\sim}0.5$--$1\,^\circ$C \citep{Good2013}, giving an observed bulk sensitivity of $0.19$--$0.55$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. The calibrated $\gamma$ at the median ocean warming of ${\sim}0.7\,^\circ$C predicts a rate increase of $0.37 \times 0.7 \approx 0.26$~mm\,SLE\,yr$^{-1}$, consistent with both the scaling and the observed acceleration.
+As an independent check, over 1997--2018, Mouginot et~al.~\citep{Mouginot2019} observed a discharge increase of $\Delta D {\sim}0.19$--$0.28$~mm\,SLE\,yr$^{-1}$ while EN4 subsurface temperatures (200--500\,m) in Greenland peripheral waters warmed by ${\sim}0.5$--$1\,^\circ$C \citep{Good2013}, giving an observed bulk sensitivity of $0.19$--$0.55$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$. The calibrated $\gamma$ at the median ocean warming of $\Delta T{\sim}0.7\,^\circ$C predicts a rate increase of $\gamma = \Delta D/\Delta T \approx 0.37$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$, consistent with both the scaling and the observed acceleration.
 
-\textit{Surface-to-ocean transfer function.} The discharge model (Eq.~\eqref{eq:greenland_dyn}) requires subsurface ocean temperature $T_{\mathrm{ocean}}$, which is available from EN4 during the historical period (1970--2021) but not under SSP scenarios. To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
+\textit{Surface-to-ocean transfer function.} To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
 \begin{equation}
 	T_{\mathrm{ocean}}(t) = \alpha\,T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
 	\label{eq:ocean_transfer}
 \end{equation}
-where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), $T_{\mathrm{ocean}}$ is the EN4 subsurface temperature anomaly (200--500\,m depth, 58--80$^\circ$N, 75--5$^\circ$W), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
+where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
 
-For projections, SSP GMST trajectories are converted to Greenland regional surface temperature using an Arctic amplification factor of $3.0 \pm 0.5$ ($1\sigma$), consistent with the observed ratio of Greenland-to-global warming over 1970--2021. SSP Greenland regional surface temperatures (CMIP6, rebaselined to Berkeley Earth over 1995--2005) are passed through Eq.~\eqref{eq:ocean_transfer} to obtain projected $T_{\mathrm{ocean}}$, which then enters Eq.~\eqref{eq:greenland_dyn} via the delayed integral. Each of the 2,000 Monte Carlo samples draws $\mathrm{AA} \sim \mathcal{N}(3.0, 0.5^2)$, $\alpha \sim \mathcal{N}(0.148, 0.027^2)$, and $\beta \sim \mathcal{N}(-0.051, 0.031^2)$ jointly with $(\gamma, r_0, \delta)$ from the discharge posterior, so that Arctic amplification, transfer-function, and discharge parameter uncertainties all propagate into the projections. A single draw of $(\alpha, \beta, \gamma, r_0, \delta)$ is applied to all SSP scenarios, so that inter-SSP differences isolate the effect of the emissions pathway from parameter uncertainty.
-
-\subsubsection{WAIS}
-
-Ice dynamics governing WAIS mass loss involve instability mechanisms that current process models have not proven themselves capable of fully representing \citep{Seroussi2020,Aschwanden2021}. In the absence of reliable physical models, we take arguably the only approach available by constructing a scenario-mixture framework that represents this deep uncertainty, is grounded in the scholarly literature, and provides an accounting for recent discoveries, like the higher value of the viscous stress-exponent $n$ \citep{Millstein2022,Ranganathan2024} and sensitivity of sea-level rise projections to that value \citep{GetraerMorlighem2025, Martin2026}. Our framework comprises three physically motivated scenarios, each characterized by a probability weight, an endpoint distribution at 2100, a temporal trajectory, and a multiplicative rheology ($n$) correction. We choose to set all WAIS scenarios to be independent of the warming trajectory because there are vanishingly few data to constrain the sensitivity of WAIS to ocean thermal forcing in a time when large calving events are rapidly changing ice shelves---the floating extension of the ice sheet---and because evidence suggests ocean thermal forcing sufficient to sustain WAIS retreat is committed regardless of emissions pathway \citep{Naughten2023}.
-
-\subsubsection{Observational context}
-
-The IMBIE satellite-era record (1992--2020; \cite{Otosaka2023}) shows WAIS cumulative mass loss of ${\sim}6.6$~mm SLE, with the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in 1992 to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012. The mass loss signal emerges from measurement noise (signal-to-noise ratio $> 2$) by approximately 1998. A structural break at ${\sim}2010$ separates a period of acceleration (0.015~mm\,yr$^{-2}$, 1992--2010) from a period of apparent deceleration ($-0.031$~mm\,yr$^{-2}$, 2010--2020). This recent deceleration may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018} rather than a reversal of the ice-dynamical trend. The WAIS contribution represents ${\sim}8$--9\% of the total GMSL rate and ${\sim}35$--70\% of the barystatic (non-thermosteric) contribution.
-
-Few if any runs in the 188-member ISMIP6 ensemble \citep{Seroussi2020} reproduce the observed trajectory of WAIS mass loss through 2020 (Fig.~2f of the main text). The ensemble 95th percentile merely tracks the lower bound of observations, and the ensemble median implies near-zero or slightly positive mass change under warming---a result that is difficult to reconcile with satellite measurements and reflects known structural biases in the underlying models (see ``Known biases in ice sheet model projections'' below).
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_wais_observations.png}
-\caption{\textbf{WAIS observational record.} Left: cumulative WAIS sea-level contribution from IMBIE (1992--2020; \cite{Otosaka2023}) with measurement uncertainties, relative to the year-2000 baseline. The structural break at ${\sim}2010$ (red dashed line) separates a period of acceleration from apparent deceleration. Right: WAIS mass loss rate evolution, showing the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in the early 1990s to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012, followed by a decline that may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018}.}
-\label{fig:wais_observations}
-\end{figure}
-
-\subsubsection{Framework structure: three scenarios}
-
-The framework comprises three scenarios spanning the range from stable WAIS (no instability) through marine ice sheet instability (MISI) to the combination of MISI with marine ice cliff instability (MICI):
-
-\begin{itemize}
-\item \textbf{S1: Status quo} ($P = 0.10$; 25--85~mm at 2100; $\alpha = 0$). No marine ice sheet instability operates. Discharge responds linearly to ocean thermal forcing, and grounding-line retreat does not trigger the positive feedback characteristic of MISI. The range is derived from a physical scaling: the lower bound extrapolates the IMBIE time-averaged rate (0.24~mm\,yr$^{-1}$) over 80~yr from the anchor year (${\sim}19$~mm); the 25~mm lower bound rounds up to account for measurement uncertainty in the baseline rate; the upper bound applies the projected Amundsen Sea ocean warming enhancement factor ($f = [(2.15 + \Delta T_{\mathrm{warm}})/2.15]^2 \approx 2.9$ for $+1.5\,^\circ$C warming; \cite{Naughten2023}) to the peak observed rate, yielding a linear ramp to ${\sim}85$~mm.
-
-\item \textbf{S2: MISI} ($P = 0.80$; 150--1000~mm at 2100; $\alpha = +4$). Marine ice sheet instability drives accelerating grounding-line retreat on retrograde beds, with amplification from processes that current models omit (calving, subglacial hydrology, ice damage). The positive skewness ($\alpha = +4$) is motivated by the analytical and numerical results of Robel et~al.~\citep{Robel2019}, who showed that the grounding-line flux nonlinearity ($q_g \propto h_g^{\,n+1}$, where $h_g$ is grounding-line thickness; \cite{Schoof2007}) amplifies and skews the uncertainty distribution toward greater ice loss when the nonlinearity exponent exceeds 3 (realistic values are 4--5). In their 500-member Thwaites ensemble, fractional projection uncertainty ranges from 0.25 to 0.50 depending on forcing persistence, with systematic positive skew. The trajectory follows a power-law ramp $H(t) = H_{\mathrm{anchor}} + H_{\mathrm{remaining}} \cdot [(t - t_a)/(2100 - t_a)]^\beta$, where the trajectory exponent $\beta$ is drawn from a log-normal distribution with median 1.8 and log-standard deviation 0.3 (i.e., back-loaded, reflecting the accelerating character of MISI dynamics).
-
-\item \textbf{S3: MISI + MICI} ($P = 0.10$; 600--1300~mm at 2100; $\alpha = -3$). Full instability cascade including marine ice cliff instability, in which loss of buttressing ice shelves exposes ice cliffs that exceed the yield strength of ice, triggering structural failure and rapid retreat \citep{Bassis2012, DeContoP2016}. The S3 bounds are anchored to the IPCC AR6 low-confidence Antarctic ice sheet projection under SSP5-8.5 \citep{Fox-Kemper2021}: the lower bound (600~mm) corresponds to the 83rd percentile (559~mm, rounded), and the upper bound (1300~mm) corresponds to the 95th percentile (1309~mm, rounded). This anchoring is appropriate because the AR6 low-confidence projection incorporates the deep-uncertainty processes (MISI + MICI) that define S3. For GMSL purposes, it is immaterial whether ice loss originates from WAIS or from marine basins of EAIS---both contribute to the same global ocean---and in the AR6 low-confidence storyline, WAIS dominates but EAIS marine basins also contribute. The upper bound additionally matches the Amundsen Sea Embayment ice volume above flotation ($V_{af} \approx 1100$~mm; \cite{Morlighem2020}), providing an independent physical cross-check. The negative skewness ($\alpha = -3$) in log-space concentrates probability toward the lower portion of the range, reflecting the assessment that if MICI operates, it is unlikely to do so at maximum efficiency; the limited weight ($P = 0.10$) separately captures the substantial evidence against efficient MICI operation during the 21st century (see below). The trajectory exponent has median 2.2, reflecting the more rapid acceleration expected under combined instabilities.
-\end{itemize}
-
-An earlier version of the framework used four scenarios, separating ``moderate MISI'' from ``MISI with amplifiers.'' We merged these because the distinction is not physically defensible: if MISI is triggered, the amplifying processes that current models omit---calving \citep{Aschwanden2021, Fricker2025}, subglacial hydrology \citep{Dow2022}, and ice damage---necessarily accompany it. A scenario in which MISI proceeds exactly as models predict is an artifact of model limitations, not a distinct physical regime. The merged S2 uses its skewed distribution to span the full range from moderate to amplified MISI outcomes.
-
-\subsubsection{Scenario weights}
-
-The 10--80--10 weight split reflects the following assessments:
-
-\textit{S1 = 10\% (no MISI).} Sustained WAIS stability requires grounding lines to stabilize despite ongoing retreat on retrograde slopes, committed ocean warming \citep{Naughten2023}, and observed acceleration. IPCC AR6 states that MISI ``may be underway'' in the Amundsen Sea Embayment (medium confidence; \cite{Fox-Kemper2021}); Joughin et~al.~\citep{Joughin2014} concluded that early-stage collapse of Thwaites is already underway; and van den Akker et~al.~\citep{vandenAkker2025} showed that present-day ocean thermal forcing, held constant, is sufficient to deglaciate large parts of WAIS within 300--2500~yr. The 10\% weight reflects the small but non-zero possibility that observed trends are reversible or dominated by internal variability.
-
-\textit{S2 = 80\% (MISI).} MISI is the most physically supported instability mechanism, included in IPCC medium-confidence projections \citep{Fox-Kemper2021}, and is arguably already initiated \citep{Joughin2014, Rignot2026}. Ritz et~al.~\citep{Ritz2015} found MISI to be the dominant instability pathway in a probabilistic treatment of Antarctic contributions; Bamber et~al.~\citep{Bamber2019} structured expert judgment produced WAIS distributions dominated by MISI-type dynamics with strongly positive skew; and DeConto et~al.~\citep{DeConto2021} obtained total Antarctic median ${\sim}340$~mm under RCP8.5 without MICI but with nonlinear acceleration above 3$\,^\circ$C. The 80\% weight reflects the consensus position that MISI is the baseline expectation for WAIS evolution.
-
-\textit{S3 = 10\% (MISI + MICI).} IPCC AR6 assigns low confidence to MICI and excludes it from medium-confidence projections \citep{Fox-Kemper2021}. Several studies have challenged the efficiency of MICI during the 21st century: Morlighem et~al.~\citep{Morlighem2024} found that dynamic thinning prevents cliffs from growing tall enough for sustained structural failure, requiring calving rates $\geq 25\times$ higher than physically motivated models suggest; Clerc et~al.~\citep{Clerc2019} showed that realistic ice-shelf removal timescales (days or longer) raise the critical cliff height from ${\sim}90$~m to ${\sim}540$~m via viscous relaxation; and Schlemm et~al.~\citep{Schlemm2022} demonstrated that m\'{e}lange buttressing and embayment geometry changes are self-limiting. However, MICI cannot be entirely excluded: ice cliffs exceeding ${\sim}100$~m (with crevasses) are structurally unstable \citep{Bassis2012}, DeConto \& Pollard~\citep{DeContoP2016} calibrated MICI against Pliocene and last-interglacial constraints, and Edwards et~al.~\citep{Edwards2019} showed that while MICI is not required to reproduce paleo sea-level changes, it remains consistent with them. The 10\% weight is consistent with AR6's low-confidence assessment.
-
-\subsubsection{Scenario endpoint ranges}
-
-\textit{S1: 25--85~mm.} Derived from a physical scaling chain: (i)~the lower bound extrapolates the IMBIE time-averaged WAIS rate (0.24~mm\,yr$^{-1}$) over 95~yr; (ii)~the upper bound applies the quadratic melt scaling $f = [(T_0 + \Delta T_{\mathrm{warm}})/T_0]^2$ \citep{Holland2008} with projected Amundsen Sea shelf warming of $+0.7$ to $+1.5\,^\circ$C \citep{Naughten2023}, yielding an enhancement factor of 1.7--2.9 applied to the peak observed rate (0.44~mm\,yr$^{-1}$), then linearly ramped. This range is consistent with IPCC AR6 medium-confidence projections under stable-WAIS assumptions.
-
-\textit{S2: 150--1000~mm.} The lower bound is anchored to transient-calibrated ice sheet model projections. Goldberg et~al.~\citep{Goldberg2026} constrained two independent models (STREAMICE and ISSM) against observed surface elevation changes at Thwaites Glacier and found volume-above-flotation loss rates of 180--200~Gt\,yr$^{-1}$ by 2067 from the trunk subdomain alone, using $n = 3$ with no calving or subglacial hydrology. Their surface-elevation-only calibration produced the largest mass loss and the best match to observed volume-above-flotation trends, while velocity-only calibration systematically underestimated inland thinning---a result that highlights calibration-method uncertainty as a source of bias comparable to inter-model spread. Integrating this trajectory to 2100 (with rates still accelerating at their projection endpoint), scaling to the full Thwaites catchment, and adding comparable contributions from Pine Island Glacier (33~km of grounding-line retreat since 1992; \cite{Rignot2026}), Smith/Kohler, and S1-like contributions from non-ASE basins gives a conservative total of ${\sim}130$~mm; the 150~mm floor accounts for the documented low biases in the underlying models (see below). The upper bound of 1000~mm matches the Bamber et~al.~\citep{Bamber2019} WAIS 95th percentile under $+5\,^\circ$C warming (930~mm) and is consistent with partial (${\sim}30$\%) deglaciation of the WAIS marine-based sectors \citep{Robel2019}. Van den Akker et~al.~\citep{vandenAkker2025} found peak WAIS loss rates of ${\sim}3$~mm\,yr$^{-1}$ under sustained present-day forcing during rapid collapse phases, consistent with reaching the upper S2 range within the century.
-
-\textit{S3: 600--1300~mm.} Both bounds are anchored to the IPCC AR6 low-confidence Antarctic ice sheet projection under SSP5-8.5 \citep{Fox-Kemper2021}. The lower bound (600~mm) corresponds to the AR6 low-confidence 83rd percentile (559~mm, rounded to 600~mm), representing the threshold above which instability processes excluded from medium-confidence projections must be active. This is independently supported by Edwards et~al.~\citep{Edwards2019}, who found that with MICI under RCP8.5, the most likely total Antarctic outcome is ${\sim}450$~mm; taking the WAIS share (60--80\%) and adding MISI from basins where MICI does not operate gives ${\sim}600$~mm. The upper bound (1300~mm) corresponds to the AR6 low-confidence 95th percentile (1309~mm, rounded to 1300~mm). This is cross-checked against the Amundsen Sea Embayment ice volume above flotation ($V_{af} \approx 1100$~mm; \cite{Morlighem2020}); the ${\sim}200$~mm excess is consistent with contributions from EAIS marine basins (Wilkes, Aurora) that participate in the AR6 low-confidence storyline. DeConto \& Pollard~\citep{DeContoP2016} obtained 640--1140~mm total Antarctic under RCP8.5 with MICI, placing our upper bound within their range.
-
-\subsubsection{Statistical model for endpoint distributions}
-
-Within each scenario, the 2100 endpoint is drawn from a skew-normal distribution in log-space, $\mathrm{SN}_{\log}(\xi, \omega, \alpha)$, where $\xi$ and $\omega$ are solved such that the 5th and 95th percentiles match the scenario bounds. The log-space formulation is motivated by three physical considerations: (i)~the dominant uncertainties (bed geometry, basal friction, ocean thermal forcing, buttressing loss) enter as multiplicative factors on grounding-line flux $q_g \propto h_g^{\,n+1}$ \citep{Schoof2007}, making a multiplicative (log-space) distribution natural; (ii)~mass loss is strictly positive, which log-space enforces without truncation; and (iii)~the scenarios span two orders of magnitude (25--1300~mm), and a log-space family provides scale-invariant behavior across this range. For $\alpha = 0$, the distribution reduces to a log-normal.
-
-The skew-normal extension captures the asymmetry arising from flux nonlinearity. Robel et~al.~\citep{Robel2019} showed analytically that when the grounding-line flux exponent $n + 1 > 3$, ensemble distributions of retreating grounding lines are systematically skewed toward greater retreat: more-retreated members retreat faster (positive feedback), while less-retreated members experience weaker instability, creating a heavy right tail. Verjans et~al.~\citep{Verjans2024} extended this result, showing that noise-induced drift from calving variability is equivalent to ${\sim}1$~cm GMSL in the first century; reproducing this drift deterministically requires a 270\% increase in mean calving rate, indicating that deterministic models are systematically biased low.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_wais_a4_scenarios.png}
-\caption{\textbf{A4 scenario endpoint distributions at 2100.} Left: probability density functions for the three individual scenarios---S1 (status quo, $P = 0.10$, $\alpha = 0$), S2 (MISI, $P = 0.80$, $\alpha = +4$), and S3 (MISI+MICI, $P = 0.10$, $\alpha = -3$)---after the rheology correction. Right: the resulting A4 mixture distribution, showing the median (0.40~m, dashed) and 90\% credible interval ([0.06, 1.50]~m, dotted). The strong positive skew of the mixture reflects the dominance of S2, whose right-skewed endpoint distribution ($\alpha = +4$) is motivated by the grounding-line flux nonlinearity \citep{Robel2019}.}
-\label{fig:wais_a4_scenarios}
-\end{figure}
-
-\subsubsection{Temporal trajectory}
-
-The cumulative WAIS contribution at year $t$ is given by
-\begin{equation}
-H(t) = H_{\mathrm{anchor}} + (H_{2100} - H_{\mathrm{anchor}}) \cdot \left(\frac{t - t_a}{2100 - t_a}\right)^\beta,
-\label{eq:wais_trajectory}
-\end{equation}
-where $H_{\mathrm{anchor}}$ is the IMBIE observed cumulative value at the anchor year $t_a = 2020$ (the final year of the IMBIE record; $H_{\mathrm{anchor}} = 5.8 \pm 0.7$~mm, $1\sigma$, relative to the year-2000 baseline), $H_{2100}$ is the scenario endpoint, and $\beta$ is a trajectory exponent drawn from a log-normal distribution. For years before the anchor ($t \leq t_a$), the framework returns IMBIE observations with their measurement uncertainties rather than scenario projections. For S1 (no instability), $\beta = 1$ (constant rate, linear ramp). For S2, $\beta$ has log-mean $\ln(1.8)$ and log-standard deviation 0.3, reflecting the accelerating, back-loaded character of MISI dynamics. The power-law trajectory form is motivated by the Schoof~\citep{Schoof2007} grounding-line flux scaling $q_g \propto h_g^{\,n+1}$: if grounding-line retreat proceeds at roughly constant rate on a retrograde bed with slope $s$, then $h_g$ decreases approximately linearly, $h_g(t) \sim h_0 - s \cdot v \cdot (t - t_0)$, and the cumulative flux integral grows faster than linearly because $q_g$ increases as $h_g$ decreases. For a power-law flux, dimensional analysis gives cumulative loss scaling as $(t - t_0)^\beta$ with $\beta > 1$, where the exact value depends on bed geometry and $n$; for $n = 3$--4, this yields $\beta \approx 1.5$--2.5. This motivates the parameterization without claiming an exact derivation. For S3, $\beta$ has log-mean $\ln(2.2)$ and log-standard deviation 0.3, reflecting the more rapid acceleration expected when MICI supplements MISI.
-
-The trajectory exponent is corrected for rheology: the reference $\beta$ is drawn assuming $n = 3$ (matching the literature from which the scaling is derived) and then adjusted to $\beta_{\mathrm{corrected}} = \beta_{n=3} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$, where $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$ is drawn from the observed Glen's law exponent distribution \citep{Millstein2022, Ranganathan2024}. This correction increases $\beta$ by ${\sim}28\%$ at the median, producing more back-loaded (accelerating) trajectories when the ice is more stress-sensitive, as is expected from grounding-line dynamics.
-
-\subsubsection{Rheology correction}
-
-A multiplicative rheology correction is applied to all scenario endpoints. All ISMIP6 models and the literature scenarios from which our endpoint ranges are derived assume Glen's flow law with $n = 3$, but satellite observations indicate $n = 4.1 \pm 0.4$ in fast-flowing Antarctic ice \citep{Millstein2022}, supported by laboratory measurements ($n \approx 3.5$--3.7; \cite{Fan2025}), Greenland field observations ($n \approx 4$; \cite{Bons2018}), and theoretical analysis of the dislocation creep regime \citep{Ranganathan2024}. The consequence for projections has been quantified: Martin et~al.~\citep{Martin2026} found that using $n = 3$ when the true value is $n = 4$ underestimates 100-year sea-level rise by 21--35\% in the MISMIP+ and ABUMIP benchmarks, and Getraer \& Morlighem~\citep{GetraerMorlighem2025} found $32 \pm 14$\% greater Amundsen Sea Embayment loss with $n = 4$ in an ISMIP6-framework experiment. The bias grows nonlinearly with forcing strength \citep{Martin2026}.
-
-We implement the rheology correction in Mode~B (unified $n$-driven corrections), in which a single draw of the Glen's law exponent $n$ per Monte Carlo sample drives both corrections through the physical link to $n$:
-\begin{enumerate}
-\item $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$, clipped at $n_{\mathrm{draw}} \geq n_{\mathrm{ref}} = 3$.
-\item Endpoint: $R(n) = 1 + r_0\,(n_{\mathrm{draw}} - n_{\mathrm{ref}})$, where $r_0 = 0.28 \pm 0.07$ ($1\sigma$) is the fractional change in endpoint per unit change in $n$, calibrated from Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025}.
-\item Trajectory: $\beta(n) = \beta_{\mathrm{ref}} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$.
-\end{enumerate}
-This couples the endpoint and trajectory corrections through $n$, which is more physically consistent than drawing $R$ and the $\beta$ correction independently (Mode~A). At the median observed exponent $n = 4.1$, $R = 1 + 0.28 \times 1.1 = 1.31$; at $\pm 1\sigma$ in $n$, the correction spans from $R = 1.20$ ($n = 3.7$) to $R = 1.42$ ($n = 4.5$), consistent with the literature range of 1.21--1.35 from Martin et~al.~\citep{Martin2026}. The correction is applied to all scenarios because the rheology bias affects every ice sheet model regardless of which instability mechanism operates. Importantly, $R$ and $\beta$ correct conceptually independent quantities: the endpoint ranges are defined at $n = 3$, and $R$ scales the total ice lost (the endpoint magnitude), while the $\beta$ correction changes when that ice is lost (the trajectory shape). These corrections are not double-counting because Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025} report the ratio of total sea-level change at $n = 4$ to $n = 3$---a cumulative endpoint quantity---not the trajectory shape.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_wais_projection.png}
-\caption{\textbf{WAIS A4 projections.} Cumulative WAIS sea-level contribution from the A4 scenario mixture (SSP-independent), showing the median (solid), 66\% credible interval (dark shading), and 90\% credible interval (light shading). IMBIE observations (1992--2020) are shown as grey circles. The total WAIS volume above flotation ($V_{af} = 3.3$~m SLE) is indicated by the dotted line. The back-loaded trajectory ($\beta > 1$ for S2 and S3) produces accelerating mass loss, with the uncertainty fan widening rapidly after mid-century as the MISI scenarios diverge.}
-\label{fig:wais_projection}
-\end{figure}
-
-\subsubsection{Known biases in ice sheet model projections}
-
-Our scenario ranges exceed IPCC AR6 medium-confidence projections for WAIS. This is expected and physically justified by multiple documented biases in the ISMIP6 ensemble:
-
-\begin{enumerate}
-\item \textit{Rheology bias.} All ISMIP6 models assume $n = 3$; observed $n \approx 4$ produces 21--35\% more sea-level rise \citep{Martin2026, GetraerMorlighem2025}. Models initialized with $n = 3$ can match $n = 4$ observations in the short term by tuning a viscosity multiplier, but this compensation breaks down on projection timescales \citep{Martin2026}.
-
-\item \textit{Missing calving.} No ISMIP6 model adequately represents iceberg calving \citep{Aschwanden2021, Fricker2025}, which is a first-order control on grounding-line retreat rate. The sensitivity of glacier flow to major calving events is well documented (e.g., 2--8$\times$ speedup after Larsen~B collapse; \cite{Scambos2004}).
-
-\item \textit{Initialization uncertainty.} Goldberg et~al.~\citep{Goldberg2026} showed that the choice of calibration data (velocity vs.\ surface elevation) produces a factor-of-two spread in projected Thwaites loss rates---comparable to the inter-model spread in ISMIP6. Surface-elevation calibration, which better captures inland thinning signatures of MISI, consistently produces larger mass loss than velocity calibration.
-
-\item \textit{Incomplete uncertainty quantification.} ISMIP6 integrates over model structure but not over parametric uncertainty within individual models, which alone could produce an interquartile range of up to 12.9~cm SLE for RCP8.5 at 2100 \citep{Aschwanden2019}.
-
-\item \textit{Biased ensemble.} ISMIP6 models share numerical methods, parameterizations, and jointly omit key physics---they are not independent samples from the space of possible models \citep{Aschwanden2021}.
-
-\item \textit{Historical validation failure.} Few if any ISMIP6 models reproduce the observed trajectory of WAIS mass loss; the ensemble 95th percentile merely tracks the lower bound of IMBIE observations \citep{Aschwanden2021}. Under continued warming, IPCC models show slower sea-level rise rates than extrapolation of modern observations \citep{Hamlington2024}.
-\end{enumerate}
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_wais_ipcc_comparison.png}
-\caption{\textbf{WAIS A4 projections compared with IPCC AR6 total Antarctic projections.} Our WAIS-only A4 projection (teal, median and 66\%/90\% CI) compared with IPCC AR6 total Antarctic Ice Sheet projections under SSP2-4.5 (blue dashed) and SSP5-8.5 (red dashed) with their respective uncertainty bands. The A4 median exceeds the IPCC total AIS projection by mid-century, and the A4 uncertainty is substantially wider, reflecting the deep uncertainty from MISI, rheology, and missing processes that the ISMIP6 ensemble does not capture.}
-\label{fig:wais_ipcc_comparison}
-\end{figure}
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_wais_pdf_exceedance_ipcc.png}
-\caption{\textbf{WAIS endpoint distributions and exceedance probabilities: A4 vs IPCC.} Left: probability density at 2100 for the A4 WAIS framework (blue) compared with the IPCC AR6 total Antarctic projection (red). The A4 distribution is wider, with a higher median and a heavier right tail arising from the MISI skewness and rheology correction. Right: exceedance probability curves, showing that the A4 framework assigns substantially higher probability to exceeding any given threshold above ${\sim}0.1$~m. The IPCC distribution assigns near-zero probability to outcomes exceeding 0.5~m, whereas the A4 framework assigns ${\sim}40$\% probability to this threshold.}
-\label{fig:wais_pdf_exceedance_ipcc}
-\end{figure}
-
-\subsubsection{Independent cross-check: structured expert judgment}
-
-The Bamber et~al.~\citep{Bamber2019} structured expert judgment (SEJ) provides an independent, methodology-orthogonal validation target. Their WAIS-specific results under $+5\,^\circ$C warming give a median of 180~mm and 95th percentile of 930~mm, with strong positive skew. Our A4 mixture (median ${\sim}400$~mm, 90\% CI: 60--1500~mm, after rheology correction) is wider and shifted higher than the Bamber estimates. This is expected because: (a)~Bamber was published before the rheology bias was quantified \citep{Martin2026}; (b)~the SEJ was conducted before Morlighem et~al.~\citep{Morlighem2024} and recent Thwaites observations that have sharpened the evidence for ongoing instability; and (c)~our framework explicitly applies the rheology correction, which shifts the entire distribution upward by ${\sim}28\%$. The agreement in the broad distributional shape---strongly right-skewed, with median in the hundreds of millimeters---strengthens confidence in both approaches despite their different methodologies.
-
-As a second cross-check, Rosier et~al.~\citep{Rosier2025} calibrated an ice sheet model (\'Ua) against ASE observations using Bayesian inference with deep surrogates and projected Amundsen Sea sector contributions of $19.0 \pm 2.2$~mm (Paris 2$\,^\circ$C) and $18.9 \pm 2.7$~mm (RCP8.5) by 2100---statistically indistinguishable across scenarios, supporting the SSP-independence assumption adopted here. Their calibrated contribution falls within our S1 range (25--85~mm), consistent with the expectation that process models calibrated against the short observational record produce estimates at the lower end of our framework. Rosier et~al.\ include both cliff-height- and hydrofracture-driven calving but find no evidence of unstable calving-front retreat in any simulation, and their creep-exponent prior ($n \in [2, 5]$, uniform) is broad but centered lower than the satellite-derived $n = 4.1 \pm 0.4$ \citep{Millstein2022}. Their narrow uncertainty range (${\sim}5$~mm, $1\sigma$) reflects the structural constraints of a single model rather than the epistemic uncertainty that the A4 framework is designed to represent.
-
-\subsubsection{Sensitivity to scenario weights}
-
-To assess the robustness of the A4 mixture to the assigned scenario weights, we perturb each weight by $\pm 10$ percentage points (redistributing the change proportionally among the remaining scenarios) and examine the effect on the mixture median at 2100 (Fig.~\ref{fig:wais_tornado}). Perturbing the S2 (MISI) weight shifts the median by less than $\pm 0.002$~m, reflecting S2's dominance at 80\%. Perturbations to S1 and S3 produce larger shifts (up to $\pm 0.05$~m) but in opposite directions, so that the median remains within a ${\sim}0.09$~m range across all perturbations---still small relative to the 90\% credible interval (${\sim}1.4$~m). The insensitivity to weight perturbations reflects the dominance of within-scenario uncertainty (controlled by the endpoint ranges and skewness) over the between-scenario weighting.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.85\textwidth]{component_wais_tornado.png}
-\caption{\textbf{Scenario weight sensitivity.} Tornado plot showing the effect of $\pm 10$ percentage-point perturbations to each scenario weight on the median WAIS SLR at 2100. Dark bars show the inner perturbation range; light bars extend to the full $\pm 10$\% range. The dashed vertical line indicates the baseline median (0.40~m). The mixture median is insensitive to weight perturbations, varying by less than 0.09~m across all perturbations---small relative to the 90\% credible interval of the mixture distribution (${\sim}1.4$~m).}
-\label{fig:wais_tornado}
-\end{figure}
+For projections, SSP GMST trajectories are converted to Greenland regional surface temperature using an Arctic amplification factor (AA) of $3.0 \pm 0.5$ ($1\sigma$), consistent with the observed ratio of Greenland-to-global warming over 1970--2021. SSP Greenland regional surface temperatures (CMIP6, rebaselined to Berkeley Earth over 1995--2005) are passed through Eq.~\eqref{eq:ocean_transfer} to obtain projected $T_{\mathrm{ocean}}$, which then enters Eq.~\eqref{eq:greenland_dyn} via the delayed integral. Each of the 2,000 Monte Carlo samples draws $\mathrm{AA} \sim \mathcal{N}(3.0, 0.5^2)$, $\alpha \sim \mathcal{N}(0.148, 0.027^2)$, and $\beta \sim \mathcal{N}(-0.051, 0.031^2)$ jointly with $(\gamma, r_0, \delta)$ from the discharge posterior, so that Arctic amplification, transfer-function, and discharge parameter uncertainties all propagate into the projections. A single draw of $(\alpha, \beta, \gamma, r_0, \delta)$ is applied to all SSP scenarios, so that inter-SSP differences isolate the effect of the emissions pathway from parameter uncertainty.
 
 \subsubsection{EAIS}
 The EAIS component uses the same level-space Bayesian framework as glaciers and the Peninsula. The rate--temperature model is
@@ -369,6 +235,146 @@ The Antarctic Peninsula component uses the same level-space Bayesian framework, 
 
 \subsubsection{Terrestrial water storage}
 TWS projections are adopted directly from the IPCC AR6 \texttt{landwaterstorage} component rather than independently modeled, as the processes governing groundwater depletion, reservoir impoundment, and land hydrology changes are outside the scope of this framework. At each decadal interval in the IPCC projections, we fit a Gaussian distribution to the reported median and inter-quantile spread and draw 2,000 Monte Carlo samples, which are then linearly interpolated to annual resolution. For the hindcast period (pre-2020), we use the Frederikse et~al.~\citep{Frederikse2020} TWS observations with Monte Carlo sampling from their reported uncertainties. TWS is SSP-dependent but the contribution is small (${\sim}30$~mm at 2100 under SSP2-4.5) and does not materially affect the total uncertainty budget.
+
+
+\subsubsection{WAIS}
+
+Ice dynamics governing WAIS mass loss involve instability mechanisms that current process models have not proven themselves capable of fully representing \citep{Seroussi2020,Aschwanden2021}. In the absence of reliable physical models, we take arguably the only approach available by constructing a scenario-mixture framework that represents this deep uncertainty, is grounded in the scholarly literature, and provides an accounting for recent discoveries, like the higher value of the viscous stress-exponent $n$ \citep{Millstein2022,Ranganathan2024} and sensitivity of sea-level rise projections to that value \citep{GetraerMorlighem2025, Martin2026}. Our framework comprises three physically motivated scenarios, each characterized by a probability weight, an endpoint distribution at 2100, a temporal trajectory, and a multiplicative rheology ($n$) correction. We choose to set all WAIS scenarios to be independent of the warming trajectory because there are vanishingly few data to constrain the sensitivity of WAIS to ocean thermal forcing in a time when large calving events are rapidly changing ice shelves---the floating extension of the ice sheet---and because evidence suggests ocean thermal forcing sufficient to sustain WAIS retreat is committed regardless of emissions pathway \citep{Naughten2023}. We recognize that WAIS likely retains some sensitivity to emissions pathway, but that sensitivity is likely to be small relative to the wide uncertainties arising from dynamics already underway. 
+
+\subsubsubsection{Observational context}
+
+The IMBIE satellite-era record (1992--2020; \cite{Otosaka2023}) shows WAIS cumulative mass loss of ${\sim}6.6$~mm SLE, with the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in 1992 to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012. The mass loss signal emerges from measurement noise (signal-to-noise ratio $> 2$) by approximately 1998. A structural break at ${\sim}2010$ separates a period of acceleration (0.015~mm\,yr$^{-2}$, 1992--2010) from a period of apparent deceleration ($-0.031$~mm\,yr$^{-2}$, 2010--2020). This recent deceleration may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018} rather than a reversal of the ice-dynamical trend. The WAIS contribution represents ${\sim}8$--9\% of the total GMSL rate and ${\sim}35$--70\% of the barystatic (non-thermosteric) contribution.
+
+Few if any runs in the 188-member ISMIP6 ensemble \citep{Seroussi2020} reproduce the observed trajectory of WAIS mass loss through 2020 (Fig.~2f of the main text). The ensemble 95th percentile merely tracks the lower bound of observations, and the ensemble median implies near-zero or slightly positive mass change under warming---a result that is difficult to reconcile with satellite measurements and reflects known structural biases in the underlying models (see ``Known biases in ice sheet model projections'' below).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_observations.png}
+\caption{\textbf{WAIS observational record.} Left: cumulative WAIS sea-level contribution from IMBIE (1992--2020; \cite{Otosaka2023}) with measurement uncertainties, relative to the year-2000 baseline. The structural break at ${\sim}2010$ (red dashed line) separates a period of acceleration from apparent deceleration. Right: WAIS mass loss rate evolution, showing the rate increasing from ${\sim}0.15$~mm\,yr$^{-1}$ in the early 1990s to a peak of ${\sim}0.44$~mm\,yr$^{-1}$ around 2010--2012, followed by a decline that may reflect internal ocean variability in the Amundsen Sea \citep{Jenkins2018}.}
+\label{fig:wais_observations}
+\end{figure}
+
+\subsubsubsection{Framework structure: three scenarios}
+
+The framework comprises three scenarios spanning the range from stable WAIS (no instability) through marine ice sheet instability (MISI) to the combination of MISI with marine ice cliff instability (MICI):
+
+\begin{itemize}
+\item \textbf{S1: Status quo} ($P = 0.10$; 25--85~mm at 2100; $\alpha = 0$). No marine ice sheet instability operates. Discharge responds linearly to ocean thermal forcing, and grounding-line retreat does not trigger the positive feedback characteristic of MISI. The range is derived from a physical scaling: the lower bound extrapolates the IMBIE time-averaged rate (0.24~mm\,yr$^{-1}$) over 80~yr from the anchor year (${\sim}19$~mm); the 25~mm lower bound rounds up to account for measurement uncertainty in the baseline rate; the upper bound applies the projected Amundsen Sea ocean warming enhancement factor ($f = [(2.15 + \Delta T_{\mathrm{warm}})/2.15]^2 \approx 2.9$ for $+1.5\,^\circ$C warming; \cite{Naughten2023}) to the peak observed rate, yielding a linear ramp to ${\sim}85$~mm.
+
+\item \textbf{S2: MISI} ($P = 0.80$; 150--1000~mm at 2100; $\alpha = +4$). Marine ice sheet instability drives accelerating grounding-line retreat on retrograde beds, with amplification from processes that current models omit (calving, subglacial hydrology, ice damage). The positive skewness ($\alpha = +4$) is motivated by the analytical and numerical results of Robel et~al.~\citep{Robel2019}, who showed that the grounding-line flux nonlinearity ($q_g \propto h_g^{\,n+1}$, where $h_g$ is grounding-line thickness; \cite{Schoof2007}) amplifies and skews the uncertainty distribution toward greater ice loss when the nonlinearity exponent exceeds 3 (realistic values are 4--5). In their 500-member Thwaites ensemble, fractional projection uncertainty ranges from 0.25 to 0.50 depending on forcing persistence, with systematic positive skew. The trajectory follows a power-law ramp $H(t) = H_{\mathrm{anchor}} + H_{\mathrm{remaining}} \cdot [(t - t_a)/(2100 - t_a)]^\beta$, where the trajectory exponent $\beta$ is drawn from a log-normal distribution with median 1.8 and log-standard deviation 0.3, derived from the Schoof~\citep{Schoof2007} grounding-line flux scaling as described in the ``Temporal trajectory'' section below.
+
+\item \textbf{S3: MISI + MICI} ($P = 0.10$; 600--1300~mm at 2100; $\alpha = -3$). Full instability cascade including marine ice cliff instability, in which loss of buttressing ice shelves exposes ice cliffs that exceed the yield strength of ice, triggering structural failure and rapid retreat \citep{Bassis2012, DeContoP2016}. The S3 bounds are anchored to the IPCC AR6 low-confidence Antarctic ice sheet projection under SSP5-8.5 \citep{Fox-Kemper2021}: the lower bound (600~mm) corresponds to the 83rd percentile (559~mm, rounded), and the upper bound (1300~mm) corresponds to the 95th percentile (1309~mm, rounded). This anchoring is appropriate because the AR6 low-confidence projection incorporates the deep-uncertainty processes (MISI + MICI) that define S3. For GMSL purposes in this study, it is immaterial whether ice loss originates from WAIS or from marine basins of EAIS---both contribute to the same global ocean---and in the AR6 low-confidence storyline, WAIS dominates but EAIS marine basins also contribute. The upper bound additionally matches the Amundsen Sea Embayment ice volume above flotation ($V_{af} \approx 1100$~mm; \cite{Morlighem2020}), providing an independent cross-check estimate. The negative skewness ($\alpha = -3$) in log-space concentrates probability toward the lower portion of the range, reflecting the assessment that if MICI operates, it is unlikely to do so at maximum efficiency; the limited weight ($P = 0.10$) separately captures the evidence against efficient MICI operation during the 21st century (see below). The trajectory exponent has median 2.2, reflecting the more rapid acceleration expected under combined instabilities.
+\end{itemize}
+
+\subsubsubsection{Scenario weights}
+
+The 10--80--10 weight split reflects the following assessments:
+
+\textit{S1 = 10\% (no MISI).} Sustained WAIS stability requires grounding lines to stabilize despite ongoing retreat on retrograde slopes, committed ocean warming \citep{Naughten2023}, and observed acceleration. IPCC AR6 states that MISI ``may be underway'' in the Amundsen Sea Embayment (medium confidence; \cite{Fox-Kemper2021}); Joughin et~al.~\citep{Joughin2014} concluded that early-stage collapse of Thwaites is already underway; and van den Akker et~al.~\citep{vandenAkker2025} showed that present-day ocean thermal forcing, held constant, is sufficient to deglaciate large parts of WAIS within 300--2500~yr. The 10\% weight reflects the small but non-zero possibility that observed trends are reversible or dominated by internal variability.
+
+\textit{S2 = 80\% (MISI).} MISI is the most physically supported instability mechanism, included in IPCC medium-confidence projections \citep{Fox-Kemper2021}, and is arguably already initiated \citep{Joughin2014, Rignot2026}. Ritz et~al.~\citep{Ritz2015} found MISI to be the dominant instability pathway in a probabilistic treatment of Antarctic contributions; Bamber et~al.~\citep{Bamber2019} structured expert judgment produced WAIS distributions dominated by MISI-type dynamics with strongly positive skew; and DeConto et~al.~\citep{DeConto2021} obtained total Antarctic median ${\sim}340$~mm under RCP8.5 without MICI but with nonlinear acceleration above 3$\,^\circ$C. The 80\% weight reflects a consensus position that MISI is the baseline expectation for WAIS evolution.
+
+\textit{S3 = 10\% (MISI + MICI).} IPCC AR6 assigns low confidence to MICI and excludes it from medium-confidence projections \citep{Fox-Kemper2021}. Several studies have challenged the efficiency of MICI during the 21st century: Morlighem et~al.~\citep{Morlighem2024} found that dynamic thinning prevents cliffs from growing tall enough for sustained structural failure, requiring calving rates $\geq 25\times$ higher than physically motivated models suggest; Clerc et~al.~\citep{Clerc2019} showed that realistic ice-shelf removal timescales (days or longer) raise the critical cliff height from ${\sim}90$~m to ${\sim}540$~m via viscous relaxation; Schlemm et~al.~\citep{Schlemm2022} demonstrated that m\'{e}lange buttressing and embayment geometry changes are self-limiting; and a factor-of-2 error in the derivation of critical cliff height arising from an incorrect application of the deviatoric stress decomposition \citep[cf. Eq. 1 of][]{Bassis2012} calls into question the prescribed value of the critical cliff height used in projections \citep{DeContoP2016}. However, if our goal is to represent the scholarly literature without regard for individual views and opinions, then MICI cannot be entirely excluded. Our 10\% weight is consistent with AR6's low-confidence assessment. We note that our conclusions are qualitatively insensitive to MICI because of the low-confidence weighting of 10\%.
+
+%\subsubsubsection{Scenario endpoint ranges}
+
+%\textit{S1: 25--85~mm.} Derived from a physical scaling chain: (i)~the lower bound extrapolates the IMBIE time-averaged WAIS rate (0.24~mm\,yr$^{-1}$) over 95~yr; (ii)~the upper bound applies the quadratic melt scaling $f = [(T_0 + \Delta T_{\mathrm{warm}})/T_0]^2$ \citep{Holland2008} with projected Amundsen Sea shelf warming of $+0.7$ to $+1.5\,^\circ$C \citep{Naughten2023}, yielding an enhancement factor of 1.7--2.9 applied to the peak observed rate (0.44~mm\,yr$^{-1}$), then linearly ramped. This range is consistent with IPCC AR6 medium-confidence projections under stable-WAIS assumptions.
+
+%\textit{S2: 150--1000~mm.} The lower bound is anchored to transient-calibrated ice sheet model projections. Goldberg et~al.~\citep{Goldberg2026} constrained two independent models (STREAMICE and ISSM) against observed surface elevation changes at Thwaites Glacier and found volume-above-flotation loss rates of 180--200~Gt\,yr$^{-1}$ by 2067 from the trunk subdomain alone, using $n = 3$ with no calving or subglacial hydrology. Their surface-elevation-only calibration produced the largest mass loss and the best match to observed volume-above-flotation trends, while velocity-only calibration systematically underestimated inland thinning---a result that highlights calibration-method uncertainty as a source of bias comparable to inter-model spread. Integrating this trajectory to 2100 (with rates still accelerating at their projection endpoint), scaling to the full Thwaites catchment, and adding comparable contributions from Pine Island Glacier (33~km of grounding-line retreat since 1992; \cite{Rignot2026}), Smith/Kohler, and S1-like contributions from non-ASE basins gives a conservative total of ${\sim}130$~mm; the 150~mm floor accounts for the documented low biases in the underlying models (see below). The upper bound of 1000~mm matches the Bamber et~al.~\citep{Bamber2019} WAIS 95th percentile under $+5\,^\circ$C warming (930~mm) and is consistent with partial (${\sim}30$\%) deglaciation of the WAIS marine-based sectors \citep{Robel2019}. Van den Akker et~al.~\citep{vandenAkker2025} found peak WAIS loss rates of ${\sim}3$~mm\,yr$^{-1}$ under sustained present-day forcing during rapid collapse phases, consistent with reaching the upper S2 range within the century.
+
+%\textit{S3: 600--1300~mm.} Both bounds are anchored to the IPCC AR6 low-confidence Antarctic ice sheet projection under SSP5-8.5 \citep{Fox-Kemper2021}. The lower bound (600~mm) corresponds to the AR6 low-confidence 83rd percentile (559~mm, rounded to 600~mm), representing the threshold above which instability processes excluded from medium-confidence projections must be active. This is independently supported by Edwards et~al.~\citep{Edwards2019}, who found that with MICI under RCP8.5, the most likely total Antarctic outcome is ${\sim}450$~mm; taking the WAIS share (60--80\%) and adding MISI from basins where MICI does not operate gives ${\sim}600$~mm. The upper bound (1300~mm) corresponds to the AR6 low-confidence 95th percentile (1309~mm, rounded to 1300~mm). This is cross-checked against the Amundsen Sea Embayment ice volume above flotation ($V_{af} \approx 1100$~mm; \cite{Morlighem2020}); the ${\sim}200$~mm excess is consistent with contributions from EAIS marine basins (Wilkes, Aurora) that participate in the AR6 low-confidence storyline. DeConto \& Pollard~\citep{DeContoP2016} obtained 640--1140~mm total Antarctic under RCP8.5 with MICI, placing our upper bound within their range.
+
+\subsubsubsection{Statistical model for endpoint distributions}
+
+Within each scenario, the 2100 endpoint is drawn from a skew-normal distribution in log-space, $\mathrm{SN}_{\log}(\xi, \omega, \alpha)$, where $\xi$ and $\omega$ are solved such that the 5th and 95th percentiles match the scenario bounds. The log-space formulation is motivated by three physical considerations: (i)~the dominant uncertainties (bed geometry, basal friction, ocean thermal forcing, buttressing loss) enter as multiplicative factors on grounding-line flux $q_g \propto h_g^{\,n+1}$ \citep{Schoof2007}, making a multiplicative (log-space) distribution natural; (ii)~mass loss is strictly positive, which log-space enforces without truncation; and (iii)~the scenarios span two orders of magnitude (25--1300~mm), and a log-space family provides scale-invariant behavior across this range. For $\alpha = 0$, the distribution reduces to a log-normal.
+
+The skew-normal extension captures the asymmetry arising from flux nonlinearity. Robel et~al.~\citep{Robel2019} showed analytically that when the grounding-line flux exponent $n + 1 > 3$, ensemble distributions of retreating grounding lines are systematically skewed toward greater retreat: more-retreated members retreat faster (positive feedback), while less-retreated members experience weaker instability, creating a heavy right tail. %Verjans et~al.~\citep{Verjans2024} extended this result, showing that noise-induced drift from calving variability is equivalent to ${\sim}1$~cm GMSL in the first century; reproducing this drift deterministically requires a 270\% increase in mean calving rate, indicating that deterministic models are systematically biased low.
+
+%\begin{figure}[ht]
+%\centering
+%\includegraphics[width=\textwidth]{component_wais_a4_scenarios.png}
+%\caption{\textbf{A4 scenario endpoint distributions at 2100.} Left: probability density functions for the three individual scenarios---S1 (status quo, $P = 0.10$, $\alpha = 0$), S2 (MISI, $P = 0.80$, $\alpha = +4$), and S3 (MISI+MICI, $P = 0.10$, $\alpha = -3$)---after the rheology correction. Right: the resulting A4 mixture distribution, showing the median (0.40~m, dashed) and 90\% credible interval ([0.06, 1.50]~m, dotted). The strong positive skew of the mixture reflects the dominance of S2, whose right-skewed endpoint distribution ($\alpha = +4$) is motivated by the grounding-line flux nonlinearity \citep{Robel2019}.}
+%\label{fig:wais_a4_scenarios}
+%\end{figure}
+
+\subsubsubsection{Temporal trajectory}
+
+The cumulative WAIS contribution at year $t$ is given by
+\begin{equation}
+H(t) = H_{\mathrm{anchor}} + (H_{2100} - H_{\mathrm{anchor}}) \left(\frac{t - t_a}{2100 - t_a}\right)^\beta,
+\label{eq:wais_trajectory}
+\end{equation}
+where $H_{\mathrm{anchor}}$ is the IMBIE observed cumulative value at the anchor year $t_a = 2020$ (the final year of the IMBIE record; $H_{\mathrm{anchor}} = 5.8 \pm 0.7$~mm, $1\sigma$, relative to the year-2000 baseline), $H_{2100}$ is the scenario endpoint, and $\beta$ is a trajectory exponent drawn from a log-normal distribution. For years before the anchor ($t \leq t_a$), the framework returns IMBIE observations with their measurement uncertainties rather than scenario projections. For S1 (no instability), $\beta = 1$ (constant rate, linear ramp). For S2, $\beta$ has log-mean $\ln(1.8)$ and log-standard deviation 0.3, reflecting the accelerating, back-loaded character of MISI dynamics. The power-law trajectory form is motivated by the Schoof~\citep{Schoof2007} grounding-line flux scaling $q_g \propto h_g^{\,n+1}$: if grounding-line retreat proceeds at roughly constant rate on a retrograde bed with slope $s$, then $h_g$ decreases approximately linearly, $h_g(t) \sim h_0 - sv(t - t_0)$, and the cumulative flux integral grows faster than linearly because $q_g$ increases as $h_g$ decreases. For a power-law flux, dimensional analysis gives cumulative loss scaling as $(t - t_0)^\beta$ with $\beta > 1$, where the exact value depends on bed geometry and $n$; for $n = 3$--4, this yields $\beta \approx 1.5$--2.5. For S3, $\beta$ has log-mean $\ln(2.2)$ and log-standard deviation 0.3, reflecting the more rapid acceleration expected when MICI supplements MISI.
+
+The trajectory exponent is corrected for rheology: the reference $\beta$ is drawn assuming $n = 3$ (matching the literature from which the scaling is derived) and then adjusted to $\beta_{\mathrm{corrected}} = \beta_{n=3} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$, where $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$ is drawn from the observed Glen's law exponent distribution \citep{Millstein2022, Ranganathan2024}. This correction increases $\beta$ by ${\sim}28\%$ at the median, producing more back-loaded (accelerating) trajectories when the ice viscosity has a higher sensitivity to stress than commonly assumed with $n=3$.
+
+\subsubsubsection{Rheology correction}
+
+A multiplicative rheology correction is applied to all scenario endpoints. All ISMIP6 models and the literature scenarios from which our endpoint ranges are derived assume Glen's flow law with $n = 3$, but satellite observations indicate $n = 4.1 \pm 0.4$ in fast-flowing Antarctic ice \citep{Millstein2022}, supported by laboratory measurements ($n \approx 3.5$--3.7; \cite{Fan2025}), Greenland observations ($n \approx 4$; \cite{Bons2018}), and theoretical analysis of the dislocation creep regime \citep{Ranganathan2024}. The consequence for projections has been quantified: Martin et~al.~\citep{Martin2026} found that using $n = 3$ when the true value is $n = 4$ underestimates 100-year sea-level rise by 21--35\% in the MISMIP+ and ABUMIP benchmarks, and Getraer \& Morlighem~\citep{GetraerMorlighem2025} found $32 \pm 14$\% greater Amundsen Sea Embayment loss with $n = 4$ in an ISMIP6-framework experiment. The bias grows nonlinearly with forcing strength \citep{Martin2026}.
+
+We implement the rheology correction in Mode~B (unified $n$-driven corrections; defined as one option in the accompanying jupyter notebook), in which a single draw of the Glen's law exponent $n$ per Monte Carlo sample drives both corrections through the physical link to $n$:
+\begin{enumerate}
+\item $n_{\mathrm{draw}} \sim \mathcal{N}(4.1, 0.4^2)$.
+\item Endpoint: $R(n) = 1 + r_0\,(n_{\mathrm{draw}} - n_{\mathrm{ref}})$, where $r_0 = 0.28 \pm 0.07$ ($1\sigma$) is the fractional change in endpoint per unit change in $n$, calibrated from Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025}.
+\item Trajectory: $\beta(n) = \beta_{\mathrm{ref}} \cdot (n_{\mathrm{draw}} + 1)/(n_{\mathrm{ref}} + 1)$.
+\end{enumerate}
+This couples the endpoint and trajectory corrections through $n$, which is more physically consistent than drawing $R$ and the $\beta$ correction independently (Mode~A, defined in the accompanying jupyter notebook). At the median observed exponent $n = 4.1$, $R = 1 + 0.28 \times 1.1 = 1.31$; at $\pm 1\sigma$ in $n$, the correction spans from $R = 1.20$ ($n = 3.7$) to $R = 1.42$ ($n = 4.5$), consistent with the literature range of 1.21--1.35 from Martin et~al.~\citep{Martin2026}. The correction is applied to all scenarios because the rheology bias affects every ice sheet model regardless of which instability mechanism operates. Importantly, $R$ and $\beta$ correct conceptually independent quantities: the endpoint ranges are defined at $n = 3$, and $R$ scales the total ice lost (the endpoint magnitude), while the $\beta$ correction changes when that ice is lost (the trajectory shape). These corrections are not double-counting because Martin et~al.~\citep{Martin2026} and Getraer \& Morlighem~\citep{GetraerMorlighem2025} report the ratio of total sea-level change at $n = 4$ to $n = 3$---a cumulative endpoint quantity---not the trajectory shape.
+
+%\begin{figure}[ht]
+%\centering
+%\includegraphics[width=\textwidth]{component_wais_projection.png}
+%\caption{\textbf{WAIS A4 projections.} Cumulative WAIS sea-level contribution from the A4 scenario mixture (SSP-independent), showing the median (solid), 66\% credible interval (dark shading), and 90\% credible interval (light shading). IMBIE observations (1992--2020) are shown as grey circles. The total WAIS volume above flotation ($V_{af} = 3.3$~m SLE) is indicated by the dotted line. The back-loaded trajectory ($\beta > 1$ for S2 and S3) produces accelerating mass loss, with the uncertainty fan widening rapidly after mid-century as the MISI scenarios diverge.}
+%\label{fig:wais_projection}
+%\end{figure}
+
+\subsubsubsection{Known biases in ice sheet model projections}
+
+Our scenario ranges exceed IPCC AR6 medium-confidence projections for WAIS. This is expected and physically justified by multiple documented biases in the ISMIP6 ensemble:
+
+\begin{enumerate}
+\item \textit{Rheology bias.} All ISMIP6 models assume $n = 3$; observed $n \approx 4$ produces 21--35\% more sea-level rise \citep{Martin2026, GetraerMorlighem2025}. Models initialized with $n = 3$ can match $n = 4$ observations in the short term by tuning a viscosity multiplier, but this compensation breaks down on projection timescales \citep{Martin2026}.
+
+\item \textit{Missing calving.} No ISMIP6 model adequately represents iceberg calving \citep{Aschwanden2021, Fricker2025}, which is a first-order control on grounding-line retreat rate. The sensitivity of glacier flow to major calving events is well documented (e.g., 2--8$\times$ speedup after Larsen~B collapse; \cite{Scambos2004}).
+
+\item \textit{Initialization uncertainty.} Goldberg et~al.~\citep{Goldberg2026} showed that the choice of calibration data (velocity vs.\ surface elevation) produces a factor-of-two spread in projected Thwaites loss rates---comparable to the inter-model spread in ISMIP6. Surface-elevation calibration, which better captures inland thinning signatures of MISI, consistently produces larger mass loss than velocity calibration.
+
+\item \textit{Incomplete uncertainty quantification.} ISMIP6 integrates over model structure but not over parametric uncertainty within individual models, which alone could produce an interquartile range of up to 12.9~cm SLE for RCP8.5 at 2100 \citep{Aschwanden2019}.
+
+\item \textit{Biased ensemble.} ISMIP6 models share numerical methods, parameterizations, and jointly omit key physics---they are not independent samples from the space of possible models \citep{Aschwanden2021}.
+
+\item \textit{Historical validation failure.} Few if any ISMIP6 models reproduce the observed trajectory of WAIS mass loss; the ensemble 95th percentile merely tracks the lower bound of IMBIE observations \citep{Aschwanden2021}. Under continued warming, IPCC models show slower sea-level rise rates than extrapolation of modern observations \citep{Hamlington2024}.
+\end{enumerate}
+
+%\begin{figure}[ht]
+%\centering
+%\includegraphics[width=\textwidth]{component_wais_ipcc_comparison.png}
+%\caption{\textbf{WAIS A4 projections compared with IPCC AR6 total Antarctic projections.} Our WAIS-only A4 projection (teal, median and 66\%/90\% CI) compared with IPCC AR6 total Antarctic Ice Sheet projections under SSP2-4.5 (blue dashed) and SSP5-8.5 (red dashed) with their respective uncertainty bands. The A4 median exceeds the IPCC total AIS projection by mid-century, and the A4 uncertainty is substantially wider, reflecting the deep uncertainty from MISI, rheology, and missing processes that the ISMIP6 ensemble does not capture.}
+%\label{fig:wais_ipcc_comparison}
+%\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_wais_pdf_exceedance_ipcc.png}
+\caption{\textbf{WAIS endpoint distributions and exceedance probabilities: A4 vs IPCC.} Left: probability density at 2100 for the A4 WAIS framework (blue) compared with the IPCC AR6 total Antarctic projection (red). The A4 distribution is wider, with a higher median and a heavier right tail arising from the MISI skewness and rheology correction. Right: exceedance probability curves, showing that the A4 framework assigns substantially higher probability to exceeding any given threshold above ${\sim}0.1$~m. The IPCC distribution assigns near-zero probability to outcomes exceeding 0.5~m, whereas the A4 framework assigns ${\sim}40$\% probability to this threshold.}
+\label{fig:wais_pdf_exceedance_ipcc}
+\end{figure}
+
+\subsubsubsection{Independent cross-check: structured expert judgment}
+
+The Bamber et~al.~\citep{Bamber2019} structured expert judgment (SEJ) provides an independent, methodology-orthogonal validation target. Their WAIS-specific results under $+5\,^\circ$C warming give a median of 180~mm and 95th percentile of 930~mm, with strong positive skew. Our A4 mixture (median ${\sim}400$~mm, 90\% CI: 60--1500~mm, after rheology correction) is wider and shifted higher than the Bamber estimates. This is expected because: (a)~Bamber was published before the rheology bias was quantified \citep{Martin2026}; (b)~the SEJ was conducted before Morlighem et~al.~\citep{Morlighem2024} and recent Thwaites observations that have added to the evidence for ongoing instability; and (c)~our framework explicitly applies the rheology correction, which shifts the entire distribution upward by ${\sim}28\%$. The agreement in the broad distributional shape---strongly right-skewed, with median in the hundreds of millimeters---strengthens confidence in both approaches despite their different methodologies.
+
+As a second cross-check, Rosier et~al.~\citep{Rosier2025} calibrated an ice sheet model (\'Ua) against ASE observations using Bayesian inference with deep surrogates and projected Amundsen Sea sector contributions of $19.0 \pm 2.2$~mm (Paris 2$\,^\circ$C) and $18.9 \pm 2.7$~mm (RCP8.5) by 2100---statistically indistinguishable across scenarios, supporting the SSP-independence assumption adopted here. Their calibrated contribution falls within our S1 range (25--85~mm), consistent with the expectation that process models calibrated against the short observational record produce estimates at the lower end of our framework. Rosier et~al.\ include both cliff-height- and hydrofracture-driven calving but find no evidence of unstable calving-front retreat in any simulation, and their creep-exponent prior ($n \in [2, 5]$, uniform) is broad but centered lower than the satellite-derived $n = 4.1 \pm 0.4$ \citep{Millstein2022}. Their narrow uncertainty range (${\sim}5$~mm, $1\sigma$) reflects the structural constraints of a single model rather than the epistemic uncertainty that our scenario mixture model is designed to represent.
+
+\subsubsubsection{Sensitivity to scenario weights}
+
+To assess the robustness of the A4 mixture to the assigned scenario weights, we perturb each weight by $\pm 10$ percentage points (redistributing the change proportionally among the remaining scenarios) and examine the effect on the mixture median at 2100 (Fig.~\ref{fig:wais_tornado}). Perturbing the S2 (MISI) weight shifts the median by less than $\pm 0.002$~m, reflecting S2's dominance at 80\%. Perturbations to S1 and S3 produce larger shifts (up to $\pm 0.05$~m) but in opposite directions, so that the median remains within a ${\sim}0.09$~m range across all perturbations---still small relative to the 90\% credible interval (${\sim}1.4$~m). The insensitivity to weight perturbations reflects the dominance of within-scenario uncertainty (controlled by the endpoint ranges and skewness) over the between-scenario weighting.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_wais_tornado.png}
+\caption{\textbf{Scenario weight sensitivity.} Tornado plot showing the effect of $\pm 10$ percentage-point perturbations to each scenario weight on the median WAIS SLR at 2100. Dark bars show the inner perturbation range; light bars extend to the full $\pm 10$\% range. The dashed vertical line indicates the baseline median (0.40~m). The mixture median is insensitive to weight perturbations, varying by less than 0.09~m across all perturbations---small relative to the 90\% credible interval of the mixture distribution (${\sim}1.4$~m).}
+\label{fig:wais_tornado}
+\end{figure}
 
 \subsection{MCMC convergence diagnostics}
 
@@ -413,15 +419,25 @@ SSP temperature trajectories (SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5) are from I
 
 Table~\ref{tab:priors} lists the prior distributions used in each Bayesian component model. All priors are weakly informative and are chosen to regularize the posterior without dominating the likelihood. All values in the table are reported in mm (the code operates in meters internally).
 
-\begin{table}[h]
-\centering
-\caption{Prior distributions for all component models. Exp = Exponential, HN = Half-Normal, HC = Half-Cauchy, LN = Log-Normal, N = Normal, SN$_{\log}$ = Skew-Normal in log-space. Parameters $a$, $b$, $c$ in the level-space models correspond to the quadratic, linear, and constant coefficients of the rate--temperature relationship, respectively.}
-\label{tab:priors}
+\begin{landscape}
 \small
-\begin{tabular}{llll}
+\begin{longtable}{llll}
+\caption{Prior distributions for all component models. Exp = Exponential, HN = Half-Normal, HC = Half-Cauchy, LN = Log-Normal, N = Normal, SN$_{\log}$ = Skew-Normal in log-space. Parameters $a$, $b$, $c$ in the level-space models correspond to the quadratic, linear, and constant coefficients of the rate--temperature relationship, respectively.}
+\label{tab:priors} \\
 \toprule
 Component & Parameter & Prior & Source / justification \\
 \midrule
+\endfirsthead
+\multicolumn{4}{l}{\small\itshape Table~\ref{tab:priors} continued from previous page} \\
+\toprule
+Component & Parameter & Prior & Source / justification \\
+\midrule
+\endhead
+\midrule
+\multicolumn{4}{r}{\small\itshape Continued on next page} \\
+\endfoot
+\bottomrule
+\endlastfoot
 \multicolumn{4}{l}{\textit{Thermosteric (two-layer ODE, 6 free parameters)}} \\
  & $a$ (quadratic) & $\mathrm{Exp}(\mu = 22\text{ mm}/{}^\circ\text{C}^2)$ & Positive curvature; regularizes toward linear \\
  & $b_u$ (upper sensitivity) & $\mathrm{HN}(\sigma = 150\text{ mm}/{}^\circ\text{C})$ & Weakly informative; encompasses literature range \\
@@ -456,9 +472,8 @@ Component & Parameter & Prior & Source / justification \\
  & S3 trajectory $\beta$ & $\mathrm{LN}(\ln 2.2, 0.3^2)$ & MISI + MICI; more back-loaded \\
  & $n_{\mathrm{draw}}$ (Mode~B) & $\mathrm{N}(4.1, 0.4^2)$, $n \geq 3$ & Millstein et~al.; Ranganathan \& Minchew \\
  & $r_0$ (rheology sensitivity) & $0.28$ & Martin et~al.; $R(n) = 1 + r_0\,(n - 3)$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
+\end{landscape}
 
 
 %% ================================================================
