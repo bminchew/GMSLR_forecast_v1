@@ -22,7 +22,7 @@ from slr_forecast.config import PROCESSED_DATA_DIR
 H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 
 SSP = 'SSP2-4.5'
-ADAPT_COST_PER_M = 200
+ADAPT_COST_PER_M = 4000
 
 # ── Vectorized damage function (numpy piecewise, no Python loop) ──
 _SLR_KNOTS = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
