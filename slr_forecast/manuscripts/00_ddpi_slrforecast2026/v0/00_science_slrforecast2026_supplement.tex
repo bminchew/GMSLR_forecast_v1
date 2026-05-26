@@ -18,12 +18,19 @@
 \newcommand{\subsubsubsection}[1]{\paragraph{#1}\mbox{}\par}
 \makeatother
 
+% Prefix figure and table numbers with S
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+
 \title{Supplementary Materials for:\\Observational evidence for more than a meter of 21st century sea-level rise}
 \author{Minchew et al.}
 \date{}
 
 \begin{document}
 \maketitle
+
+\tableofcontents
+\clearpage
 
 %% ================================================================
 %% MATERIALS AND METHODS
@@ -518,6 +525,94 @@ Dangendorf et~al.\ (grey) GMSL reconstructions.
 All values in mm relative to the year 2000 baseline.}
 \label{fig:budget_closure}
 \end{figure}
+
+%% ================================================================
+\section{Value of Information Analysis}
+\label{sec:voi}
+%% ================================================================
+
+The value of information (VoI) analysis quantifies the economic benefit of resolving the binary uncertainty about whether WAIS retreat is slow (Scenario~1) or rapid (Scenarios~2--3). The framework follows the expected value of sample information (EVSI) formulation from classical decision theory~\citep{Raiffa1961}.
+
+\subsection{Decision framework}
+
+We consider a stylized coastal adaptation decision: a planner must choose a defense height $d$ (meters of sea-level protection) to minimize total expected costs. For a given sea-level rise distribution $S$ at 2100, the total annual cost of defense height $d$ is
+\begin{equation}
+C(d) = C_{\mathrm{adapt}}(d) + \mathbb{E}\bigl[D\bigl(\max(S - d,\, 0)\bigr)\bigr],
+\label{eq:total_cost}
+\end{equation}
+where $C_{\mathrm{adapt}}(d) = c_a \cdot d$ is the annualized adaptation cost and $D(\cdot)$ is the residual damage from SLR exceeding the defense height (overtopping).
+
+\subsubsection{Adaptation cost}
+
+We estimate the global adaptation cost per meter of SLR as $c_a = \$4{,}000$\,B/yr/m (i.e., \$4\,T/yr per meter). This is derived from Tiggeloven et~al.~\citep{Tiggeloven2020}, who estimate that 3.4\% of the global coastline ($\sim$54{,}400~km of $\sim$1.6~million~km total) warrants dike heightening under cost-benefit optimality, at a unit cost of \$7\,M per km per meter of dike height~\citep{Bos2008}. This yields $\sim$\$400\,B/m for dike raising alone along the optimal 3.4\% of coastline. We apply a conservative 10$\times$ multiplier to account for the full societal adaptation burden---including seawalls, nature-based solutions, managed retreat, and infrastructure relocation---across a broader fraction of the global coastline.
+
+\subsubsection{Damage function}
+
+Residual flood damages are computed using the piecewise-linear global damage function of Jevrejeva et~al.~\citep{Jevrejeva2018}, which maps SLR to annual global flood costs (\$B/yr) based on estimated asset exposure. For SLR beyond the tabulated range (1.80~m), we extrapolate linearly using the slope of the final segment ($\sim$\$13{,}800\,B/yr per meter).
+
+\subsection{Two-world structure}
+
+The forecast distribution is decomposed into two conditional distributions:
+\begin{itemize}
+\item \textbf{Stable WAIS} ($S_{\mathrm{stable}}$): samples from the blended forecast conditional on WAIS Scenario~1 (slow decline). These samples are drawn from the \texttt{blended\_stable/} group in the HDF5 output.
+\item \textbf{Unstable WAIS} ($S_{\mathrm{unstable}}$): samples from the full (unconditional) forecast that exceed the 97.5th percentile of the stable distribution, representing outcomes consistent with rapid WAIS retreat (Scenarios~2--3).
+\end{itemize}
+
+The current prior probability of stable WAIS is $p_s = 0.10$, consistent with our scenario weights (Scenario~1 receives 10\% probability).
+
+\subsection{EVSI calculation}
+
+For a given prior $p_s = P(\text{stable WAIS})$, the EVSI quantifies the annual benefit of learning whether WAIS is stable or unstable before choosing the defense height.
+
+\subsubsection{Hedging cost (no information)}
+
+Without additional information, the planner hedges by choosing the single defense height $d^*_{\mathrm{hedge}}$ that minimizes the prior-weighted expected cost:
+\begin{equation}
+C^*_{\mathrm{hedge}} = \min_{d}\; \bigl[\, p_s \cdot C_{\mathrm{stable}}(d) + (1 - p_s) \cdot C_{\mathrm{unstable}}(d) \,\bigr],
+\label{eq:hedge}
+\end{equation}
+where $C_{\mathrm{stable}}(d) = C_{\mathrm{adapt}}(d) + \mathbb{E}[D(\max(S_{\mathrm{stable}} - d, 0))]$ and $C_{\mathrm{unstable}}(d)$ is defined analogously using $S_{\mathrm{unstable}}$.
+
+\subsubsection{Perfect information cost}
+
+With perfect information, the planner would tailor the defense height to whichever world is realized:
+\begin{equation}
+C^*_{\mathrm{perfect}} = p_s \cdot \min_{d}\, C_{\mathrm{stable}}(d) \;+\; (1 - p_s) \cdot \min_{d}\, C_{\mathrm{unstable}}(d).
+\label{eq:perfect}
+\end{equation}
+
+\subsubsection{Annual EVSI}
+
+The annual value of perfect information is the difference between the hedging cost and the perfect-information cost:
+\begin{equation}
+\mathrm{EVSI}_{\mathrm{ann}} = \max\bigl(C^*_{\mathrm{hedge}} - C^*_{\mathrm{perfect}},\; 0\bigr).
+\label{eq:evsi}
+\end{equation}
+This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. When $p_s \approx 0$ or $p_s \approx 1$, the hedging design is already close to the tailored design, so EVSI is small. EVSI is maximized near $p_s \approx 0.5$, where the optimal designs for the two worlds diverge most.
+
+\subsection{Discounting and the VoI surface}
+
+The annual EVSI is converted to a net present value (NPV) by discounting the stream of benefits from the year information arrives ($t_a$) to the target year ($t_T = 2100$) at a real discount rate $r = 3\%$:
+\begin{equation}
+\mathrm{VoI}(t_a, p_s) = \frac{\mathrm{EVSI}_{\mathrm{ann}}(p_s)}{1000} \cdot \frac{1 - (1+r)^{-(t_T - t_a)}}{r},
+\label{eq:voi}
+\end{equation}
+where division by 1000 converts from \$B to \$T. The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
+
+The VoI surface (Fig.~4c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2094]$, 2-year steps) and prior probabilities ($p_s \in [0.01, 0.99]$, 60 values). All calculations use the SSP2-4.5 (3$\,^\circ$C) warming trajectory.
+
+\subsection{Key assumptions and limitations}
+
+The VoI calculation makes several simplifying assumptions:
+\begin{enumerate}
+\item \textbf{Binary resolution.} Information perfectly resolves the stable/unstable dichotomy. Partial information (e.g., updating $p_s$ from 0.10 to 0.30 without full resolution) would yield lower VoI.
+\item \textbf{Single decision.} The planner makes one irreversible design choice. In practice, adaptive management with staged decisions would reduce the hedging penalty, lowering VoI.
+\item \textbf{Global aggregation.} Costs are aggregated globally. Local VoI would differ based on coastal exposure and elevation.
+\item \textbf{Linear adaptation cost.} We assume $C_{\mathrm{adapt}}$ scales linearly with defense height. Economies or diseconomies of scale would modify the optimal designs.
+\item \textbf{Discount rate.} The 3\% real discount rate is standard for infrastructure but lower rates (reflecting intergenerational equity) would increase VoI substantially.
+\end{enumerate}
+
+Despite these simplifications, the analysis provides an order-of-magnitude estimate of the economic value of resolving WAIS uncertainty, supporting the argument that targeted investment in ice-sheet observations and process understanding has large expected returns.
 
 %% ================================================================
 %% REFERENCES
