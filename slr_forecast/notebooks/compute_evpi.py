@@ -38,7 +38,7 @@ SSP = 'SSP2-4.5'
 # or absorbed losses. A conservative 10× multiplier for the full
 # societal adaptation burden (seawalls, green barriers, managed retreat,
 # etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
-ADAPT_COST_PER_M = 4000   # $B/yr per meter of SLR (see derivation above)
+ADAPT_COST_PER_M = 4000   # $B per meter of SLR (see derivation above)
 P_STABLE = 0.10           # AR6 prior
 D_GRID = np.arange(0.3, 3.0, 0.05)
 DR = 0.03                 # discount rate
