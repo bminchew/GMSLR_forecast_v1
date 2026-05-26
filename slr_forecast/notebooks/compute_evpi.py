@@ -26,7 +26,7 @@ from slr_forecast.config import PROCESSED_DATA_DIR
 H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 
 SSP = 'SSP2-4.5'
-# Adaptation cost per meter of global SLR ($B/yr/m).
+# Adaptation cost per meter of global SLR.
 # Tiggeloven et al. (2020, doi:10.5194/nhess-20-1025-2020) estimate that
 # 3.4% of the entire global coastline (~1.6M km) warrants dike heightening
 # under a cost-benefit optimality criterion, at a unit cost of $7M per km
@@ -38,10 +38,16 @@ SSP = 'SSP2-4.5'
 # or absorbed losses. A conservative 10× multiplier for the full
 # societal adaptation burden (seawalls, green barriers, managed retreat,
 # etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
-ADAPT_COST_PER_M = 4000   # $B per meter of SLR (see derivation above)
-P_STABLE = 0.10           # AR6 prior
+ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
+P_STABLE = 0.10            # AR6 prior
 D_GRID = np.arange(0.3, 3.0, 0.05)
-DR = 0.03                 # discount rate
+DR = 0.03                  # discount rate
+HORIZON = 75               # planning horizon (years)
+
+# Annualize capital cost using the capital recovery factor:
+#   CRF = r(1+r)^n / ((1+r)^n - 1)
+_CRF = DR * (1 + DR)**HORIZON / ((1 + DR)**HORIZON - 1)
+ADAPT_COST_PER_M = ADAPT_CAPITAL_PER_M * _CRF  # $B/yr per meter of SLR
 
 # ── Vectorized damage function (numpy piecewise, no Python loop) ──
 _SLR_KNOTS = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
