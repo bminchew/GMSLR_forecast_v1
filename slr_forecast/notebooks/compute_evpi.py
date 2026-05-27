@@ -156,7 +156,7 @@ def main():
     # ================================================================
     print('Computing Figure 2 data: arrival year x resolution degree ...')
     p_stable_range = np.linspace(0.01, 0.99, 60)
-    arr_yrs_2 = np.arange(2026, 2096, 2)
+    arr_yrs_2 = np.arange(2026, 2152, 2)
 
     costs_st_g = np.array([_expected_cost_voi(stable_2100, d) for d in D_GRID])
     costs_un_g = np.array([_expected_cost_voi(unstable_2100, d) for d in D_GRID])
