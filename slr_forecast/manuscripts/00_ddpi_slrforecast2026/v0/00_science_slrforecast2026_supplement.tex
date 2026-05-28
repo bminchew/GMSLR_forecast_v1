@@ -98,7 +98,7 @@ We fit a two-layer energy balance model \citep{Geoffroy2013} jointly to NOAA in 
 H_{\mathrm{upper}}(t) &= a\,S_u^2 + b_u\,S_u + c\,(t - t_0), \\
 H_{\mathrm{total}}(t) &= H_{\mathrm{upper}}(t) + b_d\,S_d,
 \end{align}
-where $S_u$ and $S_d$ are upper- and deep-ocean thermal state variables driven by GMST $T(t)$, $\tau_u$ is the upper-ocean relaxation time, and $\tau_d = 150$\,yr is the deep-ocean relaxation time fixed at the CMIP5 multi-model mean \citep{Geoffroy2013}. A below-2000\,m contribution of $0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010, Desbruyeres2016} is added as a post-hoc linear trend during projection (not included in calibration, as both depth ranges are demeaned before fitting). We apply a 14\% upward correction to NOAA observations to account for the documented low bias from interpolation of sparse hydrographic profiles, primarily in the Southern Ocean \citep{Li2022}, and carry a 5\% residual structural uncertainty.
+where $S_u$ and $S_d$ are upper- and deep-ocean thermal state variables driven by GMST $T(t)$, $\tau_u$ is the upper-ocean relaxation time, and $\tau_d = 150$\,yr is the deep-ocean relaxation time fixed at the CMIP5 multi-model mean \citep{Geoffroy2013}. We fit to the CMIP5 results because the 20-year 0-2000 m record is too short to constrain centennial-timescale relaxation. A below-2000\,m contribution of $0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010, Desbruyeres2016} is added as a post-hoc linear trend during projection (not included in calibration, as both depth ranges are demeaned before fitting). We apply a 14\% upward correction to NOAA observations to account for the documented low bias from interpolation of sparse hydrographic profiles, primarily in the Southern Ocean \citep{Li2022}, and carry a 5\% residual structural uncertainty.
 
 The six free parameters ($a$, $b_u$, $b_d$, $c$, $\log\tau_u$, $\log\sigma_{\mathrm{extra}}$) are sampled via MCMC (emcee; 48 walkers, 4000 burn-in + 12000 production steps). The posterior median and 90\% credible intervals are: $a = 19.3$~[9.5, 29.4]~mm\,$^\circ$C$^{-2}$, $b_u = 50.2$~[40.2, 72.3]~mm\,$^\circ$C$^{-1}$, $b_d = 67.8$~[36.8, 101.6]~mm\,$^\circ$C$^{-1}$, $c = 0.020$~[$-0.110$, 0.135]~mm\,yr$^{-1}$, $\tau_u = 11.1$~[5.9, 23.7]~yr, and $\sigma_{\mathrm{extra}} = 2.0$~[1.7, 2.3]~mm. The model achieves $R^2 = 0.965$ (0--700\,m) and $R^2 = 0.978$ (0--2000\,m).
 
@@ -513,7 +513,31 @@ Epoch & NASA (mm\,yr$^{-1}$) & Sum (mm\,yr$^{-1}$) & Residual (mm\,yr$^{-1}$) & 
 \end{tabular}
 \end{table}
 
-A variance-weighted attribution distributes the residual across components in proportion to their uncertainties (Fig.~\ref{fig:budget_closure}). Terrestrial water storage absorbs the largest share (45\%), reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. The thermosteric component absorbs 31\%, consistent with the residual structural uncertainty (5\%) retained after the Li et~al.~\citep{Li2022} bias correction. All components are within 0.4 standard deviations of their independent estimates. The framework closes the observed budget to within 3\% over 1993--2025 and 7\% over 2010--2025 without requiring any component to depart from what the observations support.
+A variance-weighted attribution distributes the residual across components in proportion to their uncertainties (Fig.~\ref{fig:budget_closure}, Table~\ref{tab:attribution}). Terrestrial water storage absorbs the largest share (45--56\%), reflecting poorly characterized structural uncertainty in groundwater and reservoir reconstructions. The thermosteric component absorbs 21--27\%, consistent with the residual structural uncertainty (5\%) retained after the Li et~al.~\citep{Li2022} bias correction. All components are within 0.8 standard deviations of their independent observational estimates across all three epochs (Table~\ref{tab:attribution}). The framework closes the observed budget to within 3\% over 1993--2025 and 9\% over 2010--2025 without requiring any component to depart from what the observations support.
+
+\begin{table}[h]
+\centering
+\caption{Variance-weighted attribution of the budget residual. For each epoch, the total residual (NASA rate minus component-sum rate) is distributed across components in proportion to their observational rate uncertainties ($\sigma_i$). The $|z|$ column gives the attributed residual divided by $\sigma_i$; values below 1.0 indicate the residual is within the observational uncertainty.}
+\label{tab:attribution}
+\begin{tabular}{l ccc ccc ccc}
+\toprule
+ & \multicolumn{3}{c}{1993--2025} & \multicolumn{3}{c}{2000--2025} & \multicolumn{3}{c}{2010--2025} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+Component & $\sigma_i$ & Frac. & $|z|$ & $\sigma_i$ & Frac. & $|z|$ & $\sigma_i$ & Frac. & $|z|$ \\
+ & \multicolumn{1}{c}{\scriptsize mm\,yr$^{-1}$} & & & \multicolumn{1}{c}{\scriptsize mm\,yr$^{-1}$} & & & \multicolumn{1}{c}{\scriptsize mm\,yr$^{-1}$} & & \\
+\midrule
+Thermosteric  & 0.069 & 26.6\% & 0.45 & 0.069 & 24.1\% & 0.12 & 0.103 & 21.2\% & 0.74 \\
+Glaciers      & 0.041 &  9.4\% & 0.27 & 0.041 &  8.5\% & 0.07 & 0.090 & 16.1\% & 0.64 \\
+Greenland     & 0.024 &  3.1\% & 0.16 & 0.037 &  7.0\% & 0.07 & 0.107 & 22.7\% & 0.77 \\
+WAIS          & 0.024 &  3.4\% & 0.16 & 0.038 &  7.3\% & 0.07 & 0.088 & 15.4\% & 0.63 \\
+Peninsula     & 0.014 &  1.0\% & 0.09 & 0.021 &  2.2\% & 0.04 & 0.049 &  4.7\% & 0.35 \\
+TWS           & 0.100 & 56.4\% & 0.66 & 0.100 & 50.9\% & 0.18 & 0.100 & 19.9\% & 0.72 \\
+\midrule
+Total residual & \multicolumn{3}{c}{0.12 mm\,yr$^{-1}$} & \multicolumn{3}{c}{0.04 mm\,yr$^{-1}$} & \multicolumn{3}{c}{0.36 mm\,yr$^{-1}$} \\
+Closure        & \multicolumn{3}{c}{97\%} & \multicolumn{3}{c}{99\%} & \multicolumn{3}{c}{91\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[h]
 \centering
