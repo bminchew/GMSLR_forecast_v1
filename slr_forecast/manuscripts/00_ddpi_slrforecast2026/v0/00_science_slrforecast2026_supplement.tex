@@ -23,7 +23,7 @@
 \renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thetable}{S\arabic{table}}
 
-\title{Supplementary Materials for:\\Observational evidence for more than a meter of 21st century sea-level rise}
+\title{Supplementary Materials for:\\Sea level is likely to rise more than 1 meter in the 21st century}
 \author{Minchew et al.}
 \date{}
 
@@ -420,10 +420,6 @@ The blending is performed sample-by-sample across the 2{,}000-member Monte Carlo
 
 Because the quadratic extrapolation is derived entirely from the satellite altimetry record, it carries no dependence on emissions pathway. The component sum is SSP-dependent through the temperature-forced component models. Consequently, the blended forecast is SSP-independent in the near term (where $w \approx 1$) and becomes progressively SSP-dependent as the component physics dominate at longer lead times.
 
-\subsection{Budget closure diagnostic}
-
-The residual between the component sum and NASA altimetry is distributed across components in proportion to their variances: $\mathrm{shift}_i = (\sigma_i^2 / \sum_j \sigma_j^2) \times r$, where $r$ is the total residual and $\sigma_i$ is the standard deviation of component $i$ from its Monte Carlo ensemble (the Gaussian assumption is approximate for WAIS, whose distribution is skewed; however, the diagnostic is applied to the hindcast period where the WAIS contribution is small and approximately linear). This is the Bayesian posterior update under joint Gaussian assumptions, applied as a diagnostic without modifying the component posteriors. The shift-to-sigma ratio for each component tests whether the implied adjustment is within the stated uncertainty.
-
 \subsection{Variance decomposition}
 
 A variance decomposition using the law of total variance across the three policy-relevant SSPs (1-2.6, 2-4.5, 3-7.0) attributes 92\% of total forecast variance to within-scenario uncertainty---predominantly WAIS (91\% of total variance)---and 8\% to between-scenario differences. Cross-component covariances are small ($+0.0014$~m$^2$, representing 0.5\% of total variance), confirming that the independent calibration approach does not introduce material correlations.
@@ -496,7 +492,9 @@ Component & Parameter & Prior & Source / justification \\
 %% ================================================================
 \subsection{Budget closure and validation}
 
-Each component is calibrated independently; the total sea level is a diagnostic sum, not a calibration target. We evaluate budget closure by comparing the temperature-forced component hindcast (excluding EAIS; see main text) against NASA satellite altimetry over three epochs (Table~\ref{tab:budget_closure}).
+Each component is calibrated independently; the total sea level is a diagnostic sum, not a calibration target. This design makes the budget closure diagnostic a genuine out-of-sample validation: the agreement between the component sum and observed GMSL tests whether the decomposition is physically complete and whether the individually calibrated sensitivities are mutually consistent. We evaluate budget closure by comparing the temperature-forced component hindcast (excluding EAIS; see main text) against NASA satellite altimetry over three epochs (Table~\ref{tab:budget_closure}).
+
+The residual between the component sum and NASA altimetry is distributed across components in proportion to their variances: $\mathrm{shift}_i = (\sigma_i^2 / \sum_j \sigma_j^2) \times r$, where $r$ is the total residual and $\sigma_i$ is the standard deviation of component $i$ from its Monte Carlo ensemble. The Gaussian assumption is approximate for WAIS, whose distribution is skewed; however, the diagnostic is applied to the hindcast period where the WAIS contribution is small and approximately linear. This is the Bayesian posterior update under joint Gaussian assumptions, applied as a diagnostic without modifying the component posteriors. The shift-to-sigma ratio for each component tests whether the implied adjustment is within the stated uncertainty.
 
 \begin{table}[h]
 \centering
@@ -550,6 +548,27 @@ Dangendorf et~al.\ (grey) GMSL reconstructions.
 All values in mm relative to the year 2000 baseline.}
 \label{fig:budget_closure}
 \end{figure}
+
+\subsubsection{Component-level skill metrics}
+
+Table~\ref{tab:skill_metrics} summarizes the goodness-of-fit for each independently calibrated component. In addition to these within-sample metrics, Greenland discharge is validated out of sample against the Mankoff et~al.~\citep{Mankoff2021} record (1986--2023) and NOAA Arctic Report Card estimates \citep{Poinar2026}, both withheld from calibration; all withheld observations fall within the 90\% credible interval (Fig.~2b,c of the main text). The closure of 93--101\% across three overlapping epochs, with no component exceeding 0.8 standard deviations of its stated uncertainty, provides confidence that the framework captures the principal contributors to observed sea-level change over the satellite era.
+
+\begin{table}[h]
+\centering
+\caption{Goodness-of-fit for individually calibrated component models. $R^2$ is computed against the calibration data. The thermosteric model is fitted jointly to two depth ranges. Greenland discharge $R^2$ is reported in rate space to avoid inflation from cumulative integration (see main text). EAIS and Greenland SMB use literature-derived sensitivities rather than data calibration and are not listed.}
+\label{tab:skill_metrics}
+\begin{tabular}{llcl}
+\toprule
+Component & Calibration data & $R^2$ & Notes \\
+\midrule
+Thermosteric (0--700\,m) & NOAA, 1955--2025 & 0.965 & Two-layer ODE, 6 parameters \\
+Thermosteric (0--2000\,m) & NOAA, 2005--2025 & 0.978 & Joint fit with 0--700\,m \\
+Glaciers & GlaMBIE, 2000--2023 & 0.995 & Linear rate--temperature \\
+Greenland discharge & Mouginot, 1972--2018 & 0.794 & Rate-space; 3 parameters \\
+Antarctic Peninsula & IMBIE, 1992--2020 & 0.940 & Linear rate--temperature \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 %% ================================================================
 \section{Exceedance Probability by Threshold and Scenario}
@@ -671,7 +690,7 @@ The annual EVSI is converted to a net present value (NPV) by discounting the str
 \end{equation}
 The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
 
-The VoI surface (Fig.~4c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2094]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. 
+The VoI surface (Fig.~4c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. 
 
 \subsection{Key assumptions and limitations}
 
