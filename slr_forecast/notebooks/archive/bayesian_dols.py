@@ -49,7 +49,7 @@ from slr_analysis import (calibrate_dols, DOLSResult, KinematicsResult,
 
 
 # =============================================================================
-# DESIGN MATRIX BUILDER  (replicates calibrate_dols lines 1023–1138)
+# DESIGN MATRIX BUILDER  (replicates calibrate_dols design matrix construction)
 # =============================================================================
 
 
@@ -2758,10 +2758,8 @@ def fit_bayesian_level(
     resid = H_obs - H_model_mean
     r2 = 1.0 - np.sum(resid**2) / np.sum((H_obs - H_obs.mean())**2)
 
-    # Observation times
-    obs_times = I0_obs + I0_obs[0]  # not the best — caller should provide
-    # Actually I0_obs = t - t[0], so t = I0_obs + t_start. We don't have
-    # t_start here, so store I0_obs as-is and let caller track times.
+    # Observation times: I0_obs = t - t[0], relative to start.
+    # Caller must track absolute times externally.
 
     # Build arviz InferenceData
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
@@ -3815,7 +3813,8 @@ def _thermosteric_log_prob(
         Su = np.empty(n_ann)
         Su[0] = Su0
         if tau_u < 0.01:
-            # instantaneous limit — T_avg gives midpoint temperature
+            # instantaneous limit — S_u tracks temperature directly.
+            # T_avg_ann[i] ≈ T at midpoint; best available in this scope.
             Su[1:] = T_avg_ann
         else:
             s = Su0
@@ -4967,7 +4966,7 @@ def fit_bayesian_greenland(
     if progress:
         print(f"  Running emcee: {n_walkers} walkers, "
               f"{n_burnin} burn-in + {n_samples} production "
-              f"(7 params)...")
+              f"({ndim} params)...")
 
     sampler.run_mcmc(pos, n_burnin + n_samples, progress=progress)
 
@@ -5249,7 +5248,7 @@ def _greenland_joint_log_prob(
         # τ ~ LogNormal(μ, σ)
         mu_lt = prior_scales[4]
         sig_lt = prior_scales[5]
-        lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+        lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2
 
     # D₀ ~ Normal(0, σ)
     sig_D0 = prior_scales[6]
@@ -5283,7 +5282,7 @@ def _greenland_joint_log_prob(
         alpha = np.exp(-dt_ocean / tau)
         for i in range(n_ocean - 1):
             D_eff[i + 1] = (D_eff[i] * alpha[i]
-                            + T_ocean_annual[i] * (1.0 - alpha[i]))
+                            + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha[i]))
         cum_D = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D[i + 1] = (cum_D[i]
@@ -5520,7 +5519,7 @@ def fit_bayesian_greenland_joint(
         alpha_init = np.exp(-dt_ocean / tau_init)
         for i in range(n_ocean - 1):
             D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
-                                  + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+                                  + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_init[i]))
         cum_D_init = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D_init[i + 1] = (cum_D_init[i]
@@ -5683,7 +5682,7 @@ def fit_bayesian_greenland_joint(
         alpha_post = np.exp(-dt_ocean / tau_med)
         for i in range(n_ocean - 1):
             D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
-                                  + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+                                  + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_post[i]))
         cum_D_post = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D_post[i + 1] = (cum_D_post[i]
@@ -6184,7 +6183,7 @@ def _greenland_discharge_log_prob(
 
     mu_lt = prior_scales[2]
     sig_lt = prior_scales[3]
-    lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+    lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2
 
     sig_D0 = prior_scales[4]
     lp += -0.5 * (D0 / sig_D0) ** 2
@@ -6201,7 +6200,7 @@ def _greenland_discharge_log_prob(
     alpha = np.exp(-dt_ocean / tau)
     for i in range(n_ocean - 1):
         D_eff[i + 1] = (D_eff[i] * alpha[i]
-                        + T_ocean_annual[i] * (1.0 - alpha[i]))
+                        + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha[i]))
     cum_D = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D[i + 1] = (cum_D[i]
@@ -6315,7 +6314,7 @@ def fit_bayesian_greenland_discharge(
     alpha_init = np.exp(-dt_ocean / tau_init)
     for i in range(n_ocean - 1):
         D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
-                              + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+                              + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_init[i]))
     cum_D_init = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D_init[i + 1] = (cum_D_init[i]
@@ -6410,7 +6409,7 @@ def fit_bayesian_greenland_discharge(
     alpha_post = np.exp(-dt_ocean / tau_med)
     for i in range(n_ocean - 1):
         D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
-                              + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+                              + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_post[i]))
     cum_D_post = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D_post[i + 1] = (cum_D_post[i]

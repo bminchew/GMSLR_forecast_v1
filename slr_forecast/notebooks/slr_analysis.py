@@ -1340,7 +1340,9 @@ def calibrate_dols_sliding(
 
     At each center year t₀, fits the DOLS integral-space model with
     kernel-weighted WLS, where the kernel weights give more influence
-    to observations near t₀.  This is the "Dynamic" in Dynamic OLS.
+    to observations near t₀.  The sliding window reveals time-varying
+    sensitivity; the "Dynamic" in DOLS refers to leads/lags of
+    differenced regressors that correct for endogeneity.
 
     The kernel weight for observation at time t_i centered at t₀ is:
 

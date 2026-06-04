@@ -1403,10 +1403,13 @@ def read_imbie_west_antarctica(filepath: str, convert_to_meters: bool = True) ->
     df = df.set_index('time')
     df.index.name = 'time'
 
-    # Convert from mm (source) to meters
+    # Convert from mm (source) to meters; ensure sigma columns are positive
     if convert_to_meters:
         value_cols = [c for c in df.columns if c != 'decimal_year']
+        sigma_cols = [c for c in value_cols if 'sigma' in c]
         df[value_cols] = df[value_cols] / 1000.0
+        for sc in sigma_cols:
+            df[sc] = np.abs(df[sc])
 
     # Attach unit metadata — mixed units: rates vs cumulative
     _len = 'm' if convert_to_meters else 'mm'
@@ -1750,9 +1753,9 @@ def read_noaa_globaltemp(filepath: str) -> pd.DataFrame:
         
     Reference
     ---------
-    Vose, R. S., et al. (2012). NOAA's Merged Land-Ocean Surface 
-    Temperature Analysis. BAMS, 93(11), 1677-1685.
-    https://doi.org/10.1175/BAMS-D-11-00241.1
+    Vose, R. S., et al. (2021). Implementing full spatial coverage
+    in NOAA's global temperature analysis. Geophys. Res. Lett., 48,
+    e2020GL090873. https://doi.org/10.1029/2020GL090873
     """
     with open(filepath, 'r') as f:
         lines = f.readlines()
@@ -2416,9 +2419,14 @@ def _read_imbie_gt(filepath: str, dataset_name: str, region_label: str,
     df.index.name = 'time'
 
     # Unit conversion: Gt → mm SLE (÷ 362.5) → m SLE (÷ 1000)
+    # Sign flip: glaciology convention (negative = mass loss) → SLR convention
+    # (positive = mass loss = sea level rise)
     value_cols = [c for c in df.columns if c != 'decimal_year']
+    sigma_cols = [c for c in value_cols if 'sigma' in c]
+    non_sigma_cols = [c for c in value_cols if 'sigma' not in c]
     if convert_to_sle:
-        df[value_cols] = df[value_cols] / 362.5 / 1000.0   # Gt → m SLE
+        df[non_sigma_cols] = -df[non_sigma_cols] / 362.5 / 1000.0  # Gt → m SLE, sign-flipped
+        df[sigma_cols] = np.abs(df[sigma_cols]) / 362.5 / 1000.0   # Gt → m SLE, always positive
         _len = 'm'
         _rate = 'm/yr'
     else:
@@ -2474,8 +2482,8 @@ def read_imbie_greenland(filepath: str, convert_to_sle: bool = True) -> pd.DataF
     Notes
     -----
     - Total GrIS mass balance (SMB + discharge combined).
-    - Positive rate → mass loss → sea level rise.
-    - IMBIE GrIS includes peripheral glaciers.
+    - Positive rate = mass loss = sea level rise (SLR convention).
+    - Sign-flipped from native glaciology convention on read.
 
     Reference
     ---------
@@ -2680,6 +2688,9 @@ def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFr
     # Flip sign: negative Gt = mass loss → positive SLR contribution
     df['mass_balance'] = -df['mass_balance']
     df['mass_balance_mwe'] = -df['mass_balance_mwe']
+    # Ensure sigma columns are always positive
+    df['mass_balance_sigma'] = np.abs(df['mass_balance_sigma'])
+    df['mass_balance_mwe_sigma'] = np.abs(df['mass_balance_mwe_sigma'])
 
     # Drop 'region', 'start_dates', 'end_dates' columns
     df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
@@ -2757,6 +2768,9 @@ def read_glambie_regional(filepath: str, convert_to_sle: bool = True) -> pd.Data
     # Flip sign: negative Gt = mass loss → positive SLR contribution
     df['mass_balance'] = -df['mass_balance']
     df['mass_balance_mwe'] = -df['mass_balance_mwe']
+    # Ensure sigma columns are always positive
+    df['mass_balance_sigma'] = np.abs(df['mass_balance_sigma'])
+    df['mass_balance_mwe_sigma'] = np.abs(df['mass_balance_mwe_sigma'])
 
     df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
 

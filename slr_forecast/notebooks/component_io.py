@@ -204,7 +204,15 @@ def save_dols_component(
                           data=np.asarray(result.posterior_samples))
         pg.create_dataset("H0_posterior",
                           data=np.asarray(result.H0_posterior))
-        pg.attrs["param_names"] = json.dumps(["a", "b", "c"])
+        n_params = np.asarray(result.posterior_samples).shape[1]
+        if n_params == 3:
+            pg.attrs["param_names"] = json.dumps(["a", "b", "c"])
+        elif n_params == 2:
+            pg.attrs["param_names"] = json.dumps(["b", "c"])
+        else:
+            pg.attrs["param_names"] = json.dumps(
+                [f"p{i}" for i in range(n_params)]
+            )
 
         if extra_posteriors:
             for name, arr in extra_posteriors.items():
@@ -319,7 +327,7 @@ def save_ocean_hybrid(
     Parameters
     ----------
     obs_years, obs_H, obs_sigma : array-like
-        Full-depth observation data (meters, relative to 2005).
+        Full-depth observation data (meters, relative to BASELINE_YEAR).
     proj_dict : dict
         ``{ssp: {'samples': ndarray(N,T), 'median': ndarray(T), ...}}``.
     extra_metadata : dict or None

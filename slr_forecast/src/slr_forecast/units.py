@@ -101,14 +101,15 @@ def tag_sign_convention(df: pd.DataFrame, convention: str = "slr") -> pd.DataFra
     ----------
     df : DataFrame
     convention : str
-        ``'slr'`` (positive = sea level rise) or ``'glaciology'``
-        (positive = mass gain).
+        ``'slr'`` (positive = sea level rise), ``'glaciology'``
+        (positive = mass gain), or ``'storage'`` (positive = land
+        storage increase = sea level drop).
 
     Returns
     -------
     DataFrame
     """
-    if convention not in ("slr", "glaciology"):
+    if convention not in ("slr", "glaciology", "storage"):
         raise ValueError(f"Unknown sign convention: {convention!r}")
     df.attrs["sign_convention"] = convention
     return df

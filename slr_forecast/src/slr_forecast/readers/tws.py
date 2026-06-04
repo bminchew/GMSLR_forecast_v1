@@ -95,7 +95,7 @@ def read_grace_tws_global(filepath: str) -> pd.DataFrame:
     for col in ["tws_anomaly", "tws_anomaly_sigma"]:
         df[col] = df[col] * GT_TO_M_SLE
 
-    tag_sign_convention(df, "slr")
+    tag_sign_convention(df, "storage")
     tag_units(df, {
         "tws_anomaly": "m",
         "tws_anomaly_sigma": "m",

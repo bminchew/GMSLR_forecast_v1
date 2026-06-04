@@ -83,25 +83,22 @@ class TestIMBIEGreenlandReader:
         assert max_abs > 1e-5, (
             f"Max |cumulative_mb| = {max_abs:.3e}, too small for meters")
 
-    def test_sign_convention_glaciology(self, imbie_gr):
-        """IMBIE Gt reader preserves glaciology convention: mass loss is
-        negative in cumulative_mass_balance. The late-period cumulative
-        value should be negative (Greenland has been losing mass)."""
-        # Check the last value — cumulative should be negative
+    def test_sign_convention_slr(self, imbie_gr):
+        """IMBIE Gt reader converts to SLR convention: mass loss is
+        positive in cumulative_mass_balance. The late-period cumulative
+        value should be positive (Greenland has been losing mass)."""
+        # Check the last value — cumulative should be positive (SLR convention)
         cum_last = imbie_gr['cumulative_mass_balance'].values[-1]
-        assert cum_last < 0, (
-            f"Last cumulative_mb = {cum_last:.6f}, expected negative "
-            f"(glaciology convention: mass loss is negative)")
+        assert cum_last > 0, (
+            f"Last cumulative_mb = {cum_last:.6f}, expected positive "
+            f"(SLR convention: mass loss is positive)")
 
     def test_sigma_positive(self, imbie_gr):
-        """Uncertainty should always be positive (absolute value)."""
+        """Uncertainty should always be strictly positive."""
         sigma_rate = imbie_gr['mass_balance_rate_sigma'].values
         sigma_cum = imbie_gr['cumulative_mass_balance_sigma'].values
-        # Sigma values may be stored with sign from IMBIE (negative in some
-        # records means mass-balance-based convention). After the reader
-        # applies convert_to_sle, the sign might flip. Check absolute values
-        # are non-zero.
-        assert np.all(np.abs(sigma_cum) > 0), "sigma should be non-zero"
+        assert np.all(sigma_rate > 0), "rate sigma should be positive"
+        assert np.all(sigma_cum > 0), "cumulative sigma should be positive"
 
     def test_time_range(self, imbie_gr):
         """IMBIE Greenland should span roughly 1992-2020."""

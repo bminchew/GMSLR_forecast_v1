@@ -3757,7 +3757,7 @@ def _thermosteric_log_prior(theta, prior_scales, H0_prior_mean, n_layers=1):
 
 def _thermosteric_log_prob(
     theta,
-    T_avg_ann, dt_ann, Su0, obs_idx_ann, n_ann,
+    T_avg_ann, T_annual, dt_ann, Su0, obs_idx_ann, n_ann,
     I0_obs,
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
@@ -3815,8 +3815,8 @@ def _thermosteric_log_prob(
         Su = np.empty(n_ann)
         Su[0] = Su0
         if tau_u < 0.01:
-            # instantaneous limit — T_avg gives midpoint temperature
-            Su[1:] = T_avg_ann
+            # instantaneous limit — S_u tracks temperature directly
+            Su[1:] = T_annual[1:]
         else:
             s = Su0
             inv_tau = 1.0 / tau_u
@@ -3838,7 +3838,7 @@ def _thermosteric_log_prob(
         Su = np.empty(n_ann)
         Su[0] = Su0
         if tau_u < 0.01:
-            Su[1:] = T_avg_ann
+            Su[1:] = T_annual[1:]
         else:
             s = Su0
             inv_tau_u = 1.0 / tau_u
@@ -4163,7 +4163,7 @@ def fit_bayesian_thermosteric(
     ]
     sampler = emcee.EnsembleSampler(
         n_walkers, ndim, _thermosteric_log_prob,
-        args=(T_avg_ann, dt_ann, Su0_ann, obs_idx_ann, n_ann,
+        args=(T_avg_ann, T_annual, dt_ann, Su0_ann, obs_idx_ann, n_ann,
               I0_obs, H_obs, sigma_obs, prior_scales, H0_prior_mean),
         kwargs={
             'n_layers': n_layers,
@@ -5283,7 +5283,7 @@ def _greenland_joint_log_prob(
         alpha = np.exp(-dt_ocean / tau)
         for i in range(n_ocean - 1):
             D_eff[i + 1] = (D_eff[i] * alpha[i]
-                            + T_ocean_annual[i] * (1.0 - alpha[i]))
+                            + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha[i]))
         cum_D = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D[i + 1] = (cum_D[i]
@@ -5520,7 +5520,7 @@ def fit_bayesian_greenland_joint(
         alpha_init = np.exp(-dt_ocean / tau_init)
         for i in range(n_ocean - 1):
             D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
-                                  + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+                                  + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_init[i]))
         cum_D_init = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D_init[i + 1] = (cum_D_init[i]
@@ -5683,7 +5683,7 @@ def fit_bayesian_greenland_joint(
         alpha_post = np.exp(-dt_ocean / tau_med)
         for i in range(n_ocean - 1):
             D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
-                                  + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+                                  + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_post[i]))
         cum_D_post = np.zeros(n_ocean)
         for i in range(n_ocean - 1):
             cum_D_post[i + 1] = (cum_D_post[i]
@@ -6216,7 +6216,7 @@ def _greenland_discharge_log_prob(
     alpha = np.exp(-dt_ocean / tau)
     for i in range(n_ocean - 1):
         D_eff[i + 1] = (D_eff[i] * alpha[i]
-                        + T_ocean_annual[i] * (1.0 - alpha[i]))
+                        + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha[i]))
     cum_D = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D[i + 1] = (cum_D[i]
@@ -6330,7 +6330,7 @@ def fit_bayesian_greenland_discharge(
     alpha_init = np.exp(-dt_ocean / tau_init)
     for i in range(n_ocean - 1):
         D_eff_init[i + 1] = (D_eff_init[i] * alpha_init[i]
-                              + T_ocean_annual[i] * (1.0 - alpha_init[i]))
+                              + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_init[i]))
     cum_D_init = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D_init[i + 1] = (cum_D_init[i]
@@ -6425,7 +6425,7 @@ def fit_bayesian_greenland_discharge(
     alpha_post = np.exp(-dt_ocean / tau_med)
     for i in range(n_ocean - 1):
         D_eff_post[i + 1] = (D_eff_post[i] * alpha_post[i]
-                              + T_ocean_annual[i] * (1.0 - alpha_post[i]))
+                              + 0.5 * (T_ocean_annual[i] + T_ocean_annual[i + 1]) * (1.0 - alpha_post[i]))
     cum_D_post = np.zeros(n_ocean)
     for i in range(n_ocean - 1):
         cum_D_post[i + 1] = (cum_D_post[i]

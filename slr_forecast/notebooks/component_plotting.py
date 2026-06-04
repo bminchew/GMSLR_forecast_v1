@@ -151,7 +151,7 @@ def plot_model_fits(fred_year, steric_rebase, steric_sigma,
     p5, p50, p95 = np.percentile(H_ens_thermo * M_TO_MM, [5, 50, 95], axis=0)
     ax.plot(fred_year, p50, 'C0-', lw=2, label='Bayesian fit (median)')
     ax.fill_between(fred_year, p5, p95, color='C0', alpha=0.2, label='90% CI')
-    ax.set_ylabel('Steric sea level (mm, 2005 baseline)')
+    ax.set_ylabel('Steric sea level (mm, 2000 baseline)')
     ax.set_title(f'Thermosteric Component — R² = {r2_thermo:.4f}')
     ax.legend(loc='upper left', fontsize=8)
     ax.grid(True, alpha=0.3)
@@ -165,7 +165,7 @@ def plot_model_fits(fred_year, steric_rebase, steric_sigma,
     ax.plot(fred_year, p50t, 'k-', lw=2, label='Bayesian fit (median)')
     ax.fill_between(fred_year, p5t, p95t, color='gray', alpha=0.2, label='90% CI')
     ax.plot(fred_year, p50, 'C0--', lw=1.5, label='Thermosteric component')
-    ax.set_ylabel('Sea level (mm, 2005 baseline)')
+    ax.set_ylabel('Sea level (mm, 2000 baseline)')
     ax.set_xlabel('Year')
     ax.set_title('Total GMSL with Thermosteric Component')
     ax.legend(loc='upper left', fontsize=8)
@@ -494,7 +494,7 @@ def plot_budget_closure(fred_year, fred_gmsl_rebase,
         v = ~np.isnan(vals)
         ax_a.plot(fred_year[v], vals[v] * M_TO_MM, color=color, lw=1.5, label=name)
 
-    ax_a.set_ylabel('Sea level (mm, 2005 baseline)')
+    ax_a.set_ylabel('Sea level (mm, 2000 baseline)')
     ax_a.set_title(f'Historical Budget Closure  (R² = {r2_budget:.4f}, '
                     f'RMS = {rms_residual:.1f} mm)')
     ax_a.legend(fontsize=8, loc='upper left', ncol=2)
@@ -917,10 +917,11 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
             q50_idx = np.argmin(np.abs(ipcc_d['quantiles'] - 0.5))
             q05_idx = np.argmin(np.abs(ipcc_d['quantiles'] - 0.05))
             q95_idx = np.argmin(np.abs(ipcc_d['quantiles'] - 0.95))
-            ax_sl.plot(ipcc_d['years'], slc[q50_idx],
+            ipcc_scale = scale / M_TO_MM  # IPCC data in mm → display units
+            ax_sl.plot(ipcc_d['years'], slc[q50_idx] * ipcc_scale,
                        color=color, lw=1.5, ls='--', alpha=0.7)
             ax_sl.fill_between(ipcc_d['years'],
-                               slc[q05_idx], slc[q95_idx],
+                               slc[q05_idx] * ipcc_scale, slc[q95_idx] * ipcc_scale,
                                color=color, alpha=0.05)
 
     ax_sl.set_ylabel(f'{component_name} SLR ({units})')

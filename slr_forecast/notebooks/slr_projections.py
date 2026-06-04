@@ -76,9 +76,9 @@ def project_gmsl_from_temperature(
     Project GMSL from temperature using a polynomial rate-temperature relationship.
 
     The model assumes:
-        dGMSL/dt = (1/2)(d²α/dT²)T² + α₀T + c  [+ γ × SAOD]
+        dGMSL/dt = (dα/dT)·T² + α₀·T + c  [+ γ × SAOD]
 
-    where α=d(dGMSLR/dt)/DT, T is temperature anomaly, and the coefficients
+    where α=d(dGMSL/dt)/dT, T is temperature anomaly, and the coefficients
     describe how the rate of sea level rise depends on temperature.
 
     Parameters

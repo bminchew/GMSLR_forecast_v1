@@ -581,7 +581,7 @@ def project_greenland_joint_ensemble(
     T_ocean_monthly,
     time_ocean_monthly,
     projection_times,
-    baseline_year=2005.0,
+    baseline_year=2000.0,
     n_samples=2000,
     AA=2.58,
     seed=None,

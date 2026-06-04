@@ -259,7 +259,7 @@ def compute_component_rates(years, H, window=3):
 # =========================================================================
 
 def build_full_temperature_scenario(t_hist, t_ssp, offset):
-    """Combine historical + SSP temperature, rebaseline to 1995-2005.
+    """Combine historical + SSP temperature, subtract caller-provided offset.
 
     Parameters
     ----------
@@ -481,9 +481,9 @@ def fit_discharge_delay_model(
 
     The model is:
 
-        H_dyn(t) = gamma * integral(T_ocean(t' - delta), t0..t) + r0 * t + const
+        H_dyn(t) = gamma * integral(T_ocean(t' - delta), t0..t) + r0 * t
 
-    fitted in demeaned form to eliminate the intercept.  The time delay
+    fitted in demeaned form (intercept absorbed by demeaning).  The time delay
     ``delta`` is selected from ``delta_candidates`` by BIC, and the
     posterior is a BIC-weighted mixture of Gaussian draws from each
     candidate's WLS covariance.
