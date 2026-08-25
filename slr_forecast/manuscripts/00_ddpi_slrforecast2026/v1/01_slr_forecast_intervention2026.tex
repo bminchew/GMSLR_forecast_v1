@@ -98,20 +98,20 @@ The Greenland Ice Sheet (GrIS) is the largest land-ice contributor and has lost 
 
 GrIS discharge is sensitive to ocean temperature and surface melt runoff \citep{Straneo2013,Slater2020,Wood2021}. Warm, subsurface waters thin and undercut the calving fronts of marine-terminating glaciers, driving increased calving and net terminus retreat. This effect is amplified where surface runoff drives mixing and buoyant upwelling along the calving face \citep{Slater2022}. Surface melt also lubricates glacier beds, but that effect is generally short-lived and localized as the subglacial hydrological system evolves to accommodate changes in meltwater flux \citep{Schoof2010,Tedstone2013,Ultee2022}.
  
-We calibrate SPECTRUM against total GrIS discharge, integrated across the 219 marine-terminating outlet glaciers resolved in the observational record \citep{Mouginot2019}. This integration is an intentional trade-off of spatial resolution for signal-to-noise. Given the strong influence of ocean-induced melting on discharge, we approximate the GrIS-wide discharge as
+Focusing on the strong influence of ocean-induced melting on discharge, we approximate the GrIS-wide discharge as
 \begin{equation}
 	D = \gamma\,T_{\mathrm{ocean}}(t - \delta) + r_0,
 	\label{eq:greenland_rate}
 \end{equation}
-where $D$ is the GrIS discharge in sea-level equivalent units, $\gamma$ is an effective discharge sensitivity to ocean temperature, $\delta$ is the lag between distal ocean warming and ice sheet response, $r_0$ is the background discharge rate at the baseline ocean temperature, and $T_{\mathrm{ocean}}$ is the ocean temperature anomaly in the peripheral waters around Greenland relative to the 1995--2005 mean. Because $D$ is the gross discharge flux rather than an anomaly, it becomes a contribution to GMSLR only when combined with SMB, whose accumulation term offsets most of the background rate $r_0$. 
+where $D$ is the GrIS discharge in sea-level equivalent units, $\gamma$ is an effective discharge sensitivity to ocean temperature, $\delta$ is the lag between distal ocean warming and ice sheet response, $r_0$ is the background discharge rate at the baseline ocean temperature, and $T_{\mathrm{ocean}}$ is the ocean temperature anomaly in the ocean waters around Greenland relative to the 1995--2005 mean. Because $D$ is the gross discharge flux rather than an anomaly, it becomes a contribution to GMSLR only when combined with SMB, whose accumulation term offsets most of the background rate $r_0$. We calibrate against total GrIS discharge, integrated across the 219 marine-terminating outlet glaciers resolved in the observational record \citep{Mouginot2019} to trade spatial resolution for signal-to-noise in the data. Our goal is to capture ice-sheet scale discharge rather than the individual basins and glaciers. 
 
-We calibrate the time-integrated form of Eq.~\ref{eq:greenland_rate} to get the
+The calibration is carried out on the time-integrated form of Eq.~\ref{eq:greenland_rate}, which gives the
 cumulative contribution of GrIS discharge to GMSLR,
-\begin{equation}
-\label{eq:greenland_dyn}
-      \Delta H_{\mathrm{D}}(t) = \gamma \int_{t_0}^{t} T_{\mathrm{ocean}}(t' - \delta)\, dt' + r_0\,(t t_0),
-\end{equation}
-where $t_0$ is the start of the calibration record and $\gamma$ and $r_0$ are constant in time. Fitting the time-integrated (cumulative) record improves the signal-to-noise ratio, because the cumulative signal grows linearly in time while the annual errors accumulate only as its square root. It also directly constrains the total mass lost, the quantity of interest in this study.
+	\begin{equation}
+	\label{eq:greenland_dyn}
+      H_{\mathrm{D}}(t) = \gamma \int_{t_0}^{t} T_{\mathrm{ocean}}(t' - \delta)\, dt' + r_0\,(t - t_0),
+	\end{equation}
+where $t_0$ is the start of the calibration record and $\gamma$ and $r_0$ are constant in time. Fitting the time-integrated (cumulative) record further improves the signal-to-noise ratio, because the cumulative signal grows linearly in time while the annual errors accumulate only as its square root. It also directly constrains the total mass lost, the quantity of interest in this study.
 
 \begin{figure}[ht]
 \centering
@@ -120,8 +120,7 @@ where $t_0$ is the start of the calibration record and $\gamma$ and $r_0$ are co
 \label{fig:greenland_delay_fit}
 \end{figure}
 
-The calibration uses 47 years of glacier discharge data \citep{Mouginot2019} and ocean temperatures from EN4 (v4.2.2, g10 bias correction) \citep{Good2013}, averaged over 200--500\,m depth, the range most relevant to Greenland's tidewater grounding lines \citep{Slater2020}, in the seas surrounding Greenland south of
-80$^\circ$N (58--80$^\circ$N, 75--5$^\circ$W), a limit set by the sparse subsurface sampling farther north (Fig. \ref{fig:greenland_delay_fit}). Because the data are resolved annually, the lag $\delta$ is in integer-year values. We therefore fit $(\gamma, r_0)$ by weighted least squares separately for a range of $\delta$ values, using the demeaned cumulative record. Each fit carries a penalty on the mismatch between the modeled discharge rate at the end of the record and the rate observed over the final decade, which keeps the calibration consistent with the present-day discharge rate. The posterior is then formed as a Gaussian mixture of the per-$\delta$ fits, with weights derived from the Bayesian Information Criterion. This procedure places 99.5\% of the weight on $\delta = 5$~yr (rate-space $R^2 = 0.794$) and gives posterior medians $\gamma = 0.365$~mm\,SLE\,yr$^{-1}\,^\circ$C$^{-1}$ (90\% CI, 0.312--0.419~mm\,SLE\,yr$^{-1}\,^\circ$C$^{-1}$) and $r_0 = 1.383$~mm\,SLE\,yr$^{-1}$ (90\% CI, 1.367--1.399~mm\,SLE\,yr$^{-1}$). The calibration target is a cumulative record, resulting in correlated, so we report parameter intervals from a covariance that accounts for that correlation and for the excess scatter of the residuals relative to the reported observational errors ($\chi^2/\mathrm{dof} = 1.8$), rather than from the least-squares covariance, which assumes independent errors. We validate the model against a discharge record spanning 1986--2023 that was withheld from calibration \citep{Mankoff2021}. This is a weak, but nonzero, validation because the \citet{Mouginot2019} and \citet{Mankoff2021} records are independently calculated from the same raw data. Our model falls within error of validation data, as does the total Greenland contribution to GMSLR (Fig. \ref{fig:calibration}c). The validation results suggest that our simple model, with two fitted parameters and a selected lag, captures the total contribution of GrIS discharge to GMSLR during the observational record and its sensitivity to ocean temperatures in Greenland's peripheral waters.
+The calibration uses 47 years of glacier discharge data \citep{Mouginot2019} and ocean temperatures from EN4 (v4.2.2, g10 bias correction) \citep{Good2013}, averaged over 200--500\,m depth, the range most relevant to Greenland's tidewater grounding lines \citep{Slater2020}, in the seas surrounding Greenland south of 80$^\circ$N (58--80$^\circ$N, 75--5$^\circ$W), a limit set by the sparse subsurface sampling farther north (Fig. \ref{fig:greenland_delay_fit}). Because the data are resolved annually, the lag $\delta$ is in integer-year values. We therefore fit $(\gamma, r_0)$ by weighted least squares separately for a range of $\delta$ values, using the demeaned cumulative record. Each fit carries a penalty on the mismatch between the modeled discharge rate at the end of the record and the rate observed over the final decade, which keeps the calibration consistent with the present-day discharge rate. The posterior is then formed as a Gaussian mixture of the per-$\delta$ fits, with weights derived from the Bayesian Information Criterion. This procedure places 99.5\% of the weight on $\delta = 5$~yr and gives posterior medians $\gamma = 0.365$~mm\,SLE\,yr$^{-1}\,^\circ$C$^{-1}$ (0.312--0.419~mm\,SLE\,yr$^{-1}\,^\circ$C$^{-1}$) and $r_0 = 1.383$~mm\,SLE\,yr$^{-1}$ (1.367--1.399~mm\,SLE\,yr$^{-1}$). The calibration target is a cumulative record, resulting in correlated, so we report parameter intervals from a covariance that accounts for that correlation and for the excess scatter of the residuals relative to the reported observational errors (reduced chi-square $\chi^2/\mathrm{dof} = 1.8$, where $\chi^2$ is the error-weighted sum of squared residuals and $\mathrm{dof} = 45$ is the number of annual observations less the two fitted parameters), rather than from the least-squares covariance, which assumes independent errors. We validate the model against a discharge record spanning 1986--2023 that was withheld from calibration \citep{Mankoff2021}. This is a weak validation, because the \citet{Mouginot2019} and \citet{Mankoff2021} records share the same underlying raw data, though their independent processing still makes agreement meaningful. Our model falls within error of validation data, as does the total Greenland contribution to GMSLR (Fig. \ref{fig:calibration}c). The validation results suggest that our simple model, with two fitted parameters and a selected lag, captures the total contribution of GrIS discharge to GMSLR during the observational record and its sensitivity to ocean temperatures in Greenland's peripheral waters.
 
 The fitted $\delta = 5$~yr is an effective lag for spatially averaged forcing and we therefore do not attempt to attribute it to a single process. It lies within the range of timescales spanned by the ocean-to-ice pathway, from exchange between the continental shelf and fjord interiors through the terminus response to undercutting and the inland transmission of retreat to the flux gates at which discharge is measured \citep{StraneoHeimbach2013,Wood2021,robel_response_2018}. Because $T_{\mathrm{ocean}}$ is averaged over Greenland's peripheral waters, $\delta$ also absorbs the time required for a warming anomaly to become representative of conditions at outlet glaciers distributed around the ice sheet; retreat began in southeast and west Greenland in the mid-1990s and reached the northwest a decade later \citep{StraneoHeimbach2013}. 
 
@@ -151,17 +150,64 @@ which contains our calibrated $\gamma = 0.365$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-
 
 \subsubsection{Thermosteric}
 
-The thermosteric component is currently the largest single contributor to observed sea-level rise. We model it with a two-layer thermal-response model with the deep-layer structure of \citet{Geoffroy2013}, fitted jointly to the NOAA objectively analyzed thermosteric sea level derived from \emph{in situ} profiles at 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012} (Fig. ***). The model equations are
-\begin{align}
-\frac{dS_u}{dt} &= \frac{T(t) - S_u}{\tau_u} \\
-\frac{dS_d}{dt} &= \frac{S_u - S_d}{\tau_d} \\
-H_{\mathrm{upper}}(t) &= a\,S_u^2 + b_u\,S_u + c\,(t - t_0), \label{eq:thermo_upper} \\
-H_{\mathrm{total}}(t) &= H_{\mathrm{upper}}(t) + b_d\,S_d, \label{eq:thermo_total} \\
-H_{\mathrm{full}}(t) &= H_{\mathrm{total}}(t) + \dot{H}_{>2000}\,(t - t_{\mathrm{ref}}), \label{eq:thermo_full}
-\end{align}
-where $S_u$ and $S_d$ are upper- and deep-ocean thermal state variables driven by GMST $T(t)$, $\tau_u$ is the upper-ocean relaxation time, $t_0 = 1850.5$ is the start of the GMST record, and $\tau_d = 150$\,yr is the deep-ocean relaxation time, fixed at the CMIP5 multi-model mean deep-ocean adjustment time $C_0/\zeta = 151$\,yr \citep[][Table 4]{Geoffroy2013}, where $C_0$ is the deep-ocean heat capacity and $\zeta$ the interlayer heat-exchange coefficient. We fix $\tau_d$ rather than sampling it because the 21-year 0--2000\,m record is too short to constrain centennial-timescale relaxation. Each record and its corresponding model prediction are demeaned before comparison, so the fit carries no intercept and $t_0$ sets only a constant offset. Equations \ref{eq:thermo_upper} and \ref{eq:thermo_total} are the quantities fitted to the 0--700\,m and 0--2000\,m records. The forecasts use $H_{\mathrm{full}}$, which adds the ocean below 2000\,m as a constant rate $\dot{H}_{>2000} = 0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010} referenced to $t_{\mathrm{ref}} = 2000$; this layer is not observed at annual resolution, so it is adopted rather than calibrated. 
+The ocean is the dominant reservoir for the excess heat accumulated by the climate system \citep{Cheng2017}, and the resulting expansion, the thermosteric contribution, is currently the largest single contributor to observed GMSLR \citep{Frederikse2020}. Two properties of ocean heat uptake set the structure of a simple model of the thermosteric effect. First, the ocean warms with a delay relative to the atmosphere. Heat enters at the sea surface and is carried downward by turbulent mixing and by the overturning circulation, so the temperature of the interior reflects the history of surface warming. Second, that downward transfer spans a wide range of timescales. The upper few hundred meters exchange heat with the atmosphere over years to decades, whereas water below the thermocline is renewed over centuries. We therefore represent the ocean as two layers, a fast upper layer coupled to the atmosphere and a slow deep layer coupled only to the upper layer, following the structure of \citet{Geoffroy2013}. This structure reproduces both the lag between surface warming and expansion and the continued expansion that follows a stabilization of surface temperature, because the deep layer draws heat from the upper layer long after the upper layer has equilibrated.
 
-The six free parameters ($a$, $b_u$, $b_d$, $c$, $\log\tau_u$, $\log\sigma_{\mathrm{extra}}$) are sampled via MCMC (emcee; 48 walkers, 4000 burn-in + 12000 production steps). The posterior median and 90\% credible intervals are: $a = 19.2$~[9.5, 29.2]~mm\,$^\circ$C$^{-2}$, $b_u = 50.0$~[40.0, 70.7]~mm\,$^\circ$C$^{-1}$, $b_d = 67.2$~[36.1, 100.9]~mm\,$^\circ$C$^{-1}$, $c = 0.023$~[$-0.107$, 0.137]~mm\,yr$^{-1}$, $\tau_u = 11.0$~[5.9, 22.9]~yr, and $\sigma_{\mathrm{extra}} = 2.0$~[1.7, 2.3]~mm. The calibrated model reproduces both records with RMS residuals of 2.3~mm for depths 0--700\,m and 1.3~mm for 0--2000\,m, against 42 and 30 mm of observed rise over the respective records.
+Let us first consider an upper layer of thickness $h_u=700$ m warmed by $\Delta\theta(z,t)$, which raises steric height of the ocean over time as
+	\begin{equation}
+	H_{\mathrm{u}} = \int_0^{h_u} \alpha \Delta\theta\,dz,
+	\label{eq:steric_integral}
+	\end{equation}
+where $\alpha(z)$ is the thermal expansion coefficient of seawater. The warming anomaly profile is defined as $\Delta\theta = S_u\varphi$, where $S_u(t)$ is the amplitude of the anomaly in degrees and $\varphi(z)$ is a shape factor. Expanding $\alpha(z) = \alpha_0(z) + \alpha'\Delta\theta$, with $\alpha' = \partial\alpha/\partial\theta$, we rewrite Eq. \ref{eq:steric_integral} as 
+	\begin{equation}
+	H_{\mathrm{u}} = a\,S_u^2 + b_u\,S_u + c(t - t_0),
+	\label{eq:thermo_upper}
+	\end{equation}
+where $a = \int_0^h \alpha'\,\varphi^2\,dz$ and $b_u = \int_0^h \alpha_0\,\varphi\,dz$. The linear term $b_u$ is the expansion of the upper layer for a given warming while the quadratic term $a$ comes from the temperature dependence of $\alpha$. We added $c\,(t - t_0)$ to absorb instrument drift during calibration. As GMST $T(t)$ changes, the amplitude evolves as
+	\begin{equation}
+	\frac{dS_u}{dt} = \frac{T - S_u}{\tau_u},
+	\label{eq:thermo_su}
+	\end{equation}
+where $\tau_u$ is the characteristic time over which the thermal state $S_u$ relaxes to GMST. Equation~\ref{eq:thermo_su} shows that $S_u$ is an average of past temperatures, weighted toward the recent past over a time window set by $\tau_u$. The upper layer therefore smooths year-to-year fluctuations in GMST and follows longer trends with a delay comparable to $\tau_u$. 
+
+The deep layer follows the same construction, with $\Delta\theta_d(z,t) = S_d(t)\,\varphi_d(z)$ over 700--2000 m depth and $b_d = \int_{h_u}^{h_d} \alpha_0\,\varphi_d\,dz$, with $h_d=2000$ m. We drop the quadratic term because $S_d$ remains small enough that the temperature dependence of $\alpha$ is negligible. Warming from GMST reaches the deep layer only after passing through the upper layer, so the thermal state $S_d$ relaxes toward $S_u$ as
+      \begin{equation}
+      \frac{dS_d}{dt} = \frac{S_u - S_d}{\tau_d},
+      \label{eq:thermo_sd}
+      \end{equation}
+where $\tau_d = 150$\,yr is fixed at the CMIP5 multi-model mean deep-ocean adjustment time
+\citep[][Table 4]{Geoffroy2013}, because the 21-year 0--2000\,m record is too short to constrain a centennial relaxation time. Since $\tau_d$ exceeds the record length, $S_d$ tracks cumulative rather than current warming, continuing to rise for centuries after $S_u$ has equilibrated with a stabilized $T$. Adding this layer gives the total steric response for the upper 2000 m as,
+      \begin{equation}
+      H_{ud}(t) = H_{\mathrm{u}}(t) + b_d\,S_d,
+      \label{eq:thermo_total}
+      \end{equation}
+which we fit jointly to the 0--700\,m and 0--2000 m records. Finally, to account for expansion below 2000 m depth, we define 
+	\begin{equation}
+	H_{\mathrm{full}}(t) = H_{ud}(t) + \dot{H}_{>2000}(t - t_{\mathrm{ref}}),
+	\label{eq:thermo_full}
+	\end{equation}
+where $\dot{H}_{>2000} = 0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010} is a constant rate for depths below 2000\,m, referenced to $t_{\mathrm{ref}} = 2000$. This layer is not observed at annual resolution, so its rate is adopted rather than calibrated.
+
+
+
+We fit the two-layer model in Eq. \ref{eq:thermo_total} jointly to NOAA in situ thermosteric sea level at 0--700,m (1955--2025, 71 annual points) and 0--2000,m (2005--2025, 21 points) \citep{Levitus2012} with Bayesian inference, in which MCMC samples parameter combinations $\Theta = (a, b_u, b_d, c, \tau_u, \sigma_{\mathrm{extra}})$ in proportion to their posterior probability. By Bayes' theorem, the posterior probability equals the likelihood of the data given $\Theta$ times the prior probability of $\Theta$. Assuming the residual at each point is normally distributed about the model with variance $\sigma_i^2$, the negative log-likelihood takes the form $\frac{1}{2}\sum_i \left[(r_i(\Theta)/\sigma_i)^2 + \ln\sigma_i^2\right]$. Adding the negative log-prior for $\tau_u$, whose log-normal prior (defined below) has mean $\mu_{\tau_u}$ and standard deviation $s_{\tau_u}$ in $\ln\tau_u$ (the other five parameters have flat priors and so contribute only an additive constant, which we drop), gives the objective function
+\begin{equation}
+\mathcal{O}(\Theta) = \sum_{i} \left[\left(\frac{r_i(\Theta)}{\sigma_i}\right)^2 + \ln\sigma_i^2\right] + \left(\frac{\ln\tau_u - \mu_{\tau_u}}{s_{\tau_u}}\right)^2,
+\label{eq:thermo_objective}
+\end{equation}
+which is twice the negative log-posterior up to an additive constant, so MCMC visits parameter combinations $\Theta$ with probability proportional to $\exp[-\mathcal{O}(\Theta)/2]$, favoring combinations that fit the data well (small $\mathcal{O}$) over those that fit poorly (large $\mathcal{O}$). Here $r_i(\Theta)$ is the residual between the demeaned model and demeaned observation at point $i$, and $\sigma_i^2$ is that point's total variance. The point variance is defined by the quadrature sum of the formal measurement error, a structural uncertainty retained after a bias correction in the NOAA observations \citep{Li2022}, and $\sigma_{\mathrm{extra}}$, a noise term, shared across both the 0--700 m and 0--2000 m records, that absorbs misfit beyond the reported observational error. The MCMC sampling uses package emcee with 64 walkers, 6000 burn-in steps, and 30,000 production steps to ensure convergence. The relaxation time of the upper later, $\tau_u$, has a weakly informative prior, $\log\tau_u \sim \mathcal{N}(\ln 8,0.5^2)$, or $\mu_{\tau_u} = \ln (8$ yr) and $s_{\tau_u} = 0.5$ yr, consistent with the range in \citet{Geoffroy2013}. The other five parameters --- $a$, $b_u$, $b_d$, $c$, and $\sigma_{\mathrm{extra}}$ --- get uninformative flat priors with wide bounds (Fig. \ref{fig:ocean_priors_posteriors}). Both records are demeaned before fitting, which removes a baseline offset that the data cannot otherwise constrain. The posterior median and 90\% credible intervals are: $a = 20.0$ [10.1, 31.2] mm $^\circ$C$^{-2}$, $b_u = 51.0$~[40.6, 75.4] mm $^\circ$C$^{-1}$, $b_d = 68.6$ [37.0, 104.3] mm $^\circ$C$^{-1}$, $c = 0.023$ [$-0.112$, 0.140] mm yr$^{-1}$, $\tau_u = 11.6$ [6.2, 25.3] yr, and $\sigma_{\mathrm{extra}} = 2.0$ [1.7, 2.3] mm. The calibrated model reproduces both records with RMS residuals of 2.3 mm for depths 0--700 m and 1.3 mm for 0--2000 m, against 42 and 30 mm of observed rise over the respective records.
+
+
+
+%We fit a two-layer model jointly to NOAA in situ thermosteric sea level at 0--700\,m (1955--2025, 71 annual points) and 0--2000\,m (2005--2025, 21 points) \citep{Levitus2012}. The relaxation time of the upper later, $\tau_u$, has a weakly informative prior, $\log\tau_u \sim \mathcal{N}(\log 8,0.5^2)$, consistent with the range in \citet{Geoffroy2013}. The other five parameters --- $a$, $b_u$, $b_d$, $c$, and $\sigma_{\mathrm{extra}}$ --- get uninformative flat priors with wide bounds (Fig. \ref{fig:ocean_priors_posteriors}). $\sigma_{\mathrm{extra}}$ is a noise term, shared across both the 0--700\,m and 0--2000\,m records, that absorbs misfit beyond the reported observational error. The six free parameters are sampled via MCMC (using package emcee with 64 walkers, 6000 burn-in steps, and 30000 production steps to ensure convergence). The posterior median and 90\% credible intervals are: $a = 20.0$~[10.1, 31.2]~mm\,$^\circ$C$^{-2}$, $b_u = 51.0$~[40.6, 75.4]~mm $^\circ$C$^{-1}$, $b_d = 68.6$~[37.0, 104.3]~mm\,$^\circ$C$^{-1}$, $c = 0.023$~[$-0.112$, 0.140] mm yr$^{-1}$, $\tau_u = 11.6$~[6.2, 25.3]~yr, and $\sigma_{\mathrm{extra}} = 2.0$~[1.7, 2.3]~mm. The calibrated model reproduces both records with RMS residuals of 2.3~mm for depths 0--700 m and 1.3~mm for 0--2000 m, against 42 and 30 mm of observed rise over the respective records.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_ocean_fit_residuals.png}
+\caption{\textbf{Two-layer thermosteric model: fit and validation.} (a) Posterior median of the upper layer model $H_{\mathrm{u}}$ (Eq. \ref{eq:thermo_upper}) and 90\% credible interval fitted to NOAA 0--700\,m observations (circles with error bars). (b) As in (a), for the 0--2000 m record and $H_{\mathrm{ud}}$ (Eq. \ref{eq:thermo_total}). (c) Validation of the full-depth model $H_{\mathrm{full}}$ (Eq.~\ref{eq:thermo_full}) against the independent \citet{Frederikse2020} reconstruction (blue), withheld from calibration. Also shown, for reference are the NOAA-derived full-depth values (circles). (d--f) Residuals corresponding to (a)--(c), with the gray band showing the 90\% credible interval on the residual and the RMS residual reported in each panel.}
+\label{fig:ocean_fit_residuals}
+\end{figure}
+
+We validate the full-depth model in Eq. \ref{eq:thermo_full} against the independently derived data set of \citet{Frederikse2020}, withheld from calibration (Fig. \ref{fig:ocean_fit_residuals}c,f). \citet{Frederikse2020} construct global-mean steric sea level for 1900–2018 by combining in situ subsurface ocean-temperature products over 1957–2018 with a reconstruction of historical ocean heat storage for the pre-1957 period. Our comparison uses their 1957–2018 portion, showing good agreement with a relative RMS of 2.5 mm (Fig. \ref{fig:ocean_fit_residuals}c,f).
 
 \begin{figure}[ht]
 \centering
@@ -170,35 +216,54 @@ The six free parameters ($a$, $b_u$, $b_d$, $c$, $\log\tau_u$, $\log\sigma_{\mat
 \label{fig:ocean_priors_posteriors}
 \end{figure}
 
-%Because $a$ and $b_u$ multiply functions of $S_u$, which itself depends on $\tau_u$, a potential concern is parameter degeneracy such that changing $\tau_u$ rescales $S_u$, which could in principle be compensated by rescaling $a$ and $b_u$. Under full degeneracy, $b_u \propto \tau_u$ and $a \propto \tau_u^2$. The posterior does not exhibit this: $\tau_u$ varies by a factor of 3.9 across the 90\% CI, while $b_u$ varies by only a factor of 1.8 (not 3.9) and $a$ by a factor of 3.1 (not 15). This partial independence arises from four sources: (1)~the joint fit to two depth ranges with different time spans, where the deep-ocean response $b_d\,S_d$ provides an independent constraint on $\tau_u$ through the $S_u \to S_d$ coupling; (2)~the quadratic term $a\,S_u^2$, whose shape (curvature) changes with $\tau_u$ and cannot be compensated by a simple rescaling of $a$; (3)~the interannual and decadal variability in GMST, which constrains the phase lag of $S_u$ relative to $T(t)$ independently of amplitude; and (4)~the trend term $c\,(t - t_0)$, which is entirely $\tau_u$-independent. Pairwise posterior correlations are moderate ($|r| < 0.7$ for all parameter pairs), and no bimodal structure is evident in the posterior. Corner plots are provided in the analysis notebook.
-
-The ODE system is solved via an exponential integrator (piecewise-constant midpoint forcing, analytical decay) with initial conditions $S_u(0) = S_d(0) = T(0)$ (equilibrium assumption). 
-
-
-***To generate projections, we drive the fitted model with IPCC AR6 SSP temperature trajectories, propagating posterior parameter uncertainty, SSP temperature trajectory uncertainty, and below-2000\,m rate uncertainty ($0.07 \pm 0.04$\,mm\,yr$^{-1}$) via 2,000 Monte Carlo samples. ***Forecasts are generated by driving the calibrated two-layer model with IPCC AR6 temperature trajectories, propagating posterior parameter uncertainty via Monte Carlo sampling (Supplementary Material).
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.85\textwidth]{component_ocean_twopanel.png}
-\caption{\textbf{Thermosteric sea-level projections.} Upper panel: median and 66\%/90\% credible intervals for the two-layer model under four SSP scenarios, with full-depth observations (black). Lower panel: GMST forcing trajectories (relative to year 2000) with Berkeley Earth observations.}
-\label{fig:ocean_twopanel}
-\end{figure}
-
 
 
 
 \subsubsection{Glaciers}
 
-Mountain glacier mass loss is modeled as a rate--temperature relation calibrated against the GlaMBIE global consensus \citep[2000--2023;][]{GlaMBIE2025} and GMST. The data only support a linear sensitivity (Supplementary Material), which we find to be $b_{\mathrm{gl}} = 0.66$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ (Fig. \ref{fig:calibration}d). This is approximately five times the value embedded in IPCC AR6 median projections ($\sim$0.13~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$) and 1.3--1.7$\times$ the effective sensitivity of the PyGEM process model \citep{Rounce2023}, but provides excellent fit with global data compilations.
+The rate of glacier mass loss is known to be approximately linear with warming ***. To create a consistent error model for this study, we fit cumulative glacier sea-level contribution in level space as
+\begin{equation}
+	H_{\mathrm{gl}}(t) = b\int_{t_0}^{t}Td\tau + c(t - t_0) + H_0 + \varepsilon(t),
+	\label{eq:glacier_level}
+\end{equation}
+where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and evaluated at annual observation times, $H_0$ is a baseline offset, and $\varepsilon(t) \sim \mathcal{N}(0,\, \sigma_{\mathrm{obs}}^2 + \sigma_{\mathrm{extra}}^2)$ with $\sigma_{\mathrm{extra}}$ an additional model-inadequacy noise term learned from the data. We fit the linear (4 free parameters) model to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors (using package emcee with 32 walkers, 2000 burn-in steps, and 4000 production steps). The posterior median sensitivity is $b = 0.66$ mm yr$^{-1}$ $^\circ$C$^{-1}$ and the committed rate is $c = 0.57$ mm yr$^{-1}$. Cumulative loss is capped at the total glacier volume of 0.32 m SLE \citep{Farinotti2019}.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_glacier_diagnostics.png}
+\caption{\textbf{Glacier model diagnostics.} (a)~Glacier mass loss rate vs GMST anomaly with the fitted linear relationship. (b)~Cumulative glacier SLR: GlaMBIE observations (circles) with the linear model fit (black line) and 90\% credible interval (grey shading); $R^2 = 0.995$. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:glacier_diagnostics}
+\end{figure}
+
 
 \subsubsection{Antarctic Peninsula} 
 
+The Antarctic Peninsula component uses the same level-space Bayesian framework, with the rate--temperature model $\dot{H}_{\mathrm{pen}}(t) = a\,T(t)^2 + b\,T(t) + c$ calibrated against the IMBIE Peninsula record (1992--2020, 29 annual points; \citealp{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). BIC favors the linear model ($\Delta\mathrm{BIC} = -3.5$ ($\mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}}$)). The adopted linear model achieves $R^2 = 0.94$ with posterior median sensitivity $b = 0.055$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and committed rate $c = 0.028$~mm\,yr$^{-1}$ (Fig.~\ref{fig:apeninsula_diagnostics}). The Peninsula contribution reflects combined SMB and discharge responses to warming and is small relative to other components (${\sim}7$--12~mm at 2100).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_apeninsula_diagnostics.png}
+\caption{\textbf{Peninsula model diagnostics.} (a)~Peninsula mass loss rate vs GMST anomaly with the fitted linear relationship. (b)~Cumulative Peninsula SLR: IMBIE observations with the model fit and 90\% credible interval; $R^2 = 0.94$. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:apeninsula_diagnostics}
+\end{figure}
+
+
 \subsubsection{East Antarctica}
 
-\subsection{Forecasting approach}
+The EAIS component uses the same level-space Bayesian framework as glaciers and the Peninsula. The rate--temperature model is
+\begin{equation}
+	\dot{H}_{\mathrm{eais}}(t) = a\,T(t)^2 + b\,T(t) + c,
+	\label{eq:eais_rate}
+\end{equation}
+where $T(t)$ is the GMST anomaly. This is fit to the IMBIE EAIS record (1992--2020, 29 annual points; \citealp{Otosaka2023}) via emcee (32 walkers, 2000 burn-in + 4000 production steps, thinning by 2). The quadratic model yields $R^2 = 0.66$ (posterior mean: $a = 0.054$, $b = 0.035$, $c = -0.023$~mm\,yr$^{-1}$), and the linear model yields $R^2 = 0.56$ ($b = 0.021$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$, $c = -0.018$~mm\,yr$^{-1}$). BIC weakly favors the quadratic ($\Delta\mathrm{BIC} = +4.1$ ($\mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}}$, same convention as above)), but both $R^2$ values are too low for reliable projections given the 29-year record and large interannual variability (Fig.~\ref{fig:eais_diagnostics}). EAIS projections instead use the literature-derived accumulation sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST \citep{Frieler2015, Ligtenberg2013}, reflecting the Clausius--Clapeyron scaling of snowfall with warming ($C_T > 0$ corresponds to mass gain, i.e., negative SLR). The EAIS contribution is small ($-13$ to $-30$~mm at 2100, depending on scenario).
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_eais_diagnostics.png}
+\caption{\textbf{EAIS model diagnostics.} (a)~EAIS mass loss rate vs GMST anomaly with the fitted quadratic relationship. (b)~Cumulative EAIS SLR: IMBIE observations with the model fit and 90\% credible interval. (c)~Posterior distribution for the temperature sensitivity $b$.}
+\label{fig:eais_diagnostics}
+\end{figure}
 
-To project GrIS discharge model forward in time, we calibrate a transfer function between the Greenland regional surface temperature anomaly and the ocean temperature and then apply a normal distribution of Arctic amplification factors to calculate the Greenland regional surface temperature form projected GMST under different emission scenarios (Supplemental Material). For SMB, we adopt published linear and quadratic sensitivities of SMB to GMST from RCM intercomparisons \citep{Fettweis2020, Noel2021}, using the spread across RCMs as structural uncertainty \citep{Glaude2024} 
 
 
 \subsection{Component model validation}
@@ -212,6 +277,21 @@ As a validation step, we compare the sum of the independently calibrated compone
 \subsection{West Antarctic Ice Sheet.} WAIS is the largest source of uncertainty in sea-level projections (Figs. \ref{fig:calibration}g,h). The ice sheet contains $\sim$3.3~m of sea level equivalent and rests on land that is below sea level and deepens inland, making it susceptible to internal feedbacks commonly called the marine ice sheet instability (MISI;~\citealp{Joughin2014}). The delivery of warm, deep seawater is the primary climate driver of mass loss \citep{Fricker2025}. Ocean thermal forcing sufficient to drive retreat is likely committed throughout the 21st century regardless of emissions pathway \citep{Naughten2023,Rosier2025} and may be driven as much by ocean processes local to the ice sheet as those further afield \citep{Moorman2023}. Based on these lines of evidence, we make our WAIS projections independent of the warming trajectory, meaning the range of 21st-century outcomes is controlled by ice dynamics that, to leading order, are insensitive to emissions over our forecasting horizon. 
 
 No physical process models have been proven to reproduce observations \citep{Aschwanden2021} and we find insufficient data coverage and duration to support a data-driven forecast like those described above. To provide a representative range of uncertainties, we construct a scenario-mixture framework grounded in the scientific literature (Fig.~\ref{fig:calibration}g,h; Supplementary Material). Scenario 1: `slow WAIS' where rates of discharge continue to increase within the range of observed values and with linear relationship between SLR contributions and ocean temperatures. This scenario admits 25--85 mm GMSLR contribution by 2100. Based on the changes in WAIS discharge over the past decades and the position by the IPCC AR6, we take this scenario to be unlikely, and assign it a 10\% probability. Scenario 2 represents the role of MISI-driven acceleration and grounding-line retreat, yielding a GMSL contribution of 0.15--1 m by 2100. The lower value is anchored to transient-calibrated ice sheet model projections \citep{Goldberg2026} and the observed 33 km grounding-line retreat at Pine Island Glacier since 1992 \citep{Rignot2026} while the upper bound is set by structured expert judgment \citep{Bamber2019}. We assign Scenario 2 an 80\% probability. Scenario 3 represents MISI combined with the potential for cascading structural failure of ice cliffs, known as the marine ice cliff instability (MICI), with the range defined by the IPCC AR6 low-confidence 83rd (0.6 m) and 95th (1.3 m) percentile ranges. We assign a 10\% probability to this scenario, consistent with IPCC AR6 `deep uncertainty' framing. Within each scenario, the 2100 endpoint is drawn from a skew-normal distribution in log-space with physically motivated asymmetry \citep{Robel2019}. A multiplicative rheology correction ($R$ with median $R = 1.3$) is applied to all scenarios, reflecting the underestimation of ice loss when models assume the ice-viscosity stress exponent $n = 3$ rather than the observationally constrained value $n = 4.1\pm0.4$ \citep{Millstein2022,GetraerMorlighem2025,Martin2026}. The resulting mixture has a median 21st century sea-level rise of 0.41 m with a 0.07 to 1.56 m 90\% CI at 2100. We refer to this mixed model as `fast WAIS' because it allows for, but does not force, rapid ice mass loss (Scenarios 2 and 3). Sensitivity tests of the scenario weights show the chosen weights do not qualitatively impact the findings of this study (Supplementary Materials).
+
+\subsection{Forecasting approach}
+
+
+To project GrIS discharge model forward in time, we calibrate a transfer function between the Greenland regional surface temperature anomaly and the ocean temperature and then apply a normal distribution of Arctic amplification factors to calculate the Greenland regional surface temperature form projected GMST under different emission scenarios (Supplemental Material). For SMB, we adopt published linear and quadratic sensitivities of SMB to GMST from RCM intercomparisons \citep{Fettweis2020, Noel2021}, using the spread across RCMs as structural uncertainty \citep{Glaude2024} 
+
+To generate thermosteric projections, we drive the fitted model with IPCC AR6 SSP temperature trajectories, propagating posterior parameter uncertainty, SSP temperature trajectory uncertainty, and below-2000\,m rate uncertainty ($0.07 \pm 0.04$\,mm\,yr$^{-1}$) via 2,000 Monte Carlo samples. ***Forecasts are generated by driving the calibrated two-layer model with IPCC AR6 temperature trajectories, propagating posterior parameter uncertainty via Monte Carlo sampling (Supplementary Material).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.85\textwidth]{component_ocean_twopanel.png}
+\caption{\textbf{Thermosteric sea-level projections.} Upper panel: median and 66\%/90\% credible intervals for the two-layer model under four SSP scenarios, with full-depth observations (black). Lower panel: GMST forcing trajectories (relative to year 2000) with Berkeley Earth observations.}
+\label{fig:ocean_twopanel}
+\end{figure}
+
 
 %% ================================================================
 \section{Results}

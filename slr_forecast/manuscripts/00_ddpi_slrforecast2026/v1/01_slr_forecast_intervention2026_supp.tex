@@ -53,7 +53,7 @@ The pre-satellite rate of 1.1~mm\,yr$^{-1}$ (0.8--1.3~mm\,yr$^{-1}$, 90\% CI) av
 All component models are calibrated against published observational products (Table~\ref{tab:obs_datasets}). We use:
 \begin{itemize}
 \item \textbf{Global mean sea level:} NASA satellite altimetry (TOPEX/Jason, 1993--present; Hamlington et~al.~\citeyear{Hamlington2020}), with the Frederikse et~al.~\citeyearpar{Frederikse2020} tide-gauge reconstruction (1900--2018) and Dangendorf et~al.~\citeyearpar{Dangendorf2019} reconstruction for pre-satellite validation.
-\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. A 14\% upward bias correction is applied to account for the documented low bias from vertical interpolation of sparse profiles \citep{Li2022}. Depth corrections for 700--2000\,m ($0.15 \pm 0.05$~mm\,yr$^{-1}$; \citealp{Levitus2012, Cheng2017}) and below 2000\,m ($0.07 \pm 0.04$~mm\,yr$^{-1}$; \citealp{Purkey2010, Desbruyeres2016}) are applied cumulatively for years before full-depth data are available.
+\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. Both records are scaled by a factor of 1.14 before fitting. \citet{Li2022} show that linear vertical interpolation between standard depth levels cannot reproduce the curvature of the temperature--depth profile at the vertical resolution of the historical data, and that replacing it with a multiply-rotated piecewise cubic Hermite scheme raises the 1956--2020 upper-ocean (0--700\,db) thermosteric trend from 0.48 to 0.55\,mm\,yr$^{-1}$, an increase of 14\%. The uncorrected NOAA 0--700\,m trend over 1955--2025 is 0.49\,mm\,yr$^{-1}$, close to their linearly interpolated estimate, and the scaling raises it to 0.55\,mm\,yr$^{-1}$, matching their value for the cubic scheme. A residual structural uncertainty of 5\% of the corrected signal is retained after the scaling. \citet{Li2022} attribute most of the bias to the sparser vertical sampling of the pre-1990 record, so a uniform scaling reproduces their corrected trend over the full record while also raising the post-1990 rate by 14\%. The 700--2000\,m layer is carried by the 0--2000\,m record from 2005 onward and by the deep layer of the two-layer model at earlier times. A constant $0.07 \pm 0.04$~mm\,yr$^{-1}$ \citep{Purkey2010, Desbruyeres2016} is added over the full record for the contribution below 2000\,m.
 \item \textbf{Glaciers:} GlaMBIE global consensus (2000--2023; GlaMBIE~\citeyear{GlaMBIE2025}), combining glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 RGI regions. We use 2000--2023 (23 annual points) for calibration.
 \item \textbf{Greenland:} Mouginot et~al.~\citeyearpar{Mouginot2019} SMB and discharge (1972--2018), with Mankoff et~al.~\citeyearpar{Mankoff2021} (1986--2023) withheld for validation. Subsurface ocean temperature from EN4 v4.2.2 with g10 bias corrections (200--500\,m, Greenland peripheral waters; Good et~al.~\citeyear{Good2013}). Surface temperature from Berkeley Earth \citep{Rohde2020}.
 \item \textbf{Antarctica:} IMBIE satellite-era mass balance (1992--2020; Otosaka et~al.~\citeyear{Otosaka2023}), partitioned by region.
@@ -137,7 +137,9 @@ where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline and $\d
 
 
 
-\textit{Surface-to-ocean transfer function.} To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
+\textit{Surface-to-ocean transfer function.} 
+
+To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
 \begin{equation}
 	T_{\mathrm{ocean}}(t) = \alpha\,T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
 	\label{eq:ocean_transfer}
@@ -325,7 +327,7 @@ Repeating this analysis for the 95th percentile (5\% exceedance probability)---w
 
 \subsection{MCMC convergence diagnostics}
 
-For all MCMC fits (thermosteric, glaciers, EAIS, Peninsula), we verified convergence using the Gelman--Rubin diagnostic ($\hat{R}$) and effective sample size (ESS). For the glacier and Peninsula models, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $\geq 120$ and tail ESS $\geq 159$; mean acceptance fractions are 0.44 (glaciers, linear) and 0.50 (Peninsula). For the EAIS diagnostic fit, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $> 120$ and acceptance fraction 0.49. For the thermosteric two-layer model, the mean acceptance fraction is 0.455 across 48 walkers with 576,000 posterior samples (after burn-in); convergence diagnostics are not computed via the standard $\hat{R}$ formula (the thermosteric model uses a custom MCMC loop rather than the shared level-space fitting routine), but the large sample size and stable trace plots confirm convergence. Components share a common temperature driver, introducing positive correlations in the projection ensemble. This correlation is captured sample-by-sample (each Monte Carlo realization uses the same SSP temperature trajectory for all components) but the structural uncertainty in the temperature trajectories introduces additional correlation not explicitly modeled.
+For all MCMC fits (thermosteric, glaciers, EAIS, Peninsula), we verified convergence using the Gelman--Rubin diagnostic ($\hat{R}$) and effective sample size (ESS). For the glacier and Peninsula models, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $\geq 120$ and tail ESS $\geq 159$; mean acceptance fractions are 0.44 (glaciers, linear) and 0.50 (Peninsula). For the EAIS diagnostic fit, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $> 120$ and acceptance fraction 0.49. For the thermosteric two-layer model, the mean acceptance fraction is 0.446 across 64 walkers with 1,920,000 posterior samples (after burn-in); all parameters satisfy $\hat{R} < 1.02$ with ESS $\geq 6,000$ (max integrated autocorrelation time 318 steps, 94$\times$ shorter than the chain). Components share a common temperature driver, introducing positive correlations in the projection ensemble. This correlation is captured sample-by-sample (each Monte Carlo realization uses the same SSP temperature trajectory for all components) but the structural uncertainty in the temperature trajectories introduces additional correlation not explicitly modeled.
 
 \subsection{Rate-space blending}
 
@@ -382,12 +384,8 @@ Component & Parameter & Prior & Source / justification \\
 \bottomrule
 \endlastfoot
 \multicolumn{4}{l}{\textit{Thermosteric (two-layer ODE, 6 free parameters)}} \\
- & $a$ (quadratic) & $\mathrm{Exp}(\mu = 22\text{ mm}/{}^\circ\text{C}^2)$ & Positive curvature; regularizes toward linear \\
- & $b_u$ (upper sensitivity) & $\mathrm{HN}(\sigma = 150\text{ mm}/{}^\circ\text{C})$ & Weakly informative; encompasses literature range \\
- & $b_d$ (deep sensitivity) & $\mathrm{HN}(\sigma = 100\text{ mm}/{}^\circ\text{C})$ & Weakly informative; smaller than upper layer \\
- & $c$ (secular trend) & $\mathrm{N}(0.3, 0.5^2)\text{ mm\,yr}^{-1}$ & Centered near zero; allows small drift \\
  & $\log\tau_u$ & $\mathrm{N}(\log 8, 0.5^2)$ & LN median 8~yr; Geoffroy et~al.\ range \\
- & $\sigma_\mathrm{extra}$ & $\mathrm{HC}(\gamma = 3\text{ mm})$ & Model inadequacy; weakly informative \\
+ & \multicolumn{3}{l}{\small $a$, $b_u$, $b_d$, $c$, $\sigma_{\mathrm{extra}}$: flat within physically wide bounds} \\
 \midrule
 \multicolumn{4}{l}{\textit{Glaciers, EAIS, Peninsula (level-space Bayesian, 5 free parameters each)}} \\
  & $a$ ($d\alpha/dT$) & $\mathrm{Exp}(\mu = 0.043\text{ mm\,yr}^{-1}\,{}^\circ\text{C}^{-2})$ & PC prior; $P(a > 0.10) = 10\%$ \\
@@ -492,7 +490,7 @@ Table~\ref{tab:skill_metrics} summarizes the goodness-of-fit for each independen
 Component & Calibration data & $R^2$ & Notes \\
 \midrule
 Thermosteric (0--700\,m) & NOAA, 1955--2025 & 0.965 & Two-layer ODE, 6 parameters \\
-Thermosteric (0--2000\,m) & NOAA, 2005--2025 & 0.978 & Joint fit with 0--700\,m \\
+Thermosteric (0--2000\,m) & NOAA, 2005--2025 & 0.979 & Joint fit with 0--700\,m \\
 Glaciers & GlaMBIE, 2000--2023 & 0.995 & Linear rate--temperature \\
 Greenland discharge & Mouginot, 1972--2018 & 0.794 & Rate-space; 3 parameters \\
 Antarctic Peninsula & IMBIE, 1992--2020 & 0.940 & Linear rate--temperature \\
