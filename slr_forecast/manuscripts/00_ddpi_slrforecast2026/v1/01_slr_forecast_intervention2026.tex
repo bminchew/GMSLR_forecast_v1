@@ -84,7 +84,7 @@ As an overview on validation, we note that observed GMSLR and its sensitivity to
 \textbf{(b)} Greenland ice discharge modeled as a cumulative time-delay response to subsurface ocean warming with the calibration data from \citep{Mouginot2019} shown with filled circles and diamonds showing NOAA Arctic Report Card estimates \citep{Poinar2026}.
 \textbf{(c)} Greenland total mass balance with validation data shown in blue squares with 90\% CI error bars \citep{Mankoff2021}.
 \textbf{(d)} Global glacier model fitted to GlaMBIE consensus observations (2000--2023) using a linear temperature-driven model.
-\textbf{(e, f)} Budget closure: temperature-forced component hindcast (stacked) compared with satellite altimetry data (cf. Fig. \ref{fig:observations}).
+\textbf{(e)} Stacked per-component contributions to the temperature-forced hindcast, including EAIS. \textbf{(f)} Sum of components used for budget closure (excluding EAIS; see text) compared with satellite altimetry (cf. Fig. \ref{fig:observations}); shaded band is the 5--95\% Monte Carlo range.
 \textbf{(g)} WAIS scenario distributions at year 2100; dashed lines indicate medians. 
 \textbf{(h)}WAIS projections from our full scenario mixture (blue) and slow WAIS scenario (purple) compared with  observations (black, \citealp{Otosaka2023}), the ISMIP6 ensemble (green; \citealp{Seroussi2020}), and IPCC AR6 projections (red). }
 \label{fig:calibration}
@@ -187,8 +187,6 @@ which we fit jointly to the 0--700\,m and 0--2000 m records. Finally, to account
 	\end{equation}
 where $\dot{H}_{>2000} = 0.07 \pm 0.04$\,mm\,yr$^{-1}$ \citep{Purkey2010} is a constant rate for depths below 2000\,m, referenced to $t_{\mathrm{ref}} = 2000$. This layer is not observed at annual resolution, so its rate is adopted rather than calibrated.
 
-
-
 We fit the two-layer model in Eq. \ref{eq:thermo_total} jointly to NOAA in situ thermosteric sea level at 0--700,m (1955--2025, 71 annual points) and 0--2000,m (2005--2025, 21 points) \citep{Levitus2012} with Bayesian inference, in which MCMC samples parameter combinations $\Theta = (a, b_u, b_d, c, \tau_u, \sigma_{\mathrm{extra}})$ in proportion to their posterior probability. By Bayes' theorem, the posterior probability equals the likelihood of the data given $\Theta$ times the prior probability of $\Theta$. Assuming the residual at each point is normally distributed about the model with variance $\sigma_i^2$, the negative log-likelihood takes the form $\frac{1}{2}\sum_i \left[(r_i(\Theta)/\sigma_i)^2 + \ln\sigma_i^2\right]$. Adding the negative log-prior for $\tau_u$, whose log-normal prior (defined below) has mean $\mu_{\tau_u}$ and standard deviation $s_{\tau_u}$ in $\ln\tau_u$ (the other five parameters have flat priors and so contribute only an additive constant, which we drop), gives the objective function
 \begin{equation}
 \mathcal{O}(\Theta) = \sum_{i} \left[\left(\frac{r_i(\Theta)}{\sigma_i}\right)^2 + \ln\sigma_i^2\right] + \left(\frac{\ln\tau_u - \mu_{\tau_u}}{s_{\tau_u}}\right)^2,
@@ -196,9 +194,6 @@ We fit the two-layer model in Eq. \ref{eq:thermo_total} jointly to NOAA in situ 
 \end{equation}
 which is twice the negative log-posterior up to an additive constant, so MCMC visits parameter combinations $\Theta$ with probability proportional to $\exp[-\mathcal{O}(\Theta)/2]$, favoring combinations that fit the data well (small $\mathcal{O}$) over those that fit poorly (large $\mathcal{O}$). Here $r_i(\Theta)$ is the residual between the demeaned model and demeaned observation at point $i$, and $\sigma_i^2$ is that point's total variance. The point variance is defined by the quadrature sum of the formal measurement error, a structural uncertainty retained after a bias correction in the NOAA observations \citep{Li2022}, and $\sigma_{\mathrm{extra}}$, a noise term, shared across both the 0--700 m and 0--2000 m records, that absorbs misfit beyond the reported observational error. The MCMC sampling uses package emcee with 64 walkers, 6000 burn-in steps, and 30,000 production steps to ensure convergence. The relaxation time of the upper later, $\tau_u$, has a weakly informative prior, $\log\tau_u \sim \mathcal{N}(\ln 8,0.5^2)$, or $\mu_{\tau_u} = \ln (8$ yr) and $s_{\tau_u} = 0.5$ yr, consistent with the range in \citet{Geoffroy2013}. The other five parameters --- $a$, $b_u$, $b_d$, $c$, and $\sigma_{\mathrm{extra}}$ --- get uninformative flat priors with wide bounds (Fig. \ref{fig:ocean_priors_posteriors}). Both records are demeaned before fitting, which removes a baseline offset that the data cannot otherwise constrain. The posterior median and 90\% credible intervals are: $a = 20.0$ [10.1, 31.2] mm $^\circ$C$^{-2}$, $b_u = 51.0$~[40.6, 75.4] mm $^\circ$C$^{-1}$, $b_d = 68.6$ [37.0, 104.3] mm $^\circ$C$^{-1}$, $c = 0.023$ [$-0.112$, 0.140] mm yr$^{-1}$, $\tau_u = 11.6$ [6.2, 25.3] yr, and $\sigma_{\mathrm{extra}} = 2.0$ [1.7, 2.3] mm. The calibrated model reproduces both records with RMS residuals of 2.3 mm for depths 0--700 m and 1.3 mm for 0--2000 m, against 42 and 30 mm of observed rise over the respective records.
 
-
-
-%We fit a two-layer model jointly to NOAA in situ thermosteric sea level at 0--700\,m (1955--2025, 71 annual points) and 0--2000\,m (2005--2025, 21 points) \citep{Levitus2012}. The relaxation time of the upper later, $\tau_u$, has a weakly informative prior, $\log\tau_u \sim \mathcal{N}(\log 8,0.5^2)$, consistent with the range in \citet{Geoffroy2013}. The other five parameters --- $a$, $b_u$, $b_d$, $c$, and $\sigma_{\mathrm{extra}}$ --- get uninformative flat priors with wide bounds (Fig. \ref{fig:ocean_priors_posteriors}). $\sigma_{\mathrm{extra}}$ is a noise term, shared across both the 0--700\,m and 0--2000\,m records, that absorbs misfit beyond the reported observational error. The six free parameters are sampled via MCMC (using package emcee with 64 walkers, 6000 burn-in steps, and 30000 production steps to ensure convergence). The posterior median and 90\% credible intervals are: $a = 20.0$~[10.1, 31.2]~mm\,$^\circ$C$^{-2}$, $b_u = 51.0$~[40.6, 75.4]~mm $^\circ$C$^{-1}$, $b_d = 68.6$~[37.0, 104.3]~mm\,$^\circ$C$^{-1}$, $c = 0.023$~[$-0.112$, 0.140] mm yr$^{-1}$, $\tau_u = 11.6$~[6.2, 25.3]~yr, and $\sigma_{\mathrm{extra}} = 2.0$~[1.7, 2.3]~mm. The calibrated model reproduces both records with RMS residuals of 2.3~mm for depths 0--700 m and 1.3~mm for 0--2000 m, against 42 and 30 mm of observed rise over the respective records.
 
 \begin{figure}[ht]
 \centering
@@ -221,12 +216,12 @@ We validate the full-depth model in Eq. \ref{eq:thermo_full} against the indepen
 
 \subsubsection{Glaciers}
 
-The rate of glacier mass loss is known to be approximately linear with warming ***. To create a consistent error model for this study, we fit cumulative glacier sea-level contribution in level space as
+The rate of glacier mass loss is known to be approximately linear with warming \citep{Rounce2023}. To create a consistent error model for this study, we fit cumulative glacier sea-level contribution in level space as
 \begin{equation}
-	H_{\mathrm{gl}}(t) = b\int_{t_0}^{t}Td\tau + c(t - t_0) + H_0 + \varepsilon(t),
+	H_{\mathrm{gl}}(t) = b_{gl}\int_{t_0}^{t}Td\tau + c_{gl}(t - t_0) + H_{gl_0} + \varepsilon_{gl}(t),
 	\label{eq:glacier_level}
 \end{equation}
-where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and evaluated at annual observation times, $H_0$ is a baseline offset, and $\varepsilon(t) \sim \mathcal{N}(0,\, \sigma_{\mathrm{obs}}^2 + \sigma_{\mathrm{extra}}^2)$ with $\sigma_{\mathrm{extra}}$ an additional model-inadequacy noise term learned from the data. We fit the linear (4 free parameters) model to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors (using package emcee with 32 walkers, 2000 burn-in steps, and 4000 production steps). The posterior median sensitivity is $b = 0.66$ mm yr$^{-1}$ $^\circ$C$^{-1}$ and the committed rate is $c = 0.57$ mm yr$^{-1}$. Cumulative loss is capped at the total glacier volume of 0.32 m SLE \citep{Farinotti2019}.
+where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and evaluated at annual observation times, $H_{gl_0}$ is a baseline offset, and $\varepsilon_{gl}(t) \sim \mathcal{N}(0,\, \sigma_{gl_\mathrm{obs}}^2 + \sigma_{gl_\mathrm{extra}}^2)$ with $\sigma_{gl_\mathrm{extra}}$ an additional model-inadequacy noise term learned from the data. We fit the linear (4 free parameters) model to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors:  $b_{gl}\sim HalfNormal(\sigma=0.087\ \mathrm{mm\ yr^{-1}\ ^\circ C})$ encompassing previously published values and $c_{gl} \sim \mathcal{N}(0.3,1)$ mm yr$^{-1}$ \citep{Rounce2023, GlaMBIE2025}. For the MCMC, we use package emcee with 32 walkers, 2000 burn-in steps, and 4000 production steps. The posterior median sensitivity is $b = 0.66$ mm yr$^{-1}$ $^\circ$C$^{-1}$ and the committed rate is $c = 0.57$ mm yr$^{-1}$. Cumulative loss is capped at the total glacier volume of 0.32 m SLE \citep{Farinotti2019}.
 
 \begin{figure}[ht]
 \centering
@@ -268,9 +263,22 @@ where $T(t)$ is the GMST anomaly. This is fit to the IMBIE EAIS record (1992--20
 
 \subsection{Component model validation}
 
-For the hindcast, we use SMB reanalysis data \citep{Mouginot2019, Noel2018} directly.  
+Any claim to a model's predictive skill must be supported by validation against data. Here, we validate the model using three separate approaches. The first approach is a comparison between the sum of the components, which gives a model GMSL, and observations of GMSL from the satellite record, which is withheld from the calibration. Second, we hindcast by forcing the model components with observed GMST back to 1950, the approximate limit of reliable GMSL data. Third, we compare the transient sensitivity (how the rate of GMSLR changes with GMST) of the aggregate model to the observed transient sensitivity back to 1950. A successful hindcast should be seen as a necessary condition for presenting a forecast, but the sensitivity test is arguably the more important validation because a sea-level projection model is simply that, a means to represent how different sea level components respond and will respond in a warming world. 
 
-As a validation step, we compare the sum of the independently calibrated components to observations of GMSL from satellite altimetry (Fig.~\ref{fig:calibration}e,f). Validation is possible because each component is calibrated against its own observational record. Total GMSL is withheld from calibration. The component sum closes 93--101\% of the observed GMSLR rate over three epochs (1993--2025, 2000--2025, 2010--2025), with a variance-weighted attribution assigning the residual mainly to terrestrial water storage (45--56\%) and thermosteric (21--27\%) components, both within their stated uncertainties (Supplementary Material). The transient sensitivity of our component model, which defines the change in GMSLR rate with warming, closely agrees with observations and the Rahmstorf (2007) \citep{Rahmstorf2007} semi-empirical results (Fig. \ref{fig:observations}b).  
+We compare the sum of the independently calibrated components to observations of GMSL from satellite altimetry (Fig.~\ref{fig:calibration}e,f). Total GMSL is withheld from calibration. The component sum closes 94--101\% of the observed GMSLR rate over three epochs (1993--2025, 2000--2025, 2010--2025; Fig.~\ref{fig:calibration}f). Because each component is calibrated independently, we treat their rate uncertainties as independent and combine them in quadrature. Each component's individual uncertainty comes directly from its Monte Carlo ensemble. For a given epoch, we fit a linear trend to every ensemble member and take the standard deviation of the resulting trends. Repeating this for each epoch lets the combined uncertainty differ from one epoch to the next, rather than using one fixed value throughout the satellite record. By this measure, the residual is within one combined standard deviation of the component rate uncertainties in every epoch (0.55$\sigma$, 0.21$\sigma$, and 0.60$\sigma$ for 1993--2025, 2000--2025, and 2010--2025, respectively).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{component_hindcast_vs_observed.png}
+\caption{\textbf{Budget closure: temperature-forced component hindcast versus observed GMSL.}
+\textbf{(a)} Sum of components used for the budget-closure comparison (excluding EAIS; see text) against NASA satellite altimetry (grey); shaded band is the 5--95\% Monte Carlo range.
+\textbf{(b)} Stacked per-component contributions to the hindcast, including EAIS; the black line is their sum.
+All values are relative to the year 2000 baseline.}
+\label{fig:budget_closure}
+\end{figure}
+
+
+The transient sensitivity of our component model, which defines the change in GMSLR rate with warming, closely agrees with observations and the Rahmstorf (2007) \citep{Rahmstorf2007} semi-empirical results (Fig. \ref{fig:observations}b).  
 
 
 

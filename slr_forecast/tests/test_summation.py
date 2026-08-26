@@ -39,8 +39,11 @@ HAS_IPCC_DIST = os.path.exists(IPCC_DIST_PATH)
 from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 
-# Components that should be summed (EAIS included for completeness)
-SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais']
+# Components that should be summed. EAIS is excluded: the IMBIE record is
+# too short and noisy to constrain a reliable trend, so it is loaded and
+# reported per-component but not included in the total (matches
+# component_summation.ipynb and component_forecast.ipynb).
+SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais']
 ALL_HDF5_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
 
 
@@ -57,11 +60,11 @@ class TestComponentInventory:
         for comp in ALL_HDF5_COMPONENTS:
             assert comp in comps, f"Missing component: {comp}"
 
-    def test_eais_present_and_included(self):
-        """EAIS should be in HDF5 and included in summation."""
+    def test_eais_present_but_excluded(self):
+        """EAIS should be in HDF5 (for per-component reporting) but not summed."""
         comps = list_components()
         assert 'eais' in comps
-        assert 'eais' in SUMMED_COMPONENTS
+        assert 'eais' not in SUMMED_COMPONENTS
 
 
 # =========================================================================
@@ -136,7 +139,8 @@ class TestSampleSummation:
             assert medians[i] <= medians[i + 1] * 1.05
 
     def test_eais_exclusion_is_conservative(self, comp_samples):
-        """Including EAIS should reduce the total (negative SLR)."""
+        """EAIS is excluded from SUMMED_COMPONENTS; including it would lower the total."""
+        assert 'eais' not in SUMMED_COMPONENTS
         eais = load_component('eais')
         idx = np.argmin(np.abs(PROJ_YEARS - 2100))
         ssp = 'SSP2-4.5'
@@ -355,8 +359,8 @@ class TestConsistencyWithForecast:
 
     def test_same_components_as_forecast(self):
         """Summation notebook should use same components as forecast."""
-        # Forecast COMP_LABELS (from test_forecast.py knowledge):
-        forecast_comps = {'ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais'}
+        # Forecast COMP_LABELS (component_forecast.ipynb cell 2): no EAIS.
+        forecast_comps = {'ocean', 'glacier', 'greenland', 'apeninsula', 'wais'}
         # tws is added separately in both notebooks
         summation_comps = set(SUMMED_COMPONENTS)
         assert summation_comps == forecast_comps
