@@ -23,7 +23,7 @@
 \renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thetable}{S\arabic{table}}
 
-\title{Supplementary Materials for:\\Sea level is likely to rise more than 1 meter in the 21st century}
+\title{Supplementary Materials for:\\SPECTRUM: A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
 \author{Minchew, Meyer, et al.}
 \date{}
 
@@ -42,11 +42,8 @@
 
 Unless otherwise noted, all reported intervals are 90\% Bayesian credible intervals (equal-tailed), and where $1\sigma$ is reported (e.g., the rheology correction factor), we state explicitly that it is a standard deviation.
 
-\subsection{Global mean sea level (GMSL) rate estimates}
 
-The satellite-era GMSL rates and 90\% confidence intervals reported in Figure~1 of the main text are derived from the quadratic trajectory methodology of Hamlington et~al.~\citeyearpar{Hamlington2024}. A quadratic is fit to the NASA satellite altimetry record (1993--2023) and the instantaneous rate at any time $t$ is given by $\dot{H}(t) = a + bt$, where $a$ and $b$ are the linear and quadratic coefficients. The 90\% confidence intervals are determined via a 10,000-member Monte Carlo simulation in which each realization perturbs the rate and acceleration by three independent error sources: (i)~serially correlated residuals after removing the quadratic trajectory, following Maul \& Martin~\citeyearpar{Maul1993}; (ii)~glacial isostatic adjustment (GIA) uncertainty from a Bayesian inversion of ice loading histories; and (iii)~satellite mission-specific measurement errors including altimeter noise, orbit determination, wet troposphere corrections, and inter-mission biases. The resulting 90\% CIs at the endpoints of the record are $2.1 \pm 1.0$~mm\,yr$^{-1}$ at 1993 and $4.5 \pm 1.0$~mm\,yr$^{-1}$ at 2024.
 
-The pre-satellite rate of 1.1~mm\,yr$^{-1}$ (0.8--1.3~mm\,yr$^{-1}$, 90\% CI) averaged over 1900--1940 is computed from the Frederikse et~al.~\citeyearpar{Frederikse2020} tide-gauge reconstruction using a local polynomial regression (tricube kernel, 30-year bandwidth) that estimates instantaneous rates and their standard errors at each year. The narrower confidence interval reflects the longer averaging period and the lower sensitivity of tide-gauge uncertainties to the error sources that dominate the satellite record. Temperature changes between rate-doubling epochs are from Berkeley Earth \citep{Rohde2020}.
 
 \subsection{Observational datasets}
 
@@ -98,19 +95,6 @@ Projections & IPCC AR6 FACTS (med.\ \& low conf.) & 2020--2150 & Garner et~al.~\
 
 
 \subsubsection{Glaciers}
-We model cumulative glacier sea-level contribution in level space as
-\begin{equation}
-	H_{\mathrm{gl}}(t) = a\!\int_{t_0}^{t}\!T^2\,d\tau \;+\; b\!\int_{t_0}^{t}\!T\,d\tau \;+\; c\,(t - t_0) \;+\; H_0 \;+\; \varepsilon(t),
-	\label{eq:glacier_level}
-\end{equation}
-where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and evaluated at annual observation times, $H_0$ is a baseline offset, and $\varepsilon(t) \sim \mathcal{N}(0,\, \sigma_{\mathrm{obs}}^2 + \sigma_{\mathrm{extra}}^2)$ with $\sigma_{\mathrm{extra}}$ an additional model-inadequacy noise term learned from the data. The corresponding rate model is $\dot{H}_{\mathrm{gl}} = a\,T^2 + b\,T + c$. We fit both the quadratic (5 free parameters: $a$, $b$, $c$, $\sigma_{\mathrm{extra}}$, $H_0$) and linear (4 free parameters, with $a = 0$) models to the GlaMBIE record (2000--2023, 23 annual points) using Bayesian inference with weakly informative priors (emcee; linear fit: 32 walkers, 2000 burn-in + 4000 production steps, thinning by 2; quadratic fit: 64 walkers, 4000 burn-in + 12000 production steps, thinning by 2). BIC model selection favors the linear model ($\Delta\mathrm{BIC} = \mathrm{BIC}_{\mathrm{lin}} - \mathrm{BIC}_{\mathrm{quad}} = -63.8$). The data detect nonzero curvature---the posterior probability $P(a > 0) > 99\%$ with $a = 0.009$~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$---but the quadratic coefficient is small ($a \ll b$) and BIC favors the linear model, so we adopt the linear model for projections. The posterior median sensitivity is $b = 0.66$~mm\,yr$^{-1}$\,$^\circ$C$^{-1}$ and the committed rate is $c = 0.57$~mm\,yr$^{-1}$, with $R^2 = 0.995$. Cumulative loss is capped at the total glacier volume of 0.32~m SLE \citep{Farinotti2019}.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{component_glacier_diagnostics.png}
-\caption{\textbf{Glacier model diagnostics.} (a)~Glacier mass loss rate vs GMST anomaly with the fitted linear relationship. (b)~Cumulative glacier SLR: GlaMBIE observations (circles) with the linear model fit (black line) and 90\% credible interval (grey shading); $R^2 = 0.995$. (c)~Posterior distribution for the temperature sensitivity $b$.}
-\label{fig:glacier_diagnostics}
-\end{figure}
 
 
 
@@ -119,12 +103,7 @@ where $T$ is the GMST anomaly, the integrals are computed on a monthly grid and 
 
 
 \subsubsection{Greenland SMB}
-We use RACMO-derived SMB \citep{Mouginot2019} for the hindcast. Forecasts use a quadratic temperature scaling $\Delta\dot{H}_{\mathrm{smb}} = C_T\,\Delta T + C_{T^2}\,\Delta T^2$ with sensitivities drawn from the inter-RCM spread \citep{Fettweis2020, Noel2021, Glaude2024}. The linear sensitivity $C_T \sim \mathcal{N}(-300, 80^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ of GMST encompasses the MAR, RACMO, and HIRHAM estimates. The quadratic sensitivity is $C_{T^2} \sim \mathcal{N}(-50, 30^2)$~Gt\,yr$^{-1}$\,$^\circ$C$^{-2}$. The cumulative SMB contribution is obtained by integrating the rate anomaly:
-\begin{equation}
-	\Delta H_{\mathrm{smb}}(t) = \int_{t_0}^{t} \bigl[\dot{M}_0 + C_T \,\Delta T(t') + C_{T^2}\,\Delta T(t')^2\bigr]\, dt',
-	\label{eq:greenland_smb_cumulative}
-\end{equation}
-where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline and $\dot{M}_0 = 380$~Gt\,yr$^{-1}$ is the baseline SMB. 
+
 
 
 
@@ -141,7 +120,7 @@ where $\Delta T$ is the GMST anomaly relative to the 1995--2005 baseline and $\d
 
 To project $T_{\mathrm{ocean}}$ into the future, we calibrate a linear transfer function on annual-mean observations:
 \begin{equation}
-	T_{\mathrm{ocean}}(t) = \alpha\,T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
+	T_{\mathrm{ocean}}(t) = \alpha T_{\mathrm{surface}}^{\mathrm{Gr}}(t) + \beta + \varepsilon(t),
 	\label{eq:ocean_transfer}
 \end{equation}
 where $T_{\mathrm{surface}}^{\mathrm{Gr}}$ is the Greenland regional surface temperature anomaly (Berkeley Earth gridded, annual mean), and $\varepsilon$ is a zero-mean residual. Both series are anomalies relative to 1995--2005. An OLS fit over $52$ common annual values gives $\alpha = 0.148 \pm 0.027$, $\beta = -0.051 \pm 0.031\,^\circ$C, $R^2 = 0.38$, and residual standard deviation $\sigma_\varepsilon = 0.20\,^\circ$C. The transfer function is calibrated independently of the discharge model parameters $(\gamma, r_0, \delta)$: the two regressions share no free parameters and are fit on different dependent variables ($T_{\mathrm{ocean}}$ vs.\ cumulative discharge).
@@ -325,9 +304,6 @@ Repeating this analysis for the 95th percentile (5\% exceedance probability)---w
 \label{fig:wais_tornado_p95}
 \end{figure}
 
-\subsection{MCMC convergence diagnostics}
-
-For all MCMC fits (thermosteric, glaciers, EAIS, Peninsula), we verified convergence using the Gelman--Rubin diagnostic ($\hat{R}$) and effective sample size (ESS). For the glacier and Peninsula models, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $\geq 120$ and tail ESS $\geq 159$; mean acceptance fractions are 0.44 (glaciers, linear) and 0.50 (Peninsula). For the EAIS diagnostic fit, all parameters satisfy $\hat{R} < 1.05$ with bulk ESS $> 120$ and acceptance fraction 0.49. For the thermosteric two-layer model, the mean acceptance fraction is 0.446 across 64 walkers with 1,920,000 posterior samples (after burn-in); all parameters satisfy $\hat{R} < 1.02$ with ESS $\geq 6,000$ (max integrated autocorrelation time 318 steps, 94$\times$ shorter than the chain). Components share a common temperature driver, introducing positive correlations in the projection ensemble. This correlation is captured sample-by-sample (each Monte Carlo realization uses the same SSP temperature trajectory for all components) but the structural uncertainty in the temperature trajectories introduces additional correlation not explicitly modeled.
 
 \subsection{Rate-space blending}
 
