@@ -152,8 +152,6 @@ The Antarctic Peninsula component uses the same level-space Bayesian framework, 
 \label{fig:apeninsula_diagnostics}
 \end{figure}
 
-\subsubsection{Terrestrial water storage}
-TWS projections are adopted directly from the IPCC AR6 \texttt{landwaterstorage} component rather than independently modeled, as the processes governing groundwater depletion, reservoir impoundment, and land hydrology changes are outside the scope of this framework. At each decadal interval in the IPCC projections, we fit a Gaussian distribution to the reported median and inter-quantile spread and draw 2,000 Monte Carlo samples, which are then linearly interpolated to annual resolution. For the hindcast period (pre-2020), we use the Frederikse et~al.~\citeyearpar{Frederikse2020} TWS observations with Monte Carlo sampling from their reported uncertainties. TWS is SSP-dependent but the contribution is small (${\sim}30$~mm at 2100 under SSP2-4.5) and does not materially affect the total uncertainty budget.
 
 
 \subsubsection{WAIS}
@@ -305,28 +303,7 @@ Repeating this analysis for the 95th percentile (5\% exceedance probability)---w
 \end{figure}
 
 
-\subsection{Rate-space blending}
 
-The total GMSL forecast is constructed by blending the satellite-era quadratic extrapolation with the component-model sum in rate space:
-\begin{equation}
-	\dot{H}_{\mathrm{forecast}}(t) = w(t)\,\dot{H}_{\mathrm{quad}}(t) + \bigl[1 - w(t)\bigr]\,\dot{H}_{\mathrm{comp}}(t),
-	\label{eq:blend_rate}
-\end{equation}
-where $\dot{H}_{\mathrm{quad}}$ is the rate from the satellite-era quadratic fit (Section~``GMSL rate estimates''), $\dot{H}_{\mathrm{comp}}$ is the rate of the component sum (finite differences of the annual-resolution component projections), and $w(t)$ is a sigmoid blending weight
-\begin{equation}
-	w(t) = 1 - \sigma\!\left(\frac{t - t_c}{\tau}\right),
-	\label{eq:sigmoid_weight}
-\end{equation}
-with $\sigma(x) = (1 + e^{-x})^{-1}$ the standard logistic function, $t_c = 2035$, and $\tau = 5$~yr. At $t \ll t_c$, $w \approx 1$ and the forecast follows the observed quadratic trajectory; at $t \gg t_c$, $w \approx 0$ and the forecast follows the component-model physics. The transition spans approximately 22~yr (10\%--90\% of the weight shift occurs over $\pm 2.2\,\tau \approx \pm 11$~yr around $t_c$).
-
-The level forecast is obtained by integrating Eq.~\eqref{eq:blend_rate} forward from the observed GMSL at the forecast origin $t_0 = 2025.3$ (the end of the NASA altimetry record) using the trapezoidal rule:
-\begin{equation}
-	H_{\mathrm{forecast}}(t) = H_{\mathrm{obs}}(t_0) + \int_{t_0}^{t} \dot{H}_{\mathrm{forecast}}(t')\,dt'.
-	\label{eq:blend_level}
-\end{equation}
-The blending is performed sample-by-sample across the 2{,}000-member Monte Carlo ensemble, preserving correlations between the quadratic-fit parameter uncertainty and the component-model uncertainty.
-
-Because the quadratic extrapolation is derived entirely from the satellite altimetry record, it carries no dependence on emissions pathway. The component sum is SSP-dependent through the temperature-forced component models. Consequently, the blended forecast is SSP-independent in the near term (where $w \approx 1$) and becomes progressively SSP-dependent as the component physics dominate at longer lead times.
 
 \subsection{Variance decomposition}
 

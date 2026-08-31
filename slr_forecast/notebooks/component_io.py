@@ -750,13 +750,19 @@ def load_component(component_name, h5_path=None):
                         posteriors[extra] = pg[extra][:]
                 if "param_names" in pg.attrs:
                     posteriors["param_names"] = json.loads(pg.attrs["param_names"])
-            else:
+            elif all(isinstance(pg[k], h5py.Group) for k in pg):
                 # Sub-grouped (e.g. Greenland discharge/)
                 for sub in pg:
                     posteriors[sub] = {}
                     for ds_name in pg[sub]:
                         posteriors[sub][ds_name] = pg[sub][ds_name][:]
                     posteriors[sub].update(dict(pg[sub].attrs))
+            else:
+                # Flat named posterior datasets, no posterior_samples key
+                # (e.g. ocean two-layer model: a_posterior, b_u_posterior, ...)
+                for ds_name in pg:
+                    posteriors[ds_name] = pg[ds_name][:]
+                posteriors.update(dict(pg.attrs))
         out["posteriors"] = posteriors
 
         # ── SMB sensitivity (Greenland) ──
