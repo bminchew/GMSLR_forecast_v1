@@ -95,6 +95,8 @@ def project_smb_ensemble(
     seed: Optional[int] = None,
     volume_cap_m: Optional[float] = None,
     baseline_year: Optional[float] = None,
+    aa_scale: Optional[np.ndarray] = None,
+    zero_ct2_below_baseline: bool = False,
 ) -> dict:
     """Project SMB contribution to SLE under multiple SSP scenarios.
 
@@ -120,6 +122,22 @@ def project_smb_ensemble(
     baseline_year : float or None
         If provided, rebase cumulative SLE so that it is zero at this
         year.  If None (default), rebases to the year where dT ≈ 0.
+    aa_scale : ndarray or None
+        Optional per-year multiplicative scale on C_T and C_T2, shape
+        matching ``time_proj``. Intended for representing a historical
+        Arctic-amplification ramp (C_T/C_T2 are calibrated at the
+        present-day AA baked into the literature value; scaling down
+        for earlier, weaker-AA periods keeps the sensitivity consistent
+        with a different local-T/GMST ratio). Default None = no scaling
+        (all ones) -- fully backward compatible.
+    zero_ct2_below_baseline : bool
+        If True, the quadratic term is forced to zero wherever
+        dT(t) < 0. C_T2 represents a one-directional physical mechanism
+        (melt-albedo feedback / ablation-zone expansion under warming)
+        with no analog under cooling, so applying it symmetrically to
+        dT < 0 has no physical basis. Default False -- fully backward
+        compatible; existing callers (e.g. EAIS, where C_T2=0 anyway)
+        are unaffected either way.
 
     Returns
     -------
@@ -133,6 +151,10 @@ def project_smb_ensemble(
     n_times = len(time_proj)
     dt = np.diff(time_proj, prepend=time_proj[0] - 1.0)
 
+    if aa_scale is None:
+        aa_scale = np.ones(n_times)
+    aa_scale = np.asarray(aa_scale, dtype=float)
+
     # Draw sensitivity parameters
     C_T_draws = rng.normal(sensitivity.C_T, sensitivity.C_T_sigma, n_samples)
     C_T2_draws = rng.normal(sensitivity.C_T2, sensitivity.C_T2_sigma, n_samples)
@@ -143,10 +165,20 @@ def project_smb_ensemble(
         # Temperature anomaly relative to baseline
         dT = T_ssp - T_baseline
 
+        # C_T2 mask: zero below baseline if requested (no effect if
+        # zero_ct2_below_baseline=False, i.e. mask is all ones)
+        if zero_ct2_below_baseline:
+            ct2_mask = (dT >= 0).astype(float)
+        else:
+            ct2_mask = np.ones_like(dT)
+
         # SMB rate for each sample: (n_samples, n_times)
-        # rate_i(t) = C_T_i · dT(t) + C_T2_i · dT(t)² + SMB_0
-        rates = (C_T_draws[:, None] * dT[None, :]
-                 + C_T2_draws[:, None] * dT[None, :] ** 2
+        # rate_i(t) = C_T_i · aa_scale(t) · dT(t)
+        #             + C_T2_i · aa_scale(t) · dT(t)² · ct2_mask(t)
+        #             + SMB_0
+        rates = ((C_T_draws[:, None] * aa_scale[None, :]) * dT[None, :]
+                 + (C_T2_draws[:, None] * aa_scale[None, :])
+                    * dT[None, :] ** 2 * ct2_mask[None, :]
                  + sensitivity.SMB_0)
 
         # Convert Gt/yr → m SLE/yr
