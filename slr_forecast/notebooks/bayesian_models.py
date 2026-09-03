@@ -2419,7 +2419,7 @@ def _rate_accel_prior_logp(
 
 
 def _level_log_prior(theta, prior_scales, H0_prior_mean,
-                     symmetric_a=False):
+                     symmetric_a=False, symmetric_b=False):
     """Log-prior for the Bayesian level-space model.
 
     Parameters: theta = [a, b, c, log_sigma_extra, H0]
@@ -2428,7 +2428,8 @@ def _level_log_prior(theta, prior_scales, H0_prior_mean,
         a (dα/dT)       : Exponential(mean = prior_scales[0]) — a ≥ 0  [default]
                            OR Normal(0, prior_scales[0]) if symmetric_a=True
                            PC prior: shrinks toward a=0 (order-1 model)
-        b (α₀)          : HalfNormal(σ = prior_scales[1])     — b ≥ 0
+        b (α₀)          : HalfNormal(σ = prior_scales[1])     — b ≥ 0  [default]
+                           OR Normal(0, prior_scales[1]) if symmetric_b=True
         c (trend)        : Normal(prior_scales[2], prior_scales[3])
         σ_extra          : HalfCauchy(0, prior_scales[4])      — sampled as log(σ_extra)
         H₀              : Normal(H0_prior_mean, prior_scales[5])
@@ -2438,11 +2439,21 @@ def _level_log_prior(theta, prior_scales, H0_prior_mean,
         Exponential.  This allows a < 0, appropriate for components
         whose rate–temperature sensitivity may saturate or reverse
         (e.g., glaciers approaching depletion).
+    symmetric_b : bool
+        If True, use Normal(0, prior_scales[1]) for b instead of
+        HalfNormal, dropping the b >= 0 hard bound. Appropriate for
+        components with no physical reason to expect a one-signed
+        warming sensitivity for the linear term (e.g. EAIS, where
+        warming plausibly *increases* accumulation and could make the
+        net rate-temperature trend negative -- forcing b >= 0 there
+        imposes a sign assumption the physics doesn't support, and
+        piles posterior mass at the b=0 boundary instead).
     """
     a, b, c, log_sigma_extra, H0 = theta
 
-    # Non-negativity hard bounds (b always ≥ 0; a ≥ 0 unless symmetric)
-    if b < 0:
+    # Non-negativity hard bounds (skipped when the corresponding
+    # symmetric_* flag is set)
+    if not symmetric_b and b < 0:
         return -np.inf
     if not symmetric_a and a < 0:
         return -np.inf
@@ -2459,7 +2470,9 @@ def _level_log_prior(theta, prior_scales, H0_prior_mean,
         # a ~ Exponential(mean = μ_a)  [PC prior — mode at a=0]
         # log p(a) = -a/μ + const  (const = -log(μ), dropped for MCMC)
         lp += -a / prior_scales[0]
-    # b ~ HalfNormal(σ)
+    # b ~ HalfNormal(σ) [default, b >= 0 enforced above] or Normal(0, σ)
+    # [symmetric_b=True] -- same quadratic form either way, only the
+    # b >= 0 hard bound above differs.
     lp += -0.5 * (b / prior_scales[1])**2
     # c ~ Normal(μ_c, σ_c)
     lp += -0.5 * ((c - prior_scales[2]) / prior_scales[3])**2
@@ -2492,6 +2505,7 @@ def _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed):
 
 def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
                     prior_scales, H0_prior_mean, symmetric_a=False,
+                    symmetric_b=False,
                     rate_prior=None, T_end=0.0, dTdt_end=0.0,
                     rate_prior_cov_inv=None):
     """Log-posterior for the level-space model.
@@ -2509,7 +2523,7 @@ def _level_log_prob(theta, I2, I1, I0, H_obs, sigma_obs_fixed,
         Only used when rate_prior is not None.
     """
     lp = _level_log_prior(theta, prior_scales, H0_prior_mean,
-                          symmetric_a=symmetric_a)
+                          symmetric_a=symmetric_a, symmetric_b=symmetric_b)
     if not np.isfinite(lp):
         return -np.inf
     ll = _level_log_likelihood(theta, I2, I1, I0, H_obs, sigma_obs_fixed)
@@ -2549,6 +2563,7 @@ def fit_bayesian_level(
     progress: bool = True,
     seed: Optional[int] = None,
     symmetric_a: bool = False,
+    symmetric_b: bool = False,
     rate_prior: Optional['SatelliteEraQuadraticResult'] = None,
     temperature_monthly: Optional[np.ndarray] = None,
     time_monthly: Optional[np.ndarray] = None,
@@ -2587,6 +2602,7 @@ def fit_bayesian_level(
         If ``symmetric_a=True``, this is the Normal σ instead.
     prior_scale_b : float
         HalfNormal σ for b (α₀), in m/yr/°C.  Default 0.010.
+        If ``symmetric_b=True``, this is the Normal σ instead.
     prior_c_mean : float
         Normal prior mean for c (trend), in m/yr.  Default 0.002.
     prior_c_sigma : float
@@ -2603,6 +2619,11 @@ def fit_bayesian_level(
         Random seed.
     symmetric_a : bool
         If True, use Normal(0, σ) prior on a instead of Exponential.
+    symmetric_b : bool
+        If True, use Normal(0, σ) prior on b instead of HalfNormal,
+        dropping the b >= 0 hard bound. Use for components with no
+        physical reason to expect a one-signed linear sensitivity
+        (e.g. EAIS -- see ``_level_log_prior``).
     rate_prior : SatelliteEraQuadraticResult or None
         If provided, adds a bivariate Gaussian penalty on the
         model-implied (rate, accel) at end of record.  Requires
@@ -2676,8 +2697,10 @@ def fit_bayesian_level(
         a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
                        if symmetric_a else
                        f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
-        print(f"  Priors: {a_prior_str}, "
-              f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C), "
+        b_prior_str = (f"b~N(0,{prior_scale_b*1e3:.2f} mm/yr/°C)"
+                       if symmetric_b else
+                       f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C)")
+        print(f"  Priors: {a_prior_str}, {b_prior_str}, "
               f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f} mm/yr), "
               f"σ_extra~HC({prior_sigma_extra_scale*1e3:.1f} mm)")
         if rate_prior is not None:
@@ -2703,7 +2726,7 @@ def fit_bayesian_level(
     rng = np.random.default_rng(seed)
     p0_center = np.array([
         a0 if symmetric_a else max(a0, 1e-6),
-        max(b0, 1e-6),
+        b0 if symmetric_b else max(b0, 1e-6),
         c0,
         np.log(max(sigma_extra_0, 1e-6)),
         H0_0,
@@ -2717,10 +2740,12 @@ def fit_bayesian_level(
     ])
     p0 = p0_center[None, :] + p0_scale[None, :] * rng.standard_normal(
         (n_walkers, ndim))
-    # Enforce b ≥ 0 always; a ≥ 0 only when not symmetric
+    # Enforce non-negativity for walker init only when the corresponding
+    # symmetric_* flag is not set
     if not symmetric_a:
         p0[:, 0] = np.abs(p0[:, 0])
-    p0[:, 1] = np.abs(p0[:, 1])
+    if not symmetric_b:
+        p0[:, 1] = np.abs(p0[:, 1])
 
     # ---- Run emcee ----
     # Pre-compute covariance inverse once (avoids np.linalg.inv per step)
@@ -2731,6 +2756,7 @@ def fit_bayesian_level(
         args=(I2_obs, I1_obs, I0_obs, H_obs, sigma_obs,
               prior_scales, H0_prior_mean),
         kwargs={'symmetric_a': symmetric_a,
+                'symmetric_b': symmetric_b,
                 'rate_prior': rate_prior,
                 'T_end': T_end_val,
                 'dTdt_end': dTdt_end_val,
