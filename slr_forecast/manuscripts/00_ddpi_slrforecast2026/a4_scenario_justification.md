@@ -1,29 +1,33 @@
 # A4 WAIS Scenario Framework: Literature Justification
 
 **Purpose:** Provide detailed, citation-backed justification for every parameter
-choice in the revised 3-scenario A4 framework, sufficient to satisfy a skeptical
+choice in the revised 2-scenario A4 framework, sufficient to satisfy a skeptical
 reviewer with deep expertise in ice sheet modeling.
 
 ---
 
-## 1. Framework Structure: Three Scenarios
+## 1. Framework Structure: Two Scenarios
 
 | Scenario | P | Range (mm, 2100) | α | Physics |
 |----------|---|-------------------|---|---------|
 | S1: Status quo | 0.10 | 25–85 | 0 | No MISI; linear melt-driven discharge |
-| S2: MISI | 0.80 | 120–1000 | +4 | MISI with amplification |
-| S3: MISI+MICI | 0.10 | 600–1300 | −3 | Full instability cascade |
+| S2: Fast WAIS (MISI + MICI) | 0.90 | 150–1300 | +3.22 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95 |
 
-### Why three scenarios, not four
+### Why two scenarios, not three
 
-The previous framework separated "moderate MISI" (150–400 mm) from "MISI with
-amplifiers" (400–1000 mm). We merge these because the distinction is not
-physically defensible: if MISI is triggered, current models cannot represent
-the amplifying processes that accompany it. Specifically:
+An earlier version of this framework used three scenarios: S1 (status quo),
+S2 (moderate MISI, 150–1000 mm, P=0.80), and S3 (MISI+MICI, 600–1300 mm,
+P=0.10). We merge S2 and S3 into a single scenario because the distinction
+is not physically defensible: if MISI is triggered, current models cannot
+represent the amplifying processes that accompany it, and there is no
+principled way to separate "MISI without cliff failure" from "MISI with
+cliff failure" as two independent, mutually exclusive branches. Specifically:
 
 - **Calving is not represented** in any ISMIP6 model (Aschwanden et al., 2021,
   The Cryosphere; Fricker et al., 2025, Science). Calving is a first-order
-  control on grounding-line retreat rate.
+  control on grounding-line retreat rate, and ice-cliff failure is simply the
+  limiting case of unrepresented calving processes, not a categorically
+  distinct mechanism.
 - **Rheology is systematically wrong** (n=3 vs observed n≈4): Martin et al.
   (2026, AGU Advances) show 21–35% underestimation of 100-year SLR from
   rheology alone; Getraer & Morlighem (2025, GRL) find 32±14% greater
@@ -32,14 +36,24 @@ the amplifying processes that accompany it. Specifically:
   Communications, 2025, doi:10.1038/s41467-025-58375-4).
 - **Ocean-ice coupling** is parameterized, not dynamically computed, in ISMIP6.
 
-A scenario where "MISI happens but proceeds exactly as models predict" is
-therefore an artifact of model limitations, not a distinct physical regime.
-The merged S2 uses a skewed distribution (§4) to capture the full range from
-moderate to amplified MISI outcomes.
+A scenario where "MISI happens but proceeds exactly as models predict,
+without either amplification or cliff failure" is therefore an artifact of
+model limitations, not a distinct physical regime. The merged S2 uses a
+probability-weighted skewed distribution (§4) to capture the full range from
+moderate to amplified MISI outcomes, including the possibility of MICI.
+
+This merge is one step further along the same logic that motivated an even
+earlier four-scenario framework's collapse to three: that version separated
+"moderate MISI" (150–400 mm) from "MISI with amplifiers" (400–1000 mm) before
+those two were themselves merged into a single MISI scenario. The current
+2-scenario framework completes this simplification by folding the MISI+MICI
+branch into the same merged distribution, while still capturing MICI's
+distinct (negative) skew contribution through the probability-weighted blend
+described in §4.
 
 ---
 
-## 2. Scenario Weights: 10–80–10
+## 2. Scenario Weights: 10–90
 
 ### S1 = 10% (no MISI)
 
@@ -68,9 +82,9 @@ warming, and observed acceleration. A 10% weight reflects the small but
 non-zero possibility that observed trends are reversible or dominated by
 internal variability.
 
-### S2 = 80% (MISI)
+### S2 = 90% (Fast WAIS: MISI, with or without MICI)
 
-**Supporting evidence:**
+**Supporting evidence for MISI as the baseline expectation:**
 
 - AR6 assigns medium confidence to MISI contributing up to ~40 cm by 2100,
   and includes MISI in its main (medium-confidence) projections.
@@ -86,13 +100,8 @@ internal variability.
   total Antarctic median ~34 cm under RCP8.5, with nonlinear acceleration
   above 3°C.
 
-**Assessment:** MISI is the most physically supported instability mechanism,
-included in IPCC medium-confidence projections, and arguably already
-initiated. The 80% weight reflects the consensus position.
-
-### S3 = 10% (MISI + MICI)
-
-**Supporting evidence for low probability:**
+**Supporting evidence for including MICI's contribution within S2, but with
+low weight in the blend:**
 
 - AR6 assigns low confidence to MICI. It is excluded from medium-confidence
   projections and noted as "characterised by deep uncertainty."
@@ -110,9 +119,6 @@ initiated. The 80% weight reflects the consensus position.
   (melange, viscous flow) can arrest retreat.
 - Schlemm et al. (2022, The Cryosphere): MICI is self-limiting due to
   melange buttressing and embayment geometry changes.
-
-**Supporting evidence that P > 0:**
-
 - DeConto & Pollard (2016, Nature): MICI + hydrofracturing calibrated against
   Pliocene/LIG constraints produced ~1 m Antarctic SLR by 2100 (RCP8.5).
   While now considered an overestimate, the mechanism has not been definitively
@@ -125,12 +131,21 @@ initiated. The 80% weight reflects the consensus position.
 - IPCC AR6: MICI is presented under "cannot be ruled out" language for
   low-likelihood, high-impact storylines.
 
-**Assessment:** The weight of evidence since 2019 has moved decisively against
-MICI operating during the 21st century, particularly Morlighem et al. (2024)
-and Clerc et al. (2019). However, the mechanism cannot be entirely excluded,
-and its potential impact is large enough that it must be represented. A 10%
-weight is consistent with AR6's low-confidence assessment and reflects a
-non-negligible but skeptical stance.
+**Assessment:** MISI is the most physically supported instability mechanism,
+included in IPCC medium-confidence projections, and arguably already
+initiated. The 90% weight reflects the consensus position that MISI is the
+baseline expectation for WAIS evolution. Rather than assigning MICI a
+separate, small mixture weight as in the earlier three-scenario framework,
+its distinct (negative) skew and evidentiary skepticism are folded directly
+into S2's blended shape parameters (§4): the weight of evidence since 2019
+has moved decisively against MICI operating during the 21st century,
+particularly Morlighem et al. (2024) and Clerc et al. (2019), but the
+mechanism cannot be entirely excluded and its potential impact is large
+enough that it must be represented. This is functionally equivalent to a
+10%-within-90% (i.e., 0.10/0.90 of the merged mass) contribution from
+MICI-type outcomes, consistent with AR6's low-confidence assessment and
+with our conclusions being qualitatively insensitive to whether MICI
+operates.
 
 ### Cross-check with Bamber et al. (2019) SEJ
 
@@ -143,14 +158,18 @@ validation target for our mixture distribution. Their WAIS-specific results:
 | +5°C | −50 mm | 180 mm | 460 mm | 930 mm |
 
 Our A4 mixture (after rheology correction) produces:
-- Median: ~387 mm, 90% CI: [63, 1819] mm
+- Median: ~410 mm, 90% CI: [60, 1620] mm
 
 Our distribution is wider than Bamber's +5°C WAIS estimates. This is
 expected and defensible because: (a) Bamber was published before Martin et al.
 (2026) quantified the rheology bias; (b) the SEJ was conducted before
 Morlighem et al. (2024) and recent Thwaites observations that have sharpened
 the evidence for ongoing instability; (c) our framework explicitly includes
-the rheology correction that shifts the entire distribution upward by ~28%.
+the rheology correction that shifts the entire distribution upward by ~28%;
+and (d) merging the former MICI-only tail into the dominant 90%-weight
+scenario, with its upper bound pinned to the AR6 low-confidence p95
+(1300 mm), widens the tail relative to the three-scenario version, where
+that same upper bound was reached by only 10% of the mixture's mass.
 In the paper, we present Bamber SEJ as a complementary, methodology-orthogonal
 constraint on WAIS uncertainty, noting that agreement in the broad shape
 (strongly right-skewed, median in the hundreds of mm) strengthens confidence
@@ -182,101 +201,116 @@ The range is derived from a physical scaling chain:
    - *Upper bound:* Peak rate (0.44 mm/yr) ramped by f = 2.9 to 1.3 mm/yr.
      Linear ramp: (0.44 + 1.3)/2 × 95 ≈ 83 mm → **85 mm**.
 
-### S2: 120–1000 mm (MISI)
+### S2: 150–1300 mm (Fast WAIS: MISI, with or without MICI)
 
-This merges the former S2 (150–400 mm) and S3 (400–1000 mm) ranges.
+This merges the former S2 (150–1000 mm, moderate MISI) and S3 (600–1300 mm,
+MISI+MICI) ranges. The lower bound is unchanged from the former S2; the
+upper bound is unchanged from the former S3, now serving as the pin for the
+entire merged scenario.
 
-**Lower bound (120 mm):**
+**Lower bound (150 mm), basin-by-basin derivation:**
 
-The minimum physically consistent WAIS contribution if MISI operates,
-representing late-onset instability (~2060) with high residual buttressing,
-limited primarily to the Thwaites basin. Two independent arguments:
+Anchored to transient-calibrated ice sheet model projections (Goldberg,
+Morlighem & Gourmelen, 2026, GRL) and observed grounding-line retreat rates
+(Rignot et al., 2026, PNAS):
 
-1. *Rate separation from S1*: S1's upper bound (85 mm) is the maximum
-   without MISI. The grounding-line flux feedback must produce rates
-   clearly above melt-driven linear response. Even late-triggering
-   MISI that doubles the late-century rate relative to S1 gives ~120 mm.
+- *Thwaites* (~40 mm): Goldberg et al. (2026) calibrated two independent
+  models (STREAMICE, ISSM) against observed surface elevation changes and
+  found volume-above-flotation loss rates of 180–200 Gt/yr by 2067 from the
+  trunk subdomain alone, using n=3 with no calving or subglacial hydrology.
+  Integrating to 2100 and scaling to the full catchment gives ~40 mm SLE —
+  from a model configuration whose every omission biases mass loss low.
+- *PIG* (~40 mm): 33 km of grounding-line retreat since 1992 (Rignot et al.,
+  2026), sharing the same ocean forcing and retrograde bed geometry as
+  Thwaites.
+- *Smith/Kohler* (~12 mm): 43 km GL retreat since 1996, the largest relative
+  to glacier size in the ASE.
+- *Other ASE* (~10 mm): Pope, Haynes, Berry, Hull/Land — all retreating.
+- *Non-ASE WAIS* (~30 mm): Basins without MISI (Siple Coast, Marie Byrd
+  Land) contributing at S1-like rates.
 
-2. *Bed geometry*: If MISI drives Thwaites' grounding line through even
-   a portion of its retrograde bed (700–2000 m depth over ~250 km;
-   Morlighem et al. 2020), partial traverse (~50%) produces ~50–60 mm
-   SLE from Thwaites alone. Combined with S1-like contributions from
-   other basins (~30–40 mm) and smaller ASE glaciers (PIG, Smith/Kohler),
-   the total exceeds 120 mm.
+The maximally conservative sum (~130 mm) understates the lower bound because
+of the documented low biases in the underlying models (n=3, no calving, no
+subglacial hydrology, premature rate stabilization); the 150 mm floor
+accounts for these known biases without overcorrecting.
 
-**Upper bound (1000 mm):**
+**Upper bound (1300 mm), pinned to the IPCC AR6 low-confidence storyline:**
 
-- Bamber et al. (2019): WAIS 95th percentile under +5°C is 930 mm —
-  essentially 1 m. Our upper bound matches this.
-- DeConto et al. (2021): Total Antarctic median ~340 mm under RCP8.5,
-  with nonlinear acceleration above 3°C. Individual model runs can
-  substantially exceed the median.
-- Robel et al. (2019, PNAS): Thwaites alone could contribute ~500 mm
-  (total deglaciation) with ~200 mm uncertainty from internal variability.
-  Full WAIS deglaciation would contribute ~3.3 m; 1 m represents partial
-  (~30%) deglaciation, plausible during active MISI.
-- van den Akker et al. (2025, The Cryosphere): During rapid collapse
-  phase, WAIS contributes ~3 mm/yr GMSL. Over several decades this can
-  reach 1 m-scale contributions.
-- Goldberg, Morlighem & Gourmelen (2026, GRL): Transient-calibrated
-  models project Thwaites reaching 180–200 Gt/yr by 2067. Extrapolating
-  Amundsen Sea Embayment dynamics, ~1 m from WAIS by 2100 is within the
-  high-end envelope.
-
-### S3: 600–1300 mm (MISI + MICI)
-
-S3 spans the upper portion of the IPCC AR6 low-confidence Antarctic
-ice sheet projection under SSP5-8.5 (Fox-Kemper et al., 2021). The AR6
-low-confidence AIS distribution at 2100 under SSP5-8.5 has:
+S2's upper bound is anchored to the upper portion of the IPCC AR6
+low-confidence Antarctic ice sheet projection under SSP5-8.5 (Fox-Kemper
+et al., 2021). The AR6 low-confidence AIS distribution at 2100 under
+SSP5-8.5 has:
 
 | Quantile | AIS contribution (mm) |
 |----------|----------------------|
 | p83      | 559                  |
 | p95      | 1309                 |
 
-Our S3 bounds (600–1300 mm) map directly onto this range, rounded
-to clean values. This anchoring is appropriate because the AR6
-low-confidence projection is precisely the one that incorporates the
-deep-uncertainty processes (MISI + MICI) that define S3.
+The upper bound (1300 mm) maps directly onto the AR6 p95 (1309 mm, rounded).
+Because S2 now carries 90% of the mixture's weight (versus 10% for the
+former S3), this bound governs the tail behavior of the great majority of
+the distribution, not just a small minority branch. This anchoring is
+appropriate because the AR6 low-confidence projection is precisely the one
+that incorporates the deep-uncertainty processes (MISI + MICI) that define
+S2's upper range.
 
-For GMSL forecasting purposes, it is immaterial whether ice loss
-originates from WAIS or from the marine basins of EAIS — both
-contribute to the same global ocean. In the AR6 low-confidence
-storyline (and in DeConto & Pollard 2016), WAIS dominates but EAIS
-marine basins (e.g., Wilkes, Aurora) also contribute. Our S3
-therefore represents total Antarctic instability contribution, labeled
-"WAIS" as shorthand because WAIS dynamics drive the instability.
+For GMSL forecasting purposes, it is immaterial whether ice loss originates
+from WAIS or from the marine basins of EAIS — both contribute to the same
+global ocean. In the AR6 low-confidence storyline (and in DeConto & Pollard
+2016), WAIS dominates but EAIS marine basins (e.g., Wilkes, Aurora) also
+contribute. Our S2 upper bound therefore represents total Antarctic
+instability contribution, labeled "WAIS" as shorthand because WAIS dynamics
+drive the instability.
 
-**Lower bound (600 mm):**
+Independent cross-checks on the upper bound:
 
-- Corresponds to the AR6 low-confidence AIS 83rd percentile under
-  SSP5-8.5 (~559 mm, rounded to 600 mm). This represents the
-  threshold above which instability processes excluded from
-  medium-confidence projections must be active.
-- Cross-check: Edwards et al. (2019, Nature) find total Antarctic
-  outcome ~450 mm with MICI under RCP8.5; adding MISI from basins
-  where MICI doesn't operate brings the total to ~600 mm.
-
-**Upper bound (1300 mm):**
-
-- Corresponds to the AR6 low-confidence AIS 95th percentile under
-  SSP5-8.5 (1309 mm, rounded to 1300 mm).
 - Cross-checked against the ASE ice volume above flotation
   (V_af ≈ 1100 mm; Morlighem et al. 2020, BedMachine Antarctica);
   the ~200 mm excess is consistent with contributions from EAIS
   marine basins (Wilkes, Aurora) in the AR6 low-confidence storyline.
+- Edwards et al. (2019, Nature) find total Antarctic outcome ~450 mm with
+  MICI under RCP8.5; adding MISI from basins where MICI doesn't operate
+  brings the total to ~600 mm — close to the AR6 p83, which serves as a
+  secondary (not exactly matched) reference point for the interior shape
+  of S2's distribution.
 - DeConto & Pollard (2016): 640–1140 mm total Antarctic under RCP8.5
   with MICI — our upper bound is slightly above their range,
   consistent with the rheology correction that postdates their work.
 - Bamber et al. (2019) WAIS 95th percentile at +5°C: 930 mm — below
   our upper bound, as expected since Bamber predates the rheology
   correction literature.
+- van den Akker et al. (2025, The Cryosphere): During rapid collapse
+  phase, WAIS contributes ~3 mm/yr GMSL. Over several decades this can
+  reach 1 m-scale contributions, and reaching 1.3 m by 2100 implies a
+  genuinely low-probability, deep-uncertainty tail consistent with AR6's
+  own "low confidence" framing.
 
 ---
 
 ## 4. Skewness Parameterization
 
-### Positive skew for S2 (α = +4): Robel et al. (2019)
+### A probability-weighted blend, not a single scenario's shape
+
+With S2 now merging the former MISI-only and MISI+MICI branches, its shape
+parameters (α, and the trajectory exponent's log-mean) are the
+probability-weighted blend of the two source branches, weighted by their
+share of the merged 0.90 mass:
+
+α = (0.80 × 4.0 + 0.10 × (−3.0)) / 0.90 = **3.22**
+
+β log-mean = (0.80 × ln 1.8 + 0.10 × ln 2.2) / 0.90 = ln(1.84), i.e. median
+**1.84**
+
+This composites both literature-motivated skew regimes into the single
+merged distribution, rather than an arbitrary refit to any single target
+percentile (such as exactly matching the AR6 p83). With bounds of
+150–1300 mm, α = 3.22 produces a pre-rheology-correction median of ~350 mm
+(own-scenario, i.e., before blending with S1) — somewhat above the former
+MISI-only scenario's ~300 mm, because the merged scenario now also carries
+the former MICI branch's mass and its 95th percentile is pinned ~300 mm
+higher than before.
+
+### Positive skew component: Robel et al. (2019)
 
 Robel, Seroussi & Roe (2019, PNAS) demonstrated analytically and
 numerically that MISI amplifies and skews uncertainty:
@@ -303,28 +337,21 @@ numerically that MISI amplifies and skews uncertainty:
   Thwaites collapse within ~300 years; low-frequency ocean variability
   accelerates disintegration by up to 250 years.
 
-Our choice of α = +4 is calibrated by two constraints:
+This positive-skew evidence motivated the former MISI-only scenario's
+α = +4, which contributes 0.80/0.90 of the weight in the blended α = 3.22.
 
-1. **Sign and qualitative magnitude from Robel et al. (2019):** MISI
-   with n > 3 produces substantial positive skewness. This prescribes
-   α > 0 with significant magnitude.
+**Bamber et al. (2019) conditional median cross-check** (as applied to the
+former MISI-only scenario): The Bamber WAIS median at +5°C is 180 mm
+(unconditional). Removing ~15% of outcomes corresponding to S1-like
+stability and ~5% to S3-like extremes, the conditional-on-MISI median is
+~250–300 mm. With the former MISI-only bounds of 150–1000 mm, α = 4
+produced a pre-correction median of ~303 mm — within this range.
 
-2. **Bamber et al. (2019) conditional median cross-check:** The Bamber
-   WAIS median at +5°C is 180 mm (unconditional). Removing ~15% of
-   outcomes corresponding to S1-like stability and ~5% to S3-like
-   extremes, the conditional-on-MISI median is ~250–300 mm. Since both
-   the Bamber elicitation and our bounds are informed by n=3 models,
-   this comparison is at the same reference rheology. With bounds of
-   120–1000 mm, α = 4 produces a pre-correction median of ~263 mm —
-   within this range. After rheology correction (×1.28), the median
-   shifts to ~336 mm, higher than Bamber as expected because the
-   correction captures the n=3→4 bias that postdates the 2018–2019
-   elicitation (Millstein et al. 2022, Martin et al. 2026).
+### Negative skew component: MICI skepticism
 
-### Negative skew for S3 (α = −3): MICI skepticism
-
-The negative α in log-space concentrates probability toward the lower
-portion of the 600–1400 mm range, reflecting:
+The negative-α contribution (from the former MISI+MICI scenario, weighted
+0.10/0.90 into the blend) concentrates probability toward the lower portion
+of its range, reflecting:
 
 - Morlighem et al. (2024, Science Advances): MICI is unlikely at Thwaites
   during the 21st century; calving rates would need to be ≥25× higher
@@ -335,13 +362,10 @@ portion of the 600–1400 mm range, reflecting:
   melange buttressing.
 
 If MICI operates at all, it is more likely to produce outcomes at the
-lower end of its potential range than at the maximum. The α = −3 gives:
-- Mode ~1570 mm, median ~1590 mm (concentrated in lower-middle range)
-- Thin upper tail reflecting low probability of maximum MICI efficiency.
-
-Note: in linear (mm) space, the distribution retains slight positive skew
-(0.36) due to the log transform, which is physically appropriate — even
-the "skeptical" MICI distribution should not have a hard upper ceiling.
+lower end of its potential range than at the maximum. This is why the
+blended α (3.22) is somewhat below the former MISI-only value (4.0),
+pulling some probability mass down from the extreme positive-skew case,
+consistent with the evidence against efficient MICI operation.
 
 ---
 
@@ -486,4 +510,3 @@ Seroussi, H., et al. (2020). ISMIP6 Antarctica ... The Cryosphere, 14, 3033–30
 van den Akker, T., et al. (2025). West Antarctic Ice Sheet retreat ... The Cryosphere, 19, 283+. doi:10.5194/tc-19-283-2025
 
 Verjans, V., Robel, A.A., & Ambelorun, O. (2024). Biases in ice sheet models from missing noise-induced drift. The Cryosphere, 18, 2613+. doi:10.5194/tc-18-2613-2024
-

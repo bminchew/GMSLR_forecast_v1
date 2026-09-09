@@ -51,17 +51,29 @@ except ImportError:
 #              as (t − t₀)^β with β ≈ 1.5–2.5 for n = 3–4.
 #   misi     – whether MISI is active (informational flag)
 #
-# S1: Status quo — current discharge, no instability
-# S2: MISI — marine ice sheet instability with amplification from missing
-#     model processes (calving, feedbacks); positive skew per Robel et al.
-#     (2019) who showed MISI amplifies and skews uncertainty toward
-#     worst-case outcomes. Merges former S2 (moderate MISI) and S3
-#     (MISI + amplifiers) — there is no physically defensible case for
-#     MISI proceeding without amplification from processes that models
-#     omit (Martin et al., AGU Advances).
-# S3: MISI + MICI — full instability cascade including marine ice cliff
-#     instability; negative skew reflects skepticism that MICI operates
-#     at maximum efficiency.
+# S1: Status quo — current discharge, no instability.
+# S2: Fast WAIS (MISI + MICI) — marine ice sheet instability, with or
+#     without cascading ice-cliff failure. Merges the former three-scenario
+#     split (S1/S2/S3) into two: there is no physically defensible case for
+#     MISI proceeding without amplification from processes that models omit
+#     (Martin et al., AGU Advances), so "moderate MISI" and "MISI+MICI" are
+#     treated as one probability-weighted regime rather than two competing
+#     branches. Its 95th-percentile bound (high_mm=1300 mm) is pinned to the
+#     IPCC AR6 low-confidence AIS storyline under SSP5-8.5 (Fox-Kemper et
+#     al. 2021: p95=1309 mm, rounded), so that bound now governs the full
+#     90% weight of the fast branch rather than only the 10%-weight MICI
+#     tail of the former three-scenario version. Its 5th-percentile bound
+#     (low_mm=150 mm) is unchanged from the former S2 and remains the
+#     basin-by-basin physically derived MISI-onset minimum (Thwaites + PIG
+#     + Smith/Kohler + other ASE + non-ASE ≈ 130 mm, floored to 150 mm for
+#     the known low bias documented in Goldberg et al. 2026), independent
+#     of the AR6 anchor. `alpha` and `beta_loc` are probability-weighted
+#     blends of the former S2 (moderate MISI, positive skew per Robel et
+#     al. 2019, weight 0.80/0.90 of the merged mass) and former S3
+#     (MISI+MICI, negative skew reflecting skepticism that MICI operates
+#     at maximum efficiency, weight 0.10/0.90): this composites both
+#     literature-motivated skew regimes into the single merged distribution
+#     rather than an arbitrary refit to any single target percentile.
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
@@ -69,13 +81,9 @@ A4_SCENARIOS = {
                       'alpha': 0.0,
                       'beta_loc': 0.0, 'beta_scale': 0.0,
                       'misi': False},
-    'S2_misi':       {'P': 0.80, 'low_mm': 150, 'high_mm': 1000,
-                      'alpha': 4.0,
-                      'beta_loc': np.log(1.8), 'beta_scale': 0.3,
-                      'misi': True},
-    'S3_misi_mici':  {'P': 0.10, 'low_mm': 600, 'high_mm': 1300,
-                      'alpha': -3.0,
-                      'beta_loc': np.log(2.2), 'beta_scale': 0.3,
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': 150, 'high_mm': 1300,
+                      'alpha': 3.22,
+                      'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
 }
 
@@ -304,7 +312,7 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
     rheology_mode : {'A', 'B'}
     scenario_overrides : dict or None
         Per-scenario parameter overrides.  Keys are scenario names
-        (e.g. 'S2_misi'); values are dicts that can override any of
+        (e.g. 'S2_fast_wais'); values are dicts that can override any of
         'P', 'low_mm', 'high_mm', 'alpha'.  Missing keys use defaults
         from A4_SCENARIOS.  You can also pass a top-level key 'weights'
         mapping scenario names to new probabilities (must sum to 1).

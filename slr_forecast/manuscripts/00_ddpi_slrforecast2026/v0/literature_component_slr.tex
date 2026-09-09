@@ -5,23 +5,31 @@
 \usepackage{booktabs}
 \usepackage{enumitem}
 
-\title{Component-Level Sea Level Rise Forecast Models:\\A Brief Literature Assessment}
-\author{Literature search compiled 2026-05-10}
+\title{Sea-Level Rise Forecast Models Related to SPECTRUM:\\A Literature Assessment}
+\author{Literature search compiled 2026-05-10; updated 2026-09-03}
 \date{}
 
 \begin{document}
 \maketitle
 
-\noindent This report identifies the six most relevant published frameworks
-for component-level global mean sea level (GMSL) projections---i.e., studies
-that decompose total GMSL rise into individual physical contributors
-(thermosteric expansion, glaciers, Greenland ice sheet, Antarctic ice sheet,
-terrestrial water storage) and sum them probabilistically. Relevance is
-assessed relative to a Bayesian, observation-calibrated, component-level
-forecasting framework.
+\noindent This report identifies published frameworks and studies most
+relevant to SPECTRUM, our Bayesian, observation-calibrated, component-level
+GMSL forecasting framework. The original version of this report (2026-05-10)
+covered only the six closest component-summation frameworks (Section~1). The
+2026-09-03 update broadens the search to five additional methodological
+facets of SPECTRUM: alternative component-summation frameworks (Section~2),
+the semi-empirical GMST-sensitivity lineage (Section~3), deep-uncertainty and
+WAIS tail-risk framing (Section~4), observational anchoring and naive
+extrapolation (Section~5), and reduced-complexity discharge/calving
+parameterizations analogous to our Greenland model (Section~6). Section~7
+lists items published in approximately the last twelve months. A
+consolidated summary and a set of specific action items for the manuscript
+close the report (Section~8).
 
 %% ========================================================================
-\section*{1. Mengel et al.\ (2016)}
+\section{Core component-summation frameworks (2026-05-10 search)}
+
+\subsection*{1.1 Mengel et al.\ (2016)}
 
 \noindent\textbf{Citation:} Mengel, M., Levermann, A., Frieler, K.,
 Robinson, A., Marzeion, B., \& Winkelmann, R.\ (2016). Future sea level
@@ -45,8 +53,7 @@ equilibrium response functions, (ii) our explicit deep-uncertainty
 treatment of WAIS, and (iii) our use of a blending step that anchors
 projections to satellite-era observed rates.
 
-%% ========================================================================
-\section*{2. Kopp et al.\ (2014)}
+\subsection*{1.2 Kopp et al.\ (2014)}
 
 \noindent\textbf{Citation:} Kopp, R.\,E., Horton, R.\,M., Little, C.\,M.,
 Mitrovica, J.\,X., Oppenheimer, M., Rasmussen, D.\,J., Strauss, B.\,H.,
@@ -68,8 +75,7 @@ frameworks build on, including IPCC AR6. Our work shares this architecture
 but replaces assessment-derived component PDFs with observation-calibrated
 Bayesian posteriors, and does not address regional patterns.
 
-%% ========================================================================
-\section*{3. Wong et al.\ (2017) --- BRICK}
+\subsection*{1.3 Wong et al.\ (2017) --- BRICK}
 
 \noindent\textbf{Citation:} Wong, T.\,E., Bakker, A.\,M.\,R.,
 Ruckert, K., Applegate, P., Slangen, A.\,B.\,A., \& Keller, K.\ (2017).
@@ -89,10 +95,11 @@ that performs joint Bayesian calibration of all components simultaneously,
 making it the closest analogue to our approach in terms of statistical
 methodology. A key distinction is that our framework calibrates each
 component independently and handles WAIS through a structured scenario
-mixture rather than a process model.
+mixture rather than a process model. See also Darnell et al.\ (2025,
+Section~4.2), a BRICK-based follow-on directly relevant to our
+emissions-vs-tail-risk framing.
 
-%% ========================================================================
-\section*{4. Kopp et al.\ (2023) --- FACTS}
+\subsection*{1.4 Kopp et al.\ (2023) --- FACTS}
 
 \noindent\textbf{Citation:} Kopp, R.\,E., Garner, G.\,G.,
 Hermans, T.\,H.\,J., et al.\ (2023). The Framework for Assessing Changes
@@ -114,8 +121,7 @@ process-model modules in FACTS with data-driven Bayesian models, trading
 physical detail for tighter observational constraint and transparency about
 what the data alone can support.
 
-%% ========================================================================
-\section*{5. Fox-Kemper et al.\ (2021) --- IPCC AR6 Chapter 9}
+\subsection*{1.5 Fox-Kemper et al.\ (2021) --- IPCC AR6 Chapter 9}
 
 \noindent\textbf{Citation:} Fox-Kemper, B., Hewitt, H.\,T., Xiao, C.,
 et al.\ (2021). Ocean, Cryosphere and Sea Level Change. In
@@ -135,10 +141,13 @@ medians and wider uncertainty ranges than IPCC AR6 medium confidence,
 largely because the IPCC ice sheet component relies on ISMIP6 process
 models that may understate dynamic mass loss. The IPCC low-confidence
 projections, which incorporate expert judgment, are more consistent with our
-results.
+results. Törnqvist et al.\ (2025, Section~5) is a useful counterpoint here:
+it shows the 1995/96 IPCC SAR mid-range projection verified to within
+$\sim$1~cm over the following 30 years, so any claim that ``IPCC projections
+diverge from observations'' should specify AR6 specifically rather than
+IPCC assessments in general.
 
-%% ========================================================================
-\section*{6. Nauels et al.\ (2017) --- MAGICC Sea Level Model}
+\subsection*{1.6 Nauels et al.\ (2017) --- MAGICC Sea Level Model}
 
 \noindent\textbf{Citation:} Nauels, A., Meinshausen, M., Mengel, M.,
 Lorbacher, K., \& Wigley, T.\,M.\,L.\ (2017). Synthesizing long-term sea
@@ -159,10 +168,531 @@ efficient probabilistic ensemble generation. However, MAGICC calibrates to
 process-model output rather than directly to observations, and does not
 incorporate deep uncertainty in ice sheet dynamics. Our framework's direct
 observational calibration and explicit WAIS scenario structure address both
-of these limitations.
+of these limitations. See also Nauels et al.\ (2025, Section~7), a recent
+multi-century commitment framework from an overlapping author group.
 
 %% ========================================================================
-\section*{Summary}
+\section{Additional component-summation and probabilistic frameworks}
+
+\subsection*{2.1 Le Bars \& Drijfhout (2025)}
+
+\noindent\textbf{Citation:} Le Bars, D. \& Drijfhout, S.\ (2025). Connecting
+the Past and the Future to Build Regional Sea-Level Projections.
+\textit{Earth's Future}, 13, e2024EF005623.
+
+\noindent\textbf{Approach.} The KNMI (Netherlands) national framework builds
+a GMSL/regional budget (Antarctica, Greenland, glaciers, thermosteric, land
+water, vertical land motion) that is deliberately anchored to start in 1995
+so that it overlaps and is evaluated against the observational record before
+extending to 2100.
+
+\noindent\textbf{Relevance: High.} Of everything found in this search, this
+is structurally the closest published analogue to SPECTRUM's practice of
+calibrating each component against its own observational record and
+checking budget closure against satellite altimetry. Worth a direct
+comparison in the framework section.
+
+\subsection*{2.2 Felikson et al.\ (2025)}
+
+\noindent\textbf{Citation:} Felikson, D., Rounce, D.\,R., Fasullo, J.,
+Rodriguez, A., Adhikari, S., Buzzanga, B., Dangendorf, S., Kopp, R.\,E.,
+Lammers, R.\,B., Reager, J.\,T., Brinkerhoff, D., Csatho, B., Girotto, M.,
+Hamlington, B., Ivins, E.\,R., Kumar, P., Larour, E., Nerem, R.\,S.,
+Nowicki, S., Schlegel, N.-J., Tesdal, J.-E., \& Weathers, M.\ (2025).
+Progress and future directions in constraining uncertainties in
+sea-level projections using observations.
+\textit{Nature Climate Change}, 15(10), 1039--1051.\\
+\textbf{DOI:} \texttt{10.1038/s41558-025-02437-4}
+
+\noindent\textbf{Approach.} A 22-author community perspective (co-authored
+by several of the researchers behind the leading process-based and
+observational SLR groups: Kopp, Nerem, Hamlington, Dangendorf, Nowicki,
+among others) reviewing the main sources of uncertainty in multi-decadal to
+centennial SLR projections, and arguing explicitly for using observations to
+narrow them. It calls for improved emulation techniques, more systematic
+quantification of uncertainty \emph{structure} in both observations and
+models, longer observational records for the underlying physical processes,
+and closer collaboration across physical and social sciences, framed
+explicitly against the next IPCC assessment cycle.
+
+\noindent\textbf{Relevance: Very high.} This is the single closest published
+statement of SPECTRUM's underlying philosophy --- constrain component
+projections with observations rather than relying on process models alone
+--- from a broad, senior, cross-institutional author group rather than a
+single competing framework. It is not itself a competing forecasting
+method, so it does not need to be distinguished from SPECTRUM the way the
+Section~1 frameworks do; instead it is best cited in the introduction or
+discussion as the field-level motivation SPECTRUM directly answers. See
+Section~9 (``near-perfect conceptual match'') for a fuller explanation.
+
+\subsection*{2.3 Slangen et al.\ (2022)}
+
+\noindent\textbf{Citation:} Slangen, A.\,B.\,A., Palmer, M.\,D.,
+Camargo, C.\,M.\,L., Church, J.\,A., Edwards, T.\,L., Hermans, T.\,H.\,J.,
+Hewitt, H.\,T., Garner, G.\,G., et al.\ (2022). The evolution of 21st
+century sea-level projections from IPCC AR5 to AR6 and beyond.
+\textit{Cambridge Prisms: Coastal Futures}, 1, e8.\\
+\textbf{DOI:} \texttt{10.1017/cft.2022.8}
+
+\noindent\textbf{Approach.} Traces how successive IPCC component-summation
+frameworks (AR5, SROCC, AR6) changed their component treatments, uncertainty
+structure, and headline numbers across assessment cycles.
+
+\noindent\textbf{Relevance: Moderate--high.} Useful for positioning SPECTRUM
+against the IPCC lineage as a whole rather than against AR6 alone, and for
+anticipating how the next assessment cycle (which Felikson et al.\ 2025
+explicitly addresses) is likely to evolve.
+
+\subsection*{2.4 Related items noted but not detailed}
+
+Garner et al.\ (2018, \textit{Earth's Future}, DOI
+\texttt{10.1029/2018EF000991}) is an earlier meta-comparison of the
+evolution of SLR projections (1980s--2018), complementary to Slangen et al.\
+(2022). Robel, Seroussi \& Roe (2019, \textit{PNAS}, DOI
+\texttt{10.1073/pnas.1904822116}) shows marine ice sheet instability (MISI)
+mathematically skews the SLR probability distribution toward high outcomes;
+it is discussed at length in Section~4.3 but is equally relevant here as the
+theoretical justification for why a component-summation posterior for WAIS
+should be right-skewed rather than Gaussian. Le~Cozannet, Manceau \& Rohmer
+(2017, \textit{Environ.\ Res.\ Lett.}) apply possibility theory rather than
+Bayesian Monte Carlo to bound probabilistic SLR projections --- a genuinely
+different uncertainty formalism worth a citation if the discussion engages
+with alternatives to Bayesian summation.
+
+%% ========================================================================
+\section{Semi-empirical GMST-sensitivity models}
+
+\subsection*{3.1 Rahmstorf (2007) and the rate-vs-level question}
+
+\noindent\textbf{Citation:} Rahmstorf, S.\ (2007). A Semi-Empirical
+Approach to Projecting Future Sea-Level Rise. \textit{Science}, 315,
+368--370.\\
+\textbf{DOI:} \texttt{10.1126/science.1135456} --- already cited in the
+manuscript as \texttt{Rahmstorf2007}.
+
+\noindent\textbf{Approach.} Regresses the rate of GMSLR linearly on the
+\emph{level} of GMST, $dS/dt = a\,T$, calibrated on the 20th-century
+instrumental record; the founding paper of the semi-empirical class the
+manuscript already discusses.
+
+\noindent\textbf{Citation:} Vermeer, M. \& Rahmstorf, S.\ (2009). Global
+sea level linked to global temperature. \textit{PNAS}, 106, 21527--21532.\\
+\textbf{DOI:} \texttt{10.1073/pnas.0907765106} --- already present in
+\texttt{references.bib} as \texttt{Vermeer2009} but \textbf{not currently
+cited in the manuscript text}.
+
+\noindent\textbf{Approach.} Extends Rahmstorf (2007) by adding a rate-of-warming
+term, $dS/dt = a\,T + b\,dT/dt$, so that GMSLR responds to both the level and
+the rate of change of temperature.
+
+\noindent\textbf{Relevance: Very high.} This is the direct published
+precedent for the open rate-vs-level question already flagged in project
+notes (does SLR respond to $T$ or also $dT/dt$?). It should be cited
+alongside Rahmstorf (2007) wherever the manuscript discusses the
+semi-empirical class, and is the natural anchor for any explicit discussion
+of that open question.
+
+\subsection*{3.2 Grinsted \& Christensen (2021) --- transient sensitivity}
+
+\noindent\textbf{Citation:} Grinsted, A. \& Christensen, J.\,H.\ (2021). The
+transient sensitivity of sea level rise. \textit{Ocean Science}, 17,
+181--186.\\
+\textbf{DOI:} \texttt{10.5194/os-17-181-2021} --- already in the local
+Zotero library, not currently cited.
+
+\noindent\textbf{Approach.} Reframes the rate-vs-level question again: shows
+that on century timescales, GMSLR rate correlates better with
+\emph{accumulated (cumulative) warming} than with instantaneous GMST,
+defining a ``transient sea-level sensitivity'' (TSLS) distinct from the
+millennial-scale equilibrium sensitivity. The observed TSLS
+($0.40 \pm 0.05$~m~$^\circ$C$^{-1}$~century$^{-1}$) exceeds CMIP-based
+estimates (0.27--0.39). A companion paper, Grinsted et al.\ (2022,
+\textit{Earth's Future}, DOI \texttt{10.1029/2022EF002696}, in Zotero),
+extends the same diagnostic to CMIP6 GCMs directly.
+
+\noindent\textbf{Relevance: High.} A third, genuinely distinct framing of
+the level-vs-rate question (cumulative-forcing response) that the manuscript
+should engage with directly if it takes a position on this question,
+alongside Rahmstorf (2007) and Vermeer \& Rahmstorf (2009).
+
+\subsection*{3.3 Critiques of the semi-empirical approach}
+
+The manuscript currently attributes IPCC AR5's ``low confidence''
+characterization of semi-empirical models solely to Church et al.\ (2013,
+already cited as \texttt{Church2013}), but that assessment synthesized
+specific empirical critiques not currently cited.
+The most relevant, none yet in the local Zotero library:
+
+\begin{itemize}[leftmargin=*]
+\item Holgate, S., Jevrejeva, S., Woodworth, P., \& Brewer, S.\ (2007).
+Comment on ``A Semi-Empirical Approach to Projecting Future Sea-Level
+Rise.'' \textit{Science}, 317, 1866 (DOI \texttt{10.1126/science.1140942}),
+with Rahmstorf's reply in the same issue (DOI
+\texttt{10.1126/science.1141283}). Argues no robust linear GMST-rate
+relationship is detectable in the data used; Rahmstorf's reply defends
+split-sample predictive skill.
+\item Orlić, M. \& Pasarić, Z.\ (2013). Semi-empirical versus
+process-based sea-level projections for the twenty-first century.
+\textit{Nat.\ Clim.\ Change}, 3, 735--738 (DOI \texttt{10.1038/nclimate1877}),
+and (2015), Some Pitfalls of the Semiempirical Method Used to Project Sea
+Level Rise. \textit{J.\ Climate}, 28, 3779--3785 (DOI
+\texttt{10.1175/JCLI-D-14-00696.1}). Shows semi-empirical projections are
+highly sensitive to which dynamical terms and detrending/response-time
+choices are included; a ``corrected'' estimate converges toward
+process-based values.
+\item Schmith, T., Johansen, S., \& Thejll, P.\ (2012). Statistical
+Analysis of Global Surface Temperature and Sea Level Using Cointegration
+Methods. \textit{J.\ Climate}, 25, 7822--7833. Finds temperature and sea
+level share a common stochastic trend, but the 1940s warming episode
+deviates from the fitted relationship, attributed to internal ocean
+variability rather than external forcing --- a direct challenge to
+stationarity assumptions underlying extrapolation.
+\item Grassi, S., Hillebrand, E., \& Ventosa-Santaularia, D.\ (2013). The
+statistical relation of sea-level and temperature revisited. \textit{Dyn.\
+Atmos.\ Oceans} (special issue). Re-estimates Rahmstorf's proportionality
+coefficient with methods appropriate for two co-trending series; the
+sensitivity remains at only marginal statistical significance and the 90\%
+CI on 2100 GMSLR widens to 15--150~cm.
+\end{itemize}
+
+\noindent\textbf{Relevance: Moderate.} Not competing frameworks for
+SPECTRUM, but the manuscript's brief mention of semi-empirical models should
+cite 1--2 of these directly rather than relying on the AR5 assessment alone
+as a secondhand summary of the critique.
+
+%% ========================================================================
+\section{Deep uncertainty, MISI/MICI, and WAIS tail-risk framing}
+
+\subsection*{4.1 Naughten, Holland \& De Rydt (2023)}
+
+\noindent\textbf{Citation:} Naughten, K.\,A., Holland, P.\,R., \&
+De Rydt, J.\ (2023). Unavoidable future increase in West Antarctic
+ice-shelf melting over the twenty-first century. \textit{Nature Climate
+Change}, 13, 1222--1228.\\
+\textbf{DOI:} \texttt{10.1038/s41558-023-01818-x} --- already in the local
+Zotero library.
+
+\noindent\textbf{Approach.} A regional ocean model of the Amundsen Sea
+embayment shows ice-shelf melt accelerating at similar rates across all
+emissions scenarios tested this century, i.e., that ocean-driven WAIS melt
+through roughly 2100 is largely already locked in.
+
+\noindent\textbf{Relevance: Very high.} This is the strongest existing,
+independent, dynamical-modeling support for SPECTRUM's headline claim that
+the high-risk tail is largely insensitive to emissions scenario. It should
+be a central citation for that claim.
+
+\subsection*{4.2 Darnell et al.\ (2025) --- a counterpoint to engage directly}
+
+\noindent\textbf{Citation:} Darnell, C., Rennels, L., Errickson, F.,
+Wong, T.\,E., \& Srikrishnan, V.\ (2025). The interplay of future emissions
+and geophysical uncertainties for projections of sea-level rise.
+\textit{Nature Climate Change}.\\
+\textbf{DOI:} \texttt{10.1038/s41558-025-02457-0}
+
+\noindent\textbf{Approach.} Using the calibrated BRICK model (Wong et al.\
+2017, Section~1.3), decomposes SLR projection variance into emissions-driven
+and geophysical (largely ice-sheet) components as a function of forecast
+horizon. Finds emissions-scenario uncertainty dominates in the near-to-mid
+term (specifically the 2065--2075 window), with geophysical/tipping-point
+uncertainty in Antarctica becoming dominant only later.
+
+\noindent\textbf{Relevance: Very high --- requires a direct response.} This
+paper's headline decomposition is close to a rival claim to SPECTRUM's: it
+argues emissions choice \emph{does} materially affect the SLR distribution
+over multi-decadal horizons before geophysical uncertainty takes over,
+whereas SPECTRUM emphasizes that emissions cuts move the median but leave
+the tail (which we attribute predominantly to WAIS) largely unchanged. This
+surfaced independently from two separate literature searches run for this
+report, which is a reasonable signal that it is load-bearing rather than a
+minor citation. The manuscript should engage with it explicitly --- for
+example, by clarifying that our claim is about the shape/tail of the
+distribution at a fixed horizon (end of century) rather than about
+total-variance decomposition across horizons, which are not necessarily in
+conflict, but the distinction should be stated rather than left for a
+referee to raise.
+
+\subsection*{4.3 MISI/MICI physics and structural uncertainty}
+
+\begin{itemize}[leftmargin=*]
+\item Robel, A.\,A., Seroussi, H., \& Roe, G.\,H.\ (2019). Marine ice sheet
+instability amplifies and skews uncertainty in projections of future
+sea-level rise. \textit{PNAS}, 116(30), 14887--14892 (DOI
+\texttt{10.1073/pnas.1904822116}; in Zotero). Stochastic perturbation
+analysis showing MISI dynamics structurally produce a right-skewed SLR
+distribution --- theoretical grounding for treating WAIS with a fat right
+tail rather than choosing one ad hoc.
+\item DeConto, R.\,M. \& Pollard, D.\ (2016). Contribution of Antarctica to
+past and future sea-level rise. \textit{Nature}, 531, 591--597 (DOI
+\texttt{10.1038/nature17145}; in Zotero). The foundational MICI/hydrofracturing
+model producing multi-meter 21st-century Antarctic contributions under high
+emissions.
+\item Edwards, T.\,L., et al.\ (2019). Revisiting Antarctic ice loss due to
+marine ice-cliff instability. \textit{Nature}, 566, 58--64 (DOI
+\texttt{10.1038/s41586-019-0901-4}). A statistical emulator with properly
+propagated parametric uncertainty concludes the original DeConto \& Pollard
+projections likely overestimated central/high-end SLR.
+\item Morlighem, M., Goldberg, D., Barnes, J.\,M., et al.\ (2024). The West
+Antarctic Ice Sheet may not be vulnerable to marine ice cliff instability
+during the 21st century. \textit{Science Advances}, 10, eado7794 (in
+Zotero). A multi-model intercomparison arguing MICI is unlikely to activate
+before 2100 under realistic near-term forcing.
+\item Bassis, J.\,N., Berg, B., Crawford, A.\,J., \& Benn, D.\,I.\ (2021).
+Transition to marine ice cliff instability controlled by ice thickness
+gradients and velocity. \textit{Science}, 372, 1342--1344. Refines the
+physical trigger condition for MICI, showing the transition to runaway
+calving is more physically constrained than the original parameterization.
+\end{itemize}
+
+\noindent\textbf{Relevance: High, but mixed.} Together these papers show
+that whether and when MICI activates this century is itself an actively
+contested question in the ice-sheet-dynamics literature. Edwards (2019) and
+Morlighem (2024) are important tempering counter-evidence that should be
+cited alongside DeConto \& Pollard when justifying the probability weight
+assigned to SPECTRUM's fast/MICI-type WAIS branch, rather than treating MICI
+risk as settled.
+
+\subsection*{4.4 Deep-uncertainty decision framing and near-term predictability}
+
+\begin{itemize}[leftmargin=*]
+\item Bakker, A.\,M.\,R., Wong, T.\,E., Ruckert, K.\,L., \& Keller, K.\
+(2017). Sea-level projections representing the deeply uncertain
+contribution of the West Antarctic ice sheet. \textit{Sci.\ Rep.}, 7, 3880
+(DOI \texttt{10.1038/s41598-017-04134-5}). Explicitly frames WAIS via
+deep-uncertainty decision analysis rather than a process model --- the
+closest existing methodological precedent for SPECTRUM's WAIS scenario
+mixture and terminology.
+\item Kopp, R.\,E., DeConto, R.\,M., Bader, D.\,A., et al.\ (2017). Evolving
+Understanding of Antarctic Ice-Sheet Physics and Ambiguity in Probabilistic
+Sea-Level Projections. \textit{Earth's Future}, 5, 1217--1233 (in Zotero).
+Shows that alternative structural assumptions about Antarctic physics (with
+vs.\ without MICI-type processes) move probabilistic SLR distributions far
+more than emissions-scenario choice does --- close precedent for
+SPECTRUM's ``orthogonal dimension of risk'' framing.
+\item McCormack, F.\,S., et al.\ (2026). Emergent decadal predictability in
+Antarctic contribution to sea level rise. \textit{Nature}, 654, 609--613
+(DOI \texttt{10.1038/s41586-026-10614-4}). Finds the 2025 Antarctic
+mass-loss rate is strongly predictive of the rate for the following 3--5
+decades across models and scenarios, with predictability breaking down only
+late-century as marine ice-sheet feedbacks emerge --- independent
+dynamical-modeling evidence converging with SPECTRUM's rate-anchoring
+strategy and its finding that most forecast uncertainty is late-century and
+WAIS-driven.
+\end{itemize}
+
+%% ========================================================================
+\section{Observational anchoring, nowcasting, and naive extrapolation}
+
+\subsection*{5.1 Closest precedents to the naive-extrapolation baseline}
+
+\noindent\textbf{Citation:} Nerem, R.\,S., Frederikse, T., \&
+Hamlington, B.\,D.\ (2022). Extrapolating Empirical Models of
+Satellite-Observed Global Mean Sea Level to Estimate Future Sea Level
+Change. \textit{Earth's Future}, 10, e2021EF002290 --- already in the local
+Zotero library.
+
+\noindent\textbf{Approach.} Directly extrapolates a linear-plus-quadratic
+fit of satellite altimetry GMSL to 2050 and compares it against IPCC AR6,
+finding rough consistency but flagging that the extrapolation assumes
+constant rate and acceleration.
+
+\noindent\textbf{Relevance: Very high.} The closest existing precedent to
+SPECTRUM's own naive-extrapolation baseline; should be cited and explicitly
+differentiated (SPECTRUM extends the horizon to 2100 and treats the naive
+forecast as one rung in an explicit model-complexity hierarchy rather than
+a standalone estimate).
+
+\noindent Also relevant: Nerem et al.\ (2018, \textit{PNAS}, DOI
+\texttt{10.1073/pnas.1717312115}), the original detection/quantification of
+GMSLR acceleration from the altimetry record ($\sim$0.084~mm~yr$^{-2}$);
+Hamlington et al.\ (2024, \textit{Comm.\ Earth \& Environ.}, DOI
+\texttt{10.1038/s43247-024-01761-5}), which quantifies the doubling of GMSLR
+rate over 1993--2023 underlying the manuscript's own doubling-time
+discussion; and Dangendorf et al.\ (2019, \textit{Nat.\ Clim.\ Change}),
+which shows the acceleration signal predates the satellite era, supporting
+the robustness of extrapolating it.
+
+\subsection*{5.2 Observational constraint as a general method}
+
+\noindent\textbf{Citation:} Ribes, A., Qasmi, S., \& Gillett, N.\,P.\
+(2021). Making climate projections conditional on historical observations.
+\textit{Science Advances}, 7, eabc0671.\\
+\textbf{DOI:} \texttt{10.1126/sciadv.abc0671}
+
+\noindent\textbf{Approach.} A general statistical framework, outside the SLR
+literature, for constraining long-term CMIP-style warming projections using
+the full historical observational record, narrowing projection uncertainty
+by roughly a factor of 2--3.
+
+\noindent\textbf{Relevance: High.} The clearest methodological ancestor,
+outside sea level specifically, for SPECTRUM's rate-space blending step.
+Useful as a citation establishing that observationally-constrained
+projection is an established technique in climate science more broadly, not
+an ad hoc device specific to this study.
+
+\subsection*{5.3 A necessary nuance}
+
+\noindent\textbf{Citation:} Törnqvist, T.\,E., Conrad, C.\,P.,
+Dangendorf, S., \& Hamlington, B.\,D.\ (2025). Evaluating IPCC Projections
+of Global Sea-Level Change From the Pre-Satellite Era. \textit{Earth's
+Future}, 13, e2025EF006533.
+
+\noindent\textbf{Approach.} Finds that the IPCC Second Assessment Report
+(1995/96) mid-range GMSL projection verified to within $\sim$1~cm accuracy
+over the following 30 years.
+
+\noindent\textbf{Relevance: High --- a needed qualifier.} SPECTRUM's
+critique of process-model divergence from observations is specifically a
+critique of \emph{AR6}, not of IPCC assessments in general; this paper
+shows an earlier IPCC vintage performed very well. The manuscript's
+introduction should make this scope explicit rather than let the broader
+claim stand unqualified (cross-referenced in Section~1.5).
+
+\subsection*{5.4 Simplicity-in-forecasting literature}
+
+Beyond Green \& Armstrong (2015, already cited as \texttt{Green2015}),
+Makridakis, S., Spiliotis, E., \& Assimakopoulos, V.\ (2020), The M4
+Competition: 100,000 time series and 61 forecasting methods,
+\textit{Int.\ J.\ Forecasting}, 36, 54--74 (DOI
+\texttt{10.1016/j.ijforecast.2019.04.014}), is a large-scale empirical
+forecasting competition confirming that simple statistical and hybrid
+methods remain highly competitive against complex ones --- a useful second,
+independent citation for the general model-parsimony argument, alongside
+Held (2005, Section~6.4).
+
+%% ========================================================================
+\section{Reduced-complexity discharge and calving parameterizations}
+
+\subsection*{6.1 Closest precedent to the Greenland delayed-response model}
+
+\noindent\textbf{Citation:} Levermann, A., Winkelmann, R., Nowicki, S.,
+et al.\ (2014). Projecting Antarctic ice discharge using response functions
+from SeaRISE ice-sheet models. \textit{Earth Syst.\ Dynam.}, 5(2), 271--293.\\
+\textbf{DOI:} \texttt{10.5194/esd-5-271-2014}
+
+\noindent\textbf{Approach.} Derives linear, time-lagged response
+(convolution) functions relating ice discharge to ocean-driven basal-melt
+forcing, calibrated against full ice-sheet-model experiments rather than
+resolved at run time; this discharge parameterization underlies LARMIP and
+subsequent ISMIP6-adjacent emulators.
+
+\noindent\textbf{Relevance: High.} The closest published precedent to
+SPECTRUM's own linear, time-lagged discharge model,
+$D = \gamma\,T_{\mathrm{ocean}}(t-\delta) + r_0$
+(Eq.~\ref{eq:greenland_rate} in the main text), though Levermann et al.\
+calibrate against model output rather than direct observations as SPECTRUM
+does.
+
+\subsection*{6.2 Plume-theory melt-rate scaling underlying the discharge sensitivity}
+
+\noindent\textbf{Citation:} Slater, D.\,A., Goldberg, D.\,N.,
+Nienow, P.\,W., \& Cowton, T.\,R.\ (2016). Scalings for Submarine Melting at
+Tidewater Glaciers from Buoyant Plume Theory. \textit{J.\ Phys.\
+Oceanogr.}, 46(6), 1839--1855.
+
+\noindent\textbf{Approach.} Derives the canonical plume-theory melt-rate
+scaling relating subglacial discharge and ocean thermal forcing to submarine
+melt rate.
+
+\noindent\textbf{Relevance: Moderate--high.} The theoretical basis for the
+``Slater/Wood-type'' melt sensitivities already cited in the manuscript's
+dimensional-scaling argument (Eqs.~\ref{eq:melt_rate}--\ref{eq:gamma_aggregate});
+several downstream applications of this scaling (Xu et al.\ 2013,
+Rignot et al.\ 2016, Slater et al.\ 2019) are already cited in the
+manuscript and in Zotero.
+
+\subsection*{6.3 A candidate primary citation for the model-complexity argument}
+
+\noindent\textbf{Citation:} Aschwanden, A., Bartholomaus, T.\,C.,
+Brinkerhoff, D.\,J., \& Truffer, M.\ (2021). Brief communication: A roadmap
+towards credible projections of ice sheet contribution to sea level.
+\textit{The Cryosphere}, 15, 5705--5715. \\
+\textbf{DOI:} \texttt{10.5194/tc-15-5705-2021} --- already cited in the
+manuscript as \texttt{Aschwanden2021}, but currently only for the specific
+claim that process models diverge from hindcasts; it is also a more general
+statement of the manuscript's model-complexity argument.
+
+\noindent\textbf{Approach.} Argues that current ice-sheet models are
+systematically under-constrained relative to their degrees of freedom, and
+that projection credibility requires matching model complexity to the
+calibration data actually available.
+
+\noindent\textbf{Relevance: High.} Beyond its existing citation, this paper
+is close to a direct statement of SPECTRUM's central methodological
+argument and could be cited a second time, alongside Green (2015) and Held
+(2005), specifically where the manuscript makes the general
+complexity-vs.-data-constraint case.
+
+\subsection*{6.4 General model-hierarchy literature}
+
+\noindent\textbf{Citation:} Held, I.\,M.\ (2005). The Gap Between Simulation
+and Understanding in Climate Modeling. \textit{Bull.\ Amer.\ Meteor.\
+Soc.}, 86(11), 1609--1614.
+
+\noindent\textbf{Approach.} The canonical argument for a ``hierarchy of
+models'' bridging idealized, well-understood low-order models and
+comprehensive simulation models, arguing that scientific understanding (and
+often forecast robustness) is better served by simpler models than by
+ever-more-complex ones.
+
+\noindent\textbf{Relevance: High.} The closest general antecedent, outside
+the SLR or ice-sheet literature specifically, to the manuscript's own
+``hierarchy of model complexity'' framing (naive $\rightarrow$ semi-empirical
+$\rightarrow$ component-level). Pairs naturally with Green (2015) as a
+second anchor citation for that argument; see also Jeevanjee, N.,
+Hassanzadeh, P., Hill, S., \& Sheshadri, A.\ (2017), A perspective on
+climate model hierarchies, \textit{JAMES}, 9(4), 1760--1771 (DOI
+\texttt{10.1002/2017MS001038}), a more formally developed follow-on.
+
+%% ========================================================================
+\section{Items published in approximately the last twelve months (Sept.\ 2025--Sept.\ 2026)}
+
+Most items in this window are cross-referenced above by topic (Felikson et
+al.\ 2025, Darnell et al.\ 2025, Naughten-adjacent items, Törnqvist et al.\
+2025, McCormack et al.\ 2026). Additional recent items not detailed
+elsewhere:
+
+\begin{itemize}[leftmargin=*]
+\item Perrette, M. \& Mengel, M.\ (2025). Relative sea level projections
+constrained by historical trends at tide gauge sites. \textit{Science
+Advances} (DOI \texttt{10.1126/sciadv.ado4506}). Generates local SLR
+projections directly from tide-gauge/GPS/altimetry historical trends rather
+than from component decomposition; global medians/ranges broadly consistent
+with AR6. \textbf{Relevance: High} as a genuinely different observation-driven
+alternative to component summation, worth a direct contrast in the framework
+discussion.
+\item Coulon, V., Klose, A.\,K., Edwards, T., Turner, F., Pattyn, F., \&
+Winkelmann, R.\ (2025). From short-term uncertainties to long-term
+certainties in the future evolution of the Antarctic Ice Sheet.
+\textit{Nature Communications}, 16, 10385 (DOI
+\texttt{10.1038/s41467-025-66178-w}). Argues short-term (decadal) and
+long-term (centennial) Antarctic ice-sheet uncertainty are largely
+decoupled --- converges with McCormack et al.\ (2026, Section~4.4) and
+supports SPECTRUM's near-term rate-anchoring logic.
+\item Winkelmann, R., Garbe, J., Donges, J.\,F., Albrecht, T., et al.\
+(2026). Mapping tipping risks from Antarctic ice basins under global
+warming. \textit{Nature Climate Change} (DOI
+\texttt{10.1038/s41558-025-02554-0}). Basin-by-basin analysis of gradual
+vs.\ threshold/tipping-point ice loss across Antarctica under different
+warming levels; complements SPECTRUM's WAIS scenario mixture with a
+basin-resolved tipping-point framing.
+\item Nauels, A., Nicholls, Z., Möller, T., Hermans, T.\,H.\,J.,
+Mengel, M., Kloenne, U., Smith, C., Slangen, A.\,B.\,A., \&
+Palmer, M.\,D.\ (2025). Multi-century global and regional sea-level rise
+commitments from cumulative greenhouse gas emissions in the coming decades.
+\textit{Nature Climate Change}, 15(11) (DOI
+\texttt{10.1038/s41558-025-02452-5}) --- already in Zotero. A direct
+descendant of Nauels et al.\ (2017, Section~1.6); quantifies how near-term
+emissions choices lock in 0.3--0.8~m of GMSLR commitment by 2300, a useful
+comparator for SPECTRUM's own emissions-vs-tail-risk framing.
+\end{itemize}
+
+\noindent No new IPCC-adjacent government or task-force assessment (NOAA
+Interagency Task Force, UK Climate Change Committee, Dutch Delta Programme)
+was identified in this twelve-month window.
+
+%% ========================================================================
+\section{Summary}
 
 \begin{table}[h]
 \centering\small
@@ -170,21 +700,83 @@ of these limitations.
 \toprule
 \textbf{Study} & \textbf{Calibration source} & \textbf{Components} & \textbf{Relevance} \\
 \midrule
-Mengel et al.\ (2016)    & Observations (indep.)   & 4 & Very high \\
-Kopp et al.\ (2014)      & IPCC assessment         & 5 & High \\
-Wong et al.\ (2017)      & Observations (joint)    & 5 & High \\
-Kopp et al.\ (2023)      & Process models          & 5+ & High \\
-Fox-Kemper et al.\ (2021)& CMIP6 + ISMIP6          & 5 & High \\
-Nauels et al.\ (2017)    & CMIP5 emulation         & 7 & Moderate--high \\
+\multicolumn{4}{@{}l}{\textit{Core component-summation frameworks (Sec.~1)}} \\
+Mengel et al.\ (2016)      & Observations (indep.)   & 4    & Very high \\
+Kopp et al.\ (2014)        & IPCC assessment         & 5    & High \\
+Wong et al.\ (2017)        & Observations (joint)    & 5    & High \\
+Kopp et al.\ (2023)        & Process models          & 5+   & High \\
+Fox-Kemper et al.\ (2021)  & CMIP6 + ISMIP6          & 5    & High \\
+Nauels et al.\ (2017)      & CMIP5 emulation         & 7    & Moderate--high \\
+\multicolumn{4}{@{}l}{\textit{Additional frameworks (Sec.~2)}} \\
+Le Bars \& Drijfhout (2025)& Observations (indep.)   & 6    & High \\
+Felikson et al.\ (2025)    & --- (perspective)       & n/a  & Very high \\
+\multicolumn{4}{@{}l}{\textit{Semi-empirical / non-component (Sec.~3, 5)}} \\
+Rahmstorf (2007)           & Observations (GMST)     & 1    & Very high \\
+Vermeer \& Rahmstorf (2009)& Observations (GMST)     & 1    & Very high \\
+Grinsted \& Christensen (2021) & Observations (GMST) & 1    & High \\
+Nerem, Frederikse \& Hamlington (2022) & Observations (altimetry) & 1 & Very high \\
+Perrette \& Mengel (2025)  & Observations (tide gauge) & 0 (spatial) & High \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent No published framework combines all of the following: (i)
-direct Bayesian calibration of each component to observational data,
-(ii) a structured deep-uncertainty treatment for ice sheet instabilities,
-and (iii) rate-space blending with satellite-era observations to anchor
-near-term projections. The closest precedent is Mengel et al.\ (2016),
-which shares (i) but not (ii) or (iii).
+\noindent The core conclusion of the 2026-05-10 search stands: no published
+framework combines (i) direct Bayesian calibration of each component to
+observational data, (ii) a structured deep-uncertainty treatment for ice
+sheet instabilities, and (iii) rate-space blending with satellite-era
+observations to anchor near-term projections. The 2026-09-03 update
+strengthens rather than overturns that conclusion, but identifies two
+papers the manuscript should engage with directly rather than simply add to
+the bibliography: Darnell et al.\ (2025), whose emissions-vs-geophysical
+variance decomposition is close to a rival claim (Section~4.2), and
+Felikson et al.\ (2025), whose community-consensus perspective is close to
+a direct statement of SPECTRUM's motivating philosophy (Section~2.2).
+
+%% ========================================================================
+\section{Action items for the manuscript}
+
+\begin{enumerate}[leftmargin=*]
+\item Cite Vermeer \& Rahmstorf (2009) --- already in \texttt{references.bib}
+as \texttt{Vermeer2009} but unused --- wherever the semi-empirical class is
+discussed, and consider citing Grinsted \& Christensen (2021) alongside it
+if the manuscript takes an explicit position on the rate-vs-level question.
+\item Add Held (2005) (and optionally Jeevanjee et al.\ 2017) as a second
+anchor citation, alongside Green (2015), for the model-hierarchy/complexity
+argument in the introduction.
+\item Add Felikson et al.\ (2025) to the introduction or discussion as the
+field-level motivation for observation-constrained projection.
+\item Add an explicit sentence engaging with Darnell et al.\ (2025) where
+the manuscript makes the ``emissions cuts move the median, not the tail''
+claim, distinguishing SPECTRUM's fixed-horizon tail-shape claim from their
+across-horizon variance decomposition.
+\item Qualify the ``process models diverge from observations'' claim
+(Section~1.5/1) to specify AR6 rather than IPCC assessments generally,
+citing Törnqvist et al.\ (2025) as the reason for the qualification.
+\item Consider citing Naughten et al.\ (2023) as the primary independent,
+dynamical-modeling support for the claim that the WAIS-driven tail is
+largely insensitive to emissions scenario, alongside Kopp et al.\ (2017)
+and McCormack et al.\ (2026).
+\item Consider a brief citation to Levermann et al.\ (2014) when introducing
+the Greenland delayed-response discharge model, as the closest published
+precedent for a linear, time-lagged discharge parameterization.
+\end{enumerate}
+
+%% ========================================================================
+\section{Note on Felikson et al.\ (2025): why ``near-perfect conceptual match''}
+
+Felikson et al.\ (2025) is not a competing forecasting framework in the
+sense of Sections~1--2 --- it makes no projection of its own. What makes it
+a near-perfect conceptual match is that it is a synthesis, by a broad and
+senior cross-institutional author group spanning the leading process-based
+and observational SLR communities, of exactly the argument SPECTRUM is
+built to demonstrate: that large-uncertainty, physics-heavy component
+projections should be narrowed using observations, that this requires
+systematically quantifying uncertainty \emph{structure} (not just
+magnitude) in both the observations and the models, and that doing so is
+urgent ahead of the next IPCC cycle. SPECTRUM can be read as one concrete,
+worked instantiation of the research program that paper calls for at the
+level of an entire field. That is why it belongs in the introduction or
+discussion as motivation/context, rather than in the same comparative table
+as Mengel, Kopp, BRICK, FACTS, or AR6.
 
 \end{document}

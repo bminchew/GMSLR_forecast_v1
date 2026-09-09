@@ -130,7 +130,7 @@ class TestEndpointSampling:
     def test_scenario_weight_override(self):
         """Setting S1 weight to 1.0 should produce samples only from S1."""
         rng = np.random.default_rng(RNG_SEED)
-        weights = {'S1_status_quo': 1.0, 'S2_misi': 0.0, 'S3_misi_mici': 0.0}
+        weights = {'S1_status_quo': 1.0, 'S2_fast_wais': 0.0}
         samples = sample_a4_wais_endpoint(
             N, rng, scenario_overrides={'weights': weights})
         # S1 range: 25-85 mm = 0.025-0.085 m, after rheology *1.28:
@@ -139,14 +139,14 @@ class TestEndpointSampling:
             "S1-only samples should stay below 0.25 m")
 
     def test_alpha_override(self):
-        """Overriding S2 alpha to 0 should increase the median (removing
-        the positive skew that pushes mass toward the lower tail)."""
+        """Overriding S2_fast_wais alpha to 0 should increase the median
+        (removing the positive skew that pushes mass toward the lower tail)."""
         rng1 = np.random.default_rng(RNG_SEED)
         rng2 = np.random.default_rng(RNG_SEED)
         base = sample_a4_wais_endpoint(N, rng1)
         modified = sample_a4_wais_endpoint(
-            N, rng2, scenario_overrides={'S2_misi': {'alpha': 0}})
-        # alpha=0 (symmetric log-normal) has higher median than alpha=4
+            N, rng2, scenario_overrides={'S2_fast_wais': {'alpha': 0}})
+        # alpha=0 (symmetric log-normal) has higher median than alpha=3.22
         assert np.median(modified) > np.median(base)
 
     def test_mode_b_produces_similar_median(self):
@@ -296,7 +296,7 @@ class TestRheologyCorrection:
         raw = _sample_log_skewnormal(N, 160, 1000, 4.0, rng)
         rng2 = np.random.default_rng(RNG_SEED)
         # Draw with rheology via endpoint
-        weights = {'S1_status_quo': 0.0, 'S2_misi': 1.0, 'S3_misi_mici': 0.0}
+        weights = {'S1_status_quo': 0.0, 'S2_fast_wais': 1.0}
         corrected = sample_a4_wais_endpoint(
             N, rng2, scenario_overrides={'weights': weights})
         # Corrected (in m) should be >= raw/1000 (uncorrected in m) for
@@ -550,27 +550,40 @@ class TestA4ScenarioParameters:
         """S1 (status quo) should not have MISI."""
         assert A4_SCENARIOS['S1_status_quo']['misi'] is False
 
-    def test_s2_s3_have_misi(self):
-        """S2 and S3 should have MISI."""
-        assert A4_SCENARIOS['S2_misi']['misi'] is True
-        assert A4_SCENARIOS['S3_misi_mici']['misi'] is True
+    def test_s2_has_misi(self):
+        """S2_fast_wais should have MISI."""
+        assert A4_SCENARIOS['S2_fast_wais']['misi'] is True
 
     def test_s1_has_linear_trajectory(self):
         """S1 should have beta_scale=0 (linear ramp, no acceleration)."""
         assert A4_SCENARIOS['S1_status_quo']['beta_scale'] == 0
 
-    def test_s2_s3_have_accelerating_trajectory(self):
-        """S2 and S3 should have beta_scale > 0 (accelerating ramp)."""
-        assert A4_SCENARIOS['S2_misi']['beta_scale'] > 0
-        assert A4_SCENARIOS['S3_misi_mici']['beta_scale'] > 0
+    def test_s2_has_accelerating_trajectory(self):
+        """S2_fast_wais should have beta_scale > 0 (accelerating ramp)."""
+        assert A4_SCENARIOS['S2_fast_wais']['beta_scale'] > 0
 
     def test_scenario_ordering(self):
-        """Scenarios should be ordered by severity: S1 < S2 < S3 ranges."""
+        """Scenarios should be ordered by severity: S1 < S2 range."""
         s1 = A4_SCENARIOS['S1_status_quo']
-        s2 = A4_SCENARIOS['S2_misi']
-        s3 = A4_SCENARIOS['S3_misi_mici']
+        s2 = A4_SCENARIOS['S2_fast_wais']
         assert s1['high_mm'] < s2['high_mm']
-        assert s2['low_mm'] < s3['low_mm']
+
+    def test_s2_high_mm_pinned_to_ar6_low_confidence(self):
+        """S2_fast_wais's 95th percentile should match the IPCC AR6
+        low-confidence AIS SSP5-8.5 storyline (p95 ~= 1309 mm, rounded to
+        1300 mm)."""
+        assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1300)
+
+    def test_s2_alpha_beta_are_probability_weighted_blend(self):
+        """alpha and beta_loc should match the probability-weighted blend
+        of the former S2 (alpha=4.0, beta_loc=log(1.8), weight 0.80) and
+        former S3 (alpha=-3.0, beta_loc=log(2.2), weight 0.10) scenarios,
+        renormalized over the merged 0.90 mass."""
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        expected_alpha = (0.80 * 4.0 + 0.10 * (-3.0)) / 0.90
+        expected_beta_loc = (0.80 * np.log(1.8) + 0.10 * np.log(2.2)) / 0.90
+        assert s2['alpha'] == pytest.approx(expected_alpha, abs=0.01)
+        assert s2['beta_loc'] == pytest.approx(expected_beta_loc, abs=0.01)
 
 
 # =========================================================================
@@ -648,23 +661,6 @@ class TestSensitivityAnalysisLogic:
             total = sum(weights_mod.values())
             assert total == pytest.approx(1.0, abs=1e-10), (
                 f"Perturbing {sname} +{perturbation}: weights sum = {total}")
-
-    def test_tornado_weights_preserve_proportions(self):
-        """Unperturbed scenario weights should maintain their relative ratios."""
-        perturbation = 0.05
-        sname = 'S2_misi'
-        orig_p = A4_SCENARIOS[sname]['P']
-        new_p = orig_p + perturbation
-        remaining = 1.0 - new_p
-        orig_remaining = 1.0 - orig_p
-
-        others = [s for s in A4_SCENARIOS if s != sname]
-        w0 = A4_SCENARIOS[others[0]]['P'] * remaining / orig_remaining
-        w1 = A4_SCENARIOS[others[1]]['P'] * remaining / orig_remaining
-        # Ratio should match original ratio
-        orig_ratio = A4_SCENARIOS[others[0]]['P'] / A4_SCENARIOS[others[1]]['P']
-        new_ratio = w0 / w1
-        assert new_ratio == pytest.approx(orig_ratio, rel=1e-10)
 
     def test_tornado_negative_perturbation(self):
         """Perturbing by -0.05 should also sum to 1 and keep weights positive."""

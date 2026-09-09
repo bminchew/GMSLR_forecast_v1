@@ -73,12 +73,15 @@ def _expected_cost_voi(samples, design_m):
     return adapt + np.mean(damages)
 
 
-def _evpi_annual(full_s, stable_s):
-    """EVPI in $B/yr for a single target-year slice of samples."""
-    s1_p975 = np.percentile(stable_s, 97.5)
-    unstable_s = full_s[full_s > s1_p975]
-    if len(unstable_s) < 20:
-        unstable_s = full_s[full_s > np.percentile(stable_s, 90)]
+def _evpi_annual(full_s, stable_s, unstable_mask):
+    """EVPI in $B/yr for a single target-year slice of samples.
+
+    `unstable_mask` is a boolean array (same sample indexing as `full_s`)
+    selecting the fast-WAIS-scenario samples directly from A4 scenario
+    membership, rather than thresholding `full_s` at a percentile of
+    `stable_s` -- exact now that the A4 framework has just 2 scenarios.
+    """
+    unstable_s = full_s[unstable_mask]
     if len(unstable_s) < 10:
         return 0.0
     costs_uc = np.array([_expected_cost_voi(full_s, d) for d in D_GRID])
@@ -104,12 +107,18 @@ def main():
         fc_yr = hf['blended/forecast_years'][:]
         full_all = hf[f'blended/{SSP}/samples'][:]
         stable_all = hf[f'blended_stable/{SSP}/samples'][:]
+        # Per-sample A4 WAIS scenario membership (0=S1_status_quo,
+        # 1=S2_fast_wais), index-aligned with full_all/stable_all's sample
+        # axis. Used to condition "fast WAIS" directly on scenario
+        # membership rather than a percentile-threshold proxy.
+        wais_scenario_idx = hf['blended/wais_scenario_idx'][:]
+
+    unstable_mask = wais_scenario_idx != 0  # not S1_status_quo
 
     iy2100 = np.argmin(np.abs(fc_yr - 2100))
     full_2100 = full_all[:, iy2100]
     stable_2100 = stable_all[:, iy2100]
-    s1_p975 = np.percentile(stable_2100, 97.5)
-    unstable_2100 = full_2100[full_2100 > s1_p975]
+    unstable_2100 = full_2100[unstable_mask]
 
     # ================================================================
     # Break-even / ROI scalars (used by fig_value_of_intervention)
@@ -139,7 +148,8 @@ def main():
 
     evpi_raw = np.array([
         _evpi_annual(full_all[:, np.argmin(np.abs(fc_yr - ty))],
-                     stable_all[:, np.argmin(np.abs(fc_yr - ty))])
+                     stable_all[:, np.argmin(np.abs(fc_yr - ty))],
+                     unstable_mask)
         for ty in tgt_yrs_1
     ])
     evpi_smooth = gaussian_filter(evpi_raw, sigma=2)
