@@ -10,7 +10,7 @@ reviewer with deep expertise in ice sheet modeling.
 
 | Scenario | P | Range (mm, 2100) | α | Physics |
 |----------|---|-------------------|---|---------|
-| S1: Status quo | 0.10 | 25–85 | 0 | No MISI; linear melt-driven discharge |
+| S1: Status quo | 0.10 | 61–118 (median 90) | n/a | No MISI; direct posterior sampling from a quadratic-in-time fit to observed IMBIE discharge |
 | S2: Fast WAIS (MISI + MICI) | 0.90 | 150–1300 | +3.22 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95 |
 
 ### Why two scenarios, not three
@@ -179,13 +179,38 @@ in both approaches despite their different methodologies.
 
 ## 3. Scenario Ranges
 
-### S1: 25–85 mm (status quo)
+### S1: 61–118 mm, median 90 mm (status quo)
 
 MISI does not operate — bed topography, mélange buttressing, and ice-shelf
 re-formation prevent the runaway grounding-line flux feedback, regardless
-of ocean warming. Discharge responds linearly to ocean thermal forcing.
+of ocean warming. Discharge responds to ocean thermal forcing without a
+threshold instability.
 
-The range is derived from a physical scaling chain:
+Because S1 has no MISI by construction, unlike S2 it does not need a
+forward physical model at all: the most direct "nothing new happens"
+baseline is a naive statistical continuation of what has actually been
+observed. We fit a Bayesian quadratic-in-time model to the IMBIE WAIS
+record (1992–2020),
+
+  rate(t) = m·(t − 2000) + c,   H(t) = 0.5·m·(t − 2000)² + c·(t − 2000) + H₀,
+
+with a signed Normal prior on the curvature m (a purely time-based fit has
+no directional physical constraint — WAIS's own record shows both
+acceleration, through ~2010, and deceleration after), using the same
+correlation-aware covariance correction applied to the other components'
+level-space fits (the raw MCMC posterior treats each point of a cumulative
+record as independent and understates uncertainty). S1 is sampled directly
+from this fitted (m, c, H₀) posterior rather than from a skew-normal
+`low_mm`/`high_mm`/`alpha` range: 2100 samples are H(2100) evaluated at
+each posterior draw, spliced onto the observed record at the anchor year
+so trajectories stay continuous. This gives median 90 mm, 90% CI
+[61, 118] mm at 2100 — requiring no assumption about future ocean-warming
+magnitude or melt-discharge sensitivity coefficients, unlike the approach
+below.
+
+#### Reconciliation with the earlier physical-scaling derivation
+
+An earlier version of S1 used a forward physical scaling chain instead:
 
 1. **Melt–discharge linearity (Joughin et al. 2021):** PIG ice loss scales
    linearly with time-averaged melt volume (r² ≥ 0.98). Holds across ASE
@@ -197,9 +222,27 @@ The range is derived from a physical scaling chain:
 4. **Enhancement factor:** f = [(2.15 + ΔT_warm)/2.15]². At +1.5°C: f ≈ 2.9.
    At +0.7°C: f ≈ 1.7. Consistent with Jourdain et al. (2022): 1.4–2.2×.
 5. **Rate ramp:**
-   - *Lower bound:* IMBIE time-averaged rate (0.24 mm/yr) × 95 yr ≈ 23 mm → **25 mm**.
+   - *Lower bound:* IMBIE time-averaged rate (0.24 mm/yr) × 95 yr ≈ 23 mm → 25 mm.
    - *Upper bound:* Peak rate (0.44 mm/yr) ramped by f = 2.9 to 1.3 mm/yr.
-     Linear ramp: (0.44 + 1.3)/2 × 95 ≈ 83 mm → **85 mm**.
+     Linear ramp: (0.44 + 1.3)/2 × 95 ≈ 83 mm → 85 mm.
+
+This gave 25–85 mm — a range the quadratic fit's own 90% CI barely
+overlaps: the physical chain's 95th percentile (85 mm) sits below the
+data-driven fit's median (90 mm). We adopt the quadratic fit as S1's basis
+rather than discard it silently, because the discrepancy is informative:
+the physical chain's inputs (a linear rate ramp anchored to the IMBIE
+*time-averaged* rate, and a melt-enhancement factor built from prospective
+ocean-warming projections) are conservative relative to what the observed
+record already shows. In particular, step 5 assumes a *linear* ramp from
+current to enhanced discharge, while the observed 1992–2020 record is
+better described as quadratic (accelerating): the fitted curvature term
+alone accounts for 82% of the projected 2100 value. A linear-ramp
+assumption applied to an already-accelerating process will systematically
+undershoot its own naive continuation. The physical chain remains useful
+as an independent, mechanistically motivated lower reference — it is not
+wrong, but it answers a narrower question (what a linear ocean-forcing
+response would give) than S1 is now built to represent (what happens if
+the observed trend, whatever is driving it, simply continues).
 
 ### S2: 150–1300 mm (Fast WAIS: MISI, with or without MICI)
 
@@ -386,8 +429,13 @@ The correction factor of 1.28 (median) is conservative relative to the
 literature range of 1.21–1.35. The σ = 0.07 spans the range from Martin
 et al.'s MISMIP+ (21%, factor 1.21) to their ABUMIP (35%, factor 1.35).
 
-The rheology correction is applied to all scenarios because the bias affects
-every ice sheet model regardless of which instability mechanism operates.
+The rheology correction is applied to S2 (and, in the earlier physical-chain
+derivation, would have applied to S1) because the n=3 bias affects every
+ISMIP6-class ice sheet model regardless of which instability mechanism
+operates. It is **not** applied to S1 under the current approach (§3): S1 is
+now sampled directly from a statistical fit to observed IMBIE mass balance,
+not from an ISMIP6-adjacent forward model, so there is no n=3 structural
+bias for the correction to remove.
 
 ---
 

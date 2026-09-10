@@ -51,7 +51,19 @@ except ImportError:
 #              as (t − t₀)^β with β ≈ 1.5–2.5 for n = 3–4.
 #   misi     – whether MISI is active (informational flag)
 #
-# S1: Status quo — current discharge, no instability.
+# S1: Status quo — current discharge, no instability. Sampled directly
+#     from a Bayesian quadratic-in-time fit to the observed IMBIE WAIS
+#     record (component_wais.ipynb cell 11) rather than the skew-normal
+#     'low_mm'/'high_mm'/'alpha' parametrization used for S2: since S1 has
+#     no MISI by construction, the most direct "nothing new happens"
+#     baseline is the naive statistical continuation of what has actually
+#     been observed, requiring no assumption about future ocean-warming
+#     magnitude or melt-discharge sensitivity coefficients. See
+#     S1_QUADRATIC_MEAN/_COV and _sample_s1_quadratic_mm() below, and
+#     manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3
+#     for the derivation this replaced and its reconciliation with the
+#     new approach. `low_mm`/`high_mm`/`alpha`/`beta_loc`/`beta_scale` are
+#     not defined for S1 and are not read by the sampling functions below.
 # S2: Fast WAIS (MISI + MICI) — marine ice sheet instability, with or
 #     without cascading ice-cliff failure. Merges the former three-scenario
 #     split (S1/S2/S3) into two: there is no physically defensible case for
@@ -77,15 +89,75 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
-    'S1_status_quo': {'P': 0.10, 'low_mm': 25,  'high_mm': 85,
-                      'alpha': 0.0,
-                      'beta_loc': 0.0, 'beta_scale': 0.0,
-                      'misi': False},
+    'S1_status_quo': {'P': 0.10, 'misi': False},
     'S2_fast_wais':  {'P': 0.90, 'low_mm': 150, 'high_mm': 1300,
                       'alpha': 3.22,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
 }
+
+# ---------------------------------------------------------------------------
+# S1_status_quo: direct posterior sampling (quadratic-in-time fit)
+#
+# S1 has no MISI by construction, so unlike S2 -- whose range comes from a
+# forward physical/ISMIP6-adjacent scaling chain subject to the same n=3
+# rheology bias as the rest of ISMIP6 -- S1 is grounded directly in the
+# observed IMBIE WAIS record via a Bayesian quadratic-in-time fit:
+#     rate(t) = m*(t-2000) + c,   H(t) = 0.5*m*(t-2000)^2 + c*(t-2000) + H0
+# fit to IMBIE 1992-2020 (component_wais.ipynb cell 11,
+# bayesian_models.fit_bayesian_level, with a signed Normal prior on
+# curvature m since a purely time-based fit has no directional physical
+# constraint -- WAIS's own record shows both acceleration and
+# deceleration). The naive continuation of this fit is the most direct
+# "nothing new happens" baseline available: it needs no assumption about
+# future ocean-warming magnitude or melt-discharge sensitivity, unlike the
+# physical scaling chain it replaces (documented, and reconciled against
+# this approach, in
+# manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3).
+#
+# S1_QUADRATIC_MEAN/_COV are (m, c, H0) in (m/yr^2, m/yr, m), using the
+# CORRELATION-AWARE covariance from component_levelspace_robust_se
+# (robust_level_intervals + robust_curve_band) -- the raw MCMC posterior
+# treats each point of this cumulative record as independent and
+# understates uncertainty, the same issue corrected for the other
+# components' level-space fits. To regenerate after refitting: rerun
+# component_wais.ipynb cell 11 and read off
+# robust['beta_map_vec'] (mean) and robust['cov_robust'] (covariance).
+S1_QUADRATIC_MEAN = np.array([1.47768168e-05, 1.55882653e-04, 1.24415552e-05])
+S1_QUADRATIC_COV = np.array([
+    [1.16388500e-11, 1.23377108e-11, 3.74423171e-10],
+    [1.23377108e-11, 1.48410280e-10, 4.53077008e-09],
+    [3.74423171e-10, 4.53077008e-09, 1.38318903e-07],
+])
+
+
+def _sample_s1_quadratic_mm(n_samples, rng, years):
+    """Direct-posterior S1_status_quo draws (mm) from the quadratic-in-time
+    fit to observed IMBIE WAIS mass balance (see S1_QUADRATIC_MEAN/_COV
+    above). No rheology correction is applied: that correction addresses
+    ice-sheet-model (n=3 vs n≈4) structural bias, which does not apply to
+    a statistical fit of real satellite-observed mass balance.
+
+    Parameters
+    ----------
+    n_samples : int
+    rng : numpy.random.Generator
+    years : array-like
+        Query years.
+
+    Returns
+    -------
+    ndarray, shape (n_samples, len(years))
+        H(year) in mm, relative to BASELINE_YEAR.
+    """
+    draws = rng.multivariate_normal(S1_QUADRATIC_MEAN, S1_QUADRATIC_COV,
+                                     size=n_samples)
+    m, c, H0 = draws[:, 0], draws[:, 1], draws[:, 2]
+    tau = np.asarray(years, dtype=float) - BASELINE_YEAR
+    H_m = (0.5 * m[:, None] * tau[None, :] ** 2
+           + c[:, None] * tau[None, :] + H0[:, None])
+    return H_m * M_TO_MM
+
 
 # A1 rheology correction (n=3 -> n=4): Martin et al. (in press)
 RHEOLOGY_FACTOR_MEDIAN = 1.28
@@ -250,8 +322,18 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         n_s = mask.sum()
         if n_s == 0:
             continue
-        s = A4_SCENARIOS[sname]
         crng = child_rngs[i]
+
+        if sname == 'S1_status_quo':
+            # Direct posterior sampling (quadratic-in-time fit), spliced
+            # onto the shared anchor -- see A4_SCENARIOS comment block.
+            # No rheology correction, no power-law ramp.
+            h_model = _sample_s1_quadratic_mm(n_s, crng, [anchor_year, year])
+            anchor_i = anchor_draws[mask]
+            samples[mask] = anchor_i + (h_model[:, 1] - h_model[:, 0])
+            continue
+
+        s = A4_SCENARIOS[sname]
 
         # ── Endpoint: draw H_2100 from skew-normal (n=3 ranges) ──
         base = _sample_log_skewnormal(
@@ -301,9 +383,12 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
     """Draw WAIS SLR endpoint samples (meters) at 2100 from the A4 mixture.
 
     This is a lightweight wrapper for sensitivity analyses that need to
-    perturb scenario parameters without trajectory or anchor logic.  Each
-    scenario's endpoint is sampled from the log-skew-normal, multiplied by
-    the rheology correction, and returned directly.
+    perturb scenario parameters without trajectory or anchor logic.
+    S2_fast_wais's endpoint is sampled from the log-skew-normal, multiplied
+    by the rheology correction. S1_status_quo is instead sampled directly
+    from its quadratic-in-time posterior (see S1_QUADRATIC_MEAN/_COV and
+    _sample_s1_quadratic_mm above) with no rheology correction -- see the
+    A4_SCENARIOS comment block for why.
 
     Parameters
     ----------
@@ -316,6 +401,8 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
         'P', 'low_mm', 'high_mm', 'alpha'.  Missing keys use defaults
         from A4_SCENARIOS.  You can also pass a top-level key 'weights'
         mapping scenario names to new probabilities (must sum to 1).
+        S1_status_quo has no 'low_mm'/'high_mm'/'alpha' to override --
+        its distribution is fixed by S1_QUADRATIC_MEAN/_COV.
 
     Returns
     -------
@@ -360,9 +447,13 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
         n_s = mask.sum()
         if n_s == 0:
             continue
-        s = eff[sname]
         crng = child_rngs[i]
 
+        if sname == 'S1_status_quo':
+            samples[mask] = _sample_s1_quadratic_mm(n_s, crng, [2100.0])[:, 0]
+            continue
+
+        s = eff[sname]
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
         )
@@ -395,6 +486,14 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     factors, and trajectory exponents **once** per sample, then evaluates
     the power-law ramp deterministically across all years.  This ensures
     that individual trajectories are smooth and internally consistent.
+
+    S1_status_quo is the exception: it has no MISI by construction, so its
+    post-anchor shape is not the power-law ramp but the (m, c, H0)
+    quadratic-in-time posterior drawn once per S1 sample (see
+    S1_QUADRATIC_MEAN/_COV above), spliced onto the same shared
+    ``anchor_draws`` every scenario uses so trajectories stay continuous
+    at ``anchor_year``: samples_mm = anchor_draws + (H_model(t) -
+    H_model(anchor_year)). No rheology correction is applied to S1.
 
     Parameters
     ----------
@@ -466,6 +565,14 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     h2100 = np.zeros(n_samples)
     beta_arr = np.zeros(n_samples)
 
+    # S1_status_quo's post-anchor curve, precomputed per-sample across
+    # `years` (plus anchor_year, to splice) from its own quadratic
+    # posterior draw. Populated only for S1-masked rows below; unused
+    # elsewhere.
+    s1_idx = scenario_names.index('S1_status_quo')
+    s1_anchor_model_mm = np.zeros(n_samples)
+    s1_curve_mm = np.zeros((n_samples, n_years))
+
     # Spawn independent child RNGs per scenario
     child_rngs = rng.spawn(len(scenario_names))
 
@@ -474,8 +581,17 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
         n_s = mask.sum()
         if n_s == 0:
             continue
-        s = A4_SCENARIOS[sname]
         crng = child_rngs[i]
+
+        if sname == 'S1_status_quo':
+            eval_years = np.concatenate([[anchor_year, 2100.0], years])
+            h_model = _sample_s1_quadratic_mm(n_s, crng, eval_years)
+            s1_anchor_model_mm[mask] = h_model[:, 0]
+            h2100[mask] = anchor_draws[mask] + (h_model[:, 1] - h_model[:, 0])
+            s1_curve_mm[mask, :] = h_model[:, 2:]
+            continue
+
+        s = A4_SCENARIOS[sname]
 
         # Endpoint: draw H_2100 from skew-normal (n=3 ranges)
         base = _sample_log_skewnormal(
@@ -532,6 +648,14 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
             t_norm = (yr - anchor_year) / t_denom
             h_remaining = np.maximum(h2100 - anchor_draws, 0.0)
             samples_mm[:, j] = anchor_draws + h_remaining * (t_norm ** beta_arr)
+
+            # S1_status_quo: override with its own quadratic-in-time shape
+            # (spliced onto the shared anchor value) instead of the
+            # power-law ramp above, which does not apply to S1.
+            s1_mask = scenario_idx == s1_idx
+            samples_mm[s1_mask, j] = (anchor_draws[s1_mask]
+                                       + (s1_curve_mm[s1_mask, j]
+                                          - s1_anchor_model_mm[s1_mask]))
 
     params = {
         'scenario_idx': scenario_idx,

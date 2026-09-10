@@ -631,11 +631,16 @@ def save_wais(
         for sname, sparams in a4_scenarios.items():
             sg = a4g.create_group(sname)
             sg.attrs["P"] = sparams["P"]
-            sg.attrs["low_mm"] = sparams["low_mm"]
-            sg.attrs["high_mm"] = sparams["high_mm"]
-            sg.attrs["alpha"] = sparams.get("alpha", 0.0)
-            sg.attrs["beta_loc"] = sparams.get("beta_loc", 0.0)
-            sg.attrs["beta_scale"] = sparams.get("beta_scale", 0.0)
+            # S1_status_quo has no low_mm/high_mm/alpha/beta -- it is
+            # sampled directly from its quadratic-in-time posterior
+            # (component_projections.S1_QUADRATIC_MEAN/_COV) instead of
+            # the skew-normal parametrization used for S2. NaN here means
+            # "not applicable", not a missing value.
+            sg.attrs["low_mm"] = sparams.get("low_mm", np.nan)
+            sg.attrs["high_mm"] = sparams.get("high_mm", np.nan)
+            sg.attrs["alpha"] = sparams.get("alpha", np.nan)
+            sg.attrs["beta_loc"] = sparams.get("beta_loc", np.nan)
+            sg.attrs["beta_scale"] = sparams.get("beta_scale", np.nan)
             sg.attrs["misi"] = sparams["misi"]
 
         # ── Observations ──

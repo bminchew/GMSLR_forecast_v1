@@ -13,10 +13,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
 from component_projections import (
     _sample_log_skewnormal,
+    _sample_s1_quadratic_mm,
     sample_a4_wais,
     sample_a4_wais_endpoint,
     sample_a4_wais_trajectories,
     A4_SCENARIOS,
+    S1_QUADRATIC_MEAN,
+    S1_QUADRATIC_COV,
     read_ipcc_component_nc, ipcc_extract,
     RHEOLOGY_FACTOR_MEDIAN,
     RHEOLOGY_FACTOR_SIGMA,
@@ -232,9 +235,16 @@ class TestTrajectories:
                 f"{sname}: expected {expected_frac:.0%}, got {actual_frac:.0%}")
 
     def test_beta_positive(self, trajectory_result):
-        """All trajectory exponents should be positive."""
+        """All trajectory exponents should be positive, for scenarios that
+        use a power-law ramp. S1_status_quo does not (it uses its own
+        quadratic-in-time posterior instead -- see A4_SCENARIOS comment
+        block), so beta is left at its 0.0 default for S1 rows and is
+        excluded here."""
         _, params, _ = trajectory_result
-        assert np.all(params['beta'] > 0)
+        scenario_names = list(A4_SCENARIOS.keys())
+        s1_idx = scenario_names.index('S1_status_quo')
+        non_s1 = params['scenario_idx'] != s1_idx
+        assert np.all(params['beta'][non_s1] > 0)
 
     def test_coherent_trajectories(self, trajectory_result):
         """Verify that trajectories are smooth power-law curves, not random
@@ -527,12 +537,16 @@ class TestA4ScenarioParameters:
             f"A4 weights sum to {total}, expected 1.0")
 
     def test_required_keys_present(self):
-        required = {'P', 'low_mm', 'high_mm', 'alpha', 'beta_loc',
-                    'beta_scale', 'misi'}
-        for sname, params in A4_SCENARIOS.items():
-            missing = required - set(params.keys())
-            assert not missing, (
-                f"{sname} missing keys: {missing}")
+        """S2_fast_wais uses the skew-normal parametrization; S1_status_quo
+        is sampled directly from its quadratic-in-time posterior (see
+        A4_SCENARIOS comment block) and so only needs 'P'/'misi'."""
+        required_s2 = {'P', 'low_mm', 'high_mm', 'alpha', 'beta_loc',
+                       'beta_scale', 'misi'}
+        required_s1 = {'P', 'misi'}
+        missing_s2 = required_s2 - set(A4_SCENARIOS['S2_fast_wais'].keys())
+        missing_s1 = required_s1 - set(A4_SCENARIOS['S1_status_quo'].keys())
+        assert not missing_s2, f"S2_fast_wais missing keys: {missing_s2}"
+        assert not missing_s1, f"S1_status_quo missing keys: {missing_s1}"
 
     def test_probabilities_valid(self):
         for sname, params in A4_SCENARIOS.items():
@@ -540,11 +554,14 @@ class TestA4ScenarioParameters:
                 f"{sname}: P = {params['P']}, expected 0 < P <= 1")
 
     def test_ranges_positive(self):
-        for sname, params in A4_SCENARIOS.items():
-            assert params['low_mm'] > 0, f"{sname}: low_mm must be positive"
-            assert params['high_mm'] > params['low_mm'], (
-                f"{sname}: high_mm ({params['high_mm']}) must exceed "
-                f"low_mm ({params['low_mm']})")
+        """Only S2_fast_wais uses low_mm/high_mm; S1_status_quo's spread
+        comes from S1_QUADRATIC_COV instead (see test_s1_quadratic_cov_*
+        below)."""
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        assert s2['low_mm'] > 0, "S2_fast_wais: low_mm must be positive"
+        assert s2['high_mm'] > s2['low_mm'], (
+            f"S2_fast_wais: high_mm ({s2['high_mm']}) must exceed "
+            f"low_mm ({s2['low_mm']})")
 
     def test_s1_no_misi(self):
         """S1 (status quo) should not have MISI."""
@@ -554,19 +571,34 @@ class TestA4ScenarioParameters:
         """S2_fast_wais should have MISI."""
         assert A4_SCENARIOS['S2_fast_wais']['misi'] is True
 
-    def test_s1_has_linear_trajectory(self):
-        """S1 should have beta_scale=0 (linear ramp, no acceleration)."""
-        assert A4_SCENARIOS['S1_status_quo']['beta_scale'] == 0
+    def test_s1_quadratic_cov_is_valid(self):
+        """S1_QUADRATIC_COV should be a valid (symmetric, positive
+        semi-definite) 3x3 covariance for (m, c, H0)."""
+        assert S1_QUADRATIC_MEAN.shape == (3,)
+        assert S1_QUADRATIC_COV.shape == (3, 3)
+        np.testing.assert_allclose(S1_QUADRATIC_COV, S1_QUADRATIC_COV.T)
+        eigvals = np.linalg.eigvalsh(S1_QUADRATIC_COV)
+        assert np.all(eigvals >= -1e-18), (
+            f"S1_QUADRATIC_COV has negative eigenvalues: {eigvals}")
+
+    def test_s1_quadratic_curvature_positive_median(self):
+        """S1's fitted curvature (m) should have a positive posterior
+        median: the observed WAIS record accelerates over 1992-2020, and
+        this is what lets S1 (no MISI) still rise faster than a linear
+        continuation would."""
+        assert S1_QUADRATIC_MEAN[0] > 0
 
     def test_s2_has_accelerating_trajectory(self):
         """S2_fast_wais should have beta_scale > 0 (accelerating ramp)."""
         assert A4_SCENARIOS['S2_fast_wais']['beta_scale'] > 0
 
     def test_scenario_ordering(self):
-        """Scenarios should be ordered by severity: S1 < S2 range."""
-        s1 = A4_SCENARIOS['S1_status_quo']
+        """Scenarios should be ordered by severity: S1's sampled endpoint
+        distribution should sit below S2's high_mm bound."""
+        rng = np.random.default_rng(0)
+        s1_samples_mm = _sample_s1_quadratic_mm(50_000, rng, [2100.0])[:, 0]
         s2 = A4_SCENARIOS['S2_fast_wais']
-        assert s1['high_mm'] < s2['high_mm']
+        assert np.percentile(s1_samples_mm, 95) < s2['high_mm']
 
     def test_s2_high_mm_pinned_to_ar6_low_confidence(self):
         """S2_fast_wais's 95th percentile should match the IPCC AR6
@@ -685,36 +717,29 @@ class TestSensitivityAnalysisLogic:
                 f"Negative weight after perturbing {sname} by -{perturbation}")
 
     def test_range_override_scales_bounds(self):
-        """±20% range override should correctly scale low_mm and high_mm."""
+        """±20% range override should correctly scale low_mm and high_mm.
+        Only S2_fast_wais uses low_mm/high_mm -- S1_status_quo's spread
+        comes from S1_QUADRATIC_COV and does not accept this override."""
+        s2 = A4_SCENARIOS['S2_fast_wais']
         for factor in [0.8, 1.0, 1.2]:
-            overrides = {}
-            for sname, s in A4_SCENARIOS.items():
-                overrides[sname] = {
-                    'low_mm': s['low_mm'] * factor,
-                    'high_mm': s['high_mm'] * factor,
-                }
-            # Verify the override structure is correct
-            for sname in A4_SCENARIOS:
-                assert overrides[sname]['low_mm'] == pytest.approx(
-                    A4_SCENARIOS[sname]['low_mm'] * factor)
-                assert overrides[sname]['high_mm'] == pytest.approx(
-                    A4_SCENARIOS[sname]['high_mm'] * factor)
+            override = {'low_mm': s2['low_mm'] * factor,
+                        'high_mm': s2['high_mm'] * factor}
+            assert override['low_mm'] == pytest.approx(s2['low_mm'] * factor)
+            assert override['high_mm'] == pytest.approx(s2['high_mm'] * factor)
 
     def test_range_override_affects_median(self):
-        """Scaling bounds up by 20% should increase the median endpoint."""
+        """Scaling S2_fast_wais's bounds up by 20% should increase the
+        mixture median endpoint."""
         rng1 = np.random.default_rng(77)
         rng2 = np.random.default_rng(77)
         base = sample_a4_wais_endpoint(50000, rng1)
-        overrides = {}
-        for sname, s in A4_SCENARIOS.items():
-            overrides[sname] = {
-                'low_mm': s['low_mm'] * 1.2,
-                'high_mm': s['high_mm'] * 1.2,
-            }
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        overrides = {'S2_fast_wais': {'low_mm': s2['low_mm'] * 1.2,
+                                       'high_mm': s2['high_mm'] * 1.2}}
         scaled = sample_a4_wais_endpoint(
             50000, rng2, scenario_overrides=overrides)
         assert np.median(scaled) > np.median(base), (
-            "Scaling bounds up 20% should increase median")
+            "Scaling S2 bounds up 20% should increase median")
 
     def test_rheology_sensitivity_direction(self):
         """Higher Glen's exponent n should produce higher rheology correction."""
