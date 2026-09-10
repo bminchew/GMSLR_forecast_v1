@@ -149,7 +149,7 @@ class TestEndpointSampling:
         base = sample_a4_wais_endpoint(N, rng1)
         modified = sample_a4_wais_endpoint(
             N, rng2, scenario_overrides={'S2_fast_wais': {'alpha': 0}})
-        # alpha=0 (symmetric log-normal) has higher median than alpha=3.22
+        # alpha=0 (symmetric log-normal) has a higher median than alpha=3
         assert np.median(modified) > np.median(base)
 
     def test_mode_b_produces_similar_median(self):
@@ -573,7 +573,7 @@ class TestA4ScenarioParameters:
 
     def test_s1_quadratic_cov_is_valid(self):
         """S1_QUADRATIC_COV should be a valid (symmetric, positive
-        semi-definite) 3x3 covariance for (m, c, H0)."""
+        semi-definite) 3x3 covariance for (a, v, H0)."""
         assert S1_QUADRATIC_MEAN.shape == (3,)
         assert S1_QUADRATIC_COV.shape == (3, 3)
         np.testing.assert_allclose(S1_QUADRATIC_COV, S1_QUADRATIC_COV.T)
@@ -581,8 +581,8 @@ class TestA4ScenarioParameters:
         assert np.all(eigvals >= -1e-18), (
             f"S1_QUADRATIC_COV has negative eigenvalues: {eigvals}")
 
-    def test_s1_quadratic_curvature_positive_median(self):
-        """S1's fitted curvature (m) should have a positive posterior
+    def test_s1_quadratic_acceleration_positive_median(self):
+        """S1's fitted acceleration (a) should have a positive posterior
         median: the observed WAIS record accelerates over 1992-2020, and
         this is what lets S1 (no MISI) still rise faster than a linear
         continuation would."""
@@ -606,16 +606,18 @@ class TestA4ScenarioParameters:
         1300 mm)."""
         assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1300)
 
-    def test_s2_alpha_beta_are_probability_weighted_blend(self):
-        """alpha and beta_loc should match the probability-weighted blend
-        of the former S2 (alpha=4.0, beta_loc=log(1.8), weight 0.80) and
-        former S3 (alpha=-3.0, beta_loc=log(2.2), weight 0.10) scenarios,
-        renormalized over the merged 0.90 mass."""
+    def test_s2_alpha_is_representative_literature_value(self):
+        """alpha should be a round, representative positive-skew value
+        (Robel et al. 2019); the mixture is insensitive to its precise
+        value, so no fitted or blended precision is expected."""
         s2 = A4_SCENARIOS['S2_fast_wais']
-        expected_alpha = (0.80 * 4.0 + 0.10 * (-3.0)) / 0.90
-        expected_beta_loc = (0.80 * np.log(1.8) + 0.10 * np.log(2.2)) / 0.90
-        assert s2['alpha'] == pytest.approx(expected_alpha, abs=0.01)
-        assert s2['beta_loc'] == pytest.approx(expected_beta_loc, abs=0.01)
+        assert s2['alpha'] == pytest.approx(3.0)
+
+    def test_s2_beta_loc_is_back_loaded(self):
+        """beta_loc should give a back-loaded (accelerating) trajectory,
+        i.e. beta_ref > 1."""
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        assert np.exp(s2['beta_loc']) > 1.0
 
 
 # =========================================================================

@@ -79,19 +79,20 @@ except ImportError:
 #     basin-by-basin physically derived MISI-onset minimum (Thwaites + PIG
 #     + Smith/Kohler + other ASE + non-ASE ≈ 130 mm, floored to 150 mm for
 #     the known low bias documented in Goldberg et al. 2026), independent
-#     of the AR6 anchor. `alpha` and `beta_loc` are probability-weighted
-#     blends of the former S2 (moderate MISI, positive skew per Robel et
-#     al. 2019, weight 0.80/0.90 of the merged mass) and former S3
-#     (MISI+MICI, negative skew reflecting skepticism that MICI operates
-#     at maximum efficiency, weight 0.10/0.90): this composites both
-#     literature-motivated skew regimes into the single merged distribution
-#     rather than an arbitrary refit to any single target percentile.
+#     of the AR6 anchor. `alpha=3` gives the endpoint distribution a
+#     right skew, reflecting the grounding-line flux nonlinearity that
+#     amplifies uncertainty toward greater ice loss once MISI is
+#     triggered (Robel et al. 2019); alpha only reshapes the distribution
+#     between its fixed 5th/95th percentile bounds (which do not depend
+#     on alpha), and the mixture is insensitive to its precise value
+#     (median shifts by at most 0.13 m across alpha in [0, 4] -- see the
+#     skewness sensitivity cell in component_wais.ipynb).
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.10, 'misi': False},
     'S2_fast_wais':  {'P': 0.90, 'low_mm': 150, 'high_mm': 1300,
-                      'alpha': 3.22,
+                      'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
 }
@@ -102,12 +103,13 @@ A4_SCENARIOS = {
 # S1 has no MISI by construction, so unlike S2 -- whose range comes from a
 # forward physical/ISMIP6-adjacent scaling chain subject to the same n=3
 # rheology bias as the rest of ISMIP6 -- S1 is grounded directly in the
-# observed IMBIE WAIS record via a Bayesian quadratic-in-time fit:
-#     rate(t) = m*(t-2000) + c,   H(t) = 0.5*m*(t-2000)^2 + c*(t-2000) + H0
+# observed IMBIE WAIS record via a Bayesian quadratic-in-time fit
+# (kinematics form -- position under constant acceleration):
+#     rate(t) = a*(t-2000) + v,   H(t) = 0.5*a*(t-2000)^2 + v*(t-2000) + H0
 # fit to IMBIE 1992-2020 (component_wais.ipynb cell 11,
-# bayesian_models.fit_bayesian_level, with a signed Normal prior on
-# curvature m since a purely time-based fit has no directional physical
-# constraint -- WAIS's own record shows both acceleration and
+# bayesian_models.fit_bayesian_level, with a signed Normal prior on the
+# acceleration a since a purely time-based fit has no directional
+# physical constraint -- WAIS's own record shows both acceleration and
 # deceleration). The naive continuation of this fit is the most direct
 # "nothing new happens" baseline available: it needs no assumption about
 # future ocean-warming magnitude or melt-discharge sensitivity, unlike the
@@ -115,7 +117,7 @@ A4_SCENARIOS = {
 # this approach, in
 # manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3).
 #
-# S1_QUADRATIC_MEAN/_COV are (m, c, H0) in (m/yr^2, m/yr, m), using the
+# S1_QUADRATIC_MEAN/_COV are (a, v, H0) in (m/yr^2, m/yr, m), using the
 # CORRELATION-AWARE covariance from component_levelspace_robust_se
 # (robust_level_intervals + robust_curve_band) -- the raw MCMC posterior
 # treats each point of this cumulative record as independent and
@@ -152,10 +154,10 @@ def _sample_s1_quadratic_mm(n_samples, rng, years):
     """
     draws = rng.multivariate_normal(S1_QUADRATIC_MEAN, S1_QUADRATIC_COV,
                                      size=n_samples)
-    m, c, H0 = draws[:, 0], draws[:, 1], draws[:, 2]
+    a, v, H0 = draws[:, 0], draws[:, 1], draws[:, 2]
     tau = np.asarray(years, dtype=float) - BASELINE_YEAR
-    H_m = (0.5 * m[:, None] * tau[None, :] ** 2
-           + c[:, None] * tau[None, :] + H0[:, None])
+    H_m = (0.5 * a[:, None] * tau[None, :] ** 2
+           + v[:, None] * tau[None, :] + H0[:, None])
     return H_m * M_TO_MM
 
 
@@ -488,7 +490,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     that individual trajectories are smooth and internally consistent.
 
     S1_status_quo is the exception: it has no MISI by construction, so its
-    post-anchor shape is not the power-law ramp but the (m, c, H0)
+    post-anchor shape is not the power-law ramp but the (a, v, H0)
     quadratic-in-time posterior drawn once per S1 sample (see
     S1_QUADRATIC_MEAN/_COV above), spliced onto the same shared
     ``anchor_draws`` every scenario uses so trajectories stay continuous

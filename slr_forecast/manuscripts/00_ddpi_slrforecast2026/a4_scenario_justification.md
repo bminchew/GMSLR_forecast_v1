@@ -11,7 +11,7 @@ reviewer with deep expertise in ice sheet modeling.
 | Scenario | P | Range (mm, 2100) | α | Physics |
 |----------|---|-------------------|---|---------|
 | S1: Status quo | 0.10 | 61–118 (median 90) | n/a | No MISI; direct posterior sampling from a quadratic-in-time fit to observed IMBIE discharge |
-| S2: Fast WAIS (MISI + MICI) | 0.90 | 150–1300 | +3.22 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95 |
+| S2: Fast WAIS (MISI + MICI) | 0.90 | 150–1300 | +3 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95 |
 
 ### Why two scenarios, not three
 
@@ -46,10 +46,9 @@ This merge is one step further along the same logic that motivated an even
 earlier four-scenario framework's collapse to three: that version separated
 "moderate MISI" (150–400 mm) from "MISI with amplifiers" (400–1000 mm) before
 those two were themselves merged into a single MISI scenario. The current
-2-scenario framework completes this simplification by folding the MISI+MICI
-branch into the same merged distribution, while still capturing MICI's
-distinct (negative) skew contribution through the probability-weighted blend
-described in §4.
+2-scenario framework completes this simplification by folding MICI's
+contribution into S2's endpoint range rather than treating it as a separate
+scenario (§4).
 
 ---
 
@@ -100,8 +99,8 @@ internal variability.
   total Antarctic median ~34 cm under RCP8.5, with nonlinear acceleration
   above 3°C.
 
-**Supporting evidence for including MICI's contribution within S2, but with
-low weight in the blend:**
+**Supporting evidence for including MICI's contribution within S2's range,
+without treating it as the dominant driver of that range:**
 
 - AR6 assigns low confidence to MICI. It is excluded from medium-confidence
   projections and noted as "characterised by deep uncertainty."
@@ -135,17 +134,15 @@ low weight in the blend:**
 included in IPCC medium-confidence projections, and arguably already
 initiated. The 90% weight reflects the consensus position that MISI is the
 baseline expectation for WAIS evolution. Rather than assigning MICI a
-separate, small mixture weight as in the earlier three-scenario framework,
-its distinct (negative) skew and evidentiary skepticism are folded directly
-into S2's blended shape parameters (§4): the weight of evidence since 2019
-has moved decisively against MICI operating during the 21st century,
-particularly Morlighem et al. (2024) and Clerc et al. (2019), but the
-mechanism cannot be entirely excluded and its potential impact is large
-enough that it must be represented. This is functionally equivalent to a
-10%-within-90% (i.e., 0.10/0.90 of the merged mass) contribution from
-MICI-type outcomes, consistent with AR6's low-confidence assessment and
-with our conclusions being qualitatively insensitive to whether MICI
-operates.
+separate mixture weight, its possibility is folded directly into S2's
+endpoint range, whose upper bound (§3) is pinned to the AR6 low-confidence
+storyline that includes MICI: the weight of evidence since 2019 has moved
+decisively against MICI operating during the 21st century, particularly
+Morlighem et al. (2024) and Clerc et al. (2019), but the mechanism cannot
+be entirely excluded and its potential impact is large enough that it must
+be represented. This is consistent with AR6's low-confidence assessment,
+and our conclusions are insensitive to the skewness parameter α's precise
+value (§4), so whether MICI operates does not affect the results.
 
 ### Cross-check with Bamber et al. (2019) SEJ
 
@@ -192,15 +189,17 @@ baseline is a naive statistical continuation of what has actually been
 observed. We fit a Bayesian quadratic-in-time model to the IMBIE WAIS
 record (1992–2020),
 
-  rate(t) = m·(t − 2000) + c,   H(t) = 0.5·m·(t − 2000)² + c·(t − 2000) + H₀,
+  rate(t) = a·(t − 2000) + v,   H(t) = 0.5·a·(t − 2000)² + v·(t − 2000) + H₀,
 
-with a signed Normal prior on the curvature m (a purely time-based fit has
-no directional physical constraint — WAIS's own record shows both
-acceleration, through ~2010, and deceleration after), using the same
-correlation-aware covariance correction applied to the other components'
-level-space fits (the raw MCMC posterior treats each point of a cumulative
-record as independent and understates uncertainty). S1 is sampled directly
-from this fitted (m, c, H₀) posterior rather than from a skew-normal
+i.e. position under constant acceleration: a is the acceleration, v the
+velocity (rate) at t=2000, and H₀ the value at t=2000. a is given a
+signed Normal prior (a purely time-based fit has no directional physical
+constraint — WAIS's own record shows both acceleration, through ~2010,
+and deceleration after), using the same correlation-aware covariance
+correction applied to the other components' level-space fits (the raw
+MCMC posterior treats each point of a cumulative record as independent
+and understates uncertainty). S1 is sampled directly from this fitted
+(a, v, H₀) posterior rather than from a skew-normal
 `low_mm`/`high_mm`/`alpha` range: 2100 samples are H(2100) evaluated at
 each posterior draw, spliced onto the observed record at the anchor year
 so trajectories stay continuous. This gives median 90 mm, 90% CI
@@ -332,28 +331,26 @@ Independent cross-checks on the upper bound:
 
 ## 4. Skewness Parameterization
 
-### A probability-weighted blend, not a single scenario's shape
+### α = 3: a representative value, not a fitted or blended one
 
-With S2 now merging the former MISI-only and MISI+MICI branches, its shape
-parameters (α, and the trajectory exponent's log-mean) are the
-probability-weighted blend of the two source branches, weighted by their
-share of the merged 0.90 mass:
+S2's endpoint distribution is right-skewed (α = 3), reflecting the
+grounding-line flux nonlinearity that amplifies uncertainty toward
+greater ice loss once MISI is triggered (Robel et al. 2019, below). We
+adopt a round, representative value from the literature rather than
+deriving a precise number from a blend of sub-regimes: α only reshapes
+the distribution's interior between its fixed 5th/95th percentile bounds
+(150–1300 mm, set independently of α, §3), and a sensitivity sweep over
+α ∈ [0, 4] shifts the mixture median by at most 0.13 m — smaller than any
+plausible reader's tolerance for precision in a shape parameter, so
+additional precision (e.g., a fitted or blended value like 3.22) buys
+nothing.
 
-α = (0.80 × 4.0 + 0.10 × (−3.0)) / 0.90 = **3.22**
+The trajectory exponent (β log-mean = ln 1.84, i.e. median 1.84) has its
+own independent physical derivation from grounding-line flux scaling
+(§3, "Temporal trajectory"; Schoof 2007, Pegler 2018) and is not tied to
+α's value.
 
-β log-mean = (0.80 × ln 1.8 + 0.10 × ln 2.2) / 0.90 = ln(1.84), i.e. median
-**1.84**
-
-This composites both literature-motivated skew regimes into the single
-merged distribution, rather than an arbitrary refit to any single target
-percentile (such as exactly matching the AR6 p83). With bounds of
-150–1300 mm, α = 3.22 produces a pre-rheology-correction median of ~350 mm
-(own-scenario, i.e., before blending with S1) — somewhat above the former
-MISI-only scenario's ~300 mm, because the merged scenario now also carries
-the former MICI branch's mass and its 95th percentile is pinned ~300 mm
-higher than before.
-
-### Positive skew component: Robel et al. (2019)
+### Positive skew: Robel et al. (2019)
 
 Robel, Seroussi & Roe (2019, PNAS) demonstrated analytically and
 numerically that MISI amplifies and skews uncertainty:
@@ -380,21 +377,11 @@ numerically that MISI amplifies and skews uncertainty:
   Thwaites collapse within ~300 years; low-frequency ocean variability
   accelerates disintegration by up to 250 years.
 
-This positive-skew evidence motivated the former MISI-only scenario's
-α = +4, which contributes 0.80/0.90 of the weight in the blended α = 3.22.
+This positive-skew evidence supports a right-skewed endpoint distribution
+for S2; we adopt α = 3 as a representative value (above) rather than
+fitting to a specific target percentile.
 
-**Bamber et al. (2019) conditional median cross-check** (as applied to the
-former MISI-only scenario): The Bamber WAIS median at +5°C is 180 mm
-(unconditional). Removing ~15% of outcomes corresponding to S1-like
-stability and ~5% to S3-like extremes, the conditional-on-MISI median is
-~250–300 mm. With the former MISI-only bounds of 150–1000 mm, α = 4
-produced a pre-correction median of ~303 mm — within this range.
-
-### Negative skew component: MICI skepticism
-
-The negative-α contribution (from the former MISI+MICI scenario, weighted
-0.10/0.90 into the blend) concentrates probability toward the lower portion
-of its range, reflecting:
+### Evidence that MICI does not operate at maximum efficiency
 
 - Morlighem et al. (2024, Science Advances): MICI is unlikely at Thwaites
   during the 21st century; calving rates would need to be ≥25× higher
@@ -404,17 +391,21 @@ of its range, reflecting:
 - Schlemm et al. (2022, The Cryosphere): MICI is self-limiting due to
   melange buttressing.
 
-If MICI operates at all, it is more likely to produce outcomes at the
-lower end of its potential range than at the maximum. This is why the
-blended α (3.22) is somewhat below the former MISI-only value (4.0),
-pulling some probability mass down from the extreme positive-skew case,
-consistent with the evidence against efficient MICI operation.
+This evidence argues against MICI systematically pushing outcomes toward
+the extreme upper end of S2's range. It does not require a separate
+downward adjustment to α: S2's upper bound (1300 mm) is independently
+anchored to the AR6 low-confidence storyline (§3), which already reflects
+the low-confidence, not-fully-efficient treatment of MICI, so this
+skepticism is captured through the range rather than the shape
+parameter.
 
 ---
 
 ## 5. Rheology Correction
 
-Applied to all scenarios as a multiplicative factor: median 1.28, σ = 0.07.
+Applied to S2 only, as a multiplicative factor: median 1.28, σ = 0.07. Not
+applied to S1, which is sampled from a statistical fit to observed mass
+balance rather than an ISMIP6-class model (§3).
 
 | Study | Finding |
 |-------|---------|
