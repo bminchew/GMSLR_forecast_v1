@@ -11,7 +11,7 @@ reviewer with deep expertise in ice sheet modeling.
 | Scenario | P | Range (mm, 2100) | α | Physics |
 |----------|---|-------------------|---|---------|
 | S1: Status quo | 0.10 | 61–118 (median 90) | n/a | No MISI; direct posterior sampling from a quadratic-in-time fit to observed IMBIE discharge |
-| S2: Fast WAIS (MISI + MICI) | 0.90 | 150–1300 | +3 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95 |
+| S2: Fast WAIS (MISI + MICI) | 0.90 | 130–1300 | +3 | MISI, with or without ice-cliff cascade; upper bound pinned to AR6 low-confidence AIS p95; lower bound pinned to S1's 99th percentile |
 
 ### Why two scenarios, not three
 
@@ -243,18 +243,20 @@ wrong, but it answers a narrower question (what a linear ocean-forcing
 response would give) than S1 is now built to represent (what happens if
 the observed trend, whatever is driving it, simply continues).
 
-### S2: 150–1300 mm (Fast WAIS: MISI, with or without MICI)
+### S2: 130–1300 mm (Fast WAIS: MISI, with or without MICI)
 
-This merges the former S2 (150–1000 mm, moderate MISI) and S3 (600–1300 mm,
-MISI+MICI) ranges. The lower bound is unchanged from the former S2; the
-upper bound is unchanged from the former S3, now serving as the pin for the
-entire merged scenario.
+**Lower bound (130 mm), pinned to S1's extreme tail:**
 
-**Lower bound (150 mm), basin-by-basin derivation:**
-
-Anchored to transient-calibrated ice sheet model projections (Goldberg,
-Morlighem & Gourmelen, 2026, GRL) and observed grounding-line retreat rates
-(Rignot et al., 2026, PNAS):
+MISI-triggered outcomes are expected to exceed anything a continued
+no-instability trend can produce, so S2's floor is set at the 99th
+percentile of S1_status_quo's endpoint distribution (§3) rather than
+derived independently. This is simpler and no less defensible than a
+basin-by-basin accounting — the earlier version of this bound could not
+be defended to better than several tens of mm in either direction — and
+it is not merely asserted: an independent basin-by-basin sum, built from
+transient-calibrated ice sheet model projections (Goldberg, Morlighem &
+Gourmelen, 2026, GRL) and observed grounding-line retreat rates (Rignot
+et al., 2026, PNAS), lands at essentially the same value:
 
 - *Thwaites* (~40 mm): Goldberg et al. (2026) calibrated two independent
   models (STREAMICE, ISSM) against observed surface elevation changes and
@@ -271,10 +273,12 @@ Morlighem & Gourmelen, 2026, GRL) and observed grounding-line retreat rates
 - *Non-ASE WAIS* (~30 mm): Basins without MISI (Siple Coast, Marie Byrd
   Land) contributing at S1-like rates.
 
-The maximally conservative sum (~130 mm) understates the lower bound because
-of the documented low biases in the underlying models (n=3, no calving, no
-subglacial hydrology, premature rate stabilization); the 150 mm floor
-accounts for these known biases without overcorrecting.
+This basin-by-basin sum (~130 mm) is itself a lower bound, since the
+underlying models carry documented low biases (n=3, no calving, no
+subglacial hydrology, premature rate stabilization) — but we no longer
+need to guess at a floor to compensate for those biases, since the
+S1-tail-based value already accounts for them and happens to coincide
+with the raw sum almost exactly.
 
 **Upper bound (1300 mm), pinned to the IPCC AR6 low-confidence storyline:**
 
@@ -339,7 +343,7 @@ greater ice loss once MISI is triggered (Robel et al. 2019, below). We
 adopt a round, representative value from the literature rather than
 deriving a precise number from a blend of sub-regimes: α only reshapes
 the distribution's interior between its fixed 5th/95th percentile bounds
-(150–1300 mm, set independently of α, §3), and a sensitivity sweep over
+(130–1300 mm, set independently of α, §3), and a sensitivity sweep over
 α ∈ [0, 4] shifts the mixture median by at most 0.13 m — smaller than any
 plausible reader's tolerance for precision in a shape parameter, so
 additional precision (e.g., a fitted or blended value like 3.22) buys

@@ -600,6 +600,17 @@ class TestA4ScenarioParameters:
         s2 = A4_SCENARIOS['S2_fast_wais']
         assert np.percentile(s1_samples_mm, 95) < s2['high_mm']
 
+    def test_s2_low_mm_pinned_to_s1_p99(self):
+        """S2's low_mm should be pinned to (approximately) the 99th
+        percentile of S1's endpoint distribution: MISI-triggered outcomes
+        are expected to exceed anything a continued no-instability trend
+        can produce, so S2's floor is set just above S1's extreme tail."""
+        rng = np.random.default_rng(0)
+        s1_samples_mm = _sample_s1_quadratic_mm(200_000, rng, [2100.0])[:, 0]
+        s1_p99 = np.percentile(s1_samples_mm, 99)
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        assert s2['low_mm'] == pytest.approx(s1_p99, abs=5.0)
+
     def test_s2_high_mm_pinned_to_ar6_low_confidence(self):
         """S2_fast_wais's 95th percentile should match the IPCC AR6
         low-confidence AIS SSP5-8.5 storyline (p95 ~= 1309 mm, rounded to

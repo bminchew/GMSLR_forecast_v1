@@ -75,11 +75,16 @@ except ImportError:
 #     al. 2021: p95=1309 mm, rounded), so that bound now governs the full
 #     90% weight of the fast branch rather than only the 10%-weight MICI
 #     tail of the former three-scenario version. Its 5th-percentile bound
-#     (low_mm=150 mm) is unchanged from the former S2 and remains the
-#     basin-by-basin physically derived MISI-onset minimum (Thwaites + PIG
-#     + Smith/Kohler + other ASE + non-ASE ≈ 130 mm, floored to 150 mm for
-#     the known low bias documented in Goldberg et al. 2026), independent
-#     of the AR6 anchor. `alpha=3` gives the endpoint distribution a
+#     (low_mm=130 mm) is pinned to the 99th percentile of S1_status_quo's
+#     endpoint distribution: MISI-triggered outcomes are expected to
+#     exceed anything a continued no-instability trend can produce, so
+#     S2's floor is set just above S1's extreme tail rather than derived
+#     from an independent basin-by-basin accounting (Thwaites + PIG +
+#     Smith/Kohler + other ASE + non-ASE), which cannot be defended to
+#     better than several tens of mm and is not needed once S2 is
+#     anchored to S1 directly -- this bound happens to coincide closely
+#     with that basin-by-basin estimate (~130 mm unfloored) as an
+#     independent cross-check. `alpha=3` gives the endpoint distribution a
 #     right skew, reflecting the grounding-line flux nonlinearity that
 #     amplifies uncertainty toward greater ice loss once MISI is
 #     triggered (Robel et al. 2019); alpha only reshapes the distribution
@@ -91,7 +96,7 @@ except ImportError:
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.10, 'misi': False},
-    'S2_fast_wais':  {'P': 0.90, 'low_mm': 150, 'high_mm': 1300,
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': 130, 'high_mm': 1300,
                       'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
