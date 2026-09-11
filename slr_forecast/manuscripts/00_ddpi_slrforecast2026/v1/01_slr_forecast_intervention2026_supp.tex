@@ -280,7 +280,7 @@ As a second cross-check, Rosier et~al.~\citeyearpar{Rosier2025} calibrated an ic
 
 \subsubsubsection{Sensitivity to scenario weights}
 
-To assess the robustness of the A4 mixture to the assigned scenario weight, we sweep $P(\mathrm{S1})$---the only free weight parameter, since $P(\mathrm{S2}) = 1 - P(\mathrm{S1})$ with only two scenarios---over 0--30\% and examine the effect on the mixture median and 95th percentile at 2100 (Fig.~\ref{fig:wais_weight_sensitivity}). Over this range, the median varies from 0.42~m ($P(\mathrm{S1})=0$) to 0.29~m ($P(\mathrm{S1})=0.30$), a span of ${\sim}0.13$~m around the baseline value of 0.38~m at $P(\mathrm{S1})=0.10$---small relative to the 90\% credible interval (${\sim}1.6$~m). The 95th percentile varies from 1.70~m to 1.46~m over the same range, a span of ${\sim}0.24$~m (${\sim}15\%$ of the baseline value, 1.63~m). The insensitivity of both statistics to the scenario weight reflects the dominance of within-scenario uncertainty (controlled by the endpoint ranges and skewness) over the between-scenario weighting.
+To assess the robustness of the A4 mixture to the assigned scenario weight, we sweep $P(\mathrm{S1})$---the only free weight parameter, since $P(\mathrm{S2}) = 1 - P(\mathrm{S1})$ with only two scenarios---over 0--30\% and examine the effect on the mixture median and 95th percentile at 2100 (Fig.~\ref{fig:wais_weight_sensitivity}). Over this range, the median varies from 0.43~m ($P(\mathrm{S1})=0$) to 0.30~m ($P(\mathrm{S1})=0.30$), a span of ${\sim}0.13$~m around the baseline value of 0.39~m at $P(\mathrm{S1})=0.10$---small relative to the 90\% credible interval (${\sim}1.6$~m). The 95th percentile varies from 1.71~m to 1.45~m over the same range, a span of ${\sim}0.26$~m (${\sim}16\%$ of the baseline value, 1.62~m). The insensitivity of both statistics to the scenario weight reflects the dominance of within-scenario uncertainty (controlled by the endpoint ranges and skewness) over the between-scenario weighting.
 
 \begin{figure}[ht]
 \centering
@@ -294,7 +294,7 @@ To assess the robustness of the A4 mixture to the assigned scenario weight, we s
 
 \subsection{Variance decomposition}
 
-A variance decomposition using the law of total variance across the three policy-relevant SSPs (1-2.6, 2-4.5, 3-7.0) attributes 92\% of total forecast variance to within-scenario uncertainty---predominantly WAIS (91\% of total variance)---and 8\% to between-scenario differences. Cross-component covariances are small ($+0.0014$~m$^2$, representing 0.5\% of total variance), confirming that the independent calibration approach does not introduce material correlations.
+A variance decomposition using the law of total variance across the three policy-relevant SSPs (1-2.6, 2-4.5, 3-7.0) attributes 95\% of total forecast variance to within-scenario uncertainty---predominantly WAIS (94\% of total variance)---and 5\% to between-scenario differences. Cross-component covariances are small ($+0.0008$~m$^2$, representing 0.2\% of total variance), confirming that the independent calibration approach does not introduce material correlations.
 
 \subsection{Temperature scenarios}
 
@@ -396,21 +396,21 @@ Table~\ref{tab:exceedance} reports the probability of exceeding selected global 
                        & 3\,$^\circ$C & 100.0 & 100.0 \\
                        & 4\,$^\circ$C & 100.0 & 100.0 \\
 \hline
-\multirow{3}{*}{0.75} & 2\,$^\circ$C &  88.1 &   0.3 \\
-                       & 3\,$^\circ$C &  99.7 &  93.5 \\
+\multirow{3}{*}{0.75} & 2\,$^\circ$C &  85.6 &   1.3 \\
+                       & 3\,$^\circ$C & 100.0 &  98.9 \\
                        & 4\,$^\circ$C & 100.0 & 100.0 \\
 \hline
-\multirow{3}{*}{1.0}  & 2\,$^\circ$C &  47.4 &   0.0 \\
-                       & 3\,$^\circ$C &  75.6 &   0.1 \\
-                       & 4\,$^\circ$C &  95.5 &  57.9 \\
+\multirow{3}{*}{1.0}  & 2\,$^\circ$C &  45.4 &   0.0 \\
+                       & 3\,$^\circ$C &  72.8 &   0.1 \\
+                       & 4\,$^\circ$C &  97.7 &  76.8 \\
 \hline
-\multirow{3}{*}{1.5}  & 2\,$^\circ$C &  17.8 &   0.0 \\
-                       & 3\,$^\circ$C &  23.8 &   0.0 \\
-                       & 4\,$^\circ$C &  34.9 &   0.0 \\
+\multirow{3}{*}{1.5}  & 2\,$^\circ$C &  14.2 &   0.0 \\
+                       & 3\,$^\circ$C &  20.4 &   0.0 \\
+                       & 4\,$^\circ$C &  32.5 &   0.0 \\
 \hline
-\multirow{3}{*}{2.0}  & 2\,$^\circ$C &   6.4 &   0.0 \\
-                       & 3\,$^\circ$C &   9.4 &   0.0 \\
-                       & 4\,$^\circ$C &  13.9 &   0.0 \\
+\multirow{3}{*}{2.0}  & 2\,$^\circ$C &   6.2 &   0.0 \\
+                       & 3\,$^\circ$C &   8.3 &   0.0 \\
+                       & 4\,$^\circ$C &  11.1 &   0.0 \\
 \hline
 \end{tabular}
 \end{table}
@@ -424,7 +424,7 @@ The value of information (VoI) analysis quantifies the economic benefit of resol
 
 \subsection{Decision framework}
 
-We consider an illustrative coastal adaptation decision where a planner must choose a defense height $d$ (meters of sea-level protection) to minimize total expected costs. The defense is expected to take 20 years to plan and complete construction and to have a minimum 50-year design lifetime ***find references***, giving a target year for planning of 2100. For a given sea-level rise distribution $S$ at 2100, the total annual cost of defense height $d$ is
+We consider an illustrative coastal adaptation decision where a planner must choose a defense height $d$ (meters of sea-level protection) to minimize total expected costs, evaluated against the sea-level rise distribution $S$ at a representative target year of 2100. For a given sea-level rise distribution $S$ at 2100, the total annual cost of defense height $d$ is
 \begin{equation}
 C(d) = C_{\mathrm{adapt}}(d) + \mathbb{E}\bigl[D\bigl(\max(S - d,\, 0)\bigr)\bigr],
 \label{eq:total_cost}

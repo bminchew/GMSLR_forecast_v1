@@ -197,7 +197,9 @@ class TestTrajectories:
 
     def test_params_keys(self, trajectory_result):
         _, params, _ = trajectory_result
-        assert set(params.keys()) == {'scenario_idx', 'h2100_mm', 'beta', 'anchor_mm'}
+        assert set(params.keys()) == {'scenario_idx', 'h2100_mm', 'beta',
+                                       'beta_eff_2035', 'beta_eff_2050',
+                                       'anchor_mm'}
 
     def test_monotonic_post_anchor(self, trajectory_result):
         """Each sample's trajectory should be monotonically non-decreasing
@@ -265,6 +267,49 @@ class TestTrajectories:
         # floating point, so allow ~10% of samples to show sign changes.
         assert frac_smooth > 0.85, (
             f"Only {frac_smooth:.0%} of trajectories are smooth (expected >85%)")
+
+    def test_s2_endpoint_pinned_to_h2100(self, trajectory_result):
+        """S2_fast_wais's rate-space blend with the IMBIE quadratic is
+        rescaled so H(2100) always equals the independently-drawn h2100 --
+        the blend reshapes the path only, not the assessed 2100 endpoint
+        distribution (see component_projections.sample_a4_wais_trajectories
+        docstring / blend block)."""
+        samples_m, params, years = trajectory_result
+        scenario_names = list(A4_SCENARIOS.keys())
+        s2_idx = scenario_names.index('S2_fast_wais')
+        s2_mask = params['scenario_idx'] == s2_idx
+        idx_2100 = np.argmin(np.abs(years - 2100.0))
+        h2100_m = params['h2100_mm'][s2_mask] / 1000.0
+        np.testing.assert_allclose(samples_m[s2_mask, idx_2100], h2100_m,
+                                    atol=1e-9)
+
+    def test_s2_near_anchor_rate_is_data_anchored(self, trajectory_result):
+        """Before blending, the power-law ramp forced dH/dt = 0 exactly at
+        the anchor year for beta > 1 (t_norm**beta has zero slope at
+        t_norm=0). After blending with the IMBIE quadratic, the near-anchor
+        rate should instead be small and comparable to the quadratic's own
+        rate there, not implied by beta alone. Regression check: the
+        realized rate immediately after the anchor should be far smaller
+        than the *unblended* power-law rate a representative beta=1.84
+        would imply blowing up from the very small A4 low_mm bound."""
+        samples_m, params, years = trajectory_result
+        scenario_names = list(A4_SCENARIOS.keys())
+        s2_idx = scenario_names.index('S2_fast_wais')
+        s2_mask = params['scenario_idx'] == s2_idx
+        idx_anchor = np.argmin(np.abs(years - 2020.0))
+        idx_next = idx_anchor + 1
+        dt = years[idx_next] - years[idx_anchor]
+        rate_mm_per_yr = ((samples_m[s2_mask, idx_next]
+                            - samples_m[s2_mask, idx_anchor]) * 1000.0 / dt)
+        # A pure power-law ramp from the S2 low bound (130 mm) to the
+        # median h2100 with beta~1.8-2.3 would give a near-anchor rate at
+        # least several mm/yr for most samples once beta is not >>1; the
+        # blended, data-anchored rate should sit close to zero given
+        # WAIS's own near-zero/decelerating IMBIE rate at the anchor.
+        assert np.median(np.abs(rate_mm_per_yr)) < 1.0, (
+            f"Median |rate| immediately post-anchor = "
+            f"{np.median(np.abs(rate_mm_per_yr)):.2f} mm/yr; expected small "
+            f"(data-anchored), not power-law-implied")
 
 
 # =========================================================================

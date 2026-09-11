@@ -179,6 +179,14 @@ N_REF = 3         # reference exponent used by ISMIP6 and literature scenarios
 # Martin et al. (2026): 21-35% for Δn=1 → r₀ ≈ 0.28
 RHEOLOGY_SENSITIVITY = 0.28
 
+# S2_fast_wais near-term blend: same sigmoid window (T_CENTER, TAU_BLEND)
+# as component_forecast.ipynb's aggregate rate-space blend
+# (blend_rate_space below), reused here rather than refit so the paper
+# applies one blending rule everywhere instead of a second free parameter
+# pair to justify.
+WAIS_S2_BLEND_T_CENTER = 2035.0
+WAIS_S2_BLEND_TAU = 5.0
+
 
 def _sample_log_skewnormal(n, low, high, alpha, rng):
     """Draw positive samples from a skew-normal in log-space.
@@ -664,10 +672,91 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
                                        + (s1_curve_mm[s1_mask, j]
                                           - s1_anchor_model_mm[s1_mask]))
 
+    # ── S2_fast_wais: rate-space blend of the power-law path with the
+    # IMBIE quadratic (naive "nothing new happens" continuation), so the
+    # near-term rate is data-anchored instead of forced to zero at the
+    # anchor year (the artifact of a pure power-law ramp with beta > 1).
+    # Uses the same blend_rate_space() machinery and sigmoid window as
+    # component_forecast.ipynb's aggregate blend, for one consistent
+    # blending rule across the paper. The blended path is then rescaled
+    # so H(2100) still equals the independently-drawn h2100 exactly: the
+    # blend reshapes *how* the trajectory gets to 2100, not the assessed
+    # endpoint distribution (which stays the AR6/S1-p99-pinned 130-1300 mm
+    # skew-normal used by sample_a4_wais_endpoint() elsewhere). S1 is
+    # untouched -- it already *is* the quadratic.
+    beta_eff_2035 = np.full(n_samples, np.nan)
+    beta_eff_2050 = np.full(n_samples, np.nan)
+    s2_idx = scenario_names.index('S2_fast_wais')
+    s2_mask = scenario_idx == s2_idx
+    n_s2 = int(s2_mask.sum())
+    fmask = years >= anchor_year
+
+    if n_s2 > 0 and np.any(fmask):
+        quad_rng = child_rngs[s2_idx].spawn(1)[0]
+        quad_draws = quad_rng.multivariate_normal(
+            S1_QUADRATIC_MEAN, S1_QUADRATIC_COV, size=n_s2)
+        a_q, v_q, H0_q = quad_draws[:, 0], quad_draws[:, 1], quad_draws[:, 2]
+        tau_q = years - BASELINE_YEAR
+        # quad_level_mm is passed only because blend_rate_space's signature
+        # takes it (sq_level_samples_rb); the function never reads it --
+        # only quad_rate_mm and the target's own level (target_mm) drive
+        # the blend. Kept for signature parity / potential future use.
+        quad_level_mm = (0.5 * a_q[:, None] * tau_q[None, :] ** 2
+                          + v_q[:, None] * tau_q[None, :]
+                          + H0_q[:, None]) * M_TO_MM
+        quad_rate_mm = (a_q[:, None] * tau_q[None, :] + v_q[:, None]) * M_TO_MM
+
+        target_mm = samples_mm[s2_mask, :]  # pre-blend: obs + power-law ramp
+        anchor_s2 = anchor_draws[s2_mask]
+        h2100_s2 = h2100[s2_mask]
+
+        blended_mm, f_years, _ = blend_rate_space(
+            years, target_mm, quad_rate_mm, quad_level_mm, years,
+            anchor_year, anchor_s2,
+            WAIS_S2_BLEND_T_CENTER, WAIS_S2_BLEND_TAU,
+        )
+
+        # Pin H(2100) exactly to h2100_s2 (see docstring above).
+        i2100 = int(np.argmin(np.abs(f_years - 2100.0)))
+        denom = blended_mm[:, i2100] - anchor_s2
+        safe = np.abs(denom) > 1e-9
+        scale = np.zeros(n_s2)
+        scale[safe] = (h2100_s2[safe] - anchor_s2[safe]) / denom[safe]
+        rescaled_mm = (anchor_s2[:, None]
+                        + (blended_mm - anchor_s2[:, None]) * scale[:, None])
+
+        samples_mm[np.ix_(s2_mask, fmask)] = rescaled_mm
+
+        # Effective exponent of the blended+rescaled path -- a reportable
+        # number for the text, replacing beta_ref=1.84 as "the" trajectory
+        # shape (beta_arr above is now only the shape of the pre-blend
+        # target, not the realized path). Evaluated at two points:
+        # WAIS_S2_BLEND_T_CENTER itself (2035, inside the transition --
+        # where the blend actually differs from the target) and 2050
+        # (past the transition, where it necessarily reconverges toward
+        # beta_arr and mainly serves as a sanity check on that
+        # reconvergence). Undefined (NaN) wherever the blended level at
+        # that year is at or below the anchor -- do not fill with a
+        # clipped/placeholder value, since log(remaining fraction) is only
+        # meaningful for a positive remaining fraction.
+        def _beta_eff_at(target_year):
+            i = int(np.argmin(np.abs(f_years - target_year)))
+            tau_i = (f_years[i] - anchor_year) / (2100.0 - anchor_year)
+            remain_frac = (rescaled_mm[:, i] - anchor_s2) / (h2100_s2 - anchor_s2)
+            out = np.full(n_s2, np.nan)
+            pos = remain_frac > 0
+            out[pos] = np.log(remain_frac[pos]) / np.log(tau_i)
+            return out
+
+        beta_eff_2035[s2_mask] = _beta_eff_at(WAIS_S2_BLEND_T_CENTER)
+        beta_eff_2050[s2_mask] = _beta_eff_at(2050.0)
+
     params = {
         'scenario_idx': scenario_idx,
         'h2100_mm': h2100,
         'beta': beta_arr,
+        'beta_eff_2035': beta_eff_2035,
+        'beta_eff_2050': beta_eff_2050,
         'anchor_mm': anchor_draws,
     }
     return samples_mm / M_TO_MM, params
