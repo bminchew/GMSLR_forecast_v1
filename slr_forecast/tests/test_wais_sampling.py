@@ -264,9 +264,16 @@ class TestTrajectories:
         # A smooth power-law should have 0 sign changes
         frac_smooth = np.mean(sign_changes == 0)
         # S1 samples (beta=1) have near-zero d2 that can flip sign from
-        # floating point, so allow ~10% of samples to show sign changes.
-        assert frac_smooth > 0.85, (
-            f"Only {frac_smooth:.0%} of trajectories are smooth (expected >85%)")
+        # floating point, and S2 samples near the low_mm/high_mm bounds
+        # (h_remaining small, e.g. from S2's 130-1000 mm range) have
+        # correspondingly small curvature there too -- both push some
+        # fraction of samples below floating-point noise. Threshold
+        # lowered from 0.85 to 0.80 when S2's high_mm dropped 1300->1000
+        # (smaller mixture p95, see test_mixture_p95_not_above_ar6_low_
+        # confidence), which shrank typical h_remaining and pushed more
+        # samples into that noise floor.
+        assert frac_smooth > 0.80, (
+            f"Only {frac_smooth:.0%} of trajectories are smooth (expected >80%)")
 
     def test_s2_endpoint_pinned_to_h2100(self, trajectory_result):
         """S2_fast_wais's rate-space blend with the IMBIE quadratic is
@@ -656,11 +663,21 @@ class TestA4ScenarioParameters:
         s2 = A4_SCENARIOS['S2_fast_wais']
         assert s2['low_mm'] == pytest.approx(s1_p99, abs=5.0)
 
-    def test_s2_high_mm_pinned_to_ar6_low_confidence(self):
-        """S2_fast_wais's 95th percentile should match the IPCC AR6
-        low-confidence AIS SSP5-8.5 storyline (p95 ~= 1309 mm, rounded to
-        1300 mm)."""
-        assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1300)
+    def test_s2_high_mm_is_round_one_meter(self):
+        """S2_fast_wais's 95th percentile bound should be a round 1000 mm,
+        chosen so the full mixture's own p95 (not S2's within-scenario
+        p95) sits at or below the IPCC AR6 low-confidence AIS SSP5-8.5 p95
+        (~1309 mm) -- see test_mixture_p95_not_above_ar6_low_confidence."""
+        assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1000)
+
+    def test_mixture_p95_not_above_ar6_low_confidence(self):
+        """The full two-scenario mixture's p95 at 2100 should not sit
+        meaningfully above the IPCC AR6 low-confidence AIS SSP5-8.5 p95
+        (1309 mm) -- there is no additional data to defend a mixture tail
+        heavier than AR6's own low-confidence storyline."""
+        rng = np.random.default_rng(42)
+        mix_mm = sample_a4_wais_endpoint(500_000, rng, rheology_mode='B') * 1000.0
+        assert np.percentile(mix_mm, 95) < 1309.0 + 50.0
 
     def test_s2_alpha_is_representative_literature_value(self):
         """alpha should be a round, representative positive-skew value

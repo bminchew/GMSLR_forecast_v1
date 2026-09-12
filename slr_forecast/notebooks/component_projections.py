@@ -70,11 +70,20 @@ except ImportError:
 #     MISI proceeding without amplification from processes that models omit
 #     (Martin et al., AGU Advances), so "moderate MISI" and "MISI+MICI" are
 #     treated as one probability-weighted regime rather than two competing
-#     branches. Its 95th-percentile bound (high_mm=1300 mm) is pinned to the
-#     IPCC AR6 low-confidence AIS storyline under SSP5-8.5 (Fox-Kemper et
-#     al. 2021: p95=1309 mm, rounded), so that bound now governs the full
-#     90% weight of the fast branch rather than only the 10%-weight MICI
-#     tail of the former three-scenario version. Its 5th-percentile bound
+#     branches. Its 95th-percentile bound (high_mm=1000 mm) is a round
+#     number chosen so the full two-scenario *mixture's* own p95 at 2100
+#     (~1.26 m; see the validation cell in component_wais.ipynb) sits at or
+#     below the IPCC AR6 low-confidence AIS storyline's p95 under SSP5-8.5
+#     (Fox-Kemper et al. 2021: 1309 mm) -- rather than pinning S2's
+#     within-scenario p95 to that storyline directly, which pushed the
+#     mixture's own p95 to ~1.6 m, meaningfully above AR6 low confidence
+#     with no additional data to defend the excess. 1 m remains consistent
+#     with independent cross-checks: the Amundsen Sea Embayment's ice
+#     volume above flotation plus spillover to neighboring basins
+#     (~1.1 m; Morlighem et al. 2020), Bamber et al. (2019)'s WAIS 95th
+#     percentile at +5C after rheology correction (~1.19 m), and DeConto &
+#     Pollard (2016)'s most aggressive MICI projection (0.64-1.14 m total
+#     Antarctic). Its 5th-percentile bound
 #     (low_mm=130 mm) is pinned to the 99th percentile of S1_status_quo's
 #     endpoint distribution: MISI-triggered outcomes are expected to
 #     exceed anything a continued no-instability trend can produce, so
@@ -96,7 +105,7 @@ except ImportError:
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.10, 'misi': False},
-    'S2_fast_wais':  {'P': 0.90, 'low_mm': 130, 'high_mm': 1300,
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': 130, 'high_mm': 1000,
                       'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
@@ -681,8 +690,9 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     # blending rule across the paper. The blended path is then rescaled
     # so H(2100) still equals the independently-drawn h2100 exactly: the
     # blend reshapes *how* the trajectory gets to 2100, not the assessed
-    # endpoint distribution (which stays the AR6/S1-p99-pinned 130-1300 mm
-    # skew-normal used by sample_a4_wais_endpoint() elsewhere). S1 is
+    # endpoint distribution (which stays the S1-p99-pinned/mixture-p95-
+    # capped 130-1000 mm skew-normal used by sample_a4_wais_endpoint()
+    # elsewhere). S1 is
     # untouched -- it already *is* the quadratic.
     beta_eff_2035 = np.full(n_samples, np.nan)
     beta_eff_2050 = np.full(n_samples, np.nan)
