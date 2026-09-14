@@ -1,0 +1,410 @@
+\documentclass[12pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{hyperref}
+
+\title{Introduction Roughs for SPECTRUM}
+\author{}
+\date{Drafted 2026-09-13; finalized after three rounds of adversarial review}
+
+\begin{document}
+\maketitle
+
+\noindent This file contains three candidate Introductions for
+\texttt{01\_slr\_forecast\_intervention2026.tex}, produced as directed:
+Version 1 follows the six-item bulleted outline already present at the top
+of that manuscript's \texttt{\textbackslash section\{Introduction\}}; Version
+2 is an independently constructed introduction drawing on the broader
+survey in \texttt{literature\_component\_slr.tex} and the project's own
+findings; Version 3 is a condensed synthesis of the two, retaining what we
+judged the most load-bearing points (the stakes, the three-way model-class
+trade-off, the WAIS tail-risk gap, and the SPECTRUM framework itself)
+while dropping supporting detail and secondary citations. All three are
+written to match the voice, quantitative style, and citation density of
+the target manuscript. Versions 1 and 2 were each drafted, then put
+through three rounds of independent adversarial review (fresh reviewers
+each round, checking citation validity against \texttt{references.bib},
+accuracy against the papers actually cited, style conformance, and prose
+quality) with a full revision pass after each round, and were confirmed in
+the final round to compile cleanly (verified with a live
+\texttt{pdflatex}/\texttt{bibtex} run) with no outstanding material
+issues. Version 3 draws only on claims and citations already verified in
+Versions 1 and 2, and received one adversarial review pass of its own
+(citation validity, accuracy, and length target) rather than the full
+three rounds. Nothing here has been copied into the manuscript itself.
+
+\noindent\textbf{Length note.} Version 1 is 1044 words and Version 2 is
+872 words (body text only, excluding headings, counted programmatically).
+Version 3 originally targeted the intersection of ``half to two-thirds''
+of each, i.e.\ 522--581 words, and its first draft came in at 580 words,
+inside that band relative to both (0.56$\times$ V1, 0.67$\times$ V2). A
+second revision pass (described below) added connective sentences to fix
+structural and clarity problems surfaced by adversarial review; the
+current text is 623 words (0.60$\times$ V1, 0.71$\times$ V2), modestly
+above the original band, a trade-off made deliberately in favor of
+clarity over the length target. Its citation count (23) is unchanged by
+that pass and was scaled down roughly in proportion to its length rather
+than held to the 25--40 range specified for Versions 1 and 2, since
+forcing that many citations into a passage this short would come at the
+expense of prose quality. Version 3's first draft received one full
+adversarial review pass, which caught (and that pass fixed) several
+compression artifacts: a fabricated causal link between the
+model-parsimony citations and the held-out-validation design, an
+inaccurate collapsing of Rahmstorf (2007) and Vermeer \& Rahmstorf (2009)
+into a single-coefficient description (the latter has two), a dropped
+hierarchy-of-models rationale, an orphaned citation, and a reversed
+description of what component-level models trade away.
+
+\noindent\textbf{Revision note (second pass).} The revised draft was then
+checked by three independent adversarial reviewers, each rereading the
+full text and mapping every sentence to the idea it is meant to convey,
+one focused on argumentative structure and logical coherence, one on
+plain-language and sentence-level clarity, and one on whether each
+sentence's content actually matched the goal that mapping assigned it.
+All three independently flagged the same unresolved referent (the phrase
+``that gap'' opening Paragraph 3, which pointed to nothing named in the
+preceding paragraph); two flagged a component-level-models sentence that
+conflated a stated weakness (assuming stationarity) with an unrelated,
+more important claim (no published implementation withholds the
+aggregate record for an independent check) behind a single semicolon; and
+reviewers separately flagged an unearned closing claim in Paragraph 2 (that
+ordering model classes by complexity lets simpler ones check more complex
+ones, asserted without the paragraph showing how), an unsupported closing
+claim in Paragraph 3 (an appeal to ``adaptation planning'' introduced with
+no groundwork), and several sentences overloaded with two or more distinct
+claims joined by colons or semicolons. The text above fixes all of these:
+it names the referent explicitly (``this missing independent check''),
+splits the conflated and overloaded sentences, ties the Paragraph 2
+closing claim to the specific held-out GMSLR--GMST check performed in
+Paragraph 4, and rewrites the Paragraph 3 closing claim to point back to
+the flooding-damage stakes already established in Paragraph 1 rather than
+to an unintroduced concept. No citations were added or removed in this
+pass.
+
+\noindent\textbf{Bibliography note.} Version 1 cites only keys that already
+exist in \texttt{references.bib}. Version 2 additionally cites several
+papers discussed in \texttt{literature\_component\_slr.tex} that are not
+yet in \texttt{references.bib}: \texttt{Felikson2025}, \texttt{Slangen2022},
+\texttt{Garner2018}, \texttt{Nauels2017}, \texttt{Kopp2023},
+\texttt{McCormack2026}, \texttt{Bakker2017}, \texttt{Darnell2025}, and
+\texttt{Held2005}. These entries would need to be added to
+\texttt{references.bib} before Version 2 can be compiled or merged into the
+manuscript; per task instructions, no file other than this one has been
+modified.
+
+%% ====================================================================
+\section*{Version 1 --- follows the manuscript's own itemized outline}
+
+Coastal communities plan against a moving target. Each additional
+centimeter of global mean sea-level rise (GMSLR) exposes roughly 1.6
+million more people to annual flooding \citep{Kulp2019}, nearly 90\% of
+them in low- and middle-income countries \citep{Jongman2012}. Without
+further adaptation, annual flood damages are projected to reach
+US\$14--18T (trillion) per year once GMSLR reaches 0.9--1.1~m
+\citep{Jevrejeva2018}, while a lower-bound estimate of the cost of adapting
+to that rise, based on the price of raising dikes along a small fraction of
+the world's coastlines, is on the order of US\$4T per meter
+\citep{Tiggeloven2020}. Developing countries currently receive roughly
+US\$21B per year in adaptation finance across all sectors
+\citep{UNEP2023}, far short of what these cost estimates imply is needed.
+That shortfall makes the reliability of the sea-level projections used to
+plan adaptation directly consequential for how effectively it can be
+closed.
+
+Sea-level projections have been published regularly for more than four
+decades and span a wide range of methods and outcomes \citep{Garner2026}.
+Rates of GMSLR have already doubled twice since the mid-20th century,
+first over about 16 years and $0.34\ ^\circ$C of warming and again over
+about 21 years and $0.41\ ^\circ$C \citep{Frederikse2020,Hamlington2024,
+Rohde2020}. Yet current coastal planning still leans heavily on
+projections from the IPCC Sixth Assessment Report (AR6), which places
+21st-century rise at 0.4--0.7~m \citep{Fox-Kemper2021,Hirschfeld2023}.
+This variety is not a weakness so much as an underused resource: no single
+class of model is simultaneously the most physically detailed, the most
+transparent, and the most tightly constrained by data, and a framework
+that arrays these approaches by complexity, testing each rung against data
+before trusting the next, offers a way to combine their respective
+strengths and to identify where projections agree, diverge, or exceed what
+the data can support \citep{Green2015,Makridakis2020}.
+
+At the most detailed end sit numerical ice-sheet models, which resolve ice
+flow, deformation, and fracture directly and let competing physical
+hypotheses, such as whether marine ice-cliff instability can activate this
+century, be posed and debated within a common numerical framework
+\citep{DeContoP2016,Edwards2019,Morlighem2024}. Their principal weakness
+is that this physical detail demands more constraints than the
+observational record can currently supply. In hindcasting studies,
+process-based models diverge from historical GMSLR reconstructions
+\citep{Aschwanden2021} and from satellite observations within a decade of
+initialization \citep{Fricker2025}. These disagreements trace to
+structural gaps such as the omission of leading-order calving physics
+\citep{Fricker2025} and an assumed ice viscosity far less sensitive to
+stress than observations indicate \citep{Millstein2022,
+GetraerMorlighem2025}, compounded by initialization uncertainty and, for
+marine ice sheets specifically, dynamics that can skew the resulting
+projections toward high outcomes rather than merely widening them
+\citep{Robel2019}. The resulting parameterizations are numerous enough,
+and their interactions complex enough, that these models function largely
+as black boxes even to their developers, and every century-scale
+projection necessarily extrapolates them well beyond the short
+observational record used to tune them. Decades of general forecasting
+research show that
+models with more free parameters than their calibration data can
+constrain tend to forecast worse, not better, than simpler alternatives
+\citep{Green2015}.
+
+At the opposite extreme are semi-empirical models that regress the
+observed rate of GMSLR directly onto global mean surface temperature
+(GMST), a class whose transparency and direct grounding in the data being
+predicted make it easy to test and to communicate \citep{Rahmstorf2007,
+Vermeer2009}. Statistically, semi-empirical fits track the observed
+sea-level record over multi-decade hindcast windows at least as well as,
+and at times better than, contemporaneous process-based projections
+\citep{Rahmstorf2012}, and
+Bayesian treatments of the same GMST-GMSL relationship, which propagate
+measurement and proxy uncertainty explicitly rather than fitting a single
+point estimate, extend the approach over far longer records
+\citep{Kopp2016}. Their central limitation is that a single global
+regression coefficient is not obviously physical or causal, may not stay
+stationary as individual components respond to different forcings on
+different timescales, and gives no way to tell, when it forecasts
+correctly, whether that agreement reflects the right physical reasons
+\citep{Church2013}.
+
+Between these extremes sit component-level models that decompose GMSLR
+into its physical contributors, ocean thermal expansion, glaciers, and the
+ice sheets, and calibrate each against existing observational or model
+data \citep{Kopp2014,Mengel2016,Wong2017}. This intermediate complexity is
+a deliberate trade. Parsimony and a direct connection to physical
+processes come at the cost of lumped parameters that cannot resolve
+individual basins or glaciers, an assumption of stationarity over the
+calibration period, and the same extrapolation risk that limits every
+other class of model. The calibration strategy within this class still
+varies: some scale a component decomposition to modeled temperature
+trajectories \citep{Perrette2013}, others use Bayesian-calibrated
+reduced-complexity models, with an expert prior on the most uncertain term
+(Antarctic dynamics), to bound a physically plausible upper limit on total
+sea-level rise \citep{Sriver2012}, and still others forgo new
+component physics altogether and instead statistically fuse existing
+probabilistic projections into a single consensus estimate
+\citep{Grandey2024}.
+
+A framework that spans this hierarchy, from semi-empirical regression
+through component-level, data-calibrated models to full process-based
+simulation, does not need to choose a single class as authoritative. It can use agreement
+or disagreement across rungs as a diagnostic in its own right, letting the
+simplest, most transparent models motivate and check the more complex
+ones, calibrating and validating within the space of models rather than
+against a single preferred one, and it can let the most consequential
+insights come from the simplest rung rather than the most complex. Here,
+we construct such a framework:
+a data-driven, component-level sea-level projection that treats each
+contributor to GMSLR, ocean thermal expansion, Greenland Ice Sheet (GrIS)
+surface mass balance (SMB) and glacier discharge, West Antarctic Ice Sheet
+(WAIS) glacier discharge, East Antarctic Ice Sheet (EAIS) SMB, the
+Antarctic Peninsula, glaciers outside the ice sheets, and terrestrial water
+storage, with its own parsimonious physical model, calibrated against
+independent observational records using Bayesian inference. We call this
+framework SPECTRUM, for Sea-level Projections from Empirical Calibration
+of Thermodynamical, Reduced-physics Models. Most of its component models
+adapt existing formulations from the literature; the exception is
+Greenland Ice Sheet discharge, whose 3-parameter model connecting glacier
+discharge directly to ocean temperature is developed here. Critically,
+observed GMSLR and its sensitivity to observed GMST are withheld from
+every component-level calibration and used only as diagnostics on the
+composite model, so that the framework's central test, whether
+independently calibrated parts sum to reproduce a whole they were never
+fit to, is genuinely out of sample.
+
+%% ====================================================================
+\section*{Version 2 --- independent synthesis from the literature review}
+
+Every additional centimeter of global mean sea-level rise (GMSLR) exposes
+roughly 1.6 million more people to annual coastal flooding
+\citep{Kulp2019}, and unmitigated damages are projected to reach
+US\$14--18T (trillion) per year once rise reaches 0.9--1.1~m
+\citep{Jevrejeva2018}. Sea-level projections meant to guide adaptation
+against those costs have been published for more than four decades. A
+database of 756 such projections drawn from 103 studies shows their
+production concentrated in a handful of wealthy countries and their
+horizons only recently extended past 2100, and finds that, prior to the
+IPCC's Sixth Assessment Report (AR6), individual studies' high-end
+estimates routinely exceeded the IPCC's own central ranges
+\citep{Garner2026}. Over that same period, successive IPCC assessment
+cycles have revised their component treatments and uncertainty structure
+substantially \citep{Slangen2022,Garner2018}, evidence less of an immature
+field than of one still searching for the right relationship between
+physical detail and the observational record available to constrain it.
+
+A growing, cross-institutional view holds that the way forward is not more
+physical detail but tighter observational constraint. A recent synthesis
+spanning the leading process-based and observational sea-level research
+groups argues explicitly for narrowing projections with data and for
+characterizing uncertainty structure, not just magnitude, in both the
+observations and the models \citep{Felikson2025}. That argument responds
+to a specific, well-documented weakness of the process-based ice-sheet
+models that dominate current assessments, including AR6's own 0.4--0.7~m
+projection for 21st-century rise \citep{Fox-Kemper2021}. In hindcasting
+exercises, these models diverge from the historical GMSLR record
+\citep{Aschwanden2021} and from satellite observations within a decade of
+initialization \citep{Fricker2025}, disagreements traced to structural
+gaps such as an assumed ice viscosity far less sensitive to stress than
+observations indicate \citep{Millstein2022,GetraerMorlighem2025}.
+
+Component-summation frameworks, which decompose GMSLR into its physical
+contributors and combine them probabilistically, already offer a partial
+answer, and existing implementations differ mainly in what each component
+is calibrated against: expert-assessed probability distributions
+\citep{Kopp2014}, independently calibrated semi-empirical response
+functions \citep{Mengel2016}, jointly calibrated physical models
+\citep{Wong2017}, or reduced-complexity emulators of process-model output
+\citep{Nauels2017}, with the modular platform now underlying AR6 designed
+to accommodate all of these calibration strategies within a common
+structure \citep{Kopp2023}. What none of them do is hold out the aggregate
+observational record, global sea level's own sensitivity to global
+temperature, entirely from every component-level fit and use it solely as
+an independent check on the summed result.
+
+The stakes of that calibration choice are concentrated in West Antarctica.
+Marine ice sheet instability does not simply widen the uncertainty on
+Antarctic contributions; it mathematically skews the resulting
+distribution toward high outcomes \citep{Robel2019}, and independent
+regional ocean modeling finds that ocean-driven melt of West Antarctic ice
+shelves accelerates at similar rates across emissions scenarios this
+century, meaning much of that risk may already be locked in
+\citep{Naughten2023}. Recent work also finds that the near-term rate of
+Antarctic mass loss is itself predictive of the rate over the following
+3--5 decades \citep{McCormack2026}, suggesting the tail is not
+only large but partially foreseeable from the current observational
+record. Yet deep-uncertainty treatments that represent this risk as a
+structured scenario mixture rather than a single process-model trajectory
+remain rare \citep[e.g.,][]{Bakker2017}. A recent variance decomposition
+reaches a seemingly contrary conclusion, that emissions-scenario choice
+dominates projection uncertainty through the mid-century before
+geophysical uncertainty takes over \citep{Darnell2025}, a claim that a
+framework treating the tail explicitly cannot simply set aside.
+
+None of this is an argument against physical detail; it is an argument
+for testing that detail against data before trusting it. Outside
+sea-level rise specifically, climate science has long recognized that a
+hierarchy spanning idealized and comprehensive models serves
+understanding, and often forecast robustness, better than comprehensive
+models alone \citep{Held2005}, a pattern general forecasting research
+confirms empirically across some 100,000 time series
+\citep{Green2015,Makridakis2020}. Semi-empirical models that regress GMSLR
+directly onto GMST provide another genuinely data-driven benchmark
+\citep{Rahmstorf2007,Vermeer2009}, distinguishing the choice of model
+complexity from the choice of calibration source. Nor is the record
+uniformly unkind to assessment-based projection. An earlier IPCC
+assessment's mid-range 21st-century sea-level projection verified to
+within about a centimeter three decades later \citep{Tornqvist2025}, a
+reminder that any critique of process-based projections should be aimed at
+specific assessment cycles and specific components, not at process-based
+reasoning as such.
+
+Here, we build a component-level framework that puts that discipline into
+practice directly: every physical contributor to GMSLR, ocean thermal
+expansion, Greenland Ice Sheet (GrIS) surface mass balance and glacier
+discharge, West Antarctic Ice Sheet (WAIS) glacier discharge, East
+Antarctic Ice Sheet (EAIS) surface mass balance, the Antarctic Peninsula,
+glaciers outside the ice sheets, and terrestrial water storage, is
+calibrated with its own parsimonious physical model against an
+independent observational record, using Bayesian inference to propagate
+parameter uncertainty rather than adopting it from assessment or
+process-model output. We call the result SPECTRUM, for Sea-level
+Projections from Empirical Calibration of Thermodynamical, Reduced-physics
+Models. The only genuinely new component model links GrIS discharge to
+ocean temperature through a 3-parameter time-lagged response; every other
+component adapts an existing formulation. Its treatment of WAIS is a
+structured
+deep-uncertainty scenario mixture built to represent the skewed tail
+described above rather than average over it. Observed GMSLR and its GMST
+sensitivity, withheld from every component calibration, are reserved as
+the composite-level diagnostic that current frameworks do not report, and
+against which SPECTRUM's aggregated components are tested here for the
+first time.
+
+%% ====================================================================
+\section*{Version 3 --- condensed synthesis}
+
+Global mean sea-level rise (GMSLR) already exposes roughly 1.6 million
+more people to annual flooding for every additional centimeter
+\citep{Kulp2019}, with unmitigated damages projected at US\$14--18T
+(trillion) per year once rise reaches 0.9--1.1~m \citep{Jevrejeva2018}.
+Sea-level projections meant to inform that risk have been published for
+four decades and span a wide range of methods and outcomes
+\citep{Garner2026}. Rates of GMSLR have already doubled twice since the
+mid-20th century \citep{Frederikse2020,Hamlington2024}, yet coastal
+planning still leans heavily on the IPCC Sixth Assessment Report (AR6),
+which projects 0.4--0.7~m of 21st-century rise
+\citep{Fox-Kemper2021,Hirschfeld2023}. A growing, cross-institutional view
+holds that narrowing AR6's range requires tighter observational
+constraint on projections, not more physical detail \citep{Felikson2025}.
+
+Three model classes have taken up that challenge, each with a real
+weakness. Process-based ice-sheet models resolve ice flow and
+fracture directly, but they demand more constraints than the
+observational record can currently supply. In hindcasting studies, they
+diverge from the historical GMSLR record \citep{Aschwanden2021} and from
+satellite observations within a decade of initialization
+\citep{Fricker2025}. These disagreements trace to gaps such as an
+assumed ice viscosity far less sensitive to stress than observations
+indicate \citep{Millstein2022,GetraerMorlighem2025}. Decades of general
+forecasting research show that models with more free parameters than
+their data can constrain tend to forecast worse than simpler alternatives
+\citep{Green2015,Makridakis2020}. Semi-empirical models that regress the
+rate of GMSLR onto global mean surface temperature are simple and
+transparent, but the underlying relationship is not obviously physical,
+causal, or stationary \citep{Rahmstorf2007,Vermeer2009,Church2013}. Even
+so, such fits track the observed record at least as well as
+contemporaneous process-based projections \citep{Rahmstorf2012}. Between
+these extremes, component-level models decompose GMSLR into its physical
+contributors and calibrate each against existing data
+\citep{Kopp2014,Mengel2016,Wong2017}, trading basin-scale resolution for
+parsimony and a direct physical connection, at the cost of assuming
+stationarity. None of the published implementations, however, withholds
+the aggregate observational record from every component fit, so none can
+use it as an independent check on the summed result. Ordering these
+three model classes by complexity, rather than treating any one as
+authoritative, turns their disagreement into a diagnostic, letting the
+simplest, most transparent models motivate and check the more complex
+ones.
+
+The stakes of this missing independent check are concentrated in West
+Antarctica, where marine ice sheet instability does not merely widen
+projection uncertainty but skews it toward high outcomes
+\citep{Robel2019}, and where independent regional ocean modeling finds
+melt accelerating at similar rates across emissions scenarios this
+century, meaning much of that risk may already be locked in
+\citep{Naughten2023}. This West Antarctic risk differs structurally from
+the temperature-sensitive uncertainty in the other components. Treating
+it as a single central trajectory, rather than a mixture spanning its
+full range, would understate exactly the high-end damages introduced
+above.
+
+Here, we build a component-level framework in which each contributor to
+GMSLR (ocean thermal expansion; Greenland Ice Sheet (GrIS) surface mass
+balance and glacier discharge; West Antarctic Ice Sheet (WAIS) glacier
+discharge; East Antarctic Ice Sheet (EAIS) surface mass balance; the
+Antarctic Peninsula; glaciers outside the ice sheets; and terrestrial
+water storage) gets its own parsimonious physical model, calibrated
+against an independent observational record using Bayesian inference. We
+call it SPECTRUM, for Sea-level Projections from Empirical Calibration of
+Thermodynamical, Reduced-physics Models. Its only new component
+model links GrIS discharge to ocean temperature through a 3-parameter
+time-lagged response. Its treatment of WAIS is a structured
+deep-uncertainty scenario mixture, built to represent the skewed tail
+described above rather than average over it. Observed GMSLR and its
+sensitivity to GMST, the relationship at the core of the semi-empirical
+class described above, are withheld from every component calibration and
+used only as a diagnostic on the composite model. The central test is
+therefore out of sample. It asks whether the independently calibrated
+parts reproduce a whole they were never fit to.
+
+\bibliographystyle{agufull08}
+\bibliography{references}
+
+\end{document}

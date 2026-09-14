@@ -6,7 +6,7 @@
 \usepackage{enumitem}
 
 \title{Sea-Level Rise Forecast Models Related to SPECTRUM:\\A Literature Assessment}
-\author{Literature search compiled 2026-05-10; updated 2026-09-03}
+\author{Literature search compiled 2026-05-10; updated 2026-09-03; updated 2026-09-13}
 \date{}
 
 \begin{document}
@@ -259,6 +259,43 @@ Bayesian Monte Carlo to bound probabilistic SLR projections --- a genuinely
 different uncertainty formalism worth a citation if the discussion engages
 with alternatives to Bayesian summation.
 
+\subsection*{2.5 Grandey et al.\ (2024) --- statistical fusion of existing projections}
+
+\noindent\textbf{Citation:} Grandey, B.\,S., Dauwels, J., Koh, Z.\,Y.,
+Horton, B.\,P., \& Chew, L.\,Y.\ (2024). Fusion of probabilistic projections
+of sea-level rise. \textit{Earth's Future}, 12(12), e2024EF005295.\\
+\textbf{DOI:} \texttt{10.1029/2024EF005295}
+
+\noindent\textbf{Approach.} Statistically fuses multiple existing
+probabilistic GMSL projections (e.g.\ IPCC AR6, expert elicitations) into a
+single consensus posterior, rather than generating a new projection from
+component physics or observations.
+
+\noindent\textbf{Relevance: Moderate--high.} Methodologically adjacent to
+SPECTRUM's own blending step (Section~5.2), but fuses \emph{other studies'
+outputs} rather than blending an observation-anchored posterior with a
+model-based one. Worth a passing citation as an alternative notion of
+``fusion'' if the manuscript discusses its blending step's novelty.
+
+\subsection*{2.6 Perrette et al.\ (2013) --- precursor to the tide-gauge scaling approach}
+
+\noindent\textbf{Citation:} Perrette, M., Landerer, F., Riva, R.,
+Frieler, K., \& Meinshausen, M.\ (2013). A scaling approach to project
+regional sea level rise and its uncertainties. \textit{Earth Syst.\
+Dynam.}, 4(1), 11--29.\\
+\textbf{DOI:} \texttt{10.5194/esd-4-11-2013}
+
+\noindent\textbf{Approach.} Scales each component's regional pattern to a
+global-mean trajectory derived from CMIP-class temperature projections,
+with uncertainty propagated through the scaling coefficients rather than
+independent per-component Bayesian calibration.
+
+\noindent\textbf{Relevance: Moderate.} Primarily useful as the direct
+methodological ancestor of Perrette \& Mengel (2025, Section~7), already
+identified as a genuinely different observation-driven alternative to
+component summation; citing both together shows that lineage has matured
+from a model-scaling approach to a purely observation-driven one.
+
 %% ========================================================================
 \section{Semi-empirical GMST-sensitivity models}
 
@@ -359,6 +396,49 @@ CI on 2100 GMSLR widens to 15--150~cm.
 SPECTRUM, but the manuscript's brief mention of semi-empirical models should
 cite 1--2 of these directly rather than relying on the AR5 assessment alone
 as a secondhand summary of the critique.
+
+\subsection*{3.4 Kopp et al.\ (2016) --- a genuinely Bayesian semi-empirical precedent}
+
+\noindent\textbf{Citation:} Kopp, R.\,E., Bittermann, K., Horton, B.\,P.,
+Donnelly, J.\,P., Gehrels, W.\,R., Hay, C.\,C., et al.\ (2016).
+Temperature-driven global sea-level variability in the Common Era.
+\textit{Proc.\ Natl.\ Acad.\ Sci.}, 113(38).\\
+\textbf{DOI:} \texttt{10.1073/pnas.1517056113}
+
+\noindent\textbf{Approach.} A Bayesian errors-in-variables statistical model
+relating reconstructed GMST to reconstructed GMSL over the Common Era
+(the past $\sim$2000 years), explicitly propagating measurement and proxy
+uncertainty through the temperature-sea-level relationship rather than
+fitting it by ordinary least squares.
+
+\noindent\textbf{Relevance: High.} The only paper in the Rahmstorf/Vermeer
+semi-empirical lineage (Section~3.1) that performs genuine Bayesian
+calibration with propagated uncertainty rather than a point-estimate
+regression, making it methodologically closer to SPECTRUM's Bayesian DOLS
+approach than Rahmstorf (2007) or Vermeer \& Rahmstorf (2009) themselves.
+Worth citing alongside them wherever the manuscript discusses precedent for
+Bayesian treatment of the GMST-GMSL relationship specifically.
+
+\subsection*{3.5 Rahmstorf, Foster \& Cazenave (2012) --- statistical evidence for semi-empirical skill}
+
+\noindent\textbf{Citation:} Rahmstorf, S., Foster, G., \& Cazenave, A.\
+(2012). Evaluating the ability of process based models to project
+sea-level change. \textit{Environ.\ Res.\ Lett.}, 7, 044035.\\
+\textbf{DOI:} \texttt{10.1088/1748-9326/7/4/044035}
+
+\noindent\textbf{Approach.} Statistically compares the predictive skill of
+semi-empirical (GMST-forced) models against process-based (IPCC AR4-class)
+models by hindcasting observed GMSLR over the 1990--2011 satellite/tide-gauge
+record, finding the semi-empirical class tracks observations at least as
+well and the process-based models systematically underestimate the observed
+rate.
+
+\noindent\textbf{Relevance: Moderate--high.} Direct statistical evidence,
+external to SPECTRUM, for the core model-complexity argument that simpler,
+observation-calibrated models can out-predict more complex process-based
+ones over the historical record. Pairs naturally with Held (2005,
+Section~6.4) and Aschwanden et al.\ (2021, Section~6.3) as a third,
+empirical (rather than purely conceptual) anchor for that argument.
 
 %% ========================================================================
 \section{Deep uncertainty, MISI/MICI, and WAIS tail-risk framing}
@@ -480,6 +560,26 @@ strategy and its finding that most forecast uncertainty is late-century and
 WAIS-driven.
 \end{itemize}
 
+\subsection*{4.5 Sriver et al.\ (2012) --- a Bayesian-calibrated upper bound}
+
+\noindent\textbf{Citation:} Sriver, R.\,L., Urban, N.\,M., Olson, R.,
+\& Keller, K.\ (2012). Toward a physically plausible upper bound of
+sea-level rise projections. \textit{Climatic Change}, 115(3--4), 893--902.\\
+\textbf{DOI:} \texttt{10.1007/s10584-012-0610-6}
+
+\noindent\textbf{Approach.} Uses a reduced-complexity, Bayesian-calibrated
+climate/sea-level model (DOECLIM plus semi-empirical components) with
+expert-elicited priors on poorly constrained Antarctic parameters to derive
+a physically plausible upper bound on 21st-century GMSLR, rather than
+resolving Antarctic dynamics with a process model.
+
+\noindent\textbf{Relevance: Moderate--high.} An early precedent for treating
+the ice-sheet tail as a Bayesian-calibrated bounding problem rather than a
+process-model output, in the same spirit as SPECTRUM's WAIS scenario
+mixture (Section~4.4) though without the explicit deep-uncertainty scenario
+structure; useful as a citation for the general strategy of bounding the
+tail statistically when the underlying physics is not well constrained.
+
 %% ========================================================================
 \section{Observational anchoring, nowcasting, and naive extrapolation}
 
@@ -559,6 +659,29 @@ forecasting competition confirming that simple statistical and hybrid
 methods remain highly competitive against complex ones --- a useful second,
 independent citation for the general model-parsimony argument, alongside
 Held (2005, Section~6.4).
+
+\subsection*{5.5 Pfeffer, Harper \& O'Neel (2008) --- kinematic constraints}
+
+\noindent\textbf{Citation:} Pfeffer, W.\,T., Harper, J.\,T.,
+\& O'Neel, S.\ (2008). Kinematic constraints on glacier contributions to
+21st-century sea-level rise. \textit{Science}, 321(5894), 1340--1343.\\
+\textbf{DOI:} \texttt{10.1126/science.1159099}
+
+\noindent\textbf{Approach.} Bounds plausible 21st-century glacier and ice
+sheet contributions using observed and physically limiting ice-discharge
+velocities and geometric constraints (kinematics), rather than resolving ice
+dynamics with a full process model or fitting a semi-empirical GMST
+relationship.
+
+\noindent\textbf{Relevance: High.} An early, influential precedent for
+constraining ice-sheet/glacier contributions directly from observed rate
+and geometric limits rather than modeled physics --- the same underlying
+philosophy as SPECTRUM's rate- and observation-anchored kinematic
+extrapolation baseline (Section~5.1), applied a decade and a half earlier
+with much sparser observational records. Worth citing alongside Nerem,
+Frederikse \& Hamlington (2022) as an early precedent for the
+kinematic/observational-constraint strategy specifically for ice
+components.
 
 %% ========================================================================
 \section{Reduced-complexity discharge and calving parameterizations}
@@ -713,8 +836,10 @@ Felikson et al.\ (2025)    & --- (perspective)       & n/a  & Very high \\
 \multicolumn{4}{@{}l}{\textit{Semi-empirical / non-component (Sec.~3, 5)}} \\
 Rahmstorf (2007)           & Observations (GMST)     & 1    & Very high \\
 Vermeer \& Rahmstorf (2009)& Observations (GMST)     & 1    & Very high \\
+Kopp et al.\ (2016)        & Observations (GMST, Bayesian) & 1 & High \\
 Grinsted \& Christensen (2021) & Observations (GMST) & 1    & High \\
 Nerem, Frederikse \& Hamlington (2022) & Observations (altimetry) & 1 & Very high \\
+Pfeffer, Harper \& O'Neel (2008) & Observations (kinematic) & 2 & High \\
 Perrette \& Mengel (2025)  & Observations (tide gauge) & 0 (spatial) & High \\
 \bottomrule
 \end{tabular}

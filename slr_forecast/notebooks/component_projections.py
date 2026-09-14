@@ -1038,6 +1038,48 @@ def ipcc_extract(data, quantiles_target=(0.05, 0.5, 0.95)):
     return out
 
 
+def read_ipcc_workflow_samples(workflow_base, wf_id, ssp_code, fname, year=2100):
+    """Read raw Monte Carlo samples for a single IPCC AR6 FACTS workflow.
+
+    Unlike the confidence-level p-box files (``read_ipcc_component_nc``),
+    these ``full_sample_workflows`` files hold one constituent model's own
+    Monte Carlo ensemble (e.g. the ISMIP6 emulator or LARMIP-2 alone) and
+    so represent a genuine single-model distribution, not an envelope
+    across models.
+
+    Parameters
+    ----------
+    workflow_base : str
+        Base directory for ``full_sample_workflows``.
+    wf_id : str
+        FACTS workflow identifier, e.g. ``'wf_1e'`` (ISMIP6 emulator),
+        ``'wf_2e'`` (LARMIP-2), ``'wf_3e'`` (DeConto et al. 2021 MICI),
+        ``'wf_4'`` (Bamber et al. 2019 SEJ).
+    ssp_code : str
+        E.g. ``'ssp585'``.
+    fname : str
+        Workflow-specific filename, e.g.
+        ``'icesheets-dp20-icesheet-ssp585_AIS_globalsl.nc'``.
+    year : int
+        Target year to extract (nearest available year is used).
+
+    Returns
+    -------
+    ndarray or None
+        1-D array of samples in mm at the requested year. ``None`` if the
+        file is not found.
+    """
+    fpath = os.path.join(workflow_base, wf_id, ssp_code, fname)
+    if not os.path.exists(fpath):
+        return None
+    ds = nc.Dataset(fpath, 'r')
+    years = ds.variables['years'][:]
+    yr_idx = np.argmin(np.abs(years - year))
+    samples = np.array(ds.variables['sea_level_change'][:, yr_idx, 0], dtype=float)
+    ds.close()
+    return samples
+
+
 # =========================================================================
 # Projection statistics helpers
 # =========================================================================

@@ -39,11 +39,12 @@ HAS_IPCC_DIST = os.path.exists(IPCC_DIST_PATH)
 from slr_forecast import M_TO_MM
 BASELINE_YEAR = 2005.0
 
-# Components that should be summed. EAIS is excluded: the IMBIE record is
-# too short and noisy to constrain a reliable trend, so it is loaded and
-# reported per-component but not included in the total (matches
-# component_summation.ipynb and component_forecast.ipynb).
-SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais']
+# Components that should be summed. EAIS was previously excluded (IMBIE
+# record too short/noisy to constrain a reliable trend); re-included
+# 2026-09-13 following the correlation-aware CI and b>=0 prior fix, which
+# better constrains its projected range (matches component_summation.ipynb
+# and component_forecast.ipynb).
+SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais']
 ALL_HDF5_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
 
 
@@ -60,11 +61,11 @@ class TestComponentInventory:
         for comp in ALL_HDF5_COMPONENTS:
             assert comp in comps, f"Missing component: {comp}"
 
-    def test_eais_present_but_excluded(self):
-        """EAIS should be in HDF5 (for per-component reporting) but not summed."""
+    def test_eais_present_and_summed(self):
+        """EAIS should be in HDF5 and included in the summed total."""
         comps = list_components()
         assert 'eais' in comps
-        assert 'eais' not in SUMMED_COMPONENTS
+        assert 'eais' in SUMMED_COMPONENTS
 
 
 # =========================================================================
@@ -138,14 +139,23 @@ class TestSampleSummation:
         for i in range(len(medians) - 1):
             assert medians[i] <= medians[i + 1] * 1.05
 
-    def test_eais_exclusion_is_conservative(self, comp_samples):
-        """EAIS is excluded from SUMMED_COMPONENTS; including it would lower the total."""
-        assert 'eais' not in SUMMED_COMPONENTS
-        eais = load_component('eais')
+    def test_eais_included_lowers_total(self, comp_samples):
+        """EAIS is included in SUMMED_COMPONENTS and contributes negative SLR,
+        so the total is lower than the sum of the other components alone."""
+        assert 'eais' in SUMMED_COMPONENTS
         idx = np.argmin(np.abs(PROJ_YEARS - 2100))
         ssp = 'SSP2-4.5'
-        eais_med = np.median(eais['projections'][ssp]['samples'][:, idx])
+        eais_med = np.median(comp_samples['eais'][ssp]['samples'][:, idx])
         assert eais_med < 0, "EAIS should contribute negative SLR"
+
+        total_with = np.zeros(N_SAMPLES)
+        total_without = np.zeros(N_SAMPLES)
+        for comp in SUMMED_COMPONENTS:
+            s = comp_samples[comp][ssp]['samples'][:, idx]
+            total_with += s
+            if comp != 'eais':
+                total_without += s
+        assert np.median(total_with) < np.median(total_without)
 
 
 # =========================================================================
@@ -359,8 +369,8 @@ class TestConsistencyWithForecast:
 
     def test_same_components_as_forecast(self):
         """Summation notebook should use same components as forecast."""
-        # Forecast COMP_LABELS (component_forecast.ipynb cell 2): no EAIS.
-        forecast_comps = {'ocean', 'glacier', 'greenland', 'apeninsula', 'wais'}
+        # Forecast COMP_LABELS (component_forecast.ipynb cell 2): includes EAIS.
+        forecast_comps = {'ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais'}
         # tws is added separately in both notebooks
         summation_comps = set(SUMMED_COMPONENTS)
         assert summation_comps == forecast_comps
