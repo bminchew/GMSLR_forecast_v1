@@ -104,8 +104,8 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
-    'S1_status_quo': {'P': 0.10, 'misi': False},
-    'S2_fast_wais':  {'P': 0.90, 'low_mm': 130, 'high_mm': 1000,
+    'S1_status_quo': {'P': 0.25, 'misi': False},
+    'S2_fast_wais':  {'P': 0.75, 'low_mm': 130, 'high_mm': 1000,
                       'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},

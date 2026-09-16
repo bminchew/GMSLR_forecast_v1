@@ -13,7 +13,7 @@
 \begin{document}
 \maketitle
 
-\noindent This file contains three candidate Introductions for
+\noindent This file contains six candidate Introductions for
 \texttt{01\_slr\_forecast\_intervention2026.tex}, produced as directed:
 Version 1 follows the six-item bulleted outline already present at the top
 of that manuscript's \texttt{\textbackslash section\{Introduction\}}; Version
@@ -22,19 +22,27 @@ survey in \texttt{literature\_component\_slr.tex} and the project's own
 findings; Version 3 is a condensed synthesis of the two, retaining what we
 judged the most load-bearing points (the stakes, the three-way model-class
 trade-off, the WAIS tail-risk gap, and the SPECTRUM framework itself)
-while dropping supporting detail and secondary citations. All three are
+while dropping supporting detail and secondary citations; Versions 4 and 5
+are two independent critical edits of Version 3 (described further below)
+that substantially expand its treatment of West Antarctic Ice Sheet (WAIS)
+uncertainty and restructure its sentences for classic-style, low-embedding
+prose; Version 6 merges Versions 3--5 into a single text and corrects a
+logic error common to all three (described further below). All six are
 written to match the voice, quantitative style, and citation density of
-the target manuscript. Versions 1 and 2 were each drafted, then put
-through three rounds of independent adversarial review (fresh reviewers
-each round, checking citation validity against \texttt{references.bib},
-accuracy against the papers actually cited, style conformance, and prose
-quality) with a full revision pass after each round, and were confirmed in
-the final round to compile cleanly (verified with a live
-\texttt{pdflatex}/\texttt{bibtex} run) with no outstanding material
-issues. Version 3 draws only on claims and citations already verified in
-Versions 1 and 2, and received one adversarial review pass of its own
-(citation validity, accuracy, and length target) rather than the full
-three rounds. Nothing here has been copied into the manuscript itself.
+the target manuscript. Versions 1 and 2 were each
+drafted, then put through three rounds of independent adversarial review
+(fresh reviewers each round, checking citation validity against
+\texttt{references.bib}, accuracy against the papers actually cited, style
+conformance, and prose quality) with a full revision pass after each
+round, and were confirmed in the final round to compile cleanly (verified
+with a live \texttt{pdflatex}/\texttt{bibtex} run) with no outstanding
+material issues. Version 3 draws only on claims and citations already
+verified in Versions 1 and 2, and received one adversarial review pass of
+its own (citation validity, accuracy, and length target) rather than the
+full three rounds, followed by a second revision pass (described below)
+and, in Versions 4 and 5, a third round that substantially expands the
+WAIS discussion with newly sourced, independently verified citations.
+Nothing here has been copied into the manuscript itself.
 
 \noindent\textbf{Length note.} Version 1 is 1044 words and Version 2 is
 872 words (body text only, excluding headings, counted programmatically).
@@ -84,16 +92,98 @@ the flooding-damage stakes already established in Paragraph 1 rather than
 to an unintroduced concept. No citations were added or removed in this
 pass.
 
-\noindent\textbf{Bibliography note.} Version 1 cites only keys that already
-exist in \texttt{references.bib}. Version 2 additionally cites several
-papers discussed in \texttt{literature\_component\_slr.tex} that are not
-yet in \texttt{references.bib}: \texttt{Felikson2025}, \texttt{Slangen2022},
-\texttt{Garner2018}, \texttt{Nauels2017}, \texttt{Kopp2023},
-\texttt{McCormack2026}, \texttt{Bakker2017}, \texttt{Darnell2025}, and
-\texttt{Held2005}. These entries would need to be added to
-\texttt{references.bib} before Version 2 can be compiled or merged into the
-manuscript; per task instructions, no file other than this one has been
-modified.
+\noindent\textbf{Revision note (third pass: Versions 4 and 5).} Two
+independent editors were each given the post-second-pass text of Version 3
+and the same brief: cut any sentence not earning its place, substantially
+expand the WAIS paragraph with additional citations supporting the claim
+that WAIS is the largest single source of sea-level-projection uncertainty
+(not limited to a pre-supplied citation pool; both were explicitly told to
+search the web for further real, verifiable literature), and restructure
+sentences per the classic-style and syntax-tree principles in Steven
+Pinker's \emph{The Sense of Style} (subject and verb kept close together,
+complexity pushed to the edges of a sentence rather than center-embedded,
+end-weighting, avoiding nominalizations, one claim per main clause).
+Working independently, one editor (Version 4) built a thesis-first,
+explicitly numbered four-line evidentiary case (observational trend,
+independent expert judgment, multi-model spread, and a temporal-variance
+decomposition), closing with a separate mechanism paragraph; the other
+(Version 5) built a three-movement prose argument (mechanism, observation,
+convergence) that additionally surfaces a genuine counter-finding
+(\citealt{Edwards2019} finds ice-cliff collapse is not required to match
+the observational record, bounding the 95th-percentile Antarctic
+contribution below 43~cm without it) and argues this makes West Antarctic
+uncertainty structural rather than narrowing it. Every new citation both
+editors introduced was checked against a primary source (the publisher
+page, a DOI resolver, or the Crossref API) before use, not recalled from
+training data; four candidate citations were considered and rejected as
+redundant with citations already used. The coordinating session
+independently re-verified the four most load-bearing new numeric claims
+(the \citealt{DeContoP2016} ``more than a meter by 2100'' figure, the
+\citealt{Edwards2019} 43~cm bound, the \citealt{Seroussi2020}
+$-$7.8~to~+30.0~cm ISMIP6 range, and the \citealt{Milillo2019}
+tenfold spatial variability in Thwaites melt rates) against their
+original abstracts via web search and found all four accurate as stated
+in both drafts.
+
+\noindent\textbf{Revision note (fourth pass: Version 6).} Versions 3, 4,
+and 5 all opened the WAIS discussion with some variant of ``the stakes of
+[the missing independent check] are concentrated in West Antarctica.''
+This was flagged as a logic error: it frames West Antarctica's dominance
+as a consequence of, or contingent on, the field-wide calibration gap
+identified two paragraphs earlier, when in fact West Antarctica would be
+the largest source of sea-level-projection uncertainty regardless of
+whether any model class withholds an independent validation target. The
+two facts are real but independent, and stringing them together with
+``the stakes of X are concentrated in Y'' asserts a causal or scoping
+relationship between them that the surrounding text never establishes.
+Version 6 merges the strongest elements of Versions 3--5 (Version 4's
+thesis-first framing and tighter model-class paragraph; Version 5's
+Edwards2019 counter-finding, Milillo2019 and Levermann2020 citations, and
+punchier closing sentences; the full citation union of both WAIS
+expansions, with none dropped) and repairs the transition by (i) stating
+West Antarctica's dominance as a freestanding claim, explicitly denying
+that it follows from the calibration gap (``That is not a consequence of
+how any model class chooses to calibrate; it follows from the ice
+physics and the observational record themselves''), and (ii) moving the
+correct, oppositely-directed causal claim to the start of the SPECTRUM
+paragraph, where it belongs: the calibration gap matters \emph{because}
+West Antarctica's stakes are largest, not the reverse (``the gap matters
+most exactly where the stakes are largest: West Antarctica''). No
+citations were added beyond the union already present in Versions 4 and
+5, and none were dropped.
+
+\noindent\textbf{Bibliography note.} Version 1 cites only keys that
+already existed in \texttt{references.bib} at the time it was drafted.
+Version 2 additionally cited several papers discussed in
+\texttt{literature\_component\_slr.tex}: \texttt{Felikson2025},
+\texttt{Slangen2022}, \texttt{Garner2018}, \texttt{Nauels2017},
+\texttt{Kopp2023}, \texttt{McCormack2026}, \texttt{Bakker2017},
+\texttt{Darnell2025}, and \texttt{Held2005}; these have since been added to
+\texttt{references.bib} (by an earlier session, prior to the WAIS-expansion
+pass described above), so all citations in Versions 1--3 now resolve.
+Versions 4 and 5 introduce four further keys, added to
+\texttt{references.bib} as part of this pass: \texttt{Kopp2017},
+\texttt{Bulthuis2019}, \texttt{Milillo2019}, and \texttt{Levermann2020}.
+Like \texttt{McCormack2026} and \texttt{Held2005} before them, these four
+are flagged in \texttt{references.bib} with a note that they were
+confirmed against the publisher record or the Crossref API rather than a
+local Zotero PDF, and should be checked against a local PDF before
+submission, per this project's citation-verification standard. Both new
+sections also reuse the existing \texttt{DeContoP2016} and
+\texttt{Edwards2019} keys (already present in \texttt{references.bib} and
+already cited in Version 1) rather than introducing duplicate entries for
+the same two papers.
+
+\noindent\textbf{Bibliography note (fifth pass: Nerem2022).} A fifth key,
+\texttt{Nerem2022} (\citealt{Nerem2022}: a purely empirical quadratic
+extrapolation of the satellite-altimetry GMSL record itself, with no
+temperature regression, found to agree with IPCC SROCC and AR6 21st-century
+projections), was added to \texttt{references.bib} from a local Zotero PDF
+and cited in all six versions above, in each version's semi-empirical
+paragraph, as a still simpler empirical benchmark alongside
+\texttt{Rahmstorf2007}/\texttt{Vermeer2009}: unlike those, it needs no
+GMST regression at all, extrapolating the observed sea-level record
+directly. No existing sentences were otherwise altered.
 
 %% ====================================================================
 \section*{Version 1 --- follows the manuscript's own itemized outline}
@@ -172,7 +262,10 @@ regression coefficient is not obviously physical or causal, may not stay
 stationary as individual components respond to different forcings on
 different timescales, and gives no way to tell, when it forecasts
 correctly, whether that agreement reflects the right physical reasons
-\citep{Church2013}.
+\citep{Church2013}. An even simpler benchmark needs no temperature
+regression at all: extrapolating a quadratic fit to the
+satellite-observed GMSL record itself agrees with IPCC SROCC and AR6
+projections to within their own stated uncertainty \citep{Nerem2022}.
 
 Between these extremes sit component-level models that decompose GMSLR
 into its physical contributors, ocean thermal expansion, glaciers, and the
@@ -297,7 +390,11 @@ confirms empirically across some 100,000 time series
 \citep{Green2015,Makridakis2020}. Semi-empirical models that regress GMSLR
 directly onto GMST provide another genuinely data-driven benchmark
 \citep{Rahmstorf2007,Vermeer2009}, distinguishing the choice of model
-complexity from the choice of calibration source. Nor is the record
+complexity from the choice of calibration source. An even simpler
+benchmark needs no temperature regression at all: a quadratic
+extrapolation of the satellite-observed GMSL record alone agrees with
+IPCC SROCC and AR6 projections to within their own stated uncertainty
+\citep{Nerem2022}. Nor is the record
 uniformly unkind to assessment-based projection. An earlier IPCC
 assessment's mid-range 21st-century sea-level projection verified to
 within about a centimeter three decades later \citep{Tornqvist2025}, a
@@ -360,7 +457,11 @@ rate of GMSLR onto global mean surface temperature are simple and
 transparent, but the underlying relationship is not obviously physical,
 causal, or stationary \citep{Rahmstorf2007,Vermeer2009,Church2013}. Even
 so, such fits track the observed record at least as well as
-contemporaneous process-based projections \citep{Rahmstorf2012}. Between
+contemporaneous process-based projections \citep{Rahmstorf2012}. An even
+simpler benchmark needs no temperature regression at all: a quadratic
+extrapolation of the satellite-observed GMSL record alone agrees with
+IPCC SROCC and AR6 projections to within their own stated uncertainty
+\citep{Nerem2022}. Between
 these extremes, component-level models decompose GMSLR into its physical
 contributors and calibrate each against existing data
 \citep{Kopp2014,Mengel2016,Wong2017}, trading basin-scale resolution for
@@ -402,6 +503,398 @@ sensitivity to GMST, the relationship at the core of the semi-empirical
 class described above, are withheld from every component calibration and
 used only as a diagnostic on the composite model. The central test is
 therefore out of sample. It asks whether the independently calibrated
+parts reproduce a whole they were never fit to.
+
+%% ====================================================================
+\section*{Version 4 --- critically edited from Version 3 (draft A): thesis-first, four-line WAIS case}
+
+Global mean sea-level rise (GMSLR) already exposes roughly 1.6
+million more people to annual flooding for every additional centimeter
+\citep{Kulp2019}, with unmitigated damages projected at US\$14--18T
+(trillion) per year once rise reaches 0.9--1.1~m \citep{Jevrejeva2018}.
+Sea-level projections meant to inform that risk have been published for
+four decades and span a wide range of methods and outcomes
+\citep{Garner2026}. Rates of GMSLR have already doubled twice since the
+mid-20th century \citep{Frederikse2020,Hamlington2024}. Coastal planning
+nonetheless leans heavily on the IPCC Sixth Assessment Report (AR6),
+which projects 0.4--0.7~m of 21st-century rise
+\citep{Fox-Kemper2021,Hirschfeld2023}. A growing, cross-institutional
+view holds that narrowing AR6's range requires tighter observational
+constraint on projections, not more physical detail \citep{Felikson2025}.
+
+Three model classes have taken up that challenge, each with a real
+weakness. Process-based ice-sheet models resolve ice flow and
+fracture directly, but they demand more constraints than the
+observational record can currently supply. In hindcasting studies, they
+diverge from the historical GMSLR record \citep{Aschwanden2021} and from
+satellite observations within a decade of initialization
+\citep{Fricker2025}. These disagreements trace to gaps such as an
+assumed ice viscosity far less sensitive to stress than observations
+indicate \citep{Millstein2022,GetraerMorlighem2025}. Decades of general
+forecasting research show that models tend to forecast worse than
+simpler alternatives once they carry more free parameters than their
+data can constrain \citep{Green2015,Makridakis2020}. Semi-empirical
+models regress the rate of GMSLR onto global mean surface temperature.
+They are simple and transparent, but the underlying relationship is not
+obviously physical, causal, or stationary
+\citep{Rahmstorf2007,Vermeer2009,Church2013}. Even so, such fits track
+the observed record at least as well as contemporaneous process-based
+projections \citep{Rahmstorf2012}. An even simpler benchmark needs no
+temperature regression at all: a quadratic extrapolation of the
+satellite-observed GMSL record alone agrees with IPCC SROCC and AR6
+projections to within their own stated uncertainty \citep{Nerem2022}.
+Between these extremes,
+component-level models decompose GMSLR into its physical contributors
+and calibrate each against existing data
+\citep{Kopp2014,Mengel2016,Wong2017}, trading basin-scale resolution for
+parsimony and a direct physical connection, while assuming the
+relationships they calibrate are stationary. None of the published
+implementations, however, withholds the aggregate observational record
+from every component fit, so none can use it as an independent check on
+the summed result. Rather than treat any one model class as
+authoritative, we order the three by complexity and treat their
+disagreement as a diagnostic. The simplest, most transparent models
+motivate and check the more complex ones.
+
+The stakes of this missing independent check are concentrated in West
+Antarctica. Four independent lines of evidence converge on the same
+conclusion. West Antarctica is the largest source of uncertainty in
+sea-level projections, and its share of that uncertainty is growing.
+
+First, the observational record shows the loss is already under way.
+Antarctica's grounding lines have retreated for thirty consecutive years
+\citep{Rignot2026}, and the Thwaites Glacier basin in West Antarctica
+may already be undergoing an unstable, self-sustaining collapse
+\citep{Joughin2014}, with recent observations there consistent with
+continued high rates of loss over the next fifty years
+\citep{Goldberg2026}. Second, a structured survey of expert judgment,
+built independently of any process-model ensemble, assigns West
+Antarctica wider and more heavily tailed contribution distributions than
+those ensembles do \citep{Bamber2019}. Third, that spread is not merely
+disagreement between models talking past each other. A single ice-sheet
+model's own uncertainty in calving, basal sliding, ice-shelf rheology,
+and ocean forcing, propagated forward for centuries, already produces a
+wide range of Antarctic outcomes \citep{Bulthuis2019}, and the largest
+multi-model ensemble, ISMIP6, adds still more disagreement among its
+Antarctic members than among the members representing any other
+component \citep{Seroussi2020}. Fourth, that disagreement is not fixed
+in time. A variance decomposition of projected sea-level rise finds
+emissions-scenario choice dominant through mid-century, after which
+geophysical uncertainty, chiefly Antarctic ice dynamics, becomes the
+largest term \citep{Darnell2025}, and most of the emissions-pathway
+spread in total projections traces to the Antarctic contribution alone
+\citep{DeConto2021}. One recent finding cuts the other way: the
+near-term rate of Antarctic mass loss appears to carry predictive
+information about the rate over the following three to five decades
+\citep{McCormack2026}.
+
+The physical mechanism behind West Antarctic loss argues against
+reading that predictive signal as reassurance. Marine ice sheet
+instability does not merely widen projection uncertainty. It skews the
+distribution toward high outcomes \citep{Robel2019}. Coupled with
+hydrofracturing and ice-cliff collapse, that instability could add more
+than a meter of Antarctic sea-level rise by 2100 under unabated
+emissions \citep{DeContoP2016}. Independent regional ocean modeling
+finds shelf melt accelerating at similar rates across emissions
+scenarios this century, meaning much of that risk is already locked in
+regardless of future mitigation \citep{Naughten2023}. West Antarctic
+risk therefore differs structurally from the temperature-sensitive
+uncertainty in the other components. It is skewed, partly irreducible,
+and growing in relative importance as the century proceeds, and even
+the choice of which physical processes to include, not just which
+parameters to assume, changes the shape of its probability distribution
+\citep{Kopp2017}. Some published projections already treat it that way,
+as a deep-uncertainty mixture of scenarios rather than a single central
+trajectory \citep{Bakker2017}. Anything less would understate exactly
+the high-end damages introduced above.
+
+Here, we build a component-level framework that separates GMSLR into
+seven contributors: ocean thermal expansion; Greenland Ice Sheet (GrIS)
+surface mass balance and glacier discharge; West Antarctic Ice Sheet
+(WAIS) glacier discharge; East Antarctic Ice Sheet (EAIS) surface mass
+balance; the Antarctic Peninsula; glaciers outside the ice sheets; and
+terrestrial water storage. Each contributor gets its own parsimonious
+physical model, calibrated against an independent observational record
+using Bayesian inference. We call it SPECTRUM, for Sea-level
+Projections from Empirical Calibration of Thermodynamical,
+Reduced-physics Models. Its only new component model links GrIS
+discharge to ocean temperature through a 3-parameter time-lagged
+response. Its treatment of WAIS is a structured deep-uncertainty
+scenario mixture, built to represent the skewed tail described above
+rather than average over it. We withhold observed GMSLR and its
+sensitivity to GMST, the relationship at the core of the semi-empirical
+class described above, from every component calibration, and use it
+only as a diagnostic on the composite model. The central test is
+therefore out of sample. It asks whether the independently calibrated
+parts reproduce a whole they were never fit to.
+
+%% ====================================================================
+\section*{Version 5 --- critically edited from Version 3 (draft B): three-movement WAIS argument with counter-evidence}
+
+Global mean sea-level rise (GMSLR) already exposes roughly 1.6
+million more people to annual flooding for every additional centimeter
+\citep{Kulp2019}, with unmitigated damages projected at US\$14--18
+trillion per year once rise reaches 0.9--1.1~m \citep{Jevrejeva2018}.
+Projections of that risk span four decades and a wide range of methods
+and outcomes \citep{Garner2026}. Rates of GMSLR have already doubled
+twice since the mid-20th century \citep{Frederikse2020,Hamlington2024},
+yet coastal planning still leans heavily on the IPCC Sixth Assessment
+Report (AR6), which projects 0.4--0.7~m of 21st-century rise
+\citep{Fox-Kemper2021,Hirschfeld2023}. A growing, cross-institutional
+view holds that narrowing AR6's range requires tighter observational
+constraint on projections, not more physical detail \citep{Felikson2025}.
+
+Three model classes have taken up that challenge, each with a real
+weakness. Process-based ice-sheet models resolve ice flow and fracture
+directly, but they demand more constraints than the observational
+record can currently supply. In hindcasting studies, they diverge from
+the historical GMSLR record \citep{Aschwanden2021} and from satellite
+observations within a decade of initialization \citep{Fricker2025}.
+These disagreements trace to gaps such as an assumed ice viscosity far
+less sensitive to stress than observations indicate
+\citep{Millstein2022,GetraerMorlighem2025}. Forecasting research
+spanning decades and many fields finds the same pattern. Models with
+more free parameters than their data can constrain tend to forecast
+worse than simpler alternatives \citep{Green2015,Makridakis2020}.
+Semi-empirical models that regress the rate of GMSLR onto global mean
+surface temperature are simple and transparent, but the underlying
+relationship is not obviously physical, causal, or stationary
+\citep{Rahmstorf2007,Vermeer2009,Church2013}. Even so, such fits track
+the observed record at least as well as contemporaneous process-based
+projections \citep{Rahmstorf2012}. An even simpler benchmark needs no
+temperature regression at all: a quadratic extrapolation of the
+satellite-observed GMSL record alone agrees with IPCC SROCC and AR6
+projections to within their own stated uncertainty \citep{Nerem2022}.
+Between these extremes sit
+component-level models, which decompose GMSLR into its physical
+contributors and calibrate each against existing data
+\citep{Kopp2014,Mengel2016,Wong2017}. This approach trades basin-scale
+resolution for parsimony and a direct physical connection, at the cost
+of assuming stationarity. None of the published implementations,
+however, withholds the aggregate observational record from every
+component fit, so none can check the summed result against it
+independently. No one class is authoritative on its own. Ranked instead
+by complexity, the three become a diagnostic. The simplest, most
+transparent models motivate and check the more complex ones.
+
+The stakes of that missing check are concentrated in West Antarctica.
+Marine ice sheet instability there does not merely widen the
+uncertainty in sea-level projections, it skews that uncertainty toward
+high outcomes \citep{Robel2019}. A second, compounding process operates
+there too. Hydrofracturing strips away the ice shelves that buttress
+tall ice cliffs, letting them collapse under their own weight. The
+model that first identified this mechanism found it could add more
+than a meter to Antarctica's contribution by 2100 \citep{DeContoP2016}.
+How much of that process will actually occur remains itself disputed.
+Recalibrating the same physics against observations from the last
+interglacial, the Pliocene, and the past 25 years found no need to
+invoke ice-cliff collapse at all, and put the resulting 95th-percentile
+Antarctic contribution below 43~cm this century \citep{Edwards2019}.
+West Antarctica therefore carries a layer of uncertainty the other
+components do not. Two things are unresolved there, not one: whether an
+instability occurs at all, and how large it would be if it did.
+
+Thwaites Glacier, the drainage basin most likely to host either
+instability, may already be undergoing a self-sustaining retreat that
+cannot be stopped, according to observations and modeling published as
+early as 2014 \citep{Joughin2014}. Later radar surveys found that its
+retreat proceeds unevenly along the grounding line, with warm water
+undercutting some sectors ten times faster than others
+\citep{Milillo2019}. More recent observations remain consistent with
+continued high rates of loss there over the next 50 years
+\citep{Goldberg2026}, and grounding lines across Antarctica have
+retreated persistently for three decades \citep{Rignot2026}. Independent
+regional ocean modeling adds a further finding. Ice-shelf melt
+accelerates at similar rates whether emissions are cut sharply or not
+this century, so much of this risk is already locked in regardless of
+the mitigation path taken \citep{Naughten2023}.
+
+Several other, methodologically independent assessments converge on the
+same conclusion: West Antarctica dominates the uncertainty budget for
+sea-level rise. Two independent multi-model exercises find deep
+disagreement in Antarctica's own projected contribution. ISMIP6's
+ensemble of process models disagrees even on its sign, spanning
+outcomes from a small sea-level fall to 30~cm of rise by 2100 under
+high emissions \citep{Seroussi2020}, while a sixteen-model synthesis
+built on linear response theory finds a comparably wide spread in
+basal-melt-driven mass loss \citep{Levermann2020}. A structured survey
+of expert glaciological judgment, drawing on physical reasoning rather
+than model runs, arrives independently at similarly wide, high-tailed
+distributions \citep{Bamber2019}. At the emissions-scenario level,
+Antarctica's own total contribution swings more dramatically with how
+much warming is avoided than any other component does
+\citep{DeConto2021}. A decomposition of total sea-level-rise variance
+shows exactly when the balance tips. Emissions-scenario choice
+dominates uncertainty through mid-century, after which geophysical
+uncertainty, chiefly Antarctic ice dynamics, becomes the largest term
+\citep{Darnell2025}. Under high emissions, the IPCC's own
+low-likelihood, high-impact storyline for 2100 combines
+earlier-than-projected ice-shelf disintegration, abrupt onset of these
+Antarctic instabilities, and faster Greenland change to add more than a
+meter of additional rise \citep{Fox-Kemper2021}. The near-term rate of
+Antarctic mass loss even appears to predict its own rate three to five
+decades ahead \citep{McCormack2026}, a relationship too newly reported
+to narrow this range yet. This risk is structurally different from the
+temperature-sensitive uncertainty in the other components. A single
+central WAIS trajectory, rather than a mixture spanning its full range,
+would understate exactly the high-end damages described at the outset.
+
+Here we build a component-level framework that gives each contributor
+to GMSLR its own parsimonious physical model, calibrated against an
+independent observational record using Bayesian inference. The
+contributors are ocean thermal expansion; Greenland Ice Sheet (GrIS)
+surface mass balance and glacier discharge; West Antarctic Ice Sheet
+(WAIS) glacier discharge; East Antarctic Ice Sheet (EAIS) surface mass
+balance; the Antarctic Peninsula; glaciers outside the ice sheets; and
+terrestrial water storage. We call it SPECTRUM, for Sea-level
+Projections from Empirical Calibration of Thermodynamical,
+Reduced-physics Models. Its only new component model links GrIS
+discharge to ocean temperature through a 3-parameter time-lagged
+response. Its treatment of WAIS is a structured deep-uncertainty
+scenario mixture \citep{Bakker2017}, built to represent the skewed tail
+described above rather than average over it. We withhold observed
+GMSLR and its sensitivity to GMST, the relationship at the core of the
+semi-empirical class described above, from every component calibration,
+and use it only as a diagnostic on the composite model. The central
+test is therefore out of sample. It asks whether the independently
+calibrated parts reproduce a whole they were never fit to.
+
+%% ====================================================================
+\section*{Version 6 --- merged synthesis of Versions 3--5, WAIS transition corrected}
+
+Global mean sea-level rise (GMSLR) already exposes roughly 1.6
+million more people to annual flooding for every additional centimeter
+\citep{Kulp2019}, with unmitigated damages projected at US\$14--18T
+(trillion) per year once rise reaches 0.9--1.1~m \citep{Jevrejeva2018}.
+Sea-level projections meant to inform that risk have been published for
+four decades and span a wide range of methods and outcomes
+\citep{Garner2026}. Rates of GMSLR have already doubled twice since the
+mid-20th century \citep{Frederikse2020,Hamlington2024}. Coastal planning
+nonetheless leans heavily on the IPCC Sixth Assessment Report (AR6),
+which projects 0.4--0.7~m of 21st-century rise
+\citep{Fox-Kemper2021,Hirschfeld2023}. A growing, cross-institutional
+view holds that narrowing AR6's range requires tighter observational
+constraint on projections, not more physical detail \citep{Felikson2025}.
+
+Three model classes have taken up that challenge, each with a real
+weakness. Process-based ice-sheet models resolve ice flow and
+fracture directly, but they demand more constraints than the
+observational record can currently supply. In hindcasting studies, they
+diverge from the historical GMSLR record \citep{Aschwanden2021} and from
+satellite observations within a decade of initialization
+\citep{Fricker2025}. These disagreements trace to gaps such as an
+assumed ice viscosity far less sensitive to stress than observations
+indicate \citep{Millstein2022,GetraerMorlighem2025}. Forecasting
+research spanning decades and many fields finds the same pattern.
+Models with more free parameters than their data can constrain tend to
+forecast worse than simpler alternatives \citep{Green2015,Makridakis2020}.
+Semi-empirical models regress the rate of GMSLR onto global mean surface
+temperature. They are simple and transparent, but the underlying
+relationship is not obviously physical, causal, or stationary
+\citep{Rahmstorf2007,Vermeer2009,Church2013}. Even so, such fits track
+the observed record at least as well as contemporaneous process-based
+projections \citep{Rahmstorf2012}. An even simpler benchmark needs no
+temperature regression at all: a quadratic extrapolation of the
+satellite-observed GMSL record alone agrees with IPCC SROCC and AR6
+projections to within their own stated uncertainty \citep{Nerem2022}.
+Between these extremes,
+component-level models decompose GMSLR into its physical contributors
+and calibrate each against existing data
+\citep{Kopp2014,Mengel2016,Wong2017}, trading basin-scale resolution for
+parsimony and a direct physical connection, while assuming the
+relationships they calibrate are stationary. None of the published
+implementations, however, withholds the aggregate observational record
+from every component fit, so none can use it as an independent check on
+the summed result. No one class is authoritative on its own. Ranked
+instead by complexity, the three become a diagnostic. The simplest,
+most transparent models motivate and check the more complex ones.
+
+West Antarctica is the largest single source of uncertainty in
+sea-level projections. That is not a consequence of how any model class
+chooses to calibrate; it follows from the ice physics and the
+observational record themselves. Four independent lines of evidence
+converge on this conclusion, and West Antarctica's share of the total
+uncertainty is growing.
+
+First, the observational record shows the loss is already under way and
+proceeding unevenly. Antarctica's grounding lines have retreated for
+thirty consecutive years \citep{Rignot2026}, and the Thwaites Glacier
+basin may already be undergoing a self-sustaining collapse
+\citep{Joughin2014}. Radar surveys there find warm water undercutting
+some sectors of the grounding line ten times faster than others
+\citep{Milillo2019}, and recent observations remain consistent with
+continued high rates of loss over the next fifty years
+\citep{Goldberg2026}. Second, a structured survey of expert judgment,
+built independently of any process-model ensemble, assigns West
+Antarctica wider and more heavily tailed contribution distributions than
+those ensembles do \citep{Bamber2019}. Third, that spread is not merely
+disagreement between models talking past each other. A single ice-sheet
+model's own uncertainty in calving, basal sliding, ice-shelf rheology,
+and ocean forcing, propagated forward for centuries, already produces a
+wide range of Antarctic outcomes \citep{Bulthuis2019}. The largest
+multi-model ensemble, ISMIP6, disagrees even on the sign of Antarctica's
+contribution \citep{Seroussi2020}, and a sixteen-model synthesis built
+on linear response theory finds a comparably wide spread in
+basal-melt-driven mass loss \citep{Levermann2020}. Fourth, that
+disagreement is not fixed in time. A variance decomposition of
+projected sea-level rise finds emissions-scenario choice dominant
+through mid-century, after which geophysical uncertainty, chiefly
+Antarctic ice dynamics, becomes the largest term \citep{Darnell2025},
+and most of the emissions-pathway spread in total projections traces to
+the Antarctic contribution alone \citep{DeConto2021}. Under high
+emissions, the IPCC's own low-likelihood, high-impact storyline for
+2100 combines earlier-than-projected ice-shelf disintegration, abrupt
+onset of marine ice sheet instability, and faster Greenland change to
+add more than a meter of additional rise \citep{Fox-Kemper2021}. One
+recent finding cuts the other way: the near-term rate of Antarctic mass
+loss appears to carry predictive information about the rate over the
+following three to five decades \citep{McCormack2026}, though this
+relationship is too newly reported to narrow the range yet.
+
+The physical mechanism behind West Antarctic loss argues against
+reading that predictive signal as reassurance. Marine ice sheet
+instability does not merely widen projection uncertainty; it skews the
+distribution toward high outcomes \citep{Robel2019}. Coupled with
+hydrofracturing and ice-cliff collapse, that instability could add more
+than a meter of Antarctic sea-level rise by 2100 under unabated
+emissions \citep{DeContoP2016}. How much of that process will actually
+occur is itself disputed: recalibrating the same physics against
+observations from the last interglacial, the Pliocene, and the past 25
+years finds no need to invoke ice-cliff collapse at all, bounding the
+95th-percentile Antarctic contribution below 43~cm this century without
+it \citep{Edwards2019}. Which physical processes to assume, not only
+which parameters to fit, therefore changes the shape of West
+Antarctica's projected distribution \citep{Kopp2017}. Independent
+regional ocean modeling adds a further constraint: shelf melt
+accelerates at similar rates across emissions scenarios this century,
+so much of this risk is already locked in regardless of the mitigation
+path taken \citep{Naughten2023}. This uncertainty is structurally
+different from the temperature-sensitive uncertainty in the other
+components, which is why some published projections already treat West
+Antarctica as a deep-uncertainty mixture of scenarios rather than a
+single central trajectory \citep{Bakker2017}. Anything less would
+understate exactly the high-end damages introduced above.
+
+No published component-level framework performs the independent check
+described above, and the gap matters most exactly where the stakes are
+largest: West Antarctica. Here, we build a framework in which each
+contributor to GMSLR gets its own parsimonious physical model,
+calibrated against an independent observational record using Bayesian
+inference. The contributors are ocean thermal expansion; Greenland Ice
+Sheet (GrIS) surface mass balance and glacier discharge; West Antarctic
+Ice Sheet (WAIS) glacier discharge; East Antarctic Ice Sheet (EAIS)
+surface mass balance; the Antarctic Peninsula; glaciers outside the ice
+sheets; and terrestrial water storage. We call it SPECTRUM, for
+Sea-level Projections from Empirical Calibration of Thermodynamical,
+Reduced-physics Models. Its only new component model links GrIS
+discharge to ocean temperature through a 3-parameter time-lagged
+response. Its treatment of WAIS is a structured deep-uncertainty
+scenario mixture, built to represent the skewed tail described above
+rather than average over it. We withhold observed GMSLR and its
+sensitivity to GMST, the relationship at the core of the semi-empirical
+class described above, from every component calibration, and use it
+only as a diagnostic on the composite model. The central test is
+therefore out of sample: it asks whether the independently calibrated
 parts reproduce a whole they were never fit to.
 
 \bibliographystyle{agufull08}
