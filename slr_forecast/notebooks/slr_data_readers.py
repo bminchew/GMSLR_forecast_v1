@@ -2604,6 +2604,158 @@ def read_imbie_all(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# IMBIE-3 (Otosaka et al. 2026) readers
+# ---------------------------------------------------------------------------
+
+_IMBIE3_REGION_LABELS = {
+    'imbie3_west_antarctica': 'West Antarctic Ice Sheet',
+    'imbie3_east_antarctica': 'East Antarctic Ice Sheet',
+    'imbie3_antarctic_peninsula': 'Antarctic Peninsula',
+    'imbie3_antarctica': 'Antarctic Ice Sheet (total)',
+    'imbie3_greenland': 'Greenland Ice Sheet',
+}
+
+
+def read_imbie3(filepath: str, convert_to_meters: bool = True) -> pd.DataFrame:
+    """
+    Read an IMBIE-3 (Otosaka et al. 2026) '*_mm_partitioned.csv' file.
+
+    All five region files (west_antarctica, east_antarctica,
+    antarctic_peninsula, antarctica [total], greenland) share the same
+    column layout and a 26-line '#'-prefixed metadata header, so this
+    one reader is generic across all of them (cf. read_imbie_west_antarctica,
+    which is reused generically across the older IMBIE v2021 mm-format
+    files for the same reason).
+
+    Parameters
+    ----------
+    filepath : str
+        Path to an ``imbie3_<region>_mm_partitioned.csv`` file, e.g.
+        ``data/raw/ice_sheets/imbie2026/imbie3_west_antarctica_mm_partitioned.csv``.
+    convert_to_meters : bool, default True
+        If True, convert from mm to meters sea-level equivalent.
+        If False, return values in mm.
+
+    Returns
+    -------
+    pd.DataFrame
+        Monthly DataFrame with datetime index (1979-01 to 2023-12 for
+        Antarctic regions; 1972-07 to 2023-12 for Greenland). Columns:
+
+        - decimal_year
+        - mass_balance_rate, mass_balance_rate_sigma
+        - cumulative_mass_balance, cumulative_mass_balance_sigma
+        - smb_rate, smb_rate_sigma
+        - cumulative_smb, cumulative_smb_sigma
+        - dynamics_rate, dynamics_rate_sigma
+        - cumulative_dynamics, cumulative_dynamics_sigma
+
+        Total mass balance = SMB anomaly + dynamics anomaly at every
+        epoch (that is the partition the source file provides).
+
+    Sign convention
+    ---------------
+    The source file reports *mass balance* in the native glaciology
+    convention (negative = mass loss), converted from Gt using
+    360 Gt = 1 mm SLE (Otosaka et al. 2026, Data Records section).
+    This is the OPPOSITE of the SLR-positive convention used
+    throughout this codebase (H_obs increases as the ice sheet loses
+    mass) and already applied on read by read_imbie_west_antarctica
+    (IMBIE v2021 mm files) and _read_imbie_gt (IMBIE v2021 Gt files).
+    This reader flips sign on all three components (mass balance,
+    SMB, dynamics) for consistency with those.
+
+    Verified against Otosaka et al. (2026): Antarctica lost 4,780 Gt
+    between 1979-2023, "raising the global sea level by 13.3 mm"
+    (positive), while the raw cumulative mass balance anomaly column
+    is negative over the same interval -- consistent with the flip.
+
+    Notes
+    -----
+    - 'Anomaly' in the source column names is relative to the
+      36-month-centered standardization window used to construct the
+      reconciled record (Otosaka et al. 2026, Methods), not to any
+      particular calendar epoch -- rebase with e.g. annualize_imbie()
+      before comparing to this codebase's BASELINE_YEAR-referenced
+      H_obs series.
+    - This is a newer, independent reconciliation, not an extension of
+      the IMBIE v2021 files elsewhere in this repo; expect the two
+      records to disagree somewhat in both trend and absolute
+      cumulative offset (see Otosaka et al. 2026 Fig. 2 for the
+      revision relative to the prior assessment).
+
+    Reference
+    ---------
+    Otosaka, I. N., Shepherd, A., Amory, C., et al. (2026). Mass
+    balance of the Greenland and Antarctic ice sheets from the 1970s
+    to 2023. Scientific Data, 13, 1301.
+    https://doi.org/10.1038/s41597-026-08088-0
+
+    Data: Otosaka, I. et al. (2026) [Data set]. NERC EDS UK Polar Data
+    Centre. https://doi.org/10.5285/128c5e33-5224-4197-82f0-19dcc95b80a0
+    """
+    df = pd.read_csv(filepath, comment='#')
+
+    df = df.rename(columns={
+        'Date': 'time',
+        'Mass balance (mm/yr)': 'mass_balance_rate',
+        'Mass balance uncertainty (mm/yr)': 'mass_balance_rate_sigma',
+        'Cumulative mass balance anomaly (mm)': 'cumulative_mass_balance',
+        'Cumulative mass balance anomaly uncertainty (mm)': 'cumulative_mass_balance_sigma',
+        'Surface mass balance anomaly (mm/yr)': 'smb_rate',
+        'Surface mass balance anomaly uncertainty (mm/yr)': 'smb_rate_sigma',
+        'Cumulative surface mass balance anomaly (mm)': 'cumulative_smb',
+        'Cumulative surface mass balance anomaly uncertainty (mm)': 'cumulative_smb_sigma',
+        'Dynamics mass balance anomaly (mm/yr)': 'dynamics_rate',
+        'Dynamics mass balance anomaly uncertainty (mm/yr)': 'dynamics_rate_sigma',
+        'Cumulative dynamics mass balance anomaly (mm)': 'cumulative_dynamics',
+        'Cumulative dynamics mass balance anomaly uncertainty (mm)': 'cumulative_dynamics_sigma',
+    })
+
+    df['time'] = pd.to_datetime(df['time'])
+    df['decimal_year'] = df['time'].dt.year + (df['time'].dt.month - 0.5) / 12.0
+    df = df.set_index('time')
+
+    # Sign flip (glaciology -> SLR convention) + unit conversion.
+    value_cols = ['mass_balance_rate', 'cumulative_mass_balance',
+                  'smb_rate', 'cumulative_smb',
+                  'dynamics_rate', 'cumulative_dynamics']
+    sigma_cols = [f'{c}_sigma' for c in value_cols]
+    scale = 1000.0 if convert_to_meters else 1.0
+    df[value_cols] = -df[value_cols] / scale
+    df[sigma_cols] = np.abs(df[sigma_cols]) / scale
+
+    _len = 'm' if convert_to_meters else 'mm'
+    _rate = f'{_len}/yr'
+    _stem = os.path.splitext(os.path.basename(filepath))[0].replace('_mm_partitioned', '')
+    df.attrs = {
+        'dataset': _stem,
+        'region': _IMBIE3_REGION_LABELS.get(_stem, _stem),
+        'reference': 'Otosaka et al. (2026)',
+        'doi': '10.1038/s41597-026-08088-0',
+        'data_doi': '10.5285/128c5e33-5224-4197-82f0-19dcc95b80a0',
+        'native_units': {
+            **{c: 'mm/yr' for c in value_cols if 'rate' in c},
+            **{c: 'mm' for c in value_cols if 'rate' not in c},
+            **{c: 'mm/yr' for c in sigma_cols if 'rate' in c},
+            **{c: 'mm' for c in sigma_cols if 'rate' not in c},
+        },
+        'current_units': {
+            **{c: _rate for c in value_cols if 'rate' in c},
+            **{c: _len for c in value_cols if 'rate' not in c},
+            **{c: _rate for c in sigma_cols if 'rate' in c},
+            **{c: _len for c in sigma_cols if 'rate' not in c},
+            'decimal_year': 'yr',
+        },
+        'units_standard': convert_to_meters,
+        'quantity': 'sea_level',
+        'native_time_resolution': 'monthly',
+    }
+
+    return df
+
+
+# ---------------------------------------------------------------------------
 # GlaMBIE glacier readers
 # ---------------------------------------------------------------------------
 
