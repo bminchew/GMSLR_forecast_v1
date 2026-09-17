@@ -37,12 +37,19 @@ from slr_forecast.config import Z_90
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
+# Legacy IMBIE v2021 file -- superseded by IMBIE-3 (IMBIE3_WAIS_PATH below)
+# as of the 2026-09-17 refit, but kept here since read_imbie_west_antarctica
+# is still exercised for regression/comparison purposes.
 IMBIE_WAIS_PATH = os.path.join(
     RAW_DIR, 'ice_sheets', 'antarctica', 'imbie_west_antarctica_2021_mm.csv')
+# IMBIE-3 (Otosaka et al. 2026) -- what component_wais.ipynb actually reads.
+IMBIE3_WAIS_PATH = os.path.join(
+    RAW_DIR, 'ice_sheets', 'imbie2026', 'imbie3_west_antarctica_mm_partitioned.csv')
 CONF_BASE = os.path.join(
     RAW_DIR, 'ipcc_ar6', 'slr', 'ar6', 'global', 'confidence_output_files')
 
 HAS_IMBIE_WAIS = os.path.exists(IMBIE_WAIS_PATH)
+HAS_IMBIE3_WAIS = os.path.exists(IMBIE3_WAIS_PATH)
 HAS_IPCC_AIS = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245',
     'AIS_ssp245_medium_confidence_values.nc'))
@@ -354,8 +361,17 @@ class TestRheologyCorrection:
     def test_rheology_factor_always_geq_1(self):
         """No sample should have rheology factor < 1."""
         rng = np.random.default_rng(RNG_SEED)
-        # Draw raw S2 samples without rheology
-        raw = _sample_log_skewnormal(N, 160, 1000, 4.0, rng)
+        # Draw raw S2 samples without rheology, using S2_fast_wais's actual
+        # current (low_mm, high_mm, alpha) rather than a hardcoded stand-in:
+        # the previous hardcoded (160, 1000, alpha=4) reference distribution
+        # predates the 2026-09-17 IMBIE-3 refit (which lowered low_mm from
+        # 130 to 94 mm, pinned to S1's tighter posterior -- see
+        # A4_SCENARIOS/S1_QUADRATIC_MEAN in component_projections.py) and no
+        # longer describes the same distribution sample_a4_wais_endpoint
+        # actually draws from, so the two were no longer a valid raw/
+        # corrected pair.
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        raw = _sample_log_skewnormal(N, s2['low_mm'], s2['high_mm'], s2['alpha'], rng)
         rng2 = np.random.default_rng(RNG_SEED)
         # Draw with rheology via endpoint
         weights = {'S1_status_quo': 0.0, 'S2_fast_wais': 1.0}
@@ -523,7 +539,11 @@ class TestWAISIO:
 
 @pytest.mark.skipif(not HAS_IMBIE_WAIS, reason="IMBIE WAIS data file not found")
 class TestIMBIEWAISReader:
-    """Verify read_imbie_west_antarctica + annualize_imbie on WAIS data."""
+    """Verify read_imbie_west_antarctica + annualize_imbie on the legacy
+    IMBIE v2021 WAIS record. component_wais.ipynb no longer reads this file
+    (superseded by IMBIE-3 as of the 2026-09-17 refit -- see
+    TestIMBIE3WAISReader below), but the reader function itself remains in
+    slr_data_readers.py and this class is kept as a regression check on it."""
 
     @pytest.fixture(scope="class")
     def wais_data(self):
@@ -548,7 +568,7 @@ class TestIMBIEWAISReader:
         assert max_abs > 1e-5, f"Max |cum| = {max_abs:.2e}, too small for meters"
 
     def test_time_range(self, wais_data):
-        """IMBIE WAIS should span ~1992-2020."""
+        """IMBIE v2021 WAIS should span ~1992-2020."""
         df = wais_data[0]
         years = df['decimal_year'].values
         assert years[0] >= 1990 and years[0] <= 1993
@@ -573,6 +593,78 @@ class TestIMBIEWAISReader:
 
     def test_sigma_positive(self, wais_data):
         sigma = wais_data[3]
+        assert np.all(sigma >= 0)
+
+
+# =========================================================================
+# Gap 2b: IMBIE-3 (Otosaka et al. 2026) West Antarctica reader -- the
+# record component_wais.ipynb actually reads as of the 2026-09-17 refit.
+# =========================================================================
+
+@pytest.mark.skipif(not HAS_IMBIE3_WAIS, reason="IMBIE-3 WAIS data file not found")
+class TestIMBIE3WAISReader:
+    """Verify read_imbie3 + annualize_imbie on the IMBIE-3 WAIS record.
+
+    IMBIE-3 (Otosaka et al. 2026) nearly doubles the record length versus
+    IMBIE v2021 (1979-2023 vs. 1992-2020), so the time-range assertions
+    below are intentionally different from TestIMBIEWAISReader above."""
+
+    @pytest.fixture(scope="class")
+    def wais3_data(self):
+        from slr_data_readers import read_imbie3
+        df = read_imbie3(IMBIE3_WAIS_PATH, convert_to_meters=True)
+        years, H, sigma = annualize_imbie(df, baseline_year=2005.0)
+        return df, years, H, sigma
+
+    def test_columns_present(self, wais3_data):
+        df = wais3_data[0]
+        expected = {'decimal_year', 'mass_balance_rate',
+                    'mass_balance_rate_sigma', 'cumulative_mass_balance',
+                    'cumulative_mass_balance_sigma'}
+        assert expected.issubset(set(df.columns))
+
+    def test_units_are_meters(self, wais3_data):
+        """Cumulative should be in meters (order 1e-3 to 1e-1)."""
+        df = wais3_data[0]
+        cum = df['cumulative_mass_balance'].values
+        max_abs = np.max(np.abs(cum))
+        assert max_abs < 0.5, f"Max |cum| = {max_abs:.3f}, too large for meters"
+        assert max_abs > 1e-5, f"Max |cum| = {max_abs:.2e}, too small for meters"
+
+    def test_time_range(self, wais3_data):
+        """IMBIE-3 WAIS should span ~1979-2023 (monthly records start/end
+        mid-month, so the raw decimal_year values land at ~1979.04 and
+        ~2023.96)."""
+        df = wais3_data[0]
+        years = df['decimal_year'].values
+        assert years[0] >= 1978 and years[0] <= 1980
+        assert years[-1] >= 2022
+
+    def test_annual_years(self, wais3_data):
+        """Annualized years should have ~1yr steps."""
+        years = wais3_data[1]
+        dt = np.diff(years)
+        assert np.allclose(dt, 1.0, atol=0.1)
+
+    def test_annual_years_span_longer_record(self, wais3_data):
+        """IMBIE-3's annualized record should span at least 44 years
+        (1979-2023), versus IMBIE v2021's ~29 years (1992-2020)."""
+        years = wais3_data[1]
+        assert years[-1] - years[0] >= 44
+
+    def test_baseline_zero(self, wais3_data):
+        """Rebased cumulative should be zero at baseline."""
+        years, H = wais3_data[1], wais3_data[2]
+        bl_idx = np.argmin(np.abs(years - 2005.0))
+        assert abs(H[bl_idx]) < 1e-10
+
+    def test_wais_losing_mass(self, wais3_data):
+        """WAIS cumulative SLR should be positive at end (mass loss)."""
+        H = wais3_data[2]
+        assert H[-1] > 0, f"Final H = {H[-1]:.6f}, expected positive (mass loss)"
+
+    def test_sigma_positive(self, wais3_data):
+        sigma = wais3_data[3]
         assert np.all(sigma >= 0)
 
 

@@ -84,16 +84,21 @@ except ImportError:
 #     percentile at +5C after rheology correction (~1.19 m), and DeConto &
 #     Pollard (2016)'s most aggressive MICI projection (0.64-1.14 m total
 #     Antarctic). Its 5th-percentile bound
-#     (low_mm=130 mm) is pinned to the 99th percentile of S1_status_quo's
+#     (low_mm=94 mm) is pinned to the 99th percentile of S1_status_quo's
 #     endpoint distribution: MISI-triggered outcomes are expected to
 #     exceed anything a continued no-instability trend can produce, so
 #     S2's floor is set just above S1's extreme tail rather than derived
 #     from an independent basin-by-basin accounting (Thwaites + PIG +
 #     Smith/Kohler + other ASE + non-ASE), which cannot be defended to
 #     better than several tens of mm and is not needed once S2 is
-#     anchored to S1 directly -- this bound happens to coincide closely
-#     with that basin-by-basin estimate (~130 mm unfloored) as an
-#     independent cross-check. `alpha=3` gives the endpoint distribution a
+#     anchored to S1 directly -- this bound sits below that independent
+#     basin-by-basin estimate (~130 mm unfloored), which remains a
+#     useful sanity check that S2's floor is not implausibly low even
+#     though the two no longer coincide as closely as they did under the
+#     IMBIE v2021-based S1 fit (94 mm here vs. 130 mm previously, since
+#     IMBIE-3's longer record and different rate history shift S1's
+#     tail; see S1_QUADRATIC_MEAN/_COV below). `alpha=3` gives the
+#     endpoint distribution a
 #     right skew, reflecting the grounding-line flux nonlinearity that
 #     amplifies uncertainty toward greater ice loss once MISI is
 #     triggered (Robel et al. 2019); alpha only reshapes the distribution
@@ -105,7 +110,12 @@ except ImportError:
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.25, 'misi': False},
-    'S2_fast_wais':  {'P': 0.75, 'low_mm': 130, 'high_mm': 1000,
+    # low_mm regenerated 2026-09-17 from the IMBIE-3 (Otosaka et al. 2026)
+    # refit: 99th percentile of S1_status_quo's 2100 endpoint distribution
+    # under the new S1_QUADRATIC_MEAN/_COV below (94.0 mm; was 130 mm under
+    # the IMBIE v2021 fit). See the paragraph above for how this compares
+    # to the independent basin-by-basin cross-check.
+    'S2_fast_wais':  {'P': 0.75, 'low_mm': 94, 'high_mm': 1000,
                       'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
@@ -117,11 +127,11 @@ A4_SCENARIOS = {
 # S1 has no MISI by construction, so unlike S2 -- whose range comes from a
 # forward physical/ISMIP6-adjacent scaling chain subject to the same n=3
 # rheology bias as the rest of ISMIP6 -- S1 is grounded directly in the
-# observed IMBIE WAIS record via a Bayesian quadratic-in-time fit
+# observed IMBIE-3 WAIS record via a Bayesian quadratic-in-time fit
 # (kinematics form -- position under constant acceleration):
 #     rate(t) = a*(t-2000) + v,   H(t) = 0.5*a*(t-2000)^2 + v*(t-2000) + H0
-# fit to IMBIE 1992-2020 (component_wais.ipynb cell 11,
-# bayesian_models.fit_bayesian_level, with a signed Normal prior on the
+# fit to IMBIE-3 1979-2023 (Otosaka et al. 2026; component_wais.ipynb
+# cell 11, bayesian_models.fit_bayesian_level, with a signed Normal prior on the
 # acceleration a since a purely time-based fit has no directional
 # physical constraint -- WAIS's own record shows both acceleration and
 # deceleration). The naive continuation of this fit is the most direct
@@ -139,11 +149,18 @@ A4_SCENARIOS = {
 # components' level-space fits. To regenerate after refitting: rerun
 # component_wais.ipynb cell 11 and read off
 # robust['beta_map_vec'] (mean) and robust['cov_robust'] (covariance).
-S1_QUADRATIC_MEAN = np.array([1.47768168e-05, 1.55882653e-04, 1.24415552e-05])
+#
+# Regenerated 2026-09-17 from IMBIE-3 (Otosaka et al. 2026), 1979-2023,
+# replacing the prior fit to IMBIE v2021 (1992-2020). Resulting S1 2100
+# endpoint distribution: median 83.5 mm, 90% CI [76.1, 90.9] mm (was
+# median 89.5 mm, [60.5, 118.4] mm under IMBIE v2021) -- narrower because
+# IMBIE-3's longer, more constrained record tightens the acceleration
+# posterior even though its point estimate (a) is similar.
+S1_QUADRATIC_MEAN = np.array([1.20482575e-05, 2.30292978e-04, 2.57247062e-04])
 S1_QUADRATIC_COV = np.array([
-    [1.16388500e-11, 1.23377108e-11, 3.74423171e-10],
-    [1.23377108e-11, 1.48410280e-10, 4.53077008e-09],
-    [3.74423171e-10, 4.53077008e-09, 1.38318903e-07],
+    [3.98784098e-13, 5.85224993e-12, 2.60159419e-10],
+    [5.85224993e-12, 8.58831370e-11, 3.81790034e-09],
+    [2.60159419e-10, 3.81790034e-09, 1.69723226e-07],
 ])
 
 
@@ -691,7 +708,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     # so H(2100) still equals the independently-drawn h2100 exactly: the
     # blend reshapes *how* the trajectory gets to 2100, not the assessed
     # endpoint distribution (which stays the S1-p99-pinned/mixture-p95-
-    # capped 130-1000 mm skew-normal used by sample_a4_wais_endpoint()
+    # capped 94-1000 mm skew-normal used by sample_a4_wais_endpoint()
     # elsewhere). S1 is
     # untouched -- it already *is* the quadratic.
     beta_eff_2035 = np.full(n_samples, np.nan)

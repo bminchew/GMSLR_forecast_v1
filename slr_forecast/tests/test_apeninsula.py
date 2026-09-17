@@ -22,8 +22,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'component_results.h5')
 IMBIE_AP_PATH = os.path.join(
-    RAW_DIR, 'ice_sheets', 'antarctica',
-    'imbie_antarctic_peninsula_2021_mm.csv')
+    RAW_DIR, 'ice_sheets', 'imbie2026',
+    'imbie3_antarctic_peninsula_mm_partitioned.csv')
 ISMIP6_BASE = os.path.join(RAW_DIR, 'ice_sheets', 'ismip6', 'ComputedScalarsPaper')
 
 HAS_IMBIE_AP = os.path.exists(IMBIE_AP_PATH)
@@ -39,25 +39,21 @@ PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 # IMBIE reader
 # =========================================================================
 
-@pytest.mark.skipif(not HAS_IMBIE_AP, reason="IMBIE Peninsula CSV not found")
+@pytest.mark.skipif(not HAS_IMBIE_AP, reason="IMBIE-3 Peninsula CSV not found")
 class TestIMBIEPeninsulaReader:
-    """Verify read_imbie_west_antarctica works on Peninsula CSV."""
+    """Verify read_imbie3 (Otosaka et al. 2026) works on the Peninsula CSV.
+
+    Replaces the retired IMBIE v2021 (1992-2020, 29 pts) reader test --
+    component_apeninsula.ipynb now calibrates against IMBIE-3
+    (~1979.5-2023.5, 45 pts); see notebooks/slr_data_readers.py
+    read_imbie3() docstring for the sign-flip/unit-conversion details.
+    """
 
     @pytest.fixture(scope="class")
     def pen_data(self):
-        from slr_data_readers import read_imbie_west_antarctica
-        df = read_imbie_west_antarctica(IMBIE_AP_PATH)
-        # Annualize manually (same logic as notebook)
-        t = df['decimal_year'].values
-        year_int = np.floor(t).astype(int)
-        unique_years = np.unique(year_int)
-        years = unique_years.astype(float) + 0.5
-        H = np.array([df['cumulative_mass_balance'].values[year_int == yr][-1]
-                       for yr in unique_years])
-        sigma = np.array([np.abs(df['cumulative_mass_balance_sigma'].values[
-            year_int == yr][-1]) for yr in unique_years])
-        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
-        H_rebase = H - H[bl_idx]
+        from slr_data_readers import read_imbie3
+        df = read_imbie3(IMBIE_AP_PATH, convert_to_meters=True)
+        years, H_rebase, sigma = annualize_imbie(df, baseline_year=BASELINE_YEAR)
         return df, years, H_rebase, sigma
 
     def test_columns_present(self, pen_data):
@@ -74,10 +70,10 @@ class TestIMBIEPeninsulaReader:
         assert max_abs > 1e-6, f"Max |cum| = {max_abs:.2e}, too small for meters"
 
     def test_time_range(self, pen_data):
-        """IMBIE Peninsula should span ~1992-2020."""
+        """IMBIE-3 Peninsula should span ~1979.5-2023.5."""
         years = pen_data[1]
-        assert years[0] >= 1991 and years[0] <= 1993
-        assert years[-1] >= 2018
+        assert years[0] >= 1978 and years[0] <= 1981
+        assert years[-1] >= 2022
 
     def test_annual_spacing(self, pen_data):
         years = pen_data[1]
@@ -86,7 +82,7 @@ class TestIMBIEPeninsulaReader:
 
     def test_n_years(self, pen_data):
         years = pen_data[1]
-        assert len(years) == 29, f"Expected 29 years, got {len(years)}"
+        assert len(years) == 45, f"Expected 45 years, got {len(years)}"
 
     def test_baseline_zero(self, pen_data):
         years, H = pen_data[1], pen_data[2]
@@ -98,7 +94,7 @@ class TestIMBIEPeninsulaReader:
         H = pen_data[2]
         H_mm = H[-1] * M_TO_MM
         assert H_mm > 0, f"Final H = {H_mm:.2f} mm, expected positive"
-        assert H_mm < 5, f"Final H = {H_mm:.2f} mm, too large for Peninsula"
+        assert H_mm < 3, f"Final H = {H_mm:.2f} mm, too large for Peninsula"
 
     def test_sigma_positive(self, pen_data):
         sigma = pen_data[3]
@@ -122,7 +118,7 @@ class TestAPeninsulaSaveLoad:
 
     def test_metadata_has_r2(self, loaded):
         r2 = loaded['metadata']['r2']
-        assert 0.8 < r2 < 1.0, f"R² = {r2:.4f}, expected ~0.94"
+        assert 0.9 < r2 < 1.0, f"R² = {r2:.4f}, expected ~0.96"
 
     def test_all_ssps_present(self, loaded):
         for ssp in PROJ_SSPS:
@@ -152,7 +148,7 @@ class TestAPeninsulaSaveLoad:
         assert 'years' in obs
         assert 'H_obs' in obs
         assert 'sigma' in obs
-        assert len(obs['years']) == 29
+        assert len(obs['years']) == 45
 
     def test_posteriors_present(self, loaded):
         post = loaded['posteriors']
@@ -185,12 +181,18 @@ class TestAPeninsulaProjections:
             assert med > 0, f"{ssp} median = {med*M_TO_MM:.1f} mm, expected > 0"
 
     def test_range_at_2100(self, loaded):
-        """Peninsula at 2100 should be between 3 and 30 mm for all SSPs."""
+        """Peninsula at 2100 should be between 10 and 30 mm for all SSPs.
+
+        IMBIE-3 gives a temperature sensitivity b ≈ 0.099 mm/yr/°C, about
+        1.8x the retired IMBIE v2021 estimate (b ≈ 0.055), so the 2100
+        range has shifted up from the old ~[3, 30] mm bracket; actual
+        medians span ~13-22 mm across SSPs.
+        """
         idx = np.argmin(np.abs(loaded['proj_years'] - 2100))
         for ssp in PROJ_SSPS:
             med_mm = loaded['projections'][ssp]['median'][idx] * M_TO_MM
-            assert 3 < med_mm < 30, (
-                f"{ssp} median = {med_mm:.1f} mm, outside [3, 30] mm")
+            assert 10 < med_mm < 30, (
+                f"{ssp} median = {med_mm:.1f} mm, outside [10, 30] mm")
 
     def test_ssp_ordering(self, loaded):
         """Higher SSP → more Peninsula SLR (warmer → more mass loss)."""

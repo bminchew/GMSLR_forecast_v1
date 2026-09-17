@@ -1,8 +1,12 @@
 """Unit tests for the East Antarctic Ice Sheet (EAIS) component.
 
-Tests cover: IMBIE data reader, SMB sensitivity parameters,
+Tests cover: IMBIE-3 data reader, SMB sensitivity parameters,
 SMB projection logic, HDF5 save/load roundtrip, and ISMIP6
 region mapping.
+
+Data source: IMBIE-3 (Otosaka et al. 2026), 1979-2023 (45 annual
+points, mid-year centers 1979.5-2023.5) -- supersedes the IMBIE v2021
+record (1992-2020, 29 points) previously used here.
 """
 
 import sys
@@ -22,8 +26,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'component_results.h5')
 IMBIE_EAIS_PATH = os.path.join(
-    RAW_DIR, 'ice_sheets', 'antarctica',
-    'imbie_east_antarctica_2021_mm.csv')
+    RAW_DIR, 'ice_sheets', 'imbie2026',
+    'imbie3_east_antarctica_mm_partitioned.csv')
 ISMIP6_BASE = os.path.join(RAW_DIR, 'ice_sheets', 'ismip6', 'ComputedScalarsPaper')
 
 HAS_IMBIE_EAIS = os.path.exists(IMBIE_EAIS_PATH)
@@ -39,24 +43,16 @@ PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 # IMBIE reader
 # =========================================================================
 
-@pytest.mark.skipif(not HAS_IMBIE_EAIS, reason="IMBIE EAIS CSV not found")
+@pytest.mark.skipif(not HAS_IMBIE_EAIS, reason="IMBIE-3 EAIS CSV not found")
 class TestIMBIEEAISReader:
-    """Verify read_imbie_west_antarctica works on EAIS CSV."""
+    """Verify read_imbie3() + annualize_imbie() works on the IMBIE-3 EAIS CSV."""
 
     @pytest.fixture(scope="class")
     def eais_data(self):
-        from slr_data_readers import read_imbie_west_antarctica
-        df = read_imbie_west_antarctica(IMBIE_EAIS_PATH)
-        t = df['decimal_year'].values
-        year_int = np.floor(t).astype(int)
-        unique_years = np.unique(year_int)
-        years = unique_years.astype(float) + 0.5
-        H = np.array([df['cumulative_mass_balance'].values[year_int == yr][-1]
-                       for yr in unique_years])
-        sigma = np.array([np.abs(df['cumulative_mass_balance_sigma'].values[
-            year_int == yr][-1]) for yr in unique_years])
-        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
-        H_rebase = H - H[bl_idx]
+        from slr_data_readers import read_imbie3
+        from component_analysis import annualize_imbie
+        df = read_imbie3(IMBIE_EAIS_PATH, convert_to_meters=True)
+        years, H_rebase, sigma = annualize_imbie(df, baseline_year=BASELINE_YEAR)
         return df, years, H_rebase, sigma
 
     def test_columns_present(self, eais_data):
@@ -71,13 +67,18 @@ class TestIMBIEEAISReader:
         assert max_abs < 0.1, f"Max |cum| = {max_abs:.4f}, too large for meters"
 
     def test_time_range(self, eais_data):
+        """IMBIE-3 spans 1979-2023 (vs. 1992-2020 for the superseded
+        IMBIE v2021 record); annualize_imbie() assigns mid-year points."""
         years = eais_data[1]
-        assert years[0] >= 1991 and years[0] <= 1993
-        assert years[-1] >= 2018
+        assert years[0] >= 1979 and years[0] <= 1981
+        assert years[-1] >= 2022
 
     def test_n_years(self, eais_data):
+        """IMBIE-3 EAIS record: 45 annual points (1979-2023, mid-year
+        centers 1979.5-2023.5), vs. 29 for the superseded IMBIE v2021
+        record (1992-2020)."""
         years = eais_data[1]
-        assert len(years) == 29
+        assert len(years) == 45
 
     def test_annual_spacing(self, eais_data):
         years = eais_data[1]
@@ -228,7 +229,7 @@ class TestEAISSaveLoad:
 
     def test_metadata_has_r2(self, loaded):
         r2 = loaded['metadata']['r2']
-        assert 0.3 < r2 < 0.8, f"R² = {r2:.4f}, expected ~0.57"
+        assert 0.3 < r2 < 0.8, f"R² = {r2:.4f}, expected ~0.53 (IMBIE-3 linear fit)"
 
     def test_metadata_projection_method(self, loaded):
         assert loaded['metadata']['projection_method'] == 'smb_literature'
@@ -259,11 +260,14 @@ class TestEAISSaveLoad:
         assert proj['p83'][idx] <= proj['p95'][idx]
 
     def test_observations_present(self, loaded):
+        """HDF5-saved observations are IMBIE-3 (1979-2023, 45 annual
+        points), superseding the IMBIE v2021 record (1992-2020, 29 points)
+        previously saved here."""
         obs = loaded['observations']
         assert 'years' in obs
         assert 'H_obs' in obs
         assert 'sigma' in obs
-        assert len(obs['years']) == 29
+        assert len(obs['years']) == 45
 
     def test_posteriors_present(self, loaded):
         post = loaded['posteriors']
