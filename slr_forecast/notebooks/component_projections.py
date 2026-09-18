@@ -124,9 +124,16 @@ A4_SCENARIOS = {
     # (p83) -> 84 mm (p50/median, on request) -- all same day. NOTE: at
     # the median, S2's floor no longer sits above S1's tail; see the
     # paragraph above for the full derivation and this rule's caveat.
-    'S2_fast_wais':  {'P': 0.90, 'low_mm': 84, 'high_mm': 1000,
+    # high_mm and beta_loc set 2026-09-18 as clean rounded values: 1300 mm
+    # is the IPCC AR6 low-confidence AIS p95 under SSP5-8.5 (1309 mm)
+    # rounded; median beta 2 is a clean value (previous effective value was
+    # 2.35 = 1.84 x rheology factor 1.275; 2.25 and 2.5 also tried 2026-09-18).
+    # Both are adopted values describing the
+    # qualitative shape suggested by the literature, not derived from physics.
+    # Was high_mm=1000, beta_loc=log(1.84) with an n-driven rheology rescaling.
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': 84, 'high_mm': 1300,
                       'alpha': 3.0,
-                      'beta_loc': np.log(1.84), 'beta_scale': 0.3,
+                      'beta_loc': np.log(2.0), 'beta_scale': 0.3,
                       'misi': True},
 }
 
@@ -327,9 +334,12 @@ def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
 RHEOLOGY_FACTOR_MEDIAN = 1.28
 RHEOLOGY_FACTOR_SIGMA = 0.07
 
-# Observed Glen's law exponent: Millstein, Minchew, & Pegler (2022)
-N_OBS_MEAN = 4.1
-N_OBS_SIGMA = 0.4
+# Glen's law exponent. Rheology sensitivity deprecated (2026-09-18): n is held
+# constant at N_REF, so Mode B gives R(n) = 1 and beta(n) = beta_ref exactly --
+# S2's endpoint bounds and beta_loc in A4_SCENARIOS are used as stated.
+# Previously n ~ N(4.1, 0.4^2) (Millstein, Minchew, & Pegler 2022).
+N_OBS_MEAN = 3.0
+N_OBS_SIGMA = 0.0
 N_REF = 3         # reference exponent used by ISMIP6 and literature scenarios
 
 # Rheology sensitivity: fractional increase in SLR per unit increase in n
