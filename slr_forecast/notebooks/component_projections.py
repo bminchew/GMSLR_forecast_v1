@@ -72,7 +72,8 @@ except ImportError:
 #     treated as one probability-weighted regime rather than two competing
 #     branches. Its 95th-percentile bound (high_mm=1000 mm) is a round
 #     number chosen so the full two-scenario *mixture's* own p95 at 2100
-#     (~1.26 m; see the validation cell in component_wais.ipynb) sits at or
+#     (last checked against the p83-based low_mm rule below; see the
+#     validation cell in component_wais.ipynb for the current value) sits at or
 #     below the IPCC AR6 low-confidence AIS storyline's p95 under SSP5-8.5
 #     (Fox-Kemper et al. 2021: 1309 mm) -- rather than pinning S2's
 #     within-scenario p95 to that storyline directly, which pushed the
@@ -84,21 +85,27 @@ except ImportError:
 #     percentile at +5C after rheology correction (~1.19 m), and DeConto &
 #     Pollard (2016)'s most aggressive MICI projection (0.64-1.14 m total
 #     Antarctic). Its 5th-percentile bound
-#     (low_mm=94 mm) is pinned to the 99th percentile of S1_status_quo's
-#     endpoint distribution: MISI-triggered outcomes are expected to
-#     exceed anything a continued no-instability trend can produce, so
-#     S2's floor is set just above S1's extreme tail rather than derived
-#     from an independent basin-by-basin accounting (Thwaites + PIG +
-#     Smith/Kohler + other ASE + non-ASE), which cannot be defended to
-#     better than several tens of mm and is not needed once S2 is
-#     anchored to S1 directly -- this bound sits below that independent
-#     basin-by-basin estimate (~130 mm unfloored), which remains a
-#     useful sanity check that S2's floor is not implausibly low even
-#     though the two no longer coincide as closely as they did under the
-#     IMBIE v2021-based S1 fit (94 mm here vs. 130 mm previously, since
-#     IMBIE-3's longer record and different rate history shift S1's
-#     tail; see S1_QUADRATIC_MEAN/_COV below). `alpha=3` gives the
-#     endpoint distribution a
+#     (low_mm=84 mm) is pinned to the 50th percentile (median) of
+#     S1_status_quo's 2100 endpoint distribution. NOTE this is a
+#     qualitatively different anchor than the earlier percentile choices
+#     below: at the median, S2's floor sits in the *middle* of S1's own
+#     distribution rather than above its upper tail -- about half of
+#     S1's possible outcomes exceed S2's floor. This means S2 is no
+#     longer strictly "worse than any plausible no-instability outcome";
+#     its low end now overlaps the bulk of S1's own spread. History
+#     (2026-09-17, all same day): 94 mm (99th percentile, pre-ISMIP6-
+#     widening) -> 180 mm (95th percentile, when the ISMIP6
+#     extrapolation-error widening below was added, since S1's 99th
+#     percentile was no longer a tight, sample-efficient anchor once S1
+#     carried a real tail) -> 139 mm (83rd percentile, closer to the
+#     independent basin-by-basin estimate) -> 84 mm (50th percentile, on
+#     request). See _sample_s1_quadratic_mm() and S1_ISMIP6_STD_COEFFS
+#     above for the current S1 distribution this is computed from. To
+#     regenerate: draw a large sample (e.g. N=2,000,000) from
+#     _sample_s1_quadratic_mm(N, rng, [2100.0]) or sample_a4_wais_endpoint
+#     (N, rng, scenario_overrides={'weights': {'S1_status_quo': 1.0,
+#     'S2_fast_wais': 0.0}}) and read off the median (mm). `alpha=3`
+#     gives the endpoint distribution a
 #     right skew, reflecting the grounding-line flux nonlinearity that
 #     amplifies uncertainty toward greater ice loss once MISI is
 #     triggered (Robel et al. 2019); alpha only reshapes the distribution
@@ -109,13 +116,15 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 A4_SCENARIOS = {
-    'S1_status_quo': {'P': 0.25, 'misi': False},
-    # low_mm regenerated 2026-09-17 from the IMBIE-3 (Otosaka et al. 2026)
-    # refit: 99th percentile of S1_status_quo's 2100 endpoint distribution
-    # under the new S1_QUADRATIC_MEAN/_COV below (94.0 mm; was 130 mm under
-    # the IMBIE v2021 fit). See the paragraph above for how this compares
-    # to the independent basin-by-basin cross-check.
-    'S2_fast_wais':  {'P': 0.75, 'low_mm': 94, 'high_mm': 1000,
+    'S1_status_quo': {'P': 0.10, 'misi': False},
+    # low_mm regenerated 2026-09-17: 50th percentile (median) of
+    # S1_status_quo's 2100 endpoint distribution (~84 mm) INCLUDING the
+    # ISMIP6 extrapolation-error widening (S1_ISMIP6_STD_COEFFS above).
+    # History: 94 mm (p99, pre-ISMIP6-widening) -> 180 mm (p95) -> 139 mm
+    # (p83) -> 84 mm (p50/median, on request) -- all same day. NOTE: at
+    # the median, S2's floor no longer sits above S1's tail; see the
+    # paragraph above for the full derivation and this rule's caveat.
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': 84, 'high_mm': 1000,
                       'alpha': 3.0,
                       'beta_loc': np.log(1.84), 'beta_scale': 0.3,
                       'misi': True},
@@ -152,10 +161,13 @@ A4_SCENARIOS = {
 #
 # Regenerated 2026-09-17 from IMBIE-3 (Otosaka et al. 2026), 1979-2023,
 # replacing the prior fit to IMBIE v2021 (1992-2020). Resulting S1 2100
-# endpoint distribution: median 83.5 mm, 90% CI [76.1, 90.9] mm (was
-# median 89.5 mm, [60.5, 118.4] mm under IMBIE v2021) -- narrower because
-# IMBIE-3's longer, more constrained record tightens the acceleration
-# posterior even though its point estimate (a) is similar.
+# endpoint distribution FROM THE (a,v,H0) POSTERIOR ALONE (i.e. before the
+# ISMIP6 extrapolation-error term below is added): median 83.5 mm, 90% CI
+# [76.1, 90.9] mm (was median 89.5 mm, [60.5, 118.4] mm under IMBIE
+# v2021) -- narrower because IMBIE-3's longer, more constrained record
+# tightens the acceleration posterior even though its point estimate (a)
+# is similar. See S1_ISMIP6_STD_COEFFS below for the additional
+# long-lead-time widening actually used by _sample_s1_quadratic_mm().
 S1_QUADRATIC_MEAN = np.array([1.20482575e-05, 2.30292978e-04, 2.57247062e-04])
 S1_QUADRATIC_COV = np.array([
     [3.98784098e-13, 5.85224993e-12, 2.60159419e-10],
@@ -163,13 +175,116 @@ S1_QUADRATIC_COV = np.array([
     [2.60159419e-10, 3.81790034e-09, 1.69723226e-07],
 ])
 
+# ---------------------------------------------------------------------------
+# S1_status_quo: external extrapolation-error covariance (ISMIP6 emulator)
+#
+# S1_QUADRATIC_MEAN/_COV above capture how well IMBIE-3's 45-yr record
+# constrains a *fixed* constant-acceleration curve -- i.e. parameter
+# uncertainty for an assumed-correct model shape. It does NOT capture the
+# risk that a strictly constant-acceleration extrapolation is itself a
+# poor description of non-MISI WAIS dynamics 75+ years past the
+# calibration window (2150 is ~1.9x the record length past the anchor).
+# A 44-47-yr record cannot inform how fast that extrapolation error
+# should grow with lead time -- the same reasoning already used elsewhere
+# in this project to import, rather than fit, a long-horizon parameter
+# from too-short a record (component_ocean.ipynb fixes the deep-ocean
+# relaxation time tau_d=150 yr at the Geoffroy et al. (2013) CMIP5
+# multi-model mean rather than fit it to the 21-yr ocean record).
+#
+# Framing (Tarantola, 2005, "Inverse Problem Theory"): total predictive
+# covariance = data/parameter covariance (S1_QUADRATIC_COV, well
+# constrained by IMBIE-3) + a "theory"/extrapolation-error covariance
+# that our own short record cannot resolve, estimated here from an
+# independent, external, peer-reviewed source instead: the IPCC AR6
+# ISMIP6 emulator's WAIS-specific projection (medium confidence; already
+# a "no exotic instability" ice-sheet-model ensemble, and the same one
+# shown in component_wais_pdf_exceedance_ipcc_p_s1_sweep.png).
+#
+# _sample_s1_quadratic_mm() adds ONE eta ~ N(0,1) per Monte Carlo sample
+# (not per year, so each trajectory stays smooth) times sqrt(extra_var(t)):
+#     H_S1(t) = H_quad(t) + eta * sqrt(extra_var(t))
+#     extra_var(t) = max(0, std_ISMIP6(t)^2 - std_ISMIP6(anchor_year)^2)
+# By construction extra_var(anchor_year) = 0 exactly (regardless of what
+# `anchor_year` is passed at call time), so S1 stays anchored to the
+# observed IMBIE value with no added spread there, and only widens for
+# years after the anchor.
+#
+# std_ISMIP6(t) is a quadratic fit (elapsed time since the fit anchor)
+# to the 9 native decadal points (2020-2100) of
+# data/raw/ipcc_ar6/slr/ar6/global/dist_components/
+# icesheets-ipccar6-ismipemuicesheet-ssp245_WAIS_globalsl.nc, read via
+# slr_data_readers.read_ipcc_ar6_component(component_dir=..., component_type=
+# 'icesheets', sub_component='WAIS', model='ipccar6-ismipemuicesheet',
+# scenario='ssp245', convert_to_meters=True). ssp245 used as reference:
+# WAIS's ISMIP6 std(2100) varies <5% across SSP1-2.6 to SSP5-8.5
+# (59.7-62.1 mm), consistent with S1 being SSP-independent by
+# construction.
+#
+# The fit is on std(t), NOT Var(t)=std(t)^2, directly: a quadratic fit to
+# Var(t) itself has a spurious interior minimum (var dips to a negative
+# value around 2042, R^2=0.947 despite the bad shape) because ISMIP6's
+# variance grows slowly 2020-2050 then much faster after, a shape a
+# single quadratic in VARIANCE cannot track without an unphysical dip.
+# Fitting std(t) (which grows closer to quadratically in time) and
+# squaring afterward is well-behaved (R^2=0.994, residuals <=2.3 mm, and
+# the resulting extra_var(t) is exactly monotonically non-decreasing from
+# the anchor year out to 2150 -- verified in
+# notebooks/scratch_wais_dlm_prototype.py, round 3b).
+#
+# S1_ISMIP6_FIT_ANCHOR_YEAR is the anchor year (last IMBIE-3 observation,
+# wais_year[-1]) AT THE TIME THIS FIT WAS PERFORMED -- it is where the
+# elapsed-time variable `e` in the polynomial is centered, not
+# necessarily identical to whatever `anchor_year` argument
+# _sample_s1_quadratic_mm() receives at call time (extra_var(anchor_year)
+# is always exactly 0 regardless, since both std(anchor_year) terms use
+# the same fixed curve). To regenerate after IMBIE-3 or the ISMIP6
+# emulator file are updated: rerun the fit in
+# notebooks/scratch_wais_dlm_prototype.py's build_extra_variance_interpolator
+# / fit_and_report_quadratic_extension() (round 3b), or equivalently:
+#   df = read_ipcc_ar6_component(CONF_BASE, 'icesheets', 'WAIS',
+#            'ipccar6-ismipemuicesheet', 'ssp245', convert_to_meters=True)
+#   e = df.index.values - anchor_year   # anchor_year = wais_year[-1]
+#   coeffs = np.polyfit(e, df['std'].values, 2)
+S1_ISMIP6_FIT_ANCHOR_YEAR = 2023.5
+S1_ISMIP6_STD_COEFFS = np.array([1.00993537e-05, -5.14603524e-05,
+                                  3.27977164e-03])  # meters; std(t) = c2*e^2+c1*e+c0
 
-def _sample_s1_quadratic_mm(n_samples, rng, years):
-    """Direct-posterior S1_status_quo draws (mm) from the quadratic-in-time
-    fit to observed IMBIE WAIS mass balance (see S1_QUADRATIC_MEAN/_COV
-    above). No rheology correction is applied: that correction addresses
-    ice-sheet-model (n=3 vs n≈4) structural bias, which does not apply to
-    a statistical fit of real satellite-observed mass balance.
+
+def _s1_ismip6_std_m(years):
+    """std_ISMIP6(t) [m], quadratic in elapsed time since
+    S1_ISMIP6_FIT_ANCHOR_YEAR (see S1_ISMIP6_STD_COEFFS comment above)."""
+    e = np.asarray(years, dtype=float) - S1_ISMIP6_FIT_ANCHOR_YEAR
+    c2, c1, c0 = S1_ISMIP6_STD_COEFFS
+    return c2 * e ** 2 + c1 * e + c0
+
+
+def _s1_ismip6_extra_var_m2(years, anchor_year):
+    """extra_var(t) = max(0, std_ISMIP6(t)^2 - std_ISMIP6(anchor_year)^2),
+    the ISMIP6-external extrapolation-error variance added to S1 beyond
+    `anchor_year` (see S1_ISMIP6_STD_COEFFS comment block above). Exactly
+    0 at t=anchor_year by construction, for any anchor_year.
+    """
+    std_t = _s1_ismip6_std_m(years)
+    std_anchor = _s1_ismip6_std_m(anchor_year)
+    return np.maximum(0.0, std_t ** 2 - std_anchor ** 2)
+
+
+def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
+    """Direct-posterior S1_status_quo draws (mm): the quadratic-in-time
+    fit to observed IMBIE WAIS mass balance (S1_QUADRATIC_MEAN/_COV)
+    PLUS an external ISMIP6-emulator-derived extrapolation-error term
+    (S1_ISMIP6_STD_COEFFS) that grows the spread at long lead times
+    beyond what IMBIE-3's 45-yr record alone can constrain -- see the
+    S1_ISMIP6_STD_COEFFS comment block above for the full derivation and
+    Tarantola (2005) framing. No rheology correction is applied to either
+    term: that correction addresses ice-sheet-model (n=3 vs n≈4)
+    structural bias, which does not apply to a statistical fit of real
+    satellite-observed mass balance or to an independent projection
+    ensemble's own reported uncertainty.
+
+    This is the single shared implementation used by both
+    sample_a4_wais_endpoint() and sample_a4_wais_trajectories() so the
+    two sampling paths stay consistent.
 
     Parameters
     ----------
@@ -177,18 +292,34 @@ def _sample_s1_quadratic_mm(n_samples, rng, years):
     rng : numpy.random.Generator
     years : array-like
         Query years.
+    anchor_year : float or None
+        Year at which the ISMIP6 extra-variance term is exactly zero
+        (S1 stays anchored to the observed IMBIE value there with no
+        added spread). Defaults to S1_ISMIP6_FIT_ANCHOR_YEAR when not
+        given (used by sample_a4_wais_endpoint(), which has no separate
+        anchor-splicing logic); sample_a4_wais_trajectories() passes its
+        own dynamic anchor_year (the last IMBIE-3 observation year at
+        call time) so the extra term vanishes exactly at the same point
+        the trajectory itself splices onto the observed record.
 
     Returns
     -------
     ndarray, shape (n_samples, len(years))
         H(year) in mm, relative to BASELINE_YEAR.
     """
+    if anchor_year is None:
+        anchor_year = S1_ISMIP6_FIT_ANCHOR_YEAR
     draws = rng.multivariate_normal(S1_QUADRATIC_MEAN, S1_QUADRATIC_COV,
                                      size=n_samples)
     a, v, H0 = draws[:, 0], draws[:, 1], draws[:, 2]
     tau = np.asarray(years, dtype=float) - BASELINE_YEAR
     H_m = (0.5 * a[:, None] * tau[None, :] ** 2
            + v[:, None] * tau[None, :] + H0[:, None])
+
+    extra_var_m2 = _s1_ismip6_extra_var_m2(years, anchor_year)  # shape (len(years),)
+    eta = rng.standard_normal(n_samples)  # ONE draw per sample -- smooth trajectories
+    H_m = H_m + eta[:, None] * np.sqrt(extra_var_m2)[None, :]
+
     return H_m * M_TO_MM
 
 
@@ -368,8 +499,12 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         if sname == 'S1_status_quo':
             # Direct posterior sampling (quadratic-in-time fit), spliced
             # onto the shared anchor -- see A4_SCENARIOS comment block.
-            # No rheology correction, no power-law ramp.
-            h_model = _sample_s1_quadratic_mm(n_s, crng, [anchor_year, year])
+            # No rheology correction, no power-law ramp. anchor_year is
+            # passed through so the ISMIP6 extra-variance term (see
+            # S1_ISMIP6_STD_COEFFS) is exactly zero at this function's own
+            # splice anchor, not S1_ISMIP6_FIT_ANCHOR_YEAR's default.
+            h_model = _sample_s1_quadratic_mm(n_s, crng, [anchor_year, year],
+                                               anchor_year=anchor_year)
             anchor_i = anchor_draws[mask]
             samples[mask] = anchor_i + (h_model[:, 1] - h_model[:, 0])
             continue
@@ -491,6 +626,10 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
         crng = child_rngs[i]
 
         if sname == 'S1_status_quo':
+            # No anchor-splicing logic in this lightweight endpoint
+            # wrapper, so anchor_year is left at its default
+            # (S1_ISMIP6_FIT_ANCHOR_YEAR) -- see
+            # _sample_s1_quadratic_mm's docstring.
             samples[mask] = _sample_s1_quadratic_mm(n_s, crng, [2100.0])[:, 0]
             continue
 
@@ -626,7 +765,11 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
 
         if sname == 'S1_status_quo':
             eval_years = np.concatenate([[anchor_year, 2100.0], years])
-            h_model = _sample_s1_quadratic_mm(n_s, crng, eval_years)
+            # anchor_year passed through so the ISMIP6 extra-variance term
+            # (S1_ISMIP6_STD_COEFFS) is exactly zero at this trajectory's
+            # own splice anchor -- see _sample_s1_quadratic_mm docstring.
+            h_model = _sample_s1_quadratic_mm(n_s, crng, eval_years,
+                                               anchor_year=anchor_year)
             s1_anchor_model_mm[mask] = h_model[:, 0]
             h2100[mask] = anchor_draws[mask] + (h_model[:, 1] - h_model[:, 0])
             s1_curve_mm[mask, :] = h_model[:, 2:]
