@@ -13,8 +13,24 @@
 \begin{document}
 \maketitle
 
-\noindent This file contains six candidate Introductions for
-\texttt{01\_slr\_forecast\_intervention2026.tex}, produced as directed:
+\noindent This file contains seven candidate Introductions for
+\texttt{01\_slr\_forecast\_intervention2026.tex}. Version 0 was written last,
+in a separate session, as a short introduction that carries the essential
+material and leaves the supporting detail of Versions 1--6 to the body of the
+paper. It was subsequently revised for the audience of the AGU Chapman
+Conference on sea-level rise projection, which raised its citation density and
+its technical specificity. A later pass cut most of the West Antarctic
+discussion, on the grounds that this study represents that uncertainty through
+a scenario mixture rather than resolving it, and reinvested the space in the
+central argument, which is the value of a hierarchy of forecast models that can
+each be calibrated and validated against data. It runs to roughly 2.2 pages and
+cites 53 keys, and still introduces no new entries to
+\texttt{references.bib}. Every one
+of those keys is either already used in the manuscript itself or in Versions
+1--6 of this file, or was verified for this revision against a local Zotero PDF
+(\texttt{Ranganathan2024}, \texttt{Martin2026}, \texttt{Goldberg2026},
+\texttt{Morlighem2024}, and \texttt{Edwards2019}).
+Versions 1--6 were produced as directed:
 Version 1 follows the six-item bulleted outline already present at the top
 of that manuscript's \texttt{\textbackslash section\{Introduction\}}; Version
 2 is an independently constructed introduction drawing on the broader
@@ -184,6 +200,113 @@ paragraph, as a still simpler empirical benchmark alongside
 \texttt{Rahmstorf2007}/\texttt{Vermeer2009}: unlike those, it needs no
 GMST regression at all, extrapolating the observed sea-level record
 directly. No existing sentences were otherwise altered.
+
+%% ====================================================================
+\section*{Version 0 --- short introduction written to the manuscript's voice}
+
+Rates of global mean sea-level rise (GMSLR) have doubled twice since the middle of the
+20th century, first over about 16 years and $0.34\ ^\circ$C of warming and again over
+about 21 years and $0.41\ ^\circ$C \citep{Frederikse2020,Hamlington2024,Rohde2020}.
+Every centimeter of that rise exposes roughly 1.6 million more people to annual coastal
+flooding \citep{Kulp2019}, and without further adaptation annual flood damages reach
+US\$14--18 trillion per year at 0.9--1.1~m of rise \citep{Jevrejeva2018}. What can be
+done about that depends on how well the rise can be forecast.
+
+Forecasts published over four decades span a wide range of methods and outcomes
+\citep{Garner2026}. Coastal planning leans on the Sixth Assessment Report of the
+Intergovernmental Panel on Climate Change (AR6), which projects 0.4--0.7~m of rise
+this century \citep{Fox-Kemper2021,Hirschfeld2023} and builds its Antarctic contribution
+from the ISMIP6 ensemble and its emulator, from LARMIP-2, and from structured expert
+judgment \citep{Seroussi2020,Edwards2021,Levermann2020,Bamber2019}. Whatever the method,
+a 21st-century projection is out of sample with respect to the modern observational
+record. The central difficulty is therefore not building a model but calibrating it,
+testing it against data withheld from that calibration, and reporting uncertainties in a
+form that separates the contribution of each physical process. Uncertainty that cannot
+be traced to a source cannot be reduced by targeted observation. A recent community
+synthesis makes the same case, calling for projections narrowed by observations and for
+uncertainty characterized by its structure and not only by its magnitude
+\citep{Felikson2025}.
+
+Models of sea-level rise span a wide range of complexity and their strengths are
+complementary. Process-based ice-sheet models solve the equations of ice flow,
+deformation, and fracture, and they are where competing hypotheses about grounding-line
+retreat, buttressing, and cliff failure can be posed against one another and tested
+\citep{Schoof2007,Gudmundsson2013,Pegler2018,HaseloffSergienko2018,Morlighem2024,
+Edwards2019}. They also demand more constraints than the observational record can
+supply. In hindcasts they depart from reconstructions of historical GMSLR
+\citep{Aschwanden2021}, and most projections initialized in 2016 grow the Antarctic Ice
+Sheet through the years that overlap the satellite record \citep{Fricker2025}. Explicit
+representations of grounding-zone melt are missing from most ice-sheet models, and
+outcomes remain sensitive to where a model starts from \citep{Fricker2025}. The assumed
+viscosity of ice is less sensitive to stress than ice-shelf observations and
+laboratory-to-glacier scaling indicate
+\citep{Millstein2022,GetraerMorlighem2025,Ranganathan2024}, and in marine ice sheet
+benchmarks that choice alone changes the modeled 100-year sea-level contribution by tens
+of percent \citep{Martin2026}. How a model is calibrated matters as much as what physics
+it carries. Transient calibration of two ice-sheet models against Thwaites velocity and
+surface-elevation data from 2004 to 2017 gives 2067 loss rates that differ by more than
+a factor of two depending on which of those observations enter the calibration
+\citep{Goldberg2026}. Forecasting research across many fields finds that models carrying
+more free parameters than their calibration data can constrain forecast worse than
+simpler ones \citep{Green2015,Makridakis2020}.
+
+At the other extreme, extrapolations of the observed record and semi-empirical fits of
+the rate of GMSLR to global mean surface temperature (GMST) are transparent and anchored
+in the quantity being predicted \citep{Nerem2022,Rahmstorf2007,Vermeer2009,Kopp2016},
+and they track the observed record at least as well as contemporaneous process-based
+projections \citep{Rahmstorf2012}. They give up any account of which processes are
+responsible, and the fitted relationship need not hold as individual contributors
+respond on different timescales \citep{Church2013}. Between the two sit component-level
+models, which separate GMSLR into its physical contributors and calibrate each one
+against observations, model output, or expert assessment
+\citep{Kopp2014,Mengel2016,Wong2017,Perrette2013,Nauels2017,Kopp2023}, trading spatial
+detail for parsimony and a direct link to data.
+
+No one class is at once the most physically detailed, the most transparent, and the most
+tightly constrained by data, so treating any one of them as authoritative discards what
+the others offer. Ordered by complexity they instead form a scaffolding, and each rung
+can be calibrated and tested against data before the next is trusted. An extrapolation
+of the observed record sets a scenario-independent reference that any more elaborate
+model should be able to reproduce. A semi-empirical fit adds a dependence on warming and
+little else, which isolates that sensitivity and makes it testable on its own. A
+component-level model then asks whether the same sensitivity can be recovered from the
+separate physics of the ocean, the glaciers, and the ice sheets, each calibrated against
+its own record. A process-based model asks which mechanisms within those contributors
+are responsible. Calibration and validation are then carried out within the space of
+models rather than against a single preferred one, and agreement between rungs becomes a
+diagnostic in its own right. Where the rungs agree, a result rests on more than one set
+of assumptions. Where they diverge, the divergence localizes what the data do not yet
+constrain. The simplest rungs often carry the most transferable insight, because what
+they assume is small enough to state plainly and to test directly. A scaffolding built
+this way is only as useful as the data anchoring each rung, and it is a complement to
+process-based modeling rather than a substitute for it.
+
+Here we construct a data-driven, component-level forecast of 21st-century sea-level
+rise. Where the observational record can constrain a contributor to GMSLR, we give it
+its own parsimonious physical model and calibrate that model by Bayesian inference
+against an independent record spanning decades, among them NOAA thermosteric estimates
+\citep{Levitus2012}, EN4 subsurface ocean temperature \citep{Good2013}, Greenland
+outlet-glacier discharge \citep{Mouginot2019}, GlaMBIE \citep{GlaMBIE2025}, and IMBIE-3
+\citep{Otosaka2026}. The remaining contributors, among them Greenland and East Antarctic
+surface mass balance and terrestrial water storage, are adopted from published model
+sensitivities and assessments \citep{Fettweis2020,Noel2021,Frieler2015,Frederikse2020}.
+We call the framework SPECTRUM, for Sea-level Projections from Empirical Calibration of
+Thermodynamical, Reduced-physics Models. Most of its component models are adapted from
+formulations in the literature, and for those our contribution lies in the calibration
+data, the validation, and the treatment of uncertainty. The exception is Greenland Ice
+Sheet discharge, for which we develop a three-parameter model driven by the temperature
+of the surrounding ocean. West Antarctic discharge is the one contributor we do not fit
+to warming, because the observational record cannot yet distinguish a self-sustaining
+retreat from one sustained by ocean melting from below
+\citep{Sergienko2026,Hill2023,Reese2023}, and we represent it instead as a structured
+mixture of scenarios rather than a single trajectory. We do not attempt to settle that
+question here. Observed GMSLR and its sensitivity to observed GMST are withheld from
+every component calibration and reserved as diagnostics for the summed model, so the
+central test of the framework is out of sample. The independently calibrated components
+close the satellite altimetry budget \citep{Beckley2017,Hamlington2020} and reproduce
+the level, the rate, and the transient sensitivity of GMSLR since 1950 across roughly
+1 $^\circ$C of warming \citep{Frederikse2020,Fox-Kemper2021}, a record none of them ever
+saw.
 
 %% ====================================================================
 \section*{Version 1 --- follows the manuscript's own itemized outline}
