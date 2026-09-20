@@ -2843,6 +2843,845 @@ def fit_bayesian_level(
 
 
 # ====================================================================
+# Model 4b: Bayesian Level-Space Calibration, annual resolution,
+#           correlated (GLS) likelihood
+# ====================================================================
+#
+# Fixes two defects diagnosed in the original fit_bayesian_level() when
+# applied to a short (~20 yr), natively-annual, cumulative record like
+# GlaMBIE glaciers (see handoff_glacier_ratespace.md and
+# plan_glacier_ratespace.md at the repo root for the full derivation):
+#
+# 1. H0 anchored at the wrong point.  fit_bayesian_level() integrates
+#    from the start of the temperature record (e.g. 1850), so H0
+#    represents the model level in 1850 while its prior is centred at
+#    the first FITTED observation's value (~0 after rebasing) -- a
+#    physically wrong assumption that, combined with the huge 1850-to-
+#    2000 temperature-integral lever arm, lets a 5 mm H0 prior set
+#    b's precision almost entirely (corr(b, H0) = 0.89).  Here the
+#    design integrates from time[0] (the record's own first point, at
+#    annual resolution -- dt = 1 yr per step, no monthly grid needed),
+#    so H0 means "the level immediately before the first annual
+#    increment" and a small, honestly-stated prior on it is actually
+#    appropriate (corr(b, H0) drops to ~0.4, and b becomes insensitive
+#    to prior_H0_sigma across at least 0.5-20 mm).
+#
+# 2. Independent-per-point likelihood on a cumulative record.
+#    fit_bayesian_level()'s likelihood scores each H_obs point as an
+#    independent Gaussian, though adjacent cumulative points share
+#    nearly all their accumulated error -- chi2/dof ~ 0.11-0.14,
+#    meaning the fit "explains" the data far better than the stated
+#    errors permit.  component_levelspace_robust_se.py patches this
+#    only for the REPORTED STANDARD ERROR after the fact (point
+#    estimate left as naive diagonal WLS/MCMC).  Here the true
+#    covariance (built from the native per-year rate uncertainties,
+#    exactly as GlaMBIE reports them, mirroring
+#    component_greenland_robust_se._increment_covariance's anchor=0
+#    case) is used DIRECTLY in the MCMC likelihood -- the same
+#    Cholesky/multivariate-Gaussian pattern already used in
+#    fit_bayesian_rate_model() -- so both the point estimate and its
+#    uncertainty are correct from the start; chi2/dof ~ 1.0.
+#
+# Also matches rate space's temperature convention: T must be the
+# annual-mean value for each observation's calendar year (as computed
+# for fit_bayesian_rate_linear), NOT a continuous monthly integral --
+# the two differ by ~6 months of phase (mid-year-to-mid-year vs.
+# calendar-year averaging) and that alone shifts b by several percent.
+#
+# Requires the fit window's FIRST point to be the record's baseline/
+# anchor year (true for GlaMBIE glaciers: BASELINE_YEAR=2000.0 and the
+# first GlaMBIE point is 2000.5). The forward-only (one-directional)
+# covariance construction below is only valid for that anchor=0 case;
+# it does NOT generalise to an interior anchor without rebuilding the
+# covariance bidirectionally (see component_greenland_robust_se.py's
+# general form) -- do not reuse this function for a component whose
+# fit window does not start at its own baseline year.
+#
+# A model-inadequacy term (sigma_extra), if fit, must be added to the
+# native per-year rate variance BEFORE cumulation (v[i] += sigma_extra^2
+# ahead of the cumsum), not to the cumulative H_obs sigma independently
+# at each point -- the latter would reintroduce an uncorrelated-noise
+# assumption on top of a correlated record. Because this requires
+# rebuilding the Cholesky factorization every MCMC step, fit_sigma_extra
+# defaults to False, matching the choice already validated for the
+# rate-space fit (chi2/dof = 1.02 with no sigma_extra -- no excess
+# scatter to measure).
+# ====================================================================
+
+@dataclass
+class BayesianLevelCorrelatedResult(BayesianLevelResult):
+    """BayesianLevelResult plus the diagnostics specific to this fitter."""
+    chi2_dof: float = float('nan')
+
+
+def _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
+                                 H0_prior_sigma, n_phys, prior_b_mean=0.0,
+                                 symmetric_a=False, symmetric_b=False):
+    """Priors: a ~ Exp/Normal, b ~ HalfNormal(0)/Normal(mean), c ~ Normal,
+    H0 ~ Normal.
+
+    ``prior_scales = [scale_a, scale_b, c_mean, c_sigma, sigma_extra_scale]``
+    -- identical layout/meaning to ``_rate_linear_log_prob``'s
+    ``prior_scales``, so priors read the same regardless of n_phys.
+
+    ``prior_b_mean`` defaults to 0 (the original zero-centred HalfNormal,
+    ``b >= 0`` enforced below regardless of the mean). Passing a nonzero
+    mean (e.g. a published literature estimate) turns this into a
+    Normal(mean, scale_b) truncated at b >= 0 -- still a physically
+    motivated non-negativity bound, not a symmetric two-sided prior.
+    """
+    if n_phys == 3:
+        a, b, c = phys
+        if not symmetric_a and a < 0:
+            return -np.inf
+    else:
+        b, c = phys
+    if not symmetric_b and b < 0:
+        return -np.inf
+
+    lp = 0.0
+    if n_phys == 3:
+        lp += (-0.5 * (a / prior_scales[0])**2 if symmetric_a
+               else -a / prior_scales[0])
+    lp += -0.5 * ((b - prior_b_mean) / prior_scales[1])**2
+    lp += -0.5 * ((c - prior_scales[2]) / prior_scales[3])**2
+    lp += -0.5 * ((H0 - H0_prior_mean) / H0_prior_sigma)**2
+    return lp
+
+
+def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
+                                Sigma_inv_fixed, log_det_Sigma_fixed,
+                                prior_scales, H0_prior_mean, H0_prior_sigma,
+                                n_phys, fit_sigma_extra, prior_b_mean=0.0,
+                                symmetric_a=False, symmetric_b=False):
+    """Log-posterior with the true (correlated) cumulative-record covariance.
+
+    theta = [ (a,) b, c ] (+ log_sigma_extra if fit_sigma_extra) + [H0]
+    """
+    phys = theta[:n_phys]
+    if fit_sigma_extra:
+        log_sigma_extra = theta[n_phys]
+        H0 = theta[n_phys + 1]
+    else:
+        H0 = theta[n_phys]
+
+    lp = _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
+                                      H0_prior_sigma, n_phys,
+                                      prior_b_mean=prior_b_mean,
+                                      symmetric_a=symmetric_a,
+                                      symmetric_b=symmetric_b)
+    if not np.isfinite(lp):
+        return -np.inf
+
+    if fit_sigma_extra:
+        sigma_extra = np.exp(log_sigma_extra)
+        if sigma_extra < 1e-12:
+            return -np.inf
+        v = (sigma_rate_obs * dt)**2 + sigma_extra**2
+        cv = np.cumsum(v)
+        n = len(v)
+        idx = np.arange(n)
+        Sigma = cv[np.minimum(idx[:, None], idx[None, :])]
+        try:
+            L = la.cholesky(Sigma, lower=True)
+        except la.LinAlgError:
+            return -np.inf
+        Sigma_inv = la.cho_solve((L, True), np.eye(n))
+        log_det_Sigma = 2.0 * np.sum(np.log(np.diag(L)))
+        gamma = prior_scales[4]
+        lp += -np.log(1.0 + (sigma_extra / gamma)**2) + log_sigma_extra
+    else:
+        Sigma_inv = Sigma_inv_fixed
+        log_det_Sigma = log_det_Sigma_fixed
+
+    if n_phys == 3:
+        a, b, c = phys
+        H_model = a * I2 + b * I1 + c * I0 + H0
+    else:
+        b, c = phys
+        H_model = b * I1 + c * I0 + H0
+    resid = H_obs - H_model
+    ll = -0.5 * (resid @ Sigma_inv @ resid + log_det_Sigma)
+    if not np.isfinite(ll):
+        return -np.inf
+    return lp + ll
+
+
+def fit_bayesian_level_annual_correlated(
+    H_obs: np.ndarray,
+    rate_obs: np.ndarray,
+    sigma_rate_obs: np.ndarray,
+    temperature: np.ndarray,
+    time: np.ndarray,
+    order: int = 1,
+    prior_scale_a: float = 0.010,
+    prior_scale_b: float = 0.010,
+    prior_b_mean: float = 0.0,
+    prior_c_mean: float = 0.002,
+    prior_c_sigma: float = 0.005,
+    prior_H0_mean: float = 0.0,
+    prior_H0_sigma: float = 0.002,
+    prior_sigma_extra_scale: float = 0.0002,
+    fit_sigma_extra: bool = False,
+    symmetric_a: bool = False,
+    symmetric_b: bool = False,
+    n_samples: int = 4000,
+    n_walkers: int = 32,
+    n_burnin: int = 2000,
+    thin: int = 2,
+    progress: bool = True,
+    seed: Optional[int] = None,
+) -> BayesianLevelCorrelatedResult:
+    """Bayesian level-space calibration at annual resolution with a
+    correlated (GLS) likelihood, for a component whose fit window starts
+    at its own baseline/anchor year.  See the module comment above this
+    function for the two defects this fixes relative to
+    ``fit_bayesian_level``, and its important restriction (anchor must be
+    index 0 -- do not reuse for an interior-anchor fit window).
+
+    Parameters
+    ----------
+    H_obs : np.ndarray, shape (n,)
+        Cumulative level (m), any convenient additive constant (H0
+        absorbs it) -- e.g. rebased to read 0 at the baseline year, for
+        consistency with how the record is displayed elsewhere.
+    rate_obs : np.ndarray, shape (n,)
+        Native annual rate observations (m/yr) underlying H_obs
+        (H_obs = cumsum(rate_obs) + const). Used only to label the
+        result; the covariance is built from ``sigma_rate_obs``.
+    sigma_rate_obs : np.ndarray, shape (n,)
+        Reported 1-sigma uncertainty on each annual rate (m/yr),
+        assumed independent across years (as GlaMBIE reports them).
+    temperature : np.ndarray, shape (n,)
+        Annual-mean temperature (degC) for each observation's calendar
+        year -- must match the convention used to fit the rate-space
+        model (``fit_bayesian_rate_linear``), not a continuous monthly
+        integral.
+    time : np.ndarray, shape (n,)
+        Observation times (decimal year). ``time[0]`` must be the
+        record's baseline/anchor year.
+    order : {1, 2}
+        1 = linear (dH/dt = b*T + c), 2 = quadratic (adds a*T^2).
+    prior_b_mean : float
+        Normal prior mean for b (m/yr/degC), default 0.0 (the original
+        zero-centred HalfNormal shrinkage-to-zero prior; b >= 0 is
+        enforced as a hard bound regardless of this value). Passing a
+        nonzero value (e.g. a published estimate) centres the prior
+        there instead -- if doing so, do not also cite that same source
+        as independent corroboration that the posterior falls "inside"
+        the prior; that becomes circular. Corroborate against a
+        different, independent source, or state plainly that the prior
+        is literature-informed rather than treating the fit as a blind
+        validation of it.
+    prior_H0_mean, prior_H0_sigma : float
+        Normal prior on H0 (m), the model's level immediately before
+        the first annual increment.  Because dt=1 at the very first
+        step ties H0 tightly to that step (see module comment: a free
+        H0 makes the first observation uninformative for b, c no matter
+        how tight or loose this prior is), the exact value chosen here
+        has little effect -- state it as a physically small, honest
+        number (e.g. a couple of mm) rather than tuning it.
+    fit_sigma_extra : bool
+        Default False, matching the validated rate-space choice (no
+        excess scatter beyond the reported GlaMBIE sigmas). If True,
+        the covariance is rebuilt (new Cholesky) every MCMC step --
+        negligible cost at n ~ 20-30 but does slow sampling somewhat.
+
+    Returns
+    -------
+    BayesianLevelCorrelatedResult
+        Drop-in compatible with ``BayesianLevelResult`` consumers
+        (``posterior_samples`` is (n_samples, 3) = [a, b, c], with a
+        forced to 0 for order=1), plus ``chi2_dof`` computed at the
+        posterior-mean fit against the true covariance -- should be
+        close to 1.0 when fit_sigma_extra=False and the error model is
+        adequate (unlike ``fit_bayesian_level``, where a value far from
+        1 signals the independent-likelihood mis-specification this
+        function was written to fix).
+    """
+    if order not in (1, 2):
+        raise ValueError(f"order must be 1 or 2, got {order}")
+
+    H_obs = np.asarray(H_obs, dtype=float)
+    rate_obs = np.asarray(rate_obs, dtype=float)
+    sigma_rate_obs = np.asarray(sigma_rate_obs, dtype=float)
+    temperature = np.asarray(temperature, dtype=float)
+    time = np.asarray(time, dtype=float)
+    n = len(H_obs)
+    n_phys = 3 if order == 2 else 2
+
+    dt = np.ones(n)
+    I1_obs = np.cumsum(temperature * dt)
+    I0_obs = np.cumsum(dt)
+    I2_obs = np.cumsum(temperature**2 * dt) if order == 2 else np.zeros(n)
+
+    # ---- Fixed (fit_sigma_extra=False) covariance, built once ----
+    v0 = (sigma_rate_obs * dt)**2
+    cv0 = np.cumsum(v0)
+    idx = np.arange(n)
+    Sigma0 = cv0[np.minimum(idx[:, None], idx[None, :])]
+    L0 = la.cholesky(Sigma0, lower=True)
+    Sigma_inv0 = la.cho_solve((L0, True), np.eye(n))
+    log_det_Sigma0 = 2.0 * np.sum(np.log(np.diag(L0)))
+
+    prior_scales = np.array([prior_scale_a, prior_scale_b, prior_c_mean,
+                              prior_c_sigma, prior_sigma_extra_scale])
+
+    if progress:
+        a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
+                       if symmetric_a else
+                       f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
+        b_prior_str = (f"b~N(0,{prior_scale_b*1e3:.2f} mm/yr/°C)"
+                       if symmetric_b else
+                       f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C)")
+        print(f"Bayesian level-space (annual, correlated) fit: n={n}, "
+              f"order={order}")
+        if order == 2:
+            print(f"  Priors: {a_prior_str}, {b_prior_str}, "
+                  f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f}), "
+                  f"H0~N({prior_H0_mean*1e3:.2f}, {prior_H0_sigma*1e3:.2f}) mm")
+        else:
+            print(f"  Priors: {b_prior_str}, "
+                  f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f}), "
+                  f"H0~N({prior_H0_mean*1e3:.2f}, {prior_H0_sigma*1e3:.2f}) mm")
+
+    # ---- OLS initialization ----
+    if order == 2:
+        X0 = np.column_stack([I2_obs, I1_obs, I0_obs, np.ones(n)])
+    else:
+        X0 = np.column_stack([I1_obs, I0_obs, np.ones(n)])
+    beta_ols = np.linalg.lstsq(X0, H_obs, rcond=None)[0]
+    if order == 2:
+        a0, b0, c0, H0_0 = beta_ols
+    else:
+        b0, c0, H0_0 = beta_ols
+        a0 = 0.0
+    resid_ols = H_obs - X0 @ beta_ols
+    sigma_extra_0 = max(np.std(resid_ols), 1e-6)
+
+    ndim = n_phys + (1 if fit_sigma_extra else 0) + 1  # (+H0)
+
+    # ---- Initialize walkers ----
+    rng = np.random.default_rng(seed)
+    center = []
+    scale = []
+    if order == 2:
+        center += [a0 if symmetric_a else max(a0, 1e-6)]
+        scale += [max(abs(a0) * 0.1, 1e-6)]
+    b0_init = b0 if symmetric_b else max(b0, 1e-6)
+    if not symmetric_b and prior_b_mean > 0 and b0_init <= 0:
+        b0_init = prior_b_mean
+    center += [b0_init, c0]
+    scale += [max(abs(b0) * 0.1, 1e-6), max(abs(c0) * 0.1, 1e-6)]
+    if fit_sigma_extra:
+        center += [np.log(sigma_extra_0)]
+        scale += [0.2]
+    center += [H0_0]
+    scale += [max(abs(H0_0) * 0.1, 1e-4)]
+    p0_center = np.array(center)
+    p0_scale = np.array(scale)
+    p0 = p0_center[None, :] + p0_scale[None, :] * rng.standard_normal(
+        (n_walkers, ndim))
+    if not symmetric_a and order == 2:
+        p0[:, 0] = np.abs(p0[:, 0])
+    b_col = 1 if order == 2 else 0
+    if not symmetric_b:
+        p0[:, b_col] = np.abs(p0[:, b_col])
+
+    # ---- Run emcee ----
+    sampler = emcee.EnsembleSampler(
+        n_walkers, ndim, _level_correlated_log_prob,
+        args=(I2_obs, I1_obs, I0_obs, H_obs, dt, sigma_rate_obs,
+              Sigma_inv0, log_det_Sigma0,
+              prior_scales, prior_H0_mean, prior_H0_sigma,
+              n_phys, fit_sigma_extra),
+        kwargs={'prior_b_mean': prior_b_mean,
+                'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b},
+    )
+    sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
+
+    # ---- Post-process ----
+    flat_chain = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
+    phys_flat = flat_chain[:, :n_phys]
+    if order == 2:
+        phys_samples = phys_flat
+    else:
+        phys_samples = np.column_stack([np.zeros(len(phys_flat)), phys_flat])
+    if fit_sigma_extra:
+        sigma_extra_samples = np.exp(flat_chain[:, n_phys])
+        H0_samples = flat_chain[:, n_phys + 1]
+    else:
+        sigma_extra_samples = np.zeros(len(flat_chain))
+        H0_samples = flat_chain[:, n_phys]
+
+    phys_mean = phys_samples.mean(axis=0)
+    phys_cov = np.cov(phys_samples, rowvar=False)
+    phys_hdi = np.array([
+        az.hdi(phys_samples[:, k], hdi_prob=0.94) for k in range(3)
+    ])
+
+    H_model_mean = (phys_mean[0] * I2_obs + phys_mean[1] * I1_obs
+                    + phys_mean[2] * I0_obs + H0_samples.mean())
+    resid = H_obs - H_model_mean
+    r2 = 1.0 - np.sum(resid**2) / np.sum((H_obs - H_obs.mean())**2)
+
+    if fit_sigma_extra:
+        v_mean = (sigma_rate_obs * dt)**2 + sigma_extra_samples.mean()**2
+        cv_mean = np.cumsum(v_mean)
+        Sigma_mean = cv_mean[np.minimum(idx[:, None], idx[None, :])]
+        Sigma_inv_mean = np.linalg.inv(Sigma_mean)
+    else:
+        Sigma_inv_mean = Sigma_inv0
+    chi2_dof = float((resid @ Sigma_inv_mean @ resid) / (n - n_phys - 1))
+
+    if progress:
+        print(f"  Posterior mean: b={phys_mean[1]*1e3:.4f}, "
+              f"c={phys_mean[2]*1e3:.4f} mm/yr"
+              + (f", a={phys_mean[0]*1e3:.4f} mm/yr/°C²" if order == 2 else ""))
+        print(f"  R² = {r2:.4f},  chi2/dof = {chi2_dof:.3f}  "
+              f"(against true correlated covariance)")
+
+    chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
+    n_chains_arviz = min(4, n_walkers)
+    param_names = (['a', 'b', 'c'] if order == 2 else ['b', 'c'])
+    if fit_sigma_extra:
+        param_names = param_names + ['log_sigma_extra']
+    param_names = param_names + ['H0']
+    var_dict = {name: chain_full[:, :n_chains_arviz, k].T
+                for k, name in enumerate(param_names)}
+    trace = az.from_dict(var_dict)
+
+    return BayesianLevelCorrelatedResult(
+        trace=trace,
+        physical_coefficients=phys_mean,
+        physical_covariance=phys_cov,
+        physical_hdi_94=phys_hdi,
+        posterior_samples=phys_samples,
+        H0_posterior=H0_samples,
+        sigma_extra_posterior=sigma_extra_samples,
+        r2=r2,
+        residuals=resid,
+        time=time,
+        H_obs=H_obs,
+        H_model_mean=H_model_mean,
+        sigma_obs=np.sqrt(cv0),
+        order=order,
+        sampler_diagnostics={'acceptance_fraction':
+                              sampler.acceptance_fraction.mean(),
+                              'n_walkers': n_walkers, 'n_samples': n_samples,
+                              'n_burnin': n_burnin, 'thin': thin},
+        design_info={'prior_scales': prior_scales,
+                     'param_names': param_names,
+                     'H0_prior_mean': prior_H0_mean,
+                     'H0_prior_sigma': prior_H0_sigma},
+        chi2_dof=chi2_dof,
+    )
+
+
+# ====================================================================
+# Model 5b: Bayesian Rate-Space Calibration (native annual rates)
+# ====================================================================
+#
+# Companion to fit_bayesian_level() for components whose observational
+# record is reported natively as annual rates (e.g. GlaMBIE glacier
+# mass balance, df['mass_balance'] in m/yr with its own sigma).
+#
+# The level-space model
+#
+#     H(t) = a*I2(t) + b*I1(t) + c*I0(t) + H0
+#
+# carries a baseline nuisance parameter H0 and design integrals that
+# start at the beginning of the temperature record rather than at the
+# calibration window.  Anchoring the modelled level to the observed
+# level inside the window then imposes a near-linear constraint linking
+# (b, c, H0), so b's posterior width is largely inherited from the H0
+# prior rather than from the temperature signal.  Cumulating reported
+# annual rates also correlates the observation errors, which then has
+# to be repaired downstream (component_levelspace_robust_se.py).
+#
+# In rate space the same physical model has no baseline nuisance:
+#
+#     dH/dt = a*T(t)^2 + b*T(t) + c
+#
+# and the reported per-year sigmas are used as-is, with no induced
+# correlation.  Parameters (a, b, c) have identical meaning and units
+# to the level-space fit, so the same priors apply unchanged and the
+# result object is drop-in compatible with the level-space consumers.
+
+
+@dataclass
+class BayesianRateLinearResult:
+    """Bayesian rate-space calibration result (native annual rates).
+
+    Fits the generative model:
+
+        dH/dt  = a*T(t)^2 + b*T(t) + c
+        rate_obs ~ N(dH/dt, sigma_obs(t)^2 + sigma_extra^2)
+
+    Field names mirror ``BayesianLevelResult`` so downstream consumers
+    work unchanged:
+
+    - ``posterior_samples`` is (n, 3) = [a, b, c], with the ``a`` column
+      identically zero for ``order=1``.
+    - ``H0_posterior`` is DERIVED, not fitted.  Rate space has no baseline
+      nuisance parameter; H0 exists only so that the level-space forward
+      model ``H(t) = a*I2 + b*I1 + c*I0 + H0`` reproduces the observed
+      level at the calibration anchor for every posterior draw.  When
+      ``anchor_*`` are supplied to ``fit_bayesian_rate_linear`` it is set
+      to ``H_anchor - (a*I2_a + b*I1_a + c*I0_a)`` per draw, so consumers
+      that evaluate absolute levels (e.g. the supplementary fit panels
+      in ``results_figures.ipynb``) reproduce the observations; consumers
+      that rebase to a baseline year (e.g.
+      ``slr_projections.project_component_level_ensemble``) are unaffected
+      because H0 cancels there.  Without an anchor it is zeros, which is
+      correct only for rebasing consumers.
+    """
+    trace: az.InferenceData
+    physical_coefficients: np.ndarray    # posterior mean [a, b, c]
+    physical_covariance: np.ndarray      # posterior covariance (3x3)
+    physical_hdi_94: np.ndarray          # (3, 2) - 94% HDI
+    posterior_samples: np.ndarray        # (n_samples, 3) - [a, b, c]
+    H0_posterior: np.ndarray             # (n_samples,) - zeros (see above)
+    sigma_extra_posterior: np.ndarray    # (n_samples,) - m/yr
+    r2: float                            # R^2 in RATE space
+    residuals: np.ndarray                # posterior-mean rate residuals (m/yr)
+    chi2_dof: float                      # reduced chi^2 vs reported sigma_obs
+    time: np.ndarray                     # observation times (decimal year)
+    temperature: np.ndarray              # matched temperature (degC)
+    rate_obs: np.ndarray                 # observed rates (m/yr)
+    rate_model_mean: np.ndarray          # posterior-mean modelled rates (m/yr)
+    sigma_obs: np.ndarray                # reported rate sigma (m/yr)
+    H_obs: Optional[np.ndarray] = None   # cumulated levels, diagnostics only
+    H_model_mean: Optional[np.ndarray] = None
+    order: int = 1
+    sampler_diagnostics: Optional[dict] = None
+    design_info: Optional[dict] = None
+
+
+def _rate_linear_log_prob(theta, X, rate_obs, sigma_obs, prior_scales,
+                          n_phys, fit_sigma_extra, symmetric_a=False,
+                          symmetric_b=False):
+    """Log-posterior for the rate-space model dH/dt = a*T^2 + b*T + c.
+
+    theta = [ (a,) b, c ] (+ log_sigma_extra if ``fit_sigma_extra``)
+
+    ``X`` has columns matching the physical parameters in order, i.e.
+    [T^2, T, 1] for order=2 and [T, 1] for order=1.
+
+    prior_scales = [scale_a, scale_b, c_mean, c_sigma, sigma_extra_scale]
+    with exactly the same meaning and units as ``_level_log_prior``:
+
+        a : Exponential(mean=scale_a), a >= 0  [Normal(0, scale_a) if
+            ``symmetric_a``]
+        b : HalfNormal(sigma=scale_b), b >= 0  [Normal(0, scale_b) if
+            ``symmetric_b``]
+        c : Normal(c_mean, c_sigma)
+        sigma_extra : HalfCauchy(0, sigma_extra_scale), sampled as log
+    """
+    phys = theta[:n_phys]
+    if n_phys == 3:
+        a, b, c = phys
+    else:
+        a, (b, c) = 0.0, phys
+
+    if not symmetric_b and b < 0:
+        return -np.inf
+    if n_phys == 3 and not symmetric_a and a < 0:
+        return -np.inf
+
+    lp = 0.0
+    if n_phys == 3:
+        if symmetric_a:
+            lp += -0.5 * (a / prior_scales[0])**2
+        else:
+            lp += -a / prior_scales[0]
+    lp += -0.5 * (b / prior_scales[1])**2
+    lp += -0.5 * ((c - prior_scales[2]) / prior_scales[3])**2
+
+    if fit_sigma_extra:
+        log_sigma_extra = theta[n_phys]
+        sigma_extra = np.exp(log_sigma_extra)
+        if sigma_extra < 1e-15:
+            return -np.inf
+        gamma = prior_scales[4]
+        lp += -np.log(1.0 + (sigma_extra / gamma)**2) + log_sigma_extra
+        sigma_total = np.sqrt(sigma_obs**2 + sigma_extra**2)
+    else:
+        sigma_total = sigma_obs
+
+    if not np.isfinite(lp):
+        return -np.inf
+
+    resid = rate_obs - X @ phys
+    ll = -0.5 * np.sum((resid / sigma_total)**2
+                       + 2.0 * np.log(sigma_total))
+    if not np.isfinite(ll):
+        return -np.inf
+    return lp + ll
+
+
+def fit_bayesian_rate_linear(
+    rate_obs: np.ndarray,
+    sigma_obs: np.ndarray,
+    temperature: np.ndarray,
+    time: np.ndarray,
+    order: int = 1,
+    prior_scale_a: float = 0.010,
+    prior_scale_b: float = 0.010,
+    prior_c_mean: float = 0.002,
+    prior_c_sigma: float = 0.005,
+    prior_sigma_extra_scale: float = 0.0005,
+    fit_sigma_extra: bool = False,
+    symmetric_a: bool = False,
+    symmetric_b: bool = False,
+    anchor_H: Optional[float] = None,
+    anchor_I2: float = 0.0,
+    anchor_I1: float = 0.0,
+    anchor_I0: float = 0.0,
+    n_samples: int = 4000,
+    n_walkers: int = 32,
+    n_burnin: int = 2000,
+    thin: int = 2,
+    progress: bool = True,
+    seed: Optional[int] = None,
+) -> BayesianRateLinearResult:
+    """Bayesian calibration of dH/dt = a*T^2 + b*T + c on native rates.
+
+    Parameters
+    ----------
+    rate_obs : np.ndarray, shape (n,)
+        Observed rates (m/yr), positive = sea-level rise.
+    sigma_obs : np.ndarray, shape (n,)
+        Reported 1-sigma uncertainty on each rate (m/yr).  Assumed
+        independent across observations - which is what a natively
+        reported annual rate record provides, in contrast to a
+        cumulated record.
+    temperature : np.ndarray, shape (n,)
+        Temperature anomaly (degC) matched to each rate observation.
+        For an annual rate covering calendar year k, use the annual
+        mean temperature of that same year.
+    time : np.ndarray, shape (n,)
+        Observation times (decimal year), carried through to the result.
+    order : {1, 2}
+        1 = linear (dH/dt = b*T + c), 2 = quadratic (adds a*T^2).
+    prior_scale_a, prior_scale_b, prior_c_mean, prior_c_sigma,
+    prior_sigma_extra_scale : float
+        Prior hyperparameters in SI-ish project units (m/yr per degC^k).
+        Identical meaning to ``fit_bayesian_level``, except that
+        ``prior_sigma_extra_scale`` is a rate scale (m/yr) here rather
+        than a level scale (m).
+    fit_sigma_extra : bool, default False
+        If True, sample an additional model-inadequacy variance added in
+        quadrature to ``sigma_obs``.  Only warranted when the reduced
+        chi^2 against the reported sigmas exceeds 1; otherwise the term
+        is unidentified and its posterior is prior-dominated, which
+        re-imports exactly the prior-driven interval width that motivates
+        fitting in rate space.  The reduced chi^2 is reported either way
+        (``result.chi2_dof``), so the assumption is checkable.
+    symmetric_a, symmetric_b : bool
+        Drop the corresponding non-negativity bound (see
+        ``_level_log_prior`` for the rationale).
+    anchor_H : float or None
+        Observed cumulative level (m) at a chosen anchor time, with
+        ``anchor_I2``, ``anchor_I1``, ``anchor_I0`` the level-space design
+        values at that same time (from ``build_level_design_vectors``).
+        When given, ``H0_posterior`` is derived per draw so that the
+        level-space forward model passes through the anchor; see
+        ``BayesianRateLinearResult``.  When None, ``H0_posterior`` is zeros.
+
+    Returns
+    -------
+    BayesianRateLinearResult
+    """
+    rate_obs = np.asarray(rate_obs, dtype=float)
+    sigma_obs = np.asarray(sigma_obs, dtype=float)
+    temperature = np.asarray(temperature, dtype=float)
+    time = np.asarray(time, dtype=float)
+    n = len(rate_obs)
+
+    if order not in (1, 2):
+        raise ValueError(f"order must be 1 or 2, got {order}")
+    if np.any(sigma_obs <= 0):
+        raise ValueError("sigma_obs must be strictly positive in rate space "
+                         "(no zero-sigma rebase anchor exists here)")
+
+    if order == 2:
+        X = np.column_stack([temperature**2, temperature, np.ones(n)])
+    else:
+        X = np.column_stack([temperature, np.ones(n)])
+    n_phys = X.shape[1]
+    ndim = n_phys + (1 if fit_sigma_extra else 0)
+
+    prior_scales = np.array([prior_scale_a, prior_scale_b, prior_c_mean,
+                             prior_c_sigma, prior_sigma_extra_scale])
+
+    # ---- WLS initialisation (the flat-prior solution) ----
+    w = 1.0 / sigma_obs**2
+    A_wls = X.T @ (X * w[:, None])
+    beta_wls = np.linalg.solve(A_wls, X.T @ (w * rate_obs))
+    resid_wls = rate_obs - X @ beta_wls
+    chi2_wls = float(np.sum((resid_wls / sigma_obs)**2) / max(n - n_phys, 1))
+    sigma_extra_0 = float(np.sqrt(max(
+        np.mean(resid_wls**2) - np.mean(sigma_obs**2), (0.05 * np.std(rate_obs))**2)))
+
+    if progress:
+        print(f"Bayesian rate-space fit: n={n} observations, ndim={ndim}, "
+              f"order={order}")
+        b_prior_str = (f"b~N(0,{prior_scale_b*1e3:.2f} mm/yr/degC)"
+                       if symmetric_b else
+                       f"b~HN({prior_scale_b*1e3:.2f} mm/yr/degC)")
+        msg = (f"  Priors: {b_prior_str}, "
+               f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f} mm/yr)")
+        if order == 2:
+            a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/degC^2)"
+                           if symmetric_a else
+                           f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/degC^2)")
+            msg = f"  Priors: {a_prior_str}, " + msg.split("Priors: ", 1)[1]
+        if fit_sigma_extra:
+            msg += (f", sigma_extra~HC({prior_sigma_extra_scale*1e3:.2f} "
+                    f"mm/yr)")
+        else:
+            msg += ", sigma_extra fixed at 0"
+        print(msg)
+        _lab = ['a', 'b', 'c'][3 - n_phys:]
+        print("  WLS init: "
+              + ", ".join(f"{k}={v*1e3:.4f}" for k, v in zip(_lab, beta_wls))
+              + f"  (chi2/dof = {chi2_wls:.3f} vs reported sigma)")
+
+    # ---- Initialise walkers at the WLS solution ----
+    rng = np.random.default_rng(seed)
+    p0_center = np.concatenate([
+        beta_wls,
+        [np.log(max(sigma_extra_0, 1e-9))] if fit_sigma_extra else [],
+    ])
+    # Small scatter: 2% of |WLS| keeps every walker on the correct side of
+    # the b >= 0 bound while still spanning a ball around the mode.
+    p0_scale = np.concatenate([
+        np.maximum(np.abs(beta_wls) * 0.02, 1e-9),
+        [0.1] if fit_sigma_extra else [],
+    ])
+    p0 = p0_center[None, :] + p0_scale[None, :] * rng.standard_normal(
+        (n_walkers, ndim))
+    if not symmetric_b:
+        p0[:, n_phys - 2] = np.abs(p0[:, n_phys - 2])
+    if n_phys == 3 and not symmetric_a:
+        p0[:, 0] = np.abs(p0[:, 0])
+
+    # ---- Run emcee ----
+    sampler = emcee.EnsembleSampler(
+        n_walkers, ndim, _rate_linear_log_prob,
+        args=(X, rate_obs, sigma_obs, prior_scales, n_phys, fit_sigma_extra),
+        kwargs={'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b},
+    )
+    # Seed emcee's own proposal stream as well as the walker initialisation.
+    # emcee draws its stretch-move proposals from a sampler-local RandomState
+    # that defaults to the global numpy state, so without this a rerun with the
+    # same ``seed`` reproduces the starting ball but not the chain, and the
+    # posterior medians wander by a few percent of their standard deviation
+    # between identical pipeline runs.
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
+    sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
+
+    flat_chain = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
+    n_post = flat_chain.shape[0]
+
+    phys_chain = flat_chain[:, :n_phys]
+    if fit_sigma_extra:
+        sigma_extra_samples = np.exp(flat_chain[:, n_phys])
+    else:
+        sigma_extra_samples = np.zeros(n_post)
+
+    # Pad to the (n, 3) = [a, b, c] convention used by the level-space
+    # consumers; the a column is identically zero for order=1.
+    if n_phys == 3:
+        phys_samples = phys_chain.copy()
+    else:
+        phys_samples = np.column_stack([np.zeros(n_post), phys_chain])
+
+    # Derived baseline offset (not a fitted parameter) — see the class docstring.
+    if anchor_H is None:
+        H0_samples = np.zeros(n_post)
+    else:
+        H0_samples = anchor_H - (phys_samples[:, 0] * anchor_I2
+                                 + phys_samples[:, 1] * anchor_I1
+                                 + phys_samples[:, 2] * anchor_I0)
+
+    phys_mean = phys_samples.mean(axis=0)
+    phys_cov = np.cov(phys_samples, rowvar=False)
+    phys_hdi = np.array([
+        (az.hdi(phys_samples[:, k], hdi_prob=0.94)
+         if np.ptp(phys_samples[:, k]) > 0 else np.array([0.0, 0.0]))
+        for k in range(3)
+    ])
+
+    rate_model_mean = (phys_mean[0] * temperature**2
+                       + phys_mean[1] * temperature + phys_mean[2])
+    resid = rate_obs - rate_model_mean
+    r2 = 1.0 - np.sum(resid**2) / np.sum((rate_obs - rate_obs.mean())**2)
+    chi2_dof = float(np.sum((resid / sigma_obs)**2) / max(n - n_phys, 1))
+
+    # ---- arviz trace ----
+    chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
+    n_chains_arviz = min(4, n_walkers)
+    param_names = (['dalpha_dT'] if n_phys == 3 else []) + ['alpha0', 'trend']
+    if fit_sigma_extra:
+        param_names = param_names + ['log_sigma_extra']
+    var_dict = {name: chain_full[:, :n_chains_arviz, k].T
+                for k, name in enumerate(param_names)}
+    trace = az.from_dict(var_dict)
+    conv = check_convergence(trace, quiet=(not progress))
+
+    diag = {
+        'acceptance_fraction': sampler.acceptance_fraction.mean(),
+        'n_walkers': n_walkers,
+        'n_samples': n_samples,
+        'n_burnin': n_burnin,
+        'thin': thin,
+        'convergence': conv,
+        'chi2_dof_wls': chi2_wls,
+        'beta_wls': beta_wls,
+    }
+
+    if progress:
+        print(f"  Posterior mean: a={phys_mean[0]*1e3:.4f}, "
+              f"b={phys_mean[1]*1e3:.4f}, c={phys_mean[2]*1e3:.4f} mm/yr")
+        if fit_sigma_extra:
+            print(f"  sigma_extra: median="
+                  f"{np.median(sigma_extra_samples)*1e3:.4f} mm/yr "
+                  f"[{np.percentile(sigma_extra_samples, 3)*1e3:.4f}, "
+                  f"{np.percentile(sigma_extra_samples, 97)*1e3:.4f}]")
+        print(f"  rate-space R2 = {r2:.4f},  chi2/dof = {chi2_dof:.3f},  "
+              f"acceptance = {diag['acceptance_fraction']:.2f}")
+
+    return BayesianRateLinearResult(
+        trace=trace,
+        physical_coefficients=phys_mean,
+        physical_covariance=phys_cov,
+        physical_hdi_94=phys_hdi,
+        posterior_samples=phys_samples,
+        H0_posterior=H0_samples,
+        sigma_extra_posterior=sigma_extra_samples,
+        r2=r2,
+        residuals=resid,
+        chi2_dof=chi2_dof,
+        time=time,
+        temperature=temperature,
+        rate_obs=rate_obs,
+        rate_model_mean=rate_model_mean,
+        sigma_obs=sigma_obs,
+        order=order,
+        sampler_diagnostics=diag,
+        design_info={
+            'prior_scales': prior_scales,
+            'param_names': param_names,
+            'n_phys': n_phys,
+            'fit_sigma_extra': fit_sigma_extra,
+        },
+    )
+
+
+# ====================================================================
 # Model 6: Bayesian Rate-and-State Level-Space Calibration
 # ====================================================================
 
