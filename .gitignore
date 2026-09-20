@@ -46,6 +46,9 @@ slr_forecast/notebooks/figures/
 # Private working notes (not for collaborators)
 slr_forecast/PubStrategiesClaude.md
 
+# Superseded notebooks kept locally only
+slr_forecast/notebooks/archive/
+
 # Claude Code local settings
 .claude/
 

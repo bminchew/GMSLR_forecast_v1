@@ -2849,8 +2849,7 @@ def fit_bayesian_level(
 #
 # Fixes two defects diagnosed in the original fit_bayesian_level() when
 # applied to a short (~20 yr), natively-annual, cumulative record like
-# GlaMBIE glaciers (see handoff_glacier_ratespace.md and
-# plan_glacier_ratespace.md at the repo root for the full derivation):
+# GlaMBIE glaciers:
 #
 # 1. H0 anchored at the wrong point.  fit_bayesian_level() integrates
 #    from the start of the temperature record (e.g. 1850), so H0
