@@ -65,6 +65,11 @@ SSP_TO_CODE = {
     "SSP5-8.5": "ssp585",
 }
 
+# Components whose AR6 quantiles are near-symmetric are fit with a plain
+# normal (median + spread) instead of a skew-normal. Stored with alpha = 0,
+# so downstream readers of params/{alpha,loc,scale} need no change.
+NORMAL_COMPONENTS = {"landwaterstorage"}
+
 # Components to precompute (IPCC NetCDF names)
 IPCC_COMPONENTS = [
     "total",
@@ -120,6 +125,19 @@ def fit_skewnorm_to_quantiles(q05, q17, q50, q83, q95):
     return alpha, loc_n * t_scale + t_center, np.exp(log_s) * t_scale
 
 
+def fit_normal_to_quantiles(q05, q17, q50, q83, q95):
+    """Normal (mu, sigma) from the 5 IPCC quantiles.
+
+    mu is the median; sigma is the mean of |q_p - q50| / |z_p| over the
+    four non-median quantiles. Returns (alpha=0, loc, scale) in
+    scipy.stats.skewnorm parameterization (alpha = 0 is the normal).
+    """
+    z = {0.05: 1.6449, 0.17: 0.9542, 0.83: 0.9542, 0.95: 1.6449}
+    devs = [abs(q05 - q50) / z[0.05], abs(q17 - q50) / z[0.17],
+            abs(q83 - q50) / z[0.83], abs(q95 - q50) / z[0.95]]
+    return 0.0, float(q50), float(np.mean(devs))
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -165,13 +183,15 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                     for qk in ("q05", "q17", "q50", "q83", "q95"):
                         ie[qk] = ie[qk] + _IPCC_REBASE_MM
 
-                # Fit skew-normal at each year
+                # Fit skew-normal (or normal, see NORMAL_COMPONENTS) at each year
+                _fit = (fit_normal_to_quantiles if comp in NORMAL_COMPONENTS
+                        else fit_skewnorm_to_quantiles)
                 alphas = np.zeros(n_years)
                 locs = np.zeros(n_years)
                 scales = np.zeros(n_years)
 
                 for j in range(n_years):
-                    a, loc, scale = fit_skewnorm_to_quantiles(
+                    a, loc, scale = _fit(
                         ie["q05"][j], ie["q17"][j], ie["q50"][j],
                         ie["q83"][j], ie["q95"][j],
                     )
