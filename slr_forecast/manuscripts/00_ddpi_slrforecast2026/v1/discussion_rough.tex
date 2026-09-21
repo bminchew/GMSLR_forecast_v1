@@ -1,0 +1,42 @@
+\documentclass[12pt]{article}
+
+% Packages
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\graphicspath{{../../../figures/}}
+
+\title{Draft subsection, data-driven forecasts as part of a hierarchy}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+%% ================================================================
+%% Rough draft for insertion into the Discussion of
+%% 01_slr_forecast_intervention2026.tex, replacing the placeholder
+%% note at line 454. Standalone file, so \ref commands render as ??
+%% until the text is pasted into the manuscript.
+%% ================================================================
+
+\subsection{Data-driven forecasts as part of a hierarchy}
+
+Our forecast occupies one level of a hierarchy of sea-level models ordered by complexity. Comparing it against the simpler levels tests both. The simplest level extrapolates the observed record. Carried forward to 2100, a quadratic fit to the satellite altimetry record gives 0.66 [0.41, 0.91] m of rise relative to the year 2000 \citep{Hamlington2024, Nerem2022}, and our own refit of the same record gives 0.63 m. The next level fits the rate of global mean sea-level rise to global mean surface temperature. Applying the semi-empirical relation of \citet{Rahmstorf2007} to the current warming trajectory gives 0.67 [0.63, 0.71] m. Our framework sits above both. It resolves seven contributors, most of them calibrated against their own observational record and the remainder adopted from published sensitivities, and gives 0.78 [0.60, 1.72] m at 3 $^\circ$C of warming.
+
+These numbers are comparable only if each is matched to the same West Antarctic behavior. A naive extrapolation carries forward a record in which West Antarctica continues to lose mass at its observed rate and acceleration. The matching branch of our forecast is the one that continues that behavior, and it gives 0.64 [0.53, 0.76] m at 3 $^\circ$C (Fig. \ref{fig:ridge_projections}a). The three estimates fall within a few centimeters of one another. The comparison holds at the 2100 endpoint, where the component models set the projected rate. Earlier in the century the forecast blends component trends with extrapolated observed trends through a window centered on 2035 (\S\ref{s:forecasting_model}). About ten of the seventy-five forecast years are carried by the extrapolated rate, and the forecast is anchored on the observed level at 2025, so roughly 1 cm of the 2100 level comes from the observed record rather than from the components.
+
+The same exercise at the level of individual contributors gives the same split. Our Greenland projection at 3 $^\circ$C is 169 [122, 214] mm against an AR6 median of 83 mm. A separately calibrated Greenland posterior \citep{Aschwanden2022} also sits above AR6, and its stated envelope of 4 to 30 cm contains our 90\% intervals in all three scenarios, though the RCP scenarios of that study correspond only approximately to ours. Both exceed the process-model ensembles that underpin AR6 \citep{Seroussi2020, Edwards2021}. West Antarctica behaves differently. An ice-sheet model calibrated against Amundsen Sea observations projects about 19 mm from that sector by 2100 with little sensitivity to emissions \citep{Rosier2025}, while our status-quo scenario gives 90 [61, 118] mm for the ice sheet as a whole. The two cover different domains, so that comparison is approximate. Methods agree on the contributors that decades of observations constrain. They diverge on West Antarctica, which those observations have yet to pin down.
+
+A hierarchy of models is what makes this test possible, a practice long established elsewhere in climate science \citep{Held2005, Jeevanjee2017, Maher2019}. A model of a natural system can be tested against data and against other models, but it can never be shown to be correct \citep{Oreskes1994}. Confidence comes instead from models that fail in different ways arriving at the same answer. The three levels draw on the same observational record, so their agreement tests structural assumptions rather than the data behind them. What our framework adds is that observed global mean sea level was withheld from every component calibration. Its components reach 0.64 m through physics that never saw the quantity being predicted. Where the levels diverge, the divergence locates what the data do not yet constrain and names the measurement that would settle it. Our full forecast exceeds the slow-WAIS branch by 0.14 m at the median and carries a much heavier upper tail, and that difference comes from allowing West Antarctic retreat that the observational record can neither confirm nor exclude \citep{Aschwanden2021, Felikson2025}.
+
+The same structure sets out what coastal planners can act on. \citet{Lipscomb2025} argue that a scientific claim justifies near-term adaptation spending when multiple consistent and independent lines of high-quality evidence support it and a diverse group of experts judges the resulting confidence to be high or medium in an open process. The agreement near 0.65 m satisfies the evidentiary part of that criterion and is a candidate planning baseline. The upper tail rests on a single line of evidence. It belongs in a stress test rather than in a planning baseline. \citet{Lipscomb2025} further observe that recent assessments leave deeply uncertain ice-sheet mechanisms without a stated likelihood, which leaves the weight of those outcomes unknown. We assign West Antarctica an explicit scenario weight and report how the forecast responds to changing it (Supplementary Material). Stating the weight lets a planner see which assumption separates a 0.65 m baseline from the tail, and the rate of West Antarctic loss over the next two decades will move it.
+
+%% ================================================================
+\bibliographystyle{agufull08}
+\bibliography{references}
+
+\end{document}
