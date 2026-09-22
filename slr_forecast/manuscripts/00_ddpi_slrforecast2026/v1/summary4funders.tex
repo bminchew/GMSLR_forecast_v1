@@ -1,0 +1,73 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{caption}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\graphicspath{{../../../figures/}}
+
+\captionsetup{font=small,labelfont=bf}
+\titleformat{\section}{\normalfont\large\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+\setlength{\parskip}{3pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Forecasting Sea-Level Rise from Observations}\\[3pt]
+{\normalsize A summary of the SPECTRUM forecast and its main findings}
+\end{center}
+
+\section{Why sea level matters}
+
+Every centimeter of sea-level rise exposes about 1.6 million more people to coastal flooding each year. Planning for future sea levels depends on how well we can forecast them. Most published forecasts come from complex computer models of the ice sheets. These models contain many processes that the available observations cannot yet pin down. Their answers therefore depend on assumptions that are hard to test. The high-end estimates published in recent years range from 0.6 to 2.0 m of rise by 2100.
+
+\section{Our approach}
+
+Sea level rises for a few distinct reasons. Seawater expands as it warms. Mountain glaciers and the Greenland and Antarctic ice sheets lose ice to the ocean. We give each of these contributors its own simple physical model. We then tune each model to decades of direct observations of that contributor. Where observations are too sparse, we adopt published values. We call the framework SPECTRUM. The record of global sea level itself is set aside and used only to test the finished forecast. The models never see the answer they are asked to reproduce.
+
+\section{Testing the forecast against the past}
+
+\begin{wrapfigure}{r}{0.41\textwidth}
+\vspace{-12pt}
+\centering
+\includegraphics[width=0.41\textwidth]{fig2v2_ridge_exceedance.png}
+\caption{Global sea-level forecast. (a) The chance of each level of rise at four dates. The blue forecast includes fast West Antarctic ice loss. The purple forecast assumes slow loss. Red shows the IPCC projections. Gray extends the satellite trend. (b) The chance that rise exceeds each level. The lower scales convert rise into people exposed to flooding and into annual costs.}
+\label{fig:forecast}
+\vspace{-10pt}
+\end{wrapfigure}
+
+We drove the combined model with observed temperatures and compared it with observed sea level. Satellites have measured global sea level precisely since 1993. Over that period the summed contributors account for 96 to 103\% of the observed rate of rise. The modeled rate from 1993 to 2025 is 3.19 mm per year. Observed records give 3.17 to 3.35 mm per year. The model also reproduces how the rate of rise has sped up as the planet warmed since 1950. It captures the shift from a rise driven mainly by warming seawater to one driven mainly by melting ice. That 75-year window spans 1.1 to 1.2 $^\circ$C of warming. The forecast to 2100 covers a similar span of time and a further 1 to 2 $^\circ$C of warming. The model runs low from 1950 to 2000, when records of glacier and Greenland ice loss are sparse. This record of skill against the past gives us confidence in the forecast of every contributor except one.
+
+The exception is the West Antarctic Ice Sheet. Its glaciers rest on bedrock below sea level. Once they begin to retreat, their retreat may sustain itself and speed up. The observed record is too short to tell whether that has begun. We therefore represent West Antarctica with two scenarios. In the first, ice loss continues along its observed path. In the second, ice loss accelerates. The forecast blends the two.
+
+\section{The forecast}
+
+We drive the models with three warming paths that end near 2, 3, and 4 $^\circ$C above pre-industrial temperatures by 2100. Current policies point to about 3 $^\circ$C. The typical outcomes are 0.62, 0.78, and 0.99 m of rise by 2100 relative to the year 2000. These values are 38 to 44\% higher than the projections of the Intergovernmental Panel on Climate Change. The chance that sea level rises more than 1 m above its pre-industrial level by 2100 is 25\% under 2 $^\circ$C, 44\% under 3 $^\circ$C, and 90\% under 4 $^\circ$C (Fig.~\ref{fig:forecast}).
+
+\section{Two independent kinds of risk}
+
+The forecast uncertainty has two parts, and each calls for a different response. The first comes from warming seawater, Greenland, and mountain glaciers. These respond to temperature in ways that past observations constrain well. Together they account for about 1\% of the uncertainty in the forecast. Cutting emissions reduces their contribution. If West Antarctica loses ice slowly, these contributors govern the forecast and cutting warming from 4 to 2 $^\circ$C would avoid 36 cm of rise. That would spare 61 million people from coastal flood risk and save US\$49 billion per year in adaptation costs.
+
+The second comes from West Antarctica. It accounts for 98.5 to 99.7\% of the uncertainty (Fig.~\ref{fig:leverage}b). Cutting warming from 4 to 2 $^\circ$C lowers the typical outcome by 0.37 m. It lowers the chance of more than 2 m of rise only from 6\% to 3\%. Emissions policy sets how much rise is likely. West Antarctica sets how severe the worst outcomes become.
+
+Coastal planners often design for an outcome with a 5\% chance of being exceeded. Under 3 $^\circ$C of warming, that design level is 0.95 m higher if West Antarctica loses ice fast. The difference exposes 177 million more people to annual flooding. It adds US\$127 billion per year in adaptation costs. Without adaptation, it adds US\$12.7 trillion per year in flood damages.
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.66\textwidth]{fig_slr_by_component_v2.png}
+\caption{Where the rise and the uncertainty come from. (a) Average rise from each contributor at three dates and three warming levels. Dashed purple boxes show slow West Antarctic loss. (b) Share of the uncertainty in 2100 from each contributor. West Antarctica dominates if fast loss is possible. (c) The value, in trillions of US dollars, of learning whether West Antarctic loss will be slow or fast. The value is highest when the answer arrives early.}
+\label{fig:leverage}
+\end{figure}
+
+\section{Where the leverage lies}
+
+Knowing the probability of rapid West Antarctic ice loss is the single largest lever for managing sea-level risk. Resolving that question is worth about US\$5 trillion in avoided adaptation costs (Fig.~\ref{fig:leverage}c). The value is largest when confidence in a slow future reaches 75\% and when the answer arrives in time to shape infrastructure decisions. Every year of delay lowers that value. The answer will come from tracking the rate of West Antarctic ice loss over the next two decades. If loss stays near current rates through the 2030s and 2040s, the forecast will narrow toward the lower, emissions-driven range. If loss accelerates, 1.5 to 2 m of rise becomes a planning baseline. These observations require observing systems and research programs sustained at a scale that matches the costs at stake. Even a partial answer would justify research spending far above current levels. Whether intervention could slow this loss is an open question of feasibility, side effects, and governance.
+
+\end{document}
