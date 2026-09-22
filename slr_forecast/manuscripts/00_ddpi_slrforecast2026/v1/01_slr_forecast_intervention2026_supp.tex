@@ -96,48 +96,47 @@ Projections & IPCC AR6 FACTS & 2020--2150 & Comparison & Garner et~al.~\citeyear
 \end{tabular}
 \end{table}
 
-\subsection{Component models}
+\subsection{Component model posteriors}
+\label{s:component_posteriors}
 
-\subsubsection{Thermosteric}
+This section collects the parameter posteriors of every calibrated component model. Greenland discharge is fitted by weighted least squares over a discrete set of delays, so its posterior is a mixture of normals weighted by the Bayesian Information Criterion and is shown as marginal densities. The remaining components are sampled by Markov chain Monte Carlo and are shown as corner plots, with marginal histograms on the diagonal and pairwise joint densities off it, so that the parameter trade-offs the marginals hide can be read directly. The fitted values quoted in the captions are the posterior medians with their 90\% credible intervals, and they are the values carried into the projections.
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{component_greenland_discharge_posteriors.png}
+\caption{\textbf{Greenland discharge delay model parameter posteriors.} Marginal posteriors for the three parameters of the discharge delay model calibrated against \citet{Mouginot2019}. \textbf{(a)} The sensitivity of discharge to cumulative delayed ocean thermal forcing, $\gamma$, and \textbf{(b)} the background discharge rate, $r_0$. Both are shown as the exact marginal density, a mixture of normals over the candidate delays weighted by the Bayesian Information Criterion, rather than as a histogram of posterior draws. Dashed lines mark the posterior median and dotted lines the 5th and 95th percentiles. \textbf{(c)} The delay $\delta$ is resolved only to integer years, so its posterior is the set of weights over the candidate delays, which place 99.5\% of the weight on $\delta = 5$\,yr. Panel titles give the median with the 90\% credible interval.}
+\label{fig:greenland_discharge_posteriors}
+\end{figure}
 
-
-
-
-
-\subsubsection{Glaciers}
-
-
-
-
-
-
-
-\subsubsection{Greenland SMB}
-
-
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{component_ocean_posterior_corner.png}
+\caption{\textbf{Two-layer thermosteric model posterior correlation structure.} The joint posterior for the six parameters of the two-layer energy balance model fitted to NOAA 0--700\,m and 0--2000\,m thermosteric sea level data. Diagonal panels show marginal posterior histograms (red), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Only $\tau_u$ has an informative prior (black curve) while the other five parameters have flat, uninformative priors (not shown).}
+\label{fig:ocean_priors_posteriors}
+\end{figure}
 
 
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{component_glacier_posterior_corner.png}
+\caption{\textbf{Glacier model posterior correlation structure.} The joint posterior for the three parameters of the glacier model, the warming sensitivity $b_{gl}$, the committed rate $c_{gl}$, and the baseline offset $H_{gl_0}$, fitted to the GlaMBIE record \citep{GlaMBIE2025} with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms, with dashed vertical lines marking the median and the 5th and 95th percentiles. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Posterior medians are $b_{gl} = 0.745$ mm yr$^{-1}$ $^\circ$C$^{-1}$ [0.297, 1.201], $c_{gl} = 0.574$ mm yr$^{-1}$ [0.452, 0.695], and $H_{gl_0} = -0.490$ mm [$-1.011$, 0.045], where brackets give 90\% credible intervals. Only $b_{gl}$ carries an informative prior (black curve), centered on the sensitivity of \citet{Rounce2023} and wide enough that the posterior is set by the data. The slope and intercept of a common record, $b_{gl}$ and $c_{gl}$, are strongly anti-correlated, whereas $H_{gl_0}$ is only weakly correlated with either because the temperature integral is anchored at the year 2000 baseline rather than at the start of the temperature record.}
+\label{fig:glacier_corner}
+\end{figure}
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{component_apeninsula_posterior_corner.png}
+\caption{\textbf{Antarctic Peninsula model posterior correlation structure.} The joint posterior for the four parameters of the Peninsula model, the warming sensitivity $b_{AP}$, the committed rate $c_{AP}$, the model-inadequacy term $\sigma_{\mathrm{extra}}$, and the baseline offset $H_{AP0}$, fitted to the IMBIE-3 Peninsula record \citep{Otosaka2026} with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms, with dashed vertical lines marking the median and the 5th and 95th percentiles. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Posterior medians are $b_{AP} = 0.044$ mm yr$^{-1}$ $^\circ$C$^{-1}$ [$-0.021$, 0.108], $c_{AP} = 0.056$ mm yr$^{-1}$ [0.039, 0.072], $\sigma_{\mathrm{extra}} = 0.051$ mm [0.037, 0.068], and $H_{AP0} = -0.596$ mm [$-0.750$, $-0.438$], where brackets give 90\% credible intervals. The prior on $b_{AP}$ (black curve) is flat over the range the data support. The credible interval on $b_{AP}$ spans zero, so the record does not resolve the sign of the temperature sensitivity, while the committed rate $c_{AP}$ is well separated from zero. The posterior for $\sigma_{\mathrm{extra}}$ is likewise well separated from zero, confirming that the IMBIE-3 Peninsula record carries annual scatter beyond its reported uncertainty. All four parameters are close to mutually independent, the near-circular off-diagonal contours showing that the excess-noise term absorbs scatter without trading off against the fitted rate--temperature relationship.}
+\label{fig:peninsula_corner}
+\end{figure}
 
-
-\subsubsection{Greenland discharge}
-
-
-
-
-\textit{Surface-to-ocean transfer function.} 
-
-
-\subsubsection{EAIS}
-
-\subsubsection{Peninsula}
-
-
-\subsubsection{WAIS}
-
-
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{component_eais_posterior_corner.png}
+\caption{\textbf{EAIS model posterior correlation structure.} The joint posterior for the three parameters of the East Antarctic model, the warming sensitivity $b_{EAIS}$, the committed rate $c_{EAIS}$, and the baseline offset $H_{EAIS0}$, fitted to the IMBIE-3 East Antarctic record \citep{Otosaka2026} with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms, with dashed vertical lines marking the median and the 5th and 95th percentiles. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Posterior medians are $b_{EAIS} = -0.015$ mm yr$^{-1}$ $^\circ$C$^{-1}$ [$-0.145$, 0.111], $c_{EAIS} = 0.007$ mm yr$^{-1}$ [$-0.027$, 0.041], and $H_{EAIS0} = -0.480$ mm [$-0.846$, $-0.114$], where brackets give 90\% credible intervals. Only $b_{EAIS}$ carries an informative prior (black curve), which is wide enough that the posterior is set by the data. Both the sensitivity and the committed rate have credible intervals spanning zero, consistent with an ice sheet close to balance over the IMBIE-3 record, which is why this fit serves as a diagnostic and the projection instead adopts the literature surface-mass-balance sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ \citep{Frieler2015,Ligtenberg2013}. The posterior is correspondingly uninformative in its correlation structure as well, with $b_{EAIS}$ and $c_{EAIS}$ weakly positively correlated and $H_{EAIS0}$ nearly independent of both.}
+\label{fig:eais_corner}
+\end{figure}
 
 \subsection{Variance decomposition}
 
