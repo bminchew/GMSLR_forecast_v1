@@ -370,7 +370,7 @@ Table~\ref{tab:exceedance} reports the probability of exceeding selected global 
 \label{sec:voi}
 %% ================================================================
 
-The value of information (VoI) analysis quantifies the economic benefit of resolving the binary uncertainty about whether WAIS retreat remains slow (Scenario 1) or allows for the possibility of rapid retreat (Scenario 2). The framework follows the expected value of sample information (EVSI) formulation from classical decision theory \citep{Raiffa1961}.
+The value of information (VoI) analysis quantifies the economic benefit of resolving the binary uncertainty about whether WAIS retreat remains slow (Scenario 1) or allows for the possibility of rapid retreat (Scenario 2). We compute the expected value of perfect information (EVPI), the perfect-information limit of the sample-information framework of \citet{Raiffa1961}. No signal model is specified, so any test that discriminates the two scenarios imperfectly would return less than the values reported here.
 
 \subsection{Decision framework}
 
@@ -391,7 +391,7 @@ Because the cost function $C(d)$ (Eq.~\ref{eq:total_cost}) combines adaptation c
 c_a = C_{\mathrm{cap}} \times \mathrm{CRF}, \qquad \mathrm{CRF} = \frac{r\,(1+r)^n}{(1+r)^n - 1},
 \label{eq:crf}
 \end{equation}
-where $r = 0.03$ is the real discount rate and $n = 75$\,yr is the planning horizon. This gives $\mathrm{CRF} \approx 0.034$ and an annualized adaptation cost of $c_a \approx \$135$\,B/(m$\cdot$yr)of GMSLR. The resulting $C(d)$ is in \$/yr, the EVSI is in \$/yr, and the NPV conversion (Eq.~\ref{eq:voi}) produces a present-value total in \$.
+where $r = 0.03$ is the real discount rate and $n = 75$\,yr is the planning horizon. This gives $\mathrm{CRF} \approx 0.034$ and an annualized adaptation cost of $c_a \approx \$135$\,B/(m$\cdot$yr)of GMSLR. The resulting $C(d)$ is in \$/yr, the EVPI is in \$/yr, and the present-value conversion (Eq.~\ref{eq:voi}) produces a present-value total in \$.
 
 \subsubsection{Damage function}
 
@@ -404,13 +404,13 @@ The forecast distribution is decomposed into two conditional distributions, cond
 \item \textbf{The S1 world} ($S_{\mathrm{S1}}$) samples from the blended forecast conditional on WAIS Scenario 1 (\texttt{S1\_status\_quo}) representing future GMSLR.
 \item \textbf{The S2 world} ($S_{\mathrm{S2}}$) samples from the full forecast conditional on WAIS Scenario 2 (\texttt{S2\_fast\_wais}), representing outcomes that allow for rapid WAIS retreat via MISI, with or without MICI.
 \end{itemize}
-Because the A4 framework now comprises exactly these two scenarios, $S_{\mathrm{S1}}$ and $S_{\mathrm{S2}}$ partition the full mixture completely: every Monte Carlo sample's WAIS scenario assignment is recorded at the point of sampling and carried through the component-summation and rate-space-blending pipeline as a per-sample label, so the two-world split is exact rather than approximate.
+Because the A4 framework comprises exactly these two scenarios, the two worlds partition it completely, but they are built differently. Every Monte Carlo sample's WAIS scenario assignment is recorded at the point of sampling and carried through the component-summation and rate-space-blending pipeline as a per-sample label, and $S_{\mathrm{S2}}$ is the 1{,}805 samples of the blended forecast carrying the S2 label, an exact conditional subset rather than a percentile-threshold proxy. $S_{\mathrm{S1}}$ is not the 195 samples carrying the S1 label, which would be too few to resolve the tail; it is a separate 2{,}000-member ensemble in which WAIS is replaced by its S1 trajectory for every sample, with the non-WAIS components unchanged. The two branches therefore have different sample sizes, 2{,}000 and 1{,}805.
 
 The VoI takes these two conditional worlds as its inputs and recombines them below with the prior $p_s$ as the weight, so the slow- and fast-WAIS cases of the main text, at $p(\mathrm{S1}) = 0.90$ and $0.10$, are mixtures of these worlds rather than inputs to the calculation. The current prior probability of the S1 world is $p_s = 0.10$, the scenario weight of the fast-WAIS case presented in the main text.
 
-\subsection{EVSI calculation}
+\subsection{EVPI calculation}
 
-For a given prior $p_s = P(\text{slow WAIS})$, the EVSI quantifies the annual benefit of learning whether WAIS will lose mass slowly or rapidly before choosing the defense height for coastal development.
+For a given prior $p_s \equiv p(\mathrm{S1})$ on the S1 world, the EVPI is the annual benefit of learning which scenario holds before choosing the defense height for coastal development.
 
 \subsubsection{Hedging cost (no information)}
 
@@ -429,25 +429,25 @@ C^*_{\mathrm{perfect}} = p_s \cdot \min_{d}\, C_{\mathrm{S1}}(d) \;+\; (1 - p_s)
 \label{eq:perfect}
 \end{equation}
 
-\subsubsection{Annual EVSI}
+\subsubsection{Annual EVPI}
 
 The annual value of perfect information is the difference between the hedging cost and the perfect-information cost:
 \begin{equation}
-\mathrm{EVSI}_{\mathrm{ann}} = \max\bigl(C^*_{\mathrm{hedge}} - C^*_{\mathrm{perfect}},\; 0\bigr).
+\mathrm{EVPI}_{\mathrm{ann}} = C^*_{\mathrm{hedge}} - C^*_{\mathrm{perfect}}.
 \label{eq:evsi}
 \end{equation}
-This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. When $p_s \approx 0$ or $p_s \approx 1$, the hedging design is already close to the tailored design, so EVSI is small. EVSI is maximized near $p_s \approx 0.5$, where the optimal designs for the two worlds diverge most.
+This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. It is non-negative by construction, because $C^*_{\mathrm{hedge}}$ minimizes a weighted sum of the two cost curves while $C^*_{\mathrm{perfect}}$ minimizes each of them separately. As a minimum over $d$ of functions affine in $p_s$, $C^*_{\mathrm{hedge}}$ is concave in $p_s$, and subtracting the affine $C^*_{\mathrm{perfect}}$ leaves a concave function that vanishes at $p_s = 0$ and $p_s = 1$, so the maximum is interior. Its location is set by the geometry of the two cost curves and need not be at $p_s = 0.5$. Here the two worlds are strongly asymmetric, with optimal designs of 0.80\,m under S1 against 2.95\,m or more under S2, and the maximum falls at $p_s = 0.69$.
 
 \subsection{Discounting and the VoI surface}
 
-The annual EVSI is converted to a net present value (NPV) by discounting the stream of benefits from the year information arrives ($t_a$) to the target year ($t_T = 2100$) at a real discount rate $r = 3\%$:
+The annual EVPI is converted to a present value at the year of arrival by discounting the stream of benefits from the year information arrives ($t_a$) to the target year ($t_T = 2100$) at a real discount rate $r = 3\%$:
 \begin{equation}
-\mathrm{VoI}(t_a, p_s) = \mathrm{EVSI}_{\mathrm{ann}}(p_s)\left( \frac{1 - (1+r)^{-(t_T - t_a)}}{r}\right).
+\mathrm{VoI}(t_a, p_s) = \mathrm{EVPI}_{\mathrm{ann}}(p_s)\,\max\!\left(0,\; \frac{1 - (1+r)^{-(t_T - t_a)}}{r}\right).
 \label{eq:voi}
 \end{equation}
 The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
 
-The VoI surface (Fig.~4c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. 
+The VoI surface (Fig.~10c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The value quoted in the main text, US\$5.2\,T, is the maximum of this surface over both axes, attained at $p_s = 0.69$ for information arriving in 2026. It is not the value at any single prior: at the $p(\mathrm{S1}) = 0.90$ case adopted in the main text the surface gives US\$3.9\,T, and at $p_s = 0.10$, the prior marked on the panel, US\$0.8\,T. The defense heights are searched on a grid capped at 2.95\,m, which binds for the S2 world, so the values are biased low by roughly 6\%; widening the grid leaves the location of the maximum unchanged. 
 
 \subsection{Key assumptions and limitations}
 
