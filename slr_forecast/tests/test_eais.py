@@ -357,3 +357,29 @@ class TestISMIP6EAIS:
             assert max_abs < 0.5, (
                 f"Max |SLE| = {max_abs:.3f} m for {key}, too large for EAIS")
             break
+
+
+class TestISMIP6ExperimentMetadata:
+    """ISMIP6 experiment metadata must match Seroussi et al. (2020), Table 1."""
+
+    def test_all_core_experiments_are_cmip5_rcp(self):
+        from component_projections import ISMIP6_EXPERIMENTS
+        assert set(ISMIP6_EXPERIMENTS) == {f'exp{i:02d}' for i in range(1, 14)}
+        for exp, info in ISMIP6_EXPERIMENTS.items():
+            assert info['scenario'] in ('RCP2.6', 'RCP8.5'), exp
+
+    def test_rcp26_experiments(self):
+        from component_projections import ISMIP6_EXPERIMENTS
+        rcp26 = sorted(e for e, i in ISMIP6_EXPERIMENTS.items() if i['scenario'] == 'RCP2.6')
+        assert rcp26 == ['exp03', 'exp07']
+
+    def test_ssp_analogs_are_standard_medium_no_collapse(self):
+        from component_projections import ISMIP6_EXPERIMENTS, ISMIP6_SSP_ANALOG
+        assert set(ISMIP6_SSP_ANALOG) == {'SSP1-2.6', 'SSP5-8.5'}
+        expected = {'SSP1-2.6': 'RCP2.6', 'SSP5-8.5': 'RCP8.5'}
+        for ssp, exps in ISMIP6_SSP_ANALOG.items():
+            for exp in exps:
+                info = ISMIP6_EXPERIMENTS[exp]
+                assert info['scenario'] == expected[ssp], (ssp, exp)
+                assert info['melt'] == 'standard' and info['sensitivity'] == 'medium'
+                assert not info['collapse']

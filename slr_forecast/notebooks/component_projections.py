@@ -1364,12 +1364,39 @@ def export_results_json(export_dict, filepath):
 
 OCEAN_AREA_M2 = 3.625e14  # standard ocean surface area (m²)
 
-# ISMIP6 experiment → SSP mapping (Seroussi et al. 2020, Table 1)
-ISMIP6_EXP_SSP = {
-    'exp05': 'CMIP6-median', 'exp06': 'CMIP6-median',
-    'exp09': 'SSP1-1.9', 'exp10': 'SSP1-2.6',
-    'exp11': 'SSP2-4.5', 'exp12': 'SSP3-7.0', 'exp13': 'SSP5-8.5',
+# ISMIP6 Antarctica core experiments (Seroussi et al. 2020, Table 1). All are
+# forced by CMIP5 AOGCMs under RCP2.6 or RCP8.5; none is an SSP scenario.
+# melt: ocean-melt parameterization ('open' or 'standard'); sensitivity: gamma0
+# percentile of the standard parameterization ('PIGL' = Pine Island calibration);
+# collapse: ice-shelf collapse imposed.
+ISMIP6_EXPERIMENTS = {
+    'exp01': dict(aogcm='NorESM1-M', scenario='RCP8.5', melt='open', sensitivity='medium', collapse=False),
+    'exp02': dict(aogcm='MIROC-ESM-CHEM', scenario='RCP8.5', melt='open', sensitivity='medium', collapse=False),
+    'exp03': dict(aogcm='NorESM1-M', scenario='RCP2.6', melt='open', sensitivity='medium', collapse=False),
+    'exp04': dict(aogcm='CCSM4', scenario='RCP8.5', melt='open', sensitivity='medium', collapse=False),
+    'exp05': dict(aogcm='NorESM1-M', scenario='RCP8.5', melt='standard', sensitivity='medium', collapse=False),
+    'exp06': dict(aogcm='MIROC-ESM-CHEM', scenario='RCP8.5', melt='standard', sensitivity='medium', collapse=False),
+    'exp07': dict(aogcm='NorESM1-M', scenario='RCP2.6', melt='standard', sensitivity='medium', collapse=False),
+    'exp08': dict(aogcm='CCSM4', scenario='RCP8.5', melt='standard', sensitivity='medium', collapse=False),
+    'exp09': dict(aogcm='NorESM1-M', scenario='RCP8.5', melt='standard', sensitivity='high', collapse=False),
+    'exp10': dict(aogcm='NorESM1-M', scenario='RCP8.5', melt='standard', sensitivity='low', collapse=False),
+    'exp11': dict(aogcm='CCSM4', scenario='RCP8.5', melt='open', sensitivity='medium', collapse=True),
+    'exp12': dict(aogcm='CCSM4', scenario='RCP8.5', melt='standard', sensitivity='medium', collapse=True),
+    'exp13': dict(aogcm='NorESM1-M', scenario='RCP8.5', melt='standard', sensitivity='PIGL', collapse=False),
 }
+
+# Closest ISMIP6 analogs to our SSP projections: the standard-melt,
+# medium-sensitivity runs without ice-shelf collapse, grouped by forcing
+# scenario. ISMIP6 has no core experiments for intermediate scenarios, so
+# SSP2-4.5 and SSP3-7.0 have no analog.
+ISMIP6_SSP_ANALOG = {
+    'SSP1-2.6': ['exp07'],                    # RCP2.6
+    'SSP5-8.5': ['exp05', 'exp06', 'exp08'],  # RCP8.5
+}
+
+# Default experiment set for read_ismip6_regional: RCP8.5 runs spanning the
+# medium, high, low and PIGL melt sensitivities and the ice-shelf-collapse runs.
+ISMIP6_DEFAULT_EXPERIMENTS = ['exp05', 'exp06', 'exp09', 'exp10', 'exp11', 'exp12', 'exp13']
 
 
 def read_ismip6_regional(
@@ -1388,7 +1415,7 @@ def read_ismip6_regional(
         1 = West Antarctica, 2 = East Antarctica, 3 = Peninsula.
     experiments : list of str or None
         Experiment names to read (e.g. ``['exp05', 'exp13']``).
-        If None, reads all experiments in ISMIP6_EXP_SSP.
+        If None, reads ISMIP6_DEFAULT_EXPERIMENTS.
     use_ctrl_anomaly : bool
         If True (default), read the ``_minus_ctrl_proj_`` files
         (anomaly from control). If False, read raw ivaf and subtract
@@ -1398,11 +1425,13 @@ def read_ismip6_regional(
     -------
     dict
         ``{(group, model, exp): {'time': ndarray, 'sle_m': ndarray,
-        'ssp': str}}``
-        where ``sle_m`` is in meters (positive = sea level rise).
+        'scenario': str, 'label': str}}``
+        where ``sle_m`` is in meters (positive = sea level rise),
+        ``scenario`` is the CMIP5 forcing scenario (e.g. 'RCP8.5') and
+        ``label`` is '<AOGCM> <scenario>'.
     """
     if experiments is None:
-        experiments = list(ISMIP6_EXP_SSP.keys())
+        experiments = list(ISMIP6_DEFAULT_EXPERIMENTS)
 
     region_var = f'ivaf_region_{region}'
     results = {}
@@ -1444,11 +1473,13 @@ def read_ismip6_regional(
                 # For ctrl anomaly files, ivaf_region is already the delta
                 sle_m = -ivaf_region * rhoi / (OCEAN_AREA_M2 * rhow)
 
-                ssp = ISMIP6_EXP_SSP.get(exp, exp)
+                info = ISMIP6_EXPERIMENTS.get(exp, {})
+                scenario = info.get('scenario', exp)
                 results[(group_name, model_name, exp)] = {
                     'time': time,
                     'sle_m': sle_m,
-                    'ssp': ssp,
+                    'scenario': scenario,
+                    'label': f"{info.get('aogcm', exp)} {scenario}",
                 }
 
     return results

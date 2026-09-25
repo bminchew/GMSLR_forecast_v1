@@ -1540,6 +1540,9 @@ def fit_bayesian_rate_model(
         n_walkers, ndim, _rate_log_prob,
         args=(X, r_fit, Sigma_inv, log_det_Sigma, prior_scales),
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
     # ---- 6. Post-process ----
@@ -2762,6 +2765,9 @@ def fit_bayesian_level(
                 'dTdt_end': dTdt_end_val,
                 'rate_prior_cov_inv': _rp_cov_inv},
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
     # ---- Post-process ----
@@ -3197,6 +3203,9 @@ def fit_bayesian_level_annual_correlated(
         kwargs={'prior_b_mean': prior_b_mean,
                 'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b},
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
     # ---- Post-process ----
@@ -4303,6 +4312,9 @@ def fit_bayesian_state_level(
                 'dTdt_end': dTdt_end_rp,
                 'rate_prior_cov_inv': _rp_cov_inv},
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
     sampler.run_mcmc(p0, n_burnin + n_samples, progress=progress)
 
     # ---- Post-process ----
@@ -5038,6 +5050,9 @@ def fit_bayesian_thermosteric(
         },
         moves=moves,
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
 
     if progress:
         print(f"  Running emcee: {n_walkers} walkers, "
@@ -5827,6 +5842,9 @@ def fit_bayesian_greenland(
         kwargs=log_prob_kwargs,
         moves=moves,
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
 
     if progress:
         print(f"  Running emcee: {n_walkers} walkers, "
@@ -6499,6 +6517,9 @@ def fit_bayesian_greenland_joint(
         },
         moves=moves,
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
 
     if progress:
         print(f"  Running emcee: {n_walkers} walkers, "
@@ -7260,6 +7281,9 @@ def fit_bayesian_greenland_discharge(
         },
         moves=moves,
     )
+    # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
+    if seed is not None:
+        sampler.random_state = np.random.RandomState(seed).get_state()
 
     if progress:
         print(f"  Running emcee: {n_walkers} walkers, "
