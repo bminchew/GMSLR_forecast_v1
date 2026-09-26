@@ -19,6 +19,11 @@ Figures produced
     The 2100 distribution panel alone, for SSP2-4.5 only, as two conditional
     worlds: Thwaites remains stable and Thwaites is unstable.
 
+`donor_sea_level_two_panel.png`
+    Two-panel 2100 density figure drawn with `make_figure` from
+    `scripts/plot_sea_level_two_panel.py`. Left: Thwaites stable, p(S1) = 100%,
+    under SSP1-2.6 and SSP3-7.0. Right: SSP2-4.5 with p(S1) = 100% and 0%.
+
 A note on which quantity is plotted where
 -----------------------------------------
 The two figures show different things on purpose. In the fan figure the
@@ -49,6 +54,7 @@ from matplotlib.lines import Line2D
 from scipy.stats import gaussian_kde
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / 'notebooks'))
 sys.path.insert(0, str(ROOT / 'notebooks' / 'arete_mpl'))
 sys.path.insert(0, str(ROOT / 'src'))
@@ -58,6 +64,7 @@ from slr_data_readers import (  # noqa: E402
     people_displaced_kulpstrauss2019, slr_cost_jevrejeva2018,
 )
 from slr_forecast.config import BASELINE_YEAR, FIG_DIR, PROCESSED_DATA_DIR  # noqa: E402
+from plot_sea_level_two_panel import make_figure  # noqa: E402
 
 H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 H5_OBS = PROCESSED_DATA_DIR / 'slr_processed_data.h5'
@@ -372,6 +379,82 @@ def figure_probability_simple(outfile=FIG_DIR / 'wais_probability2100_simple.png
               f'visible mass {pdf.sum():.0f}%')
 
 
+# ------------------------------------------------------------------
+# Figure 3 — two-panel 2100 densities (plot_sea_level_two_panel.make_figure)
+# ------------------------------------------------------------------
+TWO_PANEL_LOW, TWO_PANEL_HIGH = 'SSP1-2.6', 'SSP3-7.0'
+# Displayed sea-level range. The densities passed to make_figure span the full
+# support (the S2 tail reaches ~10 m), and make_figure sets xlim to that grid,
+# so the view is narrowed afterwards; the mass beyond it is printed.
+TWO_PANEL_XLIM = (0.0, 2.5)
+
+
+def load_stable(ssp, year=PDF_YEAR):
+    """2100 totals in the S1 world, p(S1) = 100%, for one SSP."""
+    with h5py.File(str(H5_COMP), 'r') as hf:
+        years = hf['blended/forecast_years'][:]
+        i = int(np.argmin(np.abs(years - year)))
+        return hf[f'blended_stable/{ssp}/samples'][:, i]
+
+
+def figure_two_panel(outfile=FIG_DIR / 'donor_sea_level_two_panel.png'):
+    ref_stable, ref_unstable = load_conditionals(DONOR_SSP)
+    samples = {
+        'low': load_stable(TWO_PANEL_LOW),
+        'high': load_stable(TWO_PANEL_HIGH),
+        'stable': ref_stable,
+        'unstable': ref_unstable,
+    }
+    bw = {k: robust_bandwidth(s, BW_FACTOR) for k, s in samples.items()}
+
+    # make_figure takes densities in m^-1 that integrate to one on a shared
+    # grid, so the grid spans every curve's full support, KDE tails included.
+    pad = 5 * max(bw.values())
+    x = np.linspace(min(s.min() for s in samples.values()) - pad,
+                    max(s.max() for s in samples.values()) + pad, 2001)
+    dens = {}
+    for k, s in samples.items():
+        kde = gaussian_kde(s, bw_method='scott')
+        kde.set_bandwidth(bw[k] / np.std(s, ddof=1))
+        dens[k] = kde(x)
+
+    with plt.rc_context():   # make_figure sets global rcParams
+        fig = make_figure(x, dens['low'], dens['high'], dens['stable'], dens['unstable'],
+                          lower_label=r'2$^\circ$C warming', higher_label=r'4$^\circ$C warming',
+                          reference_label=r'3$^\circ$C warming', baseline=str(int(BASELINE_YEAR)))
+        # make_figure labels the curves as densities (m^-1). Show them as
+        # probability (%) per sea-level bin instead, with the same bin width
+        # (DY) as the other donor figures: percent = density * DY * 100.
+        to_pct = DY * 100
+        for ax in fig.axes[:2]:   # the two density panels, in creation order
+            ax.set_xlim(TWO_PANEL_XLIM)
+            top_pct = ax.get_ylim()[1] * to_pct
+            pct_ticks = np.arange(0, np.floor(top_pct) + 1)
+            ax.set_yticks(pct_ticks / to_pct)
+            ax.set_yticklabels([f'{p:.0f}' for p in pct_ticks])
+            for t in ax.texts:
+                if t.get_text() == 'Probability density (m⁻¹)':
+                    t.set_text('Probability (%)')
+        for t in fig.texts:
+            if t.get_text().startswith('Model probability densities'):
+                t.set_text(t.get_text().replace('Model probability densities',
+                                                'Model probability distributions'))
+        fig.savefig(outfile, dpi=300, facecolor='white', bbox_inches='tight')
+        plt.close(fig)
+
+    print(f'\n{outfile.name}  ({PDF_YEAR}, rel. {int(BASELINE_YEAR)})')
+    names = {'low': f'{TWO_PANEL_LOW}, p(S1)=100%', 'high': f'{TWO_PANEL_HIGH}, p(S1)=100%',
+             'stable': f'{DONOR_SSP}, p(S1)=100%', 'unstable': f'{DONOR_SSP}, p(S1)=0%'}
+    for k, s in samples.items():
+        area = np.sum((dens[k][:-1] + dens[k][1:]) * np.diff(x) / 2)
+        print(f'  {names[k]:22s}: median {np.median(s):.2f} m, '
+              f'90% [{np.percentile(s, 5):.2f}, {np.percentile(s, 95):.2f}] m, '
+              f'n = {len(s)}, KDE bandwidth {bw[k]:.3f} m, integral {area:.4f}, '
+              f'{100 * np.mean(s > TWO_PANEL_XLIM[1]):.1f}% of samples above '
+              f'{TWO_PANEL_XLIM[1]} m')
+
+
 if __name__ == '__main__':
     figure_fan_pdf()
     figure_probability_simple()
+    figure_two_panel()
