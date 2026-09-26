@@ -48,7 +48,10 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     H_rebase : ndarray
         Cumulative SLR (m), rebased.
     sigma : ndarray
-        Uncertainty (m, positive).
+        Uncertainty of the *rebased* level (m, non-negative), i.e. of
+        ``H(t) - H(baseline_year)`` rather than of the published
+        cumulative anomaly.  Exactly zero at the baseline year, which is
+        a normalization rather than a measurement.
     """
     t = df['decimal_year'].values
     year_int = np.floor(t).astype(int)
@@ -70,6 +73,21 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     # Rebase
     bl_idx = np.argmin(np.abs(years - baseline_year))
     H_rebase = H - H[bl_idx]
+
+    # Re-anchor sigma to the same epoch as the level.  IMBIE reports the
+    # cumulative sigma accumulated from the start of *its* record, so it
+    # grows monotonically in time and is smallest at the record start.
+    # That is the uncertainty of H(t) - H(t_start), not of the rebased
+    # H(t) - H(baseline_year) we return above.  For a cumulative sum of
+    # independent annual increments the rebased marginal is
+    # |Var(H_t) - Var(H_bl)|, which is V-shaped about the anchor.  This
+    # is the form every consumer expects: _anchor_covariance (see
+    # component_levelspace_robust_se.py) builds the correlation-aware
+    # covariance from it and requires it to be PSD, and the error bars
+    # drawn on the rebased record are its marginals.  Passing the raw
+    # published sigma instead makes that covariance non-PSD and its
+    # sandwich intervals narrower than the naive ones.
+    sigma = np.sqrt(np.abs(sigma**2 - sigma[bl_idx]**2))
 
     return years, H_rebase, sigma
 
@@ -573,7 +591,15 @@ def fit_discharge_delay_model(
     for delta in delta_candidates:
         T_shifted = np.interp(dyn_years, T_ocean_years + delta, T_ocean_ann,
                               left=np.nan, right=np.nan)
-        valid = np.isfinite(T_shifted)
+        # Drop the rebase anchor along with epochs the delayed forcing
+        # does not cover.  annualize_imbie returns sigma == 0 at the
+        # baseline year -- a normalization rather than a measurement --
+        # and the 1/sigma^2 weights below are undefined there.  Same
+        # convention as the keep masks in
+        # component_levelspace_robust_se.  Records whose sigma comes
+        # from bayesian_models._cumulate are floored above zero, so this
+        # leaves the Mouginot and Mankoff fits unchanged.
+        valid = np.isfinite(T_shifted) & (np.asarray(sigma_dyn) > 0)
         if valid.sum() < 4:
             continue
 

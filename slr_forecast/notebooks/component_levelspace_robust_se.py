@@ -77,7 +77,16 @@ def _anchor_covariance(years, sigma_obs, baseline_year):
     per-step rate uncertainties), since for a cumulative sum of
     independent increments, sigma_rebased(t)^2 = |Var(H_t) - Var(H_bl)|
     is exactly this covariance's diagonal, and shared history along the
-    cumulation determines the off-diagonal.
+    cumulation determines the off-diagonal.  Verified against that
+    function on all four IMBIE-3 records; the equivalence holds only
+    with the cross-anchor block zeroed, which is what makes the result
+    positive semidefinite.
+
+    ``sigma_obs`` must therefore be the *rebased* marginal, as returned
+    by ``component_analysis.annualize_imbie``.  Passing a cumulative
+    sigma anchored at the start of the record instead breaks the
+    monotonicity this construction assumes and yields a matrix that is
+    not PSD.
 
     Points with sigma_obs == 0 (the rebase anchor itself, a
     normalization rather than a measurement) must be excluded before
@@ -88,10 +97,20 @@ def _anchor_covariance(years, sigma_obs, baseline_year):
                           '_anchor_covariance (deterministic anchor point)')
     n = len(years)
     anchor = int(np.argmin(np.abs(years - baseline_year)))
+    pre = np.arange(n) < anchor
     Sigma = np.zeros((n, n))
     for i in range(n):
         for j in range(n):
-            k = min(i, j) if (i >= anchor and j >= anchor) else max(i, j)
+            if pre[i] != pre[j]:
+                # Opposite sides of the anchor: H_i - H_bl is built from
+                # increments in (t_i, t_bl] and H_j - H_bl from
+                # (t_bl, t_j].  Disjoint sets of independent increments,
+                # so the covariance is exactly zero.
+                continue
+            # Same side: the shared history runs from the anchor out to
+            # whichever point is nearer it, so the covariance is that
+            # point's variance.
+            k = max(i, j) if pre[i] else min(i, j)
             Sigma[i, j] = sigma_obs[k] ** 2
     return Sigma, anchor
 

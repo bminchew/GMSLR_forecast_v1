@@ -175,11 +175,11 @@ A4_SCENARIOS = {
 # tightens the acceleration posterior even though its point estimate (a)
 # is similar. See S1_ISMIP6_STD_COEFFS below for the additional
 # long-lead-time widening actually used by _sample_s1_quadratic_mm().
-S1_QUADRATIC_MEAN = np.array([1.20482575e-05, 2.30292978e-04, 2.57247062e-04])
+S1_QUADRATIC_MEAN = np.array([1.39955465e-05, 2.26137775e-04, 7.47512907e-05])
 S1_QUADRATIC_COV = np.array([
-    [3.98784098e-13, 5.85224993e-12, 2.60159419e-10],
-    [5.85224993e-12, 8.58831370e-11, 3.81790034e-09],
-    [2.60159419e-10, 3.81790034e-09, 1.69723226e-07],
+    [ 2.31166064e-12, -1.53596811e-12,  3.09588618e-11],
+    [-1.53596811e-12,  2.53180643e-10,  1.59164599e-10],
+    [ 3.09588618e-11,  1.59164599e-10,  6.65181159e-09],
 ])
 
 # ---------------------------------------------------------------------------
