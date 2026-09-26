@@ -97,6 +97,7 @@ def project_smb_ensemble(
     baseline_year: Optional[float] = None,
     aa_scale: Optional[np.ndarray] = None,
     zero_ct2_below_baseline: bool = False,
+    zero_ct_below_baseline: bool = False,
 ) -> dict:
     """Project SMB contribution to SLE under multiple SSP scenarios.
 
@@ -138,6 +139,14 @@ def project_smb_ensemble(
         dT < 0 has no physical basis. Default False -- fully backward
         compatible; existing callers (e.g. EAIS, where C_T2=0 anyway)
         are unaffected either way.
+    zero_ct_below_baseline : bool
+        If True, the linear term is forced to zero wherever dT(t) < 0,
+        on the same grounds as zero_ct2_below_baseline: the ablation
+        zone contracts under cooling, so a sensitivity calibrated by
+        regional climate models at present-day warming does not carry
+        over to a colder climate. Affects the hindcast only for a
+        monotonically warming projection. Default False -- fully
+        backward compatible.
 
     Returns
     -------
@@ -172,11 +181,21 @@ def project_smb_ensemble(
         else:
             ct2_mask = np.ones_like(dT)
 
+        # C_T mask: same treatment for the linear term if requested.  The
+        # ablation zone contracts under cooling, so the sensitivity that the
+        # regional climate models calibrate at present-day warming has no
+        # analog below baseline.
+        if zero_ct_below_baseline:
+            ct_mask = (dT >= 0).astype(float)
+        else:
+            ct_mask = np.ones_like(dT)
+
         # SMB rate for each sample: (n_samples, n_times)
-        # rate_i(t) = C_T_i · aa_scale(t) · dT(t)
+        # rate_i(t) = C_T_i · aa_scale(t) · dT(t) · ct_mask(t)
         #             + C_T2_i · aa_scale(t) · dT(t)² · ct2_mask(t)
         #             + SMB_0
-        rates = ((C_T_draws[:, None] * aa_scale[None, :]) * dT[None, :]
+        rates = ((C_T_draws[:, None] * aa_scale[None, :])
+                    * dT[None, :] * ct_mask[None, :]
                  + (C_T2_draws[:, None] * aa_scale[None, :])
                     * dT[None, :] ** 2 * ct2_mask[None, :]
                  + sensitivity.SMB_0)
