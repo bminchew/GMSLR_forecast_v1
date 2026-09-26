@@ -18,16 +18,16 @@ DEFAULT_TIMEOUT=600  # 10 minutes
 
 # Pipeline order and mapping (name:filename:timeout_seconds)
 ENTRIES=(
-    "ocean:component_ocean.ipynb:1200"
-    "glacier:component_glacier.ipynb:600"
-    "greenland:component_greenland.ipynb:600"
-    "eais:component_eais.ipynb:600"
-    "peninsula:component_apeninsula.ipynb:600"
-    "wais:component_wais.ipynb:600"
-    "ratestate:bayesian_ratestate.ipynb:2700"
-    "summation:component_summation.ipynb:600"
-    "forecast:component_forecast.ipynb:600"
-    "figures:results_figures.ipynb:600"
+    "ocean:component_ocean.ipynb:2400"
+    "glacier:component_glacier.ipynb:1200"
+    "greenland:component_greenland.ipynb:1200"
+    "eais:component_eais.ipynb:1200"
+    "peninsula:component_apeninsula.ipynb:1200"
+    "wais:component_wais.ipynb:1200"
+    "ratestate:bayesian_ratestate.ipynb:5400"
+    "summation:component_summation.ipynb:1200"
+    "forecast:component_forecast.ipynb:1200"
+    "figures:results_figures.ipynb:1200"
 )
 
 lookup_entry() {
