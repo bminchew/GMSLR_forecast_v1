@@ -6,6 +6,12 @@ __pycache__/
 .eggs/
 *.egg
 *.json
+# Exception: a fitted-parameter file, not build output. It is the single
+# source of truth for the WAIS S1 quadratic (a, v, H0), written by
+# component_wais.ipynb and read by component_projections.get_s1_quadratic().
+# Tracking it is the point -- it keeps a refit reviewable as a diff and
+# lets a fresh clone run the WAIS tests.
+!slr_forecast/notebooks/s1_quadratic_fit.json
 
 # Jupyter
 .ipynb_checkpoints/

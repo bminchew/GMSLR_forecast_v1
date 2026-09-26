@@ -18,8 +18,7 @@ from component_projections import (
     sample_a4_wais_endpoint,
     sample_a4_wais_trajectories,
     A4_SCENARIOS,
-    S1_QUADRATIC_MEAN,
-    S1_QUADRATIC_COV,
+    get_s1_quadratic,
     read_ipcc_component_nc, ipcc_extract,
     RHEOLOGY_FACTOR_MEDIAN,
     RHEOLOGY_FACTOR_SIGMA,
@@ -771,21 +770,30 @@ class TestA4ScenarioParameters:
         assert A4_SCENARIOS['S2_fast_wais']['misi'] is True
 
     def test_s1_quadratic_cov_is_valid(self):
-        """S1_QUADRATIC_COV should be a valid (symmetric, positive
-        semi-definite) 3x3 covariance for (a, v, H0)."""
-        assert S1_QUADRATIC_MEAN.shape == (3,)
-        assert S1_QUADRATIC_COV.shape == (3, 3)
-        np.testing.assert_allclose(S1_QUADRATIC_COV, S1_QUADRATIC_COV.T)
-        eigvals = np.linalg.eigvalsh(S1_QUADRATIC_COV)
+        """The installed S1 quadratic should be a valid (symmetric,
+        positive semi-definite) 3x3 covariance for (a, v, H0).
+
+        The fit is inherited from component_wais.ipynb (via the stored
+        wais/s1_quadratic group), not hardcoded here, so this also
+        checks that what the notebook stored is usable.  A non-PSD
+        covariance is the signature of a cumulative sigma that was not
+        re-anchored to the rebase epoch.
+        """
+        mean, cov = get_s1_quadratic()
+        assert mean.shape == (3,)
+        assert cov.shape == (3, 3)
+        np.testing.assert_allclose(cov, cov.T)
+        eigvals = np.linalg.eigvalsh(cov)
         assert np.all(eigvals >= -1e-18), (
-            f"S1_QUADRATIC_COV has negative eigenvalues: {eigvals}")
+            f"S1 quadratic cov has negative eigenvalues: {eigvals}")
 
     def test_s1_quadratic_acceleration_positive_median(self):
         """S1's fitted acceleration (a) should have a positive posterior
         median: the observed WAIS record accelerates over 1992-2020, and
         this is what lets S1 (no MISI) still rise faster than a linear
         continuation would."""
-        assert S1_QUADRATIC_MEAN[0] > 0
+        mean, _ = get_s1_quadratic()
+        assert mean[0] > 0
 
     def test_s2_has_accelerating_trajectory(self):
         """S2_fast_wais should have beta_scale > 0 (accelerating ramp)."""

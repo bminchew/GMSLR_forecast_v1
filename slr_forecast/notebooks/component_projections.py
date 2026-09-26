@@ -8,6 +8,7 @@ function definitions.  All functions operate in SLR convention
 
 import json
 import os
+from pathlib import Path
 
 import netCDF4 as nc
 import numpy as np
@@ -59,7 +60,7 @@ except ImportError:
 #     baseline is the naive statistical continuation of what has actually
 #     been observed, requiring no assumption about future ocean-warming
 #     magnitude or melt-discharge sensitivity coefficients. See
-#     S1_QUADRATIC_MEAN/_COV and _sample_s1_quadratic_mm() below, and
+#     get_s1_quadratic() and _sample_s1_quadratic_mm() below, and
 #     manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3
 #     for the derivation this replaced and its reconciliation with the
 #     new approach. `low_mm`/`high_mm`/`alpha`/`beta_loc`/`beta_scale` are
@@ -131,7 +132,11 @@ A4_SCENARIOS = {
     # Both are adopted values describing the
     # qualitative shape suggested by the literature, not derived from physics.
     # Was high_mm=1000, beta_loc=log(1.84) with an n-driven rheology rescaling.
-    'S2_fast_wais':  {'P': 0.90, 'low_mm': 84, 'high_mm': 1300,
+    # low_mm is DERIVED, not stored: set_s1_quadratic() fills it from the
+    # installed fit via s1_median_mm(), so the S2 floor follows the S1
+    # median automatically instead of drifting out of step with it when
+    # the fit is regenerated.  None here means "no fit installed yet".
+    'S2_fast_wais':  {'P': 0.90, 'low_mm': None, 'high_mm': 1300,
                       'alpha': 3.0,
                       'beta_loc': np.log(2.0), 'beta_scale': 0.3,
                       'misi': True},
@@ -157,35 +162,170 @@ A4_SCENARIOS = {
 # this approach, in
 # manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3).
 #
-# S1_QUADRATIC_MEAN/_COV are (a, v, H0) in (m/yr^2, m/yr, m), using the
+# The S1 quadratic is (a, v, H0) in (m/yr^2, m/yr, m), using the
 # CORRELATION-AWARE covariance from component_levelspace_robust_se
 # (robust_level_intervals + robust_curve_band) -- the raw MCMC posterior
 # treats each point of this cumulative record as independent and
 # understates uncertainty, the same issue corrected for the other
-# components' level-space fits. To regenerate after refitting: rerun
-# component_wais.ipynb cell 11 and read off
-# robust['beta_map_vec'] (mean) and robust['cov_robust'] (covariance).
+# components' level-space fits.
 #
-# Regenerated 2026-09-17 from IMBIE-3 (Otosaka et al. 2026), 1979-2023,
-# replacing the prior fit to IMBIE v2021 (1992-2020). Resulting S1 2100
-# endpoint distribution FROM THE (a,v,H0) POSTERIOR ALONE (i.e. before the
-# ISMIP6 extrapolation-error term below is added): median 83.5 mm, 90% CI
-# [76.1, 90.9] mm (was median 89.5 mm, [60.5, 118.4] mm under IMBIE
-# v2021) -- narrower because IMBIE-3's longer, more constrained record
-# tightens the acceleration posterior even though its point estimate (a)
-# is similar. See S1_ISMIP6_STD_COEFFS below for the additional
-# long-lead-time widening actually used by _sample_s1_quadratic_mm().
-S1_QUADRATIC_MEAN = np.array([1.39955465e-05, 2.26137775e-04, 7.47512907e-05])
-S1_QUADRATIC_COV = np.array([
-    [ 2.31166064e-12, -1.53596811e-12,  3.09588618e-11],
-    [-1.53596811e-12,  2.53180643e-10,  1.59164599e-10],
-    [ 3.09588618e-11,  1.59164599e-10,  6.65181159e-09],
-])
+# These are NOT hardcoded.  They are inherited from the fit that produces
+# them, by one of two routes:
+#
+#   set_s1_quadratic(mean, cov)   component_wais.ipynb calls this in the
+#                                 fit cell, immediately after
+#                                 robust_level_intervals returns.  This
+#                                 route is required, not merely
+#                                 convenient: that notebook's projection
+#                                 cells run BEFORE its save_wais cell, so
+#                                 within a single run there is no stored
+#                                 copy for them to read.  Do not remove
+#                                 the setter in favour of the loader.
+#
+#   load_s1_quadratic()           every other consumer (results_figures,
+#                                 the tests, and anything else calling the
+#                                 A4 samplers without refitting) reads
+#                                 s1_quadratic_fit.json, which the WAIS
+#                                 notebook writes beside this module.
+#                                 get_s1_quadratic() calls this lazily on
+#                                 first use, so callers normally do
+#                                 nothing.
+#
+# The fit lives in a small tracked JSON file rather than in
+# component_results.h5 deliberately: the h5 is gitignored bulk output, so
+# putting it there would make a fresh clone unable to run the WAIS tests,
+# and would hide changes to the fit from review.  At ~600 bytes this file
+# belongs in version control, where a refit shows up as a readable diff.
+#
+# There is deliberately no hardcoded fallback.  A stale copy of this fit
+# is exactly the failure this indirection exists to prevent: it is
+# invisible, it survives a clean re-run, and it silently decouples the
+# projections from the record they claim to be fitted to.  If neither
+# route has supplied values, get_s1_quadratic() raises.
+_S1_QUADRATIC = None    # (mean, cov, provenance) once set
+
+
+def set_s1_quadratic(mean, cov, provenance='set_s1_quadratic()'):
+    """Install the fitted S1 quadratic (a, v, H0) mean and covariance.
+
+    Parameters
+    ----------
+    mean : array-like, shape (3,)
+        ``(a, v, H0)`` in (m/yr^2, m/yr, m) -- ``beta_map_vec`` from
+        ``component_levelspace_robust_se.robust_level_intervals``.
+    cov : array-like, shape (3, 3)
+        The correlation-aware covariance for the same three parameters
+        (``cov_robust`` from the same call).
+    provenance : str
+        Free-text note on where the values came from, echoed by
+        ``describe_s1_quadratic()`` so a stale read is visible.
+    """
+    global _S1_QUADRATIC
+    mean = np.asarray(mean, dtype=float)
+    cov = np.asarray(cov, dtype=float)
+    if mean.shape != (3,):
+        raise ValueError(f'S1 quadratic mean must have shape (3,), got {mean.shape}')
+    if cov.shape != (3, 3):
+        raise ValueError(f'S1 quadratic cov must have shape (3, 3), got {cov.shape}')
+    if not np.allclose(cov, cov.T, rtol=1e-10, atol=1e-20):
+        raise ValueError('S1 quadratic cov is not symmetric')
+    eigmin = np.linalg.eigvalsh(cov).min()
+    if eigmin < -1e-12 * max(np.abs(cov).max(), 1e-30):
+        raise ValueError(
+            f'S1 quadratic cov is not positive semidefinite (min eigenvalue '
+            f'{eigmin:.3e}).  This is the signature of a covariance built '
+            f'from a cumulative sigma that was not re-anchored to the rebase '
+            f'epoch -- see component_analysis.annualize_imbie.')
+    _S1_QUADRATIC = (mean, cov, provenance)
+    # Keep the derived S2 floor in step with the fit it is defined from.
+    A4_SCENARIOS['S2_fast_wais']['low_mm'] = s1_median_mm()
+    return mean, cov
+
+
+S2_LOW_MM_RULE_YEAR = 2100.0
+
+
+def s1_median_mm(year=S2_LOW_MM_RULE_YEAR):
+    """Median S1_status_quo endpoint at *year*, in mm above BASELINE_YEAR.
+
+    Closed form rather than Monte Carlo: H(t) is linear in (a, v, H0) and
+    the ISMIP6 extrapolation-error term added by _sample_s1_quadratic_mm
+    is zero-mean, so the median is just the fit evaluated at its mean.
+    That makes this exact and seed-free, where sampling it would add
+    noise and a seed dependence to a scenario parameter.
+    """
+    mean = _S1_QUADRATIC[0]
+    tau = float(year) - BASELINE_YEAR
+    return (0.5 * mean[0] * tau ** 2 + mean[1] * tau + mean[2]) * M_TO_MM
+
+
+S1_QUADRATIC_PATH = Path(__file__).resolve().parent / 's1_quadratic_fit.json'
+
+
+def save_s1_quadratic(mean, cov, path=None, provenance='', fitted_at=None):
+    """Write the fitted S1 quadratic to the tracked JSON, and install it.
+
+    Called by component_wais.ipynb after the fit.  Keep the resulting
+    file in version control: it is the single source of truth for the
+    S1_status_quo shape, and a refit should be visible in review.
+    """
+    from datetime import datetime, timezone
+    mean, cov = set_s1_quadratic(mean, cov, provenance=provenance or 'fresh fit')
+    path = Path(path) if path is not None else S1_QUADRATIC_PATH
+    payload = {
+        'mean': mean.tolist(),
+        'cov': cov.tolist(),
+        'order': ['a', 'v', 'H0'],
+        'units': {'a': 'm/yr^2', 'v': 'm/yr', 'H0': 'm'},
+        'provenance': provenance,
+        'fitted_at': fitted_at or datetime.now(timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(payload, indent=2) + '\n')
+    return path
+
+
+def load_s1_quadratic(path=None):
+    """Load and install the S1 quadratic from the tracked JSON."""
+    path = Path(path) if path is not None else S1_QUADRATIC_PATH
+    if not path.exists():
+        raise FileNotFoundError(
+            f'{path} does not exist.  Run component_wais.ipynb, whose fit '
+            f'cell writes it via save_s1_quadratic().')
+    payload = json.loads(path.read_text())
+    return set_s1_quadratic(
+        payload['mean'], payload['cov'],
+        provenance=f"{path.name} ({payload.get('provenance', 'no provenance')}"
+                   f", fitted {payload.get('fitted_at', 'unknown')})")
+
+
+def get_s1_quadratic():
+    """Return the ``(mean, cov)`` in force, loading from the store if needed."""
+    if _S1_QUADRATIC is None:
+        try:
+            load_s1_quadratic()
+        except (OSError, KeyError, ValueError) as exc:
+            raise RuntimeError(
+                'The S1 quadratic (a, v, H0) fit has not been supplied.  '
+                'Either call set_s1_quadratic(mean, cov) after fitting (what '
+                'component_wais.ipynb does), or run component_wais.ipynb so '
+                f'{S1_QUADRATIC_PATH.name} is written for load_s1_quadratic() '
+                f'to read.  '
+                f'Load attempt failed with: {exc}') from exc
+    return _S1_QUADRATIC[0], _S1_QUADRATIC[1]
+
+
+def describe_s1_quadratic():
+    """One-line provenance of the S1 quadratic currently in force."""
+    if _S1_QUADRATIC is None:
+        return 'S1 quadratic: not set'
+    mean, _, prov = _S1_QUADRATIC
+    return (f'S1 quadratic: a={mean[0] * 1e3:.4f} mm/yr^2, '
+            f'v={mean[1] * 1e3:.4f} mm/yr  [{prov}]')
 
 # ---------------------------------------------------------------------------
 # S1_status_quo: external extrapolation-error covariance (ISMIP6 emulator)
 #
-# S1_QUADRATIC_MEAN/_COV above capture how well IMBIE-3's 45-yr record
+# The S1 quadratic above captures how well IMBIE-3's 45-yr record
 # constrains a *fixed* constant-acceleration curve -- i.e. parameter
 # uncertainty for an assumed-correct model shape. It does NOT capture the
 # risk that a strictly constant-acceleration extrapolation is itself a
@@ -199,7 +339,7 @@ S1_QUADRATIC_COV = np.array([
 # multi-model mean rather than fit it to the 21-yr ocean record).
 #
 # Framing (Tarantola, 2005, "Inverse Problem Theory"): total predictive
-# covariance = data/parameter covariance (S1_QUADRATIC_COV, well
+# covariance = data/parameter covariance (the S1 quadratic cov, well
 # constrained by IMBIE-3) + a "theory"/extrapolation-error covariance
 # that our own short record cannot resolve, estimated here from an
 # independent, external, peer-reviewed source instead: the IPCC AR6
@@ -278,7 +418,7 @@ def _s1_ismip6_extra_var_m2(years, anchor_year):
 
 def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
     """Direct-posterior S1_status_quo draws (mm): the quadratic-in-time
-    fit to observed IMBIE WAIS mass balance (S1_QUADRATIC_MEAN/_COV)
+    fit to observed IMBIE WAIS mass balance (see get_s1_quadratic())
     PLUS an external ISMIP6-emulator-derived extrapolation-error term
     (S1_ISMIP6_STD_COEFFS) that grows the spread at long lead times
     beyond what IMBIE-3's 45-yr record alone can constrain -- see the
@@ -316,7 +456,8 @@ def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
     """
     if anchor_year is None:
         anchor_year = S1_ISMIP6_FIT_ANCHOR_YEAR
-    draws = rng.multivariate_normal(S1_QUADRATIC_MEAN, S1_QUADRATIC_COV,
+    _s1_mean, _s1_cov = get_s1_quadratic()
+    draws = rng.multivariate_normal(_s1_mean, _s1_cov,
                                      size=n_samples)
     a, v, H0 = draws[:, 0], draws[:, 1], draws[:, 2]
     tau = np.asarray(years, dtype=float) - BASELINE_YEAR
@@ -458,6 +599,11 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         IMBIE 1-sigma uncertainty (mm) at ``year``, used for pre-anchor
         years.  If None, defaults to 0.0.
     """
+    # Ensure the S1 fit is installed before any scenario dispatch: the S2
+    # branch reads A4_SCENARIOS['S2_fast_wais']['low_mm'], which
+    # set_s1_quadratic() derives, and an S2-only weighting would otherwise
+    # never reach the S1 branch that would have triggered the load.
+    get_s1_quadratic()
     if anchor_year is None:
         anchor_year = WAIS_ONSET_YEAR
     if anchor_value_mm is None:
@@ -572,7 +718,7 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
     perturb scenario parameters without trajectory or anchor logic.
     S2_fast_wais's endpoint is sampled from the log-skew-normal, multiplied
     by the rheology correction. S1_status_quo is instead sampled directly
-    from its quadratic-in-time posterior (see S1_QUADRATIC_MEAN/_COV and
+    from its quadratic-in-time posterior (see get_s1_quadratic() and
     _sample_s1_quadratic_mm above) with no rheology correction -- see the
     A4_SCENARIOS comment block for why.
 
@@ -588,13 +734,18 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
         from A4_SCENARIOS.  You can also pass a top-level key 'weights'
         mapping scenario names to new probabilities (must sum to 1).
         S1_status_quo has no 'low_mm'/'high_mm'/'alpha' to override --
-        its distribution is fixed by S1_QUADRATIC_MEAN/_COV.
+        its distribution is fixed by the installed S1 quadratic fit.
 
     Returns
     -------
     samples_m : ndarray, shape (n_samples,)
         Endpoint samples in meters at 2100.
     """
+    # Ensure the S1 fit is installed before any scenario dispatch: the S2
+    # branch reads A4_SCENARIOS['S2_fast_wais']['low_mm'], which
+    # set_s1_quadratic() derives, and an S2-only weighting would otherwise
+    # never reach the S1 branch that would have triggered the load.
+    get_s1_quadratic()
     overrides = scenario_overrides or {}
 
     scenario_names = list(A4_SCENARIOS.keys())
@@ -680,7 +831,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     S1_status_quo is the exception: it has no MISI by construction, so its
     post-anchor shape is not the power-law ramp but the (a, v, H0)
     quadratic-in-time posterior drawn once per S1 sample (see
-    S1_QUADRATIC_MEAN/_COV above), spliced onto the same shared
+    get_s1_quadratic() above), spliced onto the same shared
     ``anchor_draws`` every scenario uses so trajectories stay continuous
     at ``anchor_year``: samples_mm = anchor_draws + (H_model(t) -
     H_model(anchor_year)). No rheology correction is applied to S1.
@@ -710,6 +861,11 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
         Per-sample drawn parameters: 'scenario_idx', 'h2100_mm',
         'beta', 'anchor_mm'.
     """
+    # Ensure the S1 fit is installed before any scenario dispatch: the S2
+    # branch reads A4_SCENARIOS['S2_fast_wais']['low_mm'], which
+    # set_s1_quadratic() derives, and an S2-only weighting would otherwise
+    # never reach the S1 branch that would have triggered the load.
+    get_s1_quadratic()
     from scipy.interpolate import interp1d
 
     years = np.asarray(years, dtype=float)
@@ -874,7 +1030,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     if n_s2 > 0 and np.any(fmask):
         quad_rng = child_rngs[s2_idx].spawn(1)[0]
         quad_draws = quad_rng.multivariate_normal(
-            S1_QUADRATIC_MEAN, S1_QUADRATIC_COV, size=n_s2)
+            *get_s1_quadratic(), size=n_s2)
         a_q, v_q, H0_q = quad_draws[:, 0], quad_draws[:, 1], quad_draws[:, 2]
         tau_q = years - BASELINE_YEAR
         # quad_level_mm is passed only because blend_rate_space's signature

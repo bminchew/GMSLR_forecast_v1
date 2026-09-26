@@ -633,7 +633,7 @@ def save_wais(
             sg.attrs["P"] = sparams["P"]
             # S1_status_quo has no low_mm/high_mm/alpha/beta -- it is
             # sampled directly from its quadratic-in-time posterior
-            # (component_projections.S1_QUADRATIC_MEAN/_COV) instead of
+            # (component_projections.get_s1_quadratic()) instead of
             # the skew-normal parametrization used for S2. NaN here means
             # "not applicable", not a missing value.
             sg.attrs["low_mm"] = sparams.get("low_mm", np.nan)
