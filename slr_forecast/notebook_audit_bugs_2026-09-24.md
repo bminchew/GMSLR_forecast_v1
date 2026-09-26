@@ -4,6 +4,27 @@ Scope: the 8 `notebooks/component_*.ipynb` notebooks: ocean, glacier, greenland,
 
 "Confirmed" means the auditor traced the behavior in code, stored outputs or HDF5. "Suspected" means the mechanism is plausible but the auditor did not demonstrate it. Items marked (verified) were rechecked independently while compiling this report.
 
+## Status update 2026-09-25
+
+**Fixed:**
+- **§1.1 ISMIP6 labels:**
+  - `component_projections.py` now has `ISMIP6_EXPERIMENTS`, following Seroussi et al. (2020) Table 1, and `ISMIP6_SSP_ANALOG`: SSP1-2.6 is compared with RCP2.6 (exp07), and SSP5-8.5 with RCP8.5 (exp05, exp06, exp08). All are standard melt, medium sensitivity and no collapse.
+  - The EAIS and Peninsula notebooks use this mapping. SSP2-4.5 and SSP3-7.0 have no ISMIP6 analog, so no overlay is drawn for them.
+  - `read_ismip6.py` descriptions are corrected.
+  - The default experiment set of `read_ismip6_regional` is unchanged, so `results_figures` fig3 is unaffected.
+  - A test was added in `tests/test_eais.py`.
+- **Glacier `OBS_WINDOW`:** now (2000, 2024), so all 24 GlaMBIE points are fit (calendar years 2000–2023).
+- **Mankoff validation:** now starts in 1986 (`start_year=1986`, component_greenland cell 3; the SMB overlay in cell 13 matches), consistent with the manuscript's 1986–2023.
+- **MCMC reproducibility:** every seeded fitter in `bayesian_models.py` now seeds emcee's proposal stream (`sampler.random_state`). Reruns are bit-identical; this was checked by running Peninsula twice. See `tests/test_mcmc_reproducibility.py`.
+- **References to deprecated files:** citations of `plan_glacier_ratespace.md` and `handoff_glacier_ratespace.md` were removed from the glacier, EAIS and Peninsula notebooks. `results_figures` cells 31 and 61 still cite them in comments.
+- **WAIS rheology cells:** the n=3 vs n=3 comparison cells (old 30–31) were removed.
+
+**Not fixed:** everything else below.
+
+**Observation on the model comparison:** repeated unseeded MCMC runs moved the Peninsula ΔBIC between −3.6 and −4.3, which supports §1.5.
+
+**Stale tests:** four tests encode earlier values and fail independently of these changes: Peninsula SSP1-2.6 range, EAIS R², WAIS Mode B, and WAIS high_mm = 1000.
+
 ## 1. Cross-cutting bugs (affect more than one notebook)
 
 ### 1.1 ISMIP6 experiment → SSP mapping is wrong: HIGH, confirmed (verified)
