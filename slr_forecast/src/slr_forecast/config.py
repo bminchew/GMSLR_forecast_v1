@@ -37,10 +37,23 @@ SEEDS: dict[str, int] = {
     "projections": 42,
     "bayesian": 42,
     "tests": 42,
+    "warming": 2027,
 }
 """Named random seeds for reproducibility.  Use as:
     rng = np.random.default_rng(SEEDS['projections'])
 """
+
+SAMPLE_WARMING_PATHS: bool = True
+"""Propagate within-scenario GMST uncertainty (forcing uncertainty) into the
+component projections.  Each ensemble member k follows one percentile path
+z_k of the IPCC AR6 SSP GMST distribution for the whole century, and the same
+z_k is used by every component and every SSP (see notebooks/warming_paths.py).
+False restores the earlier behavior: the median SSP path for every member,
+with independent year-to-year noise in the thermosteric component only."""
+
+WARMING_ANCHOR_YEAR: float = 2024.0
+"""Year up to which the sampled warming offset is zero.  Warming to date is
+observed, so the AR6 spread is applied only as growth beyond this year."""
 
 # ---------------------------------------------------------------------------
 # Directory layout

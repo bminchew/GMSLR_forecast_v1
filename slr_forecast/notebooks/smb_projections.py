@@ -98,6 +98,7 @@ def project_smb_ensemble(
     aa_scale: Optional[np.ndarray] = None,
     zero_ct2_below_baseline: bool = False,
     zero_ct_below_baseline: bool = False,
+    T_offsets: Optional[dict] = None,
 ) -> dict:
     """Project SMB contribution to SLE under multiple SSP scenarios.
 
@@ -147,6 +148,12 @@ def project_smb_ensemble(
         over to a colder climate. Affects the hindcast only for a
         monotonically warming projection. Default False -- fully
         backward compatible.
+    T_offsets : dict or None
+        ``{ssp_name: ndarray (n_samples, n_times)}`` — per-member offsets
+        (°C) added to ``T_proj[ssp_name]``, so member k follows its own
+        warming path (see ``warming_paths.py``).  None (default) uses the
+        single trajectory for every member, as before.  The offsets use no
+        random draws, so the sensitivity draws are unchanged.
 
     Returns
     -------
@@ -173,6 +180,11 @@ def project_smb_ensemble(
     for ssp_name, T_ssp in T_proj.items():
         # Temperature anomaly relative to baseline
         dT = T_ssp - T_baseline
+        dT_med = dT
+        if T_offsets is not None and ssp_name in T_offsets:
+            dT = dT[None, :] + T_offsets[ssp_name]   # (n_samples, n_times)
+        else:
+            dT = dT[None, :]                          # (1, n_times)
 
         # C_T2 mask: zero below baseline if requested (no effect if
         # zero_ct2_below_baseline=False, i.e. mask is all ones)
@@ -195,9 +207,9 @@ def project_smb_ensemble(
         #             + C_T2_i · aa_scale(t) · dT(t)² · ct2_mask(t)
         #             + SMB_0
         rates = ((C_T_draws[:, None] * aa_scale[None, :])
-                    * dT[None, :] * ct_mask[None, :]
+                    * dT * ct_mask
                  + (C_T2_draws[:, None] * aa_scale[None, :])
-                    * dT[None, :] ** 2 * ct2_mask[None, :]
+                    * dT ** 2 * ct2_mask
                  + sensitivity.SMB_0)
 
         # Convert Gt/yr → m SLE/yr
@@ -216,7 +228,7 @@ def project_smb_ensemble(
         if baseline_year is not None:
             baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
         else:
-            baseline_idx = np.argmin(np.abs(dT))
+            baseline_idx = np.argmin(np.abs(dT_med))
         cumulative -= cumulative[:, baseline_idx:baseline_idx + 1]
 
         # Apply volume cap if specified

@@ -1020,6 +1020,7 @@ def project_component_level_ensemble(
     seed: Optional[int] = None,
     fixed_coefficients: Optional[dict] = None,
     tau_samples: Optional[np.ndarray] = None,
+    temperature_offsets: Optional[np.ndarray] = None,
 ) -> dict:
     """Project a single GMSL component using Bayesian level-space posteriors.
 
@@ -1074,6 +1075,12 @@ def project_component_level_ensemble(
 
         where S is the ocean state variable with relaxation time τ.
         NOT YET IMPLEMENTED — raises NotImplementedError.
+    temperature_offsets : np.ndarray or None, shape (n_samples, n_monthly)
+        Per-member offsets (°C) added to ``temperature_monthly`` before the
+        integrals are built, so member k follows its own warming path
+        (see ``warming_paths.py``).  None (default) uses the single
+        trajectory for every member, as before.  The offsets use no random
+        draws, so the posterior draws are unchanged.
 
     Returns
     -------
@@ -1136,10 +1143,26 @@ def project_component_level_ensemble(
     I1 = design['I1_obs']   # (n_proj,)
     I0 = design['I0_obs']   # (n_proj,)
 
+    if temperature_offsets is not None:
+        # Per-member integrals: same cumulative trapezoid as
+        # build_level_design_vectors, vectorised over members.
+        T_k = (temperature_monthly[None, :] + temperature_offsets) * temp_scale
+        dt_m = np.diff(time_monthly)[None, :]
+        I2_k = np.concatenate([np.zeros((n_samples, 1)), np.cumsum(
+            0.5 * (T_k[:, :-1]**2 + T_k[:, 1:]**2) * dt_m, axis=1)], axis=1)
+        I1_k = np.concatenate([np.zeros((n_samples, 1)), np.cumsum(
+            0.5 * (T_k[:, :-1] + T_k[:, 1:]) * dt_m, axis=1)], axis=1)
+        obs_idx = design['obs_idx']
+        I2 = I2_k[:, obs_idx]   # (n_samples, n_proj)
+        I1 = I1_k[:, obs_idx]
+    else:
+        I2 = I2[None, :]
+        I1 = I1[None, :]
+
     # Evaluate forward model: H(t) = a·I₂ + b·I₁ + c·I₀ + H₀
-    # Vectorised: (n_samples, 1) × (1, n_proj) → (n_samples, n_proj)
-    H_ens = (a_draws[:, None] * I2[None, :]
-             + b_draws[:, None] * I1[None, :]
+    # Vectorised: (n_samples, 1) × (·, n_proj) → (n_samples, n_proj)
+    H_ens = (a_draws[:, None] * I2
+             + b_draws[:, None] * I1
              + c_draws[:, None] * I0[None, :]
              + H0_draws[:, None])
 

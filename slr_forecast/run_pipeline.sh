@@ -9,6 +9,9 @@
 #
 # Each notebook is executed with a fresh kernel via jupyter nbconvert.
 # Outputs are written in-place. Failures stop the pipeline.
+# Entries whose file ends in .py are Python scripts, run from the repository
+# root (path relative to it); they write their own groups to
+# component_results.h5 and read the forecast written by the notebook before.
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -27,6 +30,10 @@ ENTRIES=(
     "ratestate:bayesian_ratestate.ipynb:5400"
     "summation:component_summation.ipynb:1200"
     "forecast:component_forecast.ipynb:1200"
+    "slowwais:scripts/build_slow_wais_p90.py:0"
+    "evpi:notebooks/compute_evpi.py:0"
+    "defense:notebooks/compute_optimal_defense.py:0"
+    "shapley:notebooks/compute_shapley_risk.py:0"
     "figures:results_figures.ipynb:1200"
 )
 
@@ -53,6 +60,23 @@ run_notebook() {
     }
     local nbfile="${rest%%:*}"
     local timeout="${rest#*:}"
+
+    if [[ "$nbfile" == *.py ]]; then
+        if [ ! -f "$nbfile" ]; then
+            echo "ERROR: $nbfile not found"
+            return 1
+        fi
+        echo ""
+        echo "========================================"
+        echo "  Running script: $nbfile"
+        echo "========================================"
+        local start_time=$(date +%s)
+        "${PYTHON:-python3}" "$nbfile" 2>&1
+        local end_time=$(date +%s)
+        echo "  Done: $nbfile ($(( end_time - start_time ))s)"
+        return 0
+    fi
+
     local path="${NOTEBOOKS_DIR}/${nbfile}"
 
     if [ ! -f "$path" ]; then
@@ -88,7 +112,11 @@ if [ "${1:-}" = "--list" ]; then
         _rest="${entry#*:}"
         _file="${_rest%%:*}"
         _timeout="${_rest#*:}"
-        printf "  %-12s  %-35s  (%sm timeout)\n" "$_name" "$_file" "$((_timeout / 60))"
+        if [[ "$_file" == *.py ]]; then
+            printf "  %-12s  %-35s  (script)\n" "$_name" "$_file"
+        else
+            printf "  %-12s  %-35s  (%sm timeout)\n" "$_name" "$_file" "$((_timeout / 60))"
+        fi
     done
     exit 0
 fi
