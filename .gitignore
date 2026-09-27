@@ -66,3 +66,6 @@ slr_forecast/notebooks/archive/
 
 # Renamed copy of the funder summary PDF for sharing
 slr_forecast/manuscripts/00_ddpi_slrforecast2026/v1/arete_forecast_summary.pdf
+
+# Local conclusion-writing outline, kept out of the repository
+slr_forecast/manuscripts/00_ddpi_slrforecast2026/v1/conclusion_structure.md
