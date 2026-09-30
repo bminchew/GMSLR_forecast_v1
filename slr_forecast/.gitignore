@@ -6,3 +6,7 @@ manuscripts/00_ddpi_slrforecast2026/v1/abstract.pdf
 # Rough section drafts are kept on disk but not tracked
 *_rough.tex
 *_rough.pdf
+
+# Overleaf upload bundle, rebuilt by build_overleaf_bundle.sh
+manuscripts/00_ddpi_slrforecast2026/v1/overleaf/
+manuscripts/00_ddpi_slrforecast2026/v1/overleaf.zip
