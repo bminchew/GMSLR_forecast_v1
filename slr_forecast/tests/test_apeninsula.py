@@ -181,18 +181,18 @@ class TestAPeninsulaProjections:
             assert med > 0, f"{ssp} median = {med*M_TO_MM:.1f} mm, expected > 0"
 
     def test_range_at_2100(self, loaded):
-        """Peninsula at 2100 should be between 10 and 30 mm for all SSPs.
+        """Peninsula at 2100 should be between 5 and 20 mm for all SSPs.
 
-        IMBIE-3 gives a temperature sensitivity b ≈ 0.099 mm/yr/°C, about
-        1.8x the retired IMBIE v2021 estimate (b ≈ 0.055), so the 2100
-        range has shifted up from the old ~[3, 30] mm bracket; actual
-        medians span ~13-22 mm across SSPs.
+        The level-space fit to IMBIE-3 with the full cumulative covariance
+        (BIC-selected linear model) gives a posterior median sensitivity
+        b_p = 0.044 mm/yr/°C, and the 2100 medians span 8.9-11.6 mm across
+        SSP1-2.6 to SSP3-7.0, the values quoted in the main text.
         """
         idx = np.argmin(np.abs(loaded['proj_years'] - 2100))
         for ssp in PROJ_SSPS:
             med_mm = loaded['projections'][ssp]['median'][idx] * M_TO_MM
-            assert 10 < med_mm < 30, (
-                f"{ssp} median = {med_mm:.1f} mm, outside [10, 30] mm")
+            assert 5 < med_mm < 20, (
+                f"{ssp} median = {med_mm:.1f} mm, outside [5, 20] mm")
 
     def test_ssp_ordering(self, loaded):
         """Higher SSP → more Peninsula SLR (warmer → more mass loss)."""

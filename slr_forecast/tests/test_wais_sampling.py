@@ -27,6 +27,7 @@ from component_projections import (
     N_OBS_SIGMA,
     N_REF,
     WAIS_ONSET_YEAR,
+    WAIS_MAX_SLE_MM,
 )
 from component_io import save_wais, load_component, PROJ_YEARS
 from component_analysis import annualize_imbie
@@ -185,14 +186,28 @@ class TestEndpointSampling:
         # alpha=0 (symmetric log-normal) has a higher median than alpha=3
         assert np.median(modified) > np.median(base)
 
-    def test_mode_b_produces_similar_median(self):
-        """Mode A and B should produce similar marginal distributions."""
-        rng_a = np.random.default_rng(RNG_SEED)
-        rng_b = np.random.default_rng(RNG_SEED)
-        a = sample_a4_wais_endpoint(N, rng_a, rheology_mode='A')
-        b = sample_a4_wais_endpoint(N, rng_b, rheology_mode='B')
-        # Medians should be within 15%
-        assert np.median(a) == pytest.approx(np.median(b), rel=0.15)
+    def test_mode_b_applies_no_rheology_correction(self):
+        """With n held at N_REF (the rheology correction is deprecated),
+        Mode B leaves the S2 endpoint distribution unscaled: its 5th and
+        95th percentiles equal the stated low_mm and high_mm."""
+        assert N_OBS_MEAN == N_REF and N_OBS_SIGMA == 0.0
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        b = sample_a4_wais_endpoint(
+            100_000, np.random.default_rng(RNG_SEED), rheology_mode='B',
+            scenario_overrides={'weights': {'S1_status_quo': 0.0,
+                                            'S2_fast_wais': 1.0}}) * M_TO_MM
+        assert np.percentile(b, 5) == pytest.approx(s2['low_mm'], rel=0.03)
+        assert np.percentile(b, 95) == pytest.approx(s2['high_mm'], rel=0.03)
+
+    @pytest.mark.parametrize('mode', ['A', 'B'])
+    def test_endpoint_never_exceeds_wais_cap(self, mode):
+        """No endpoint draw exceeds the marine-based WAIS volume, in either
+        rheology mode (Mode A multiplies by a factor >= 1 after sampling)."""
+        x = sample_a4_wais_endpoint(
+            100_000, np.random.default_rng(RNG_SEED), rheology_mode=mode,
+            scenario_overrides={'weights': {'S1_status_quo': 0.0,
+                                            'S2_fast_wais': 1.0}}) * M_TO_MM
+        assert x.max() <= WAIS_MAX_SLE_MM
 
 
 # =========================================================================
@@ -829,12 +844,17 @@ class TestA4ScenarioParameters:
         s2 = A4_SCENARIOS['S2_fast_wais']
         assert s2['low_mm'] == pytest.approx(s1_median, abs=5.0)
 
-    def test_s2_high_mm_is_round_one_meter(self):
-        """S2_fast_wais's 95th percentile bound should be a round 1000 mm,
-        chosen so the full mixture's own p95 (not S2's within-scenario
-        p95) sits at or below the IPCC AR6 low-confidence AIS SSP5-8.5 p95
-        (~1309 mm) -- see test_mixture_p95_not_above_ar6_low_confidence."""
-        assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1000)
+    def test_s2_high_mm_is_1300(self):
+        """S2_fast_wais's 95th percentile bound is 1300 mm (set 2026-09-18),
+        approximately the IPCC AR6 low-confidence AIS SSP5-8.5 p95 at 2100
+        (~1309 mm), as stated in the main text -- see also
+        test_mixture_p95_not_above_ar6_low_confidence."""
+        assert A4_SCENARIOS['S2_fast_wais']['high_mm'] == pytest.approx(1300)
+
+    def test_wais_cap_is_marine_based_volume(self):
+        """The physical cap is the ~3.3 m SLE of WAIS ice grounded on
+        bedrock that deepens inland (Bamber et al. 2009; Church et al. 2013)."""
+        assert WAIS_MAX_SLE_MM == pytest.approx(3300.0)
 
     def test_mixture_p95_not_above_ar6_low_confidence(self):
         """The full two-scenario mixture's p95 at 2100 should not sit
@@ -991,3 +1011,42 @@ class TestSensitivityAnalysisLogic:
         r_35 = 1 + RHEOLOGY_SENSITIVITY * (3.5 - N_REF)
         r_45 = 1 + RHEOLOGY_SENSITIVITY * (4.5 - N_REF)
         assert r_45 > r_35
+
+
+# =========================================================================
+# Physical cap on WAIS (3.3 m SLE), added 2026-09-29
+# =========================================================================
+
+class TestWaisCap:
+    """The truncated S2 sampler and the trajectory cap."""
+
+    def test_truncated_sampler_preserves_stated_percentiles(self):
+        """Truncation at `upper` re-solves the distribution so its 5th and
+        95th percentiles still equal low and high."""
+        s2 = A4_SCENARIOS['S2_fast_wais']
+        get_s1_quadratic()  # installs S2 low_mm
+        x = _sample_log_skewnormal(200_000, s2['low_mm'], s2['high_mm'],
+                                   s2['alpha'], np.random.default_rng(0),
+                                   upper=WAIS_MAX_SLE_MM)
+        assert x.max() <= WAIS_MAX_SLE_MM
+        assert np.percentile(x, 5) == pytest.approx(s2['low_mm'], rel=0.02)
+        assert np.percentile(x, 95) == pytest.approx(s2['high_mm'], rel=0.02)
+
+    def test_untruncated_sampler_unchanged(self):
+        """upper=None keeps the original, untruncated behavior."""
+        a = _sample_log_skewnormal(1000, 90.0, 1300.0, 3.0,
+                                   np.random.default_rng(1))
+        b = _sample_log_skewnormal(1000, 90.0, 1300.0, 3.0,
+                                   np.random.default_rng(1), upper=None)
+        np.testing.assert_array_equal(a, b)
+
+    def test_trajectories_capped_every_year(self):
+        """Every trajectory year, including after 2100, stays at or below
+        the cap, and some S2 paths reach it by 2150."""
+        years = np.arange(1990, 2151, dtype=float)
+        samples_m, params = sample_a4_wais_trajectories(
+            5000, np.random.default_rng(RNG_SEED), years,
+            anchor_year=2020.0, anchor_value_mm=5.0, anchor_sigma_mm=0.7)
+        assert samples_m.max() * M_TO_MM <= WAIS_MAX_SLE_MM + 1e-9
+        assert params['h2100_mm'].max() <= WAIS_MAX_SLE_MM
+        assert np.isclose(samples_m[:, -1].max() * M_TO_MM, WAIS_MAX_SLE_MM)
