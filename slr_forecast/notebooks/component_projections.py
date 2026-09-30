@@ -496,7 +496,14 @@ WAIS_S2_BLEND_T_CENTER = 2035.0
 WAIS_S2_BLEND_TAU = 5.0
 
 
-def _sample_log_skewnormal(n, low, high, alpha, rng):
+# Physical upper limit on the WAIS contribution: ~3.3 m of global sea-level
+# equivalent is grounded on bedrock that deepens inland (Bamber et al., 2009,
+# as assessed in IPCC AR5 WG1 Ch. 13, Sec. 13.4.4.3, Church et al., 2013). Applied to S2 endpoints (as a truncation, with the
+# stated 5th/95th percentiles preserved) and to every trajectory year.
+WAIS_MAX_SLE_MM = 3300.0
+
+
+def _sample_log_skewnormal(n, low, high, alpha, rng, upper=None):
     """Draw positive samples from a skew-normal in log-space.
 
     Parameters
@@ -508,6 +515,11 @@ def _sample_log_skewnormal(n, low, high, alpha, rng):
     alpha : float
         Skew-normal shape parameter in log-space.  alpha=0 gives log-normal.
     rng : numpy.random.Generator
+    upper : float or None
+        If given, the distribution is truncated at *upper* (same units as
+        *low*/*high*), and (xi, omega) are re-solved so that the 5th and
+        95th percentiles of the *truncated* distribution still equal *low*
+        and *high*. Samples above *upper* are redrawn, not clipped.
 
     Returns
     -------
@@ -536,10 +548,35 @@ def _sample_log_skewnormal(n, low, high, alpha, rng):
     omega = (log_hi - log_lo) / (q95_std - q05_std)
     xi = log_lo - omega * q05_std
 
-    # Draw in log-space, exponentiate
-    log_samples = skewnorm.rvs(alpha, loc=xi, scale=omega, size=n,
-                               random_state=rng)
-    return np.exp(log_samples)
+    if upper is None:
+        # Draw in log-space, exponentiate
+        log_samples = skewnorm.rvs(alpha, loc=xi, scale=omega, size=n,
+                                   random_state=rng)
+        return np.exp(log_samples)
+
+    # Truncated case: solve F(low) = 0.05 F(U), F(high) = 0.95 F(U) for
+    # (xi, log omega), starting from the untruncated solution.
+    from scipy.optimize import fsolve
+    log_up = np.log(upper)
+
+    def _resid(p):
+        x, lw = p
+        cdf = lambda v: skewnorm.cdf(v, alpha, loc=x, scale=np.exp(lw))
+        F_up = cdf(log_up)
+        return [cdf(log_lo) - 0.05 * F_up, cdf(log_hi) - 0.95 * F_up]
+
+    sol, _, ier, msg = fsolve(_resid, [xi, np.log(omega)], full_output=True)
+    if ier != 1 or np.max(np.abs(_resid(sol))) > 1e-8:
+        raise RuntimeError(f'truncated skew-normal fit failed: {msg}')
+    xi, omega = sol[0], np.exp(sol[1])
+
+    out = np.empty(0)
+    while out.size < n:
+        draw = np.exp(skewnorm.rvs(alpha, loc=xi, scale=omega,
+                                   size=2 * (n - out.size) + 10,
+                                   random_state=rng))
+        out = np.concatenate([out, draw[draw <= upper]])
+    return out[:n]
 
 
 def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
@@ -670,6 +707,7 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         # ── Endpoint: draw H_2100 from skew-normal (n=3 ranges) ──
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
+            upper=WAIS_MAX_SLE_MM,
         )
 
         if rheology_mode == 'A':
@@ -677,7 +715,7 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
             rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
                                size=n_s)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
 
             # Trajectory exponent: draw β at n=3, then correct for n≈4
             if s['beta_scale'] > 0:
@@ -693,7 +731,7 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
             n_draw = n_draw_all[mask]
             rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
 
             if s['beta_scale'] > 0:
                 beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
@@ -707,7 +745,8 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='A',
         h_remaining = np.maximum(base - anchor_i, 0.0)
         samples[mask] = anchor_i + h_remaining * (t_norm ** beta)
 
-    return samples / M_TO_MM  # meters
+    # WAIS cannot supply more than its marine-based ice (WAIS_MAX_SLE_MM).
+    return np.minimum(samples, WAIS_MAX_SLE_MM) / M_TO_MM  # meters
 
 
 def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
@@ -797,22 +836,24 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='A',
         s = eff[sname]
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
+            upper=WAIS_MAX_SLE_MM,
         )
 
         if rheology_mode == 'A':
             rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
                                size=n_s)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
         else:
             n_draw = n_draw_all[mask]
             rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
 
         samples[mask] = base
 
-    return samples / M_TO_MM  # meters
+    # WAIS cannot supply more than its marine-based ice (WAIS_MAX_SLE_MM).
+    return np.minimum(samples, WAIS_MAX_SLE_MM) / M_TO_MM  # meters
 
 
 def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
@@ -946,13 +987,14 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
         # Endpoint: draw H_2100 from skew-normal (n=3 ranges)
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
+            upper=WAIS_MAX_SLE_MM,
         )
 
         if rheology_mode == 'A':
             rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
                                size=n_s)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
 
             if s['beta_scale'] > 0:
                 beta_n3 = crng.lognormal(s['beta_loc'], s['beta_scale'],
@@ -966,7 +1008,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
             n_draw = n_draw_all[mask]
             rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
             rheo = np.maximum(rheo, 1.0)
-            base *= rheo
+            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
 
             if s['beta_scale'] > 0:
                 beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
@@ -1095,6 +1137,9 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
         'beta_eff_2050': beta_eff_2050,
         'anchor_mm': anchor_draws,
     }
+    # Cap every trajectory year at the marine-based WAIS volume: once that
+    # ice is gone the contribution levels off (applies after 2100 in S2).
+    samples_mm = np.minimum(samples_mm, WAIS_MAX_SLE_MM)
     return samples_mm / M_TO_MM, params
 
 

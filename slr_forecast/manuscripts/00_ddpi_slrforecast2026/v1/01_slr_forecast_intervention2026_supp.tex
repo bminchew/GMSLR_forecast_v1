@@ -23,7 +23,7 @@
 \renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thetable}{S\arabic{table}}
 
-\title{Supplementary Materials for:\\SPECTRUM: A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
+\title{Supplementary Materials for:\\A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
 \author{Minchew, Meyer, et al.}
 \date{}
 
@@ -286,7 +286,7 @@ This section collects the parameter posteriors of every calibrated component mod
 
 \subsection{Variance decomposition}
 
-We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. Under the fast-WAIS weighting, WAIS accounts for 99\%, 98\%, and 95\% of the summed component variances at 2, 3, and 4\,$^\circ$C, and all other components together account for the remaining 1\%, 2\%, and 5\%. WAIS does not depend on the warming trajectory or on the parameters of any other component. The only coupling between WAIS and the rest of the forecast therefore comes from the rate-space blend with the observed trend, which produces a small negative covariance equal to 3 to 4\% of the total variance.
+We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. The total here is the sum of the component models before blending with the observed trend, excluding terrestrial water storage. Under the fast-WAIS weighting, WAIS accounts for 98\%, 96\%, and 91\% of the total variance at 2, 3, and 4\,$^\circ$C. The thermosteric, glacier, and Greenland contributions together account for 1.5\%, 4.0\%, and 8.9\%, a share that includes the covariance among them from the warming path they share. EAIS and the Antarctic Peninsula account for the small remainder. WAIS does not depend on the warming trajectory or on the parameters of any other component, so these shares nearly sum to one.
 
 \subsection{Temperature scenarios}
 
@@ -339,7 +339,7 @@ WAIS                      & IMBIE-3, 1979--2023 (45)  & ---  & Quadratic in time
 
 Table~\ref{tab:exceedance} reports the probability of exceeding selected global mean sea-level thresholds (relative to pre-industrial) by 2100 under three warming trajectories, for the slow-WAIS case, $p(\mathrm{S1}) = 0.90$, and the fast-WAIS case, $p(\mathrm{S1}) = 0.10$. Together these columns isolate the contribution of WAIS tail risk: the difference between them is the effect of shifting the scenario weight from very unlikely to very likely continued mass loss along the observed trajectory. The slow-WAIS column retains 10\% weight on the accelerating branch, so probabilities there fall but do not vanish.
 
-The tabulated values are the fractions of posterior samples above each threshold. Fig.~9b of the main text plots the same quantity as a continuous curve over sea level. Those curves are smoothed for display only, by replacing each sample with a Gaussian kernel whose width is one quarter of Scott's rule for that ensemble, about 30 mm for the fast-WAIS case and 8 mm for the slow-WAIS case. At every threshold and warming trajectory in Table~\ref{tab:exceedance}, the smoothed curves differ from the tabulated values by at most 0.5 percentage points.
+The tabulated values are the fractions of posterior samples above each threshold. Fig.~9b of the main text plots the same quantity as a continuous curve over sea level. Those curves are smoothed for display only, by replacing each sample with a Gaussian kernel whose width is one quarter of Scott's rule for that ensemble, about 23 mm for the fast-WAIS case and 6 to 7 mm for the slow-WAIS case. At every threshold and warming trajectory in Table~\ref{tab:exceedance}, the smoothed curves differ from the unrounded sample fractions by at most 0.6 percentage points.
 
 \begin{table}[h!]
 \centering
@@ -354,21 +354,21 @@ The tabulated values are the fractions of posterior samples above each threshold
                        & 3\,$^\circ$C & 100.0 & 100.0 \\
                        & 4\,$^\circ$C & 100.0 & 100.0 \\
 \hline
-\multirow{3}{*}{0.75} & 2\,$^\circ$C &  24.0 &  70.7 \\
-                       & 3\,$^\circ$C &  88.7 &  97.7 \\
+\multirow{3}{*}{0.75} & 2\,$^\circ$C &  24.0 &  70.0 \\
+                       & 3\,$^\circ$C &  88.8 &  98.2 \\
                        & 4\,$^\circ$C &  99.5 & 100.0 \\
 \hline
-\multirow{3}{*}{1.0}  & 2\,$^\circ$C &   3.0 &  27.0 \\
-                       & 3\,$^\circ$C &  12.5 &  52.3 \\
-                       & 4\,$^\circ$C &  68.0 &  88.9 \\
+\multirow{3}{*}{1.0}  & 2\,$^\circ$C &   3.2 &  28.7 \\
+                       & 3\,$^\circ$C &  12.4 &  51.1 \\
+                       & 4\,$^\circ$C &  68.1 &  90.2 \\
 \hline
-\multirow{3}{*}{1.5}  & 2\,$^\circ$C &   1.0 &   8.6 \\
-                       & 3\,$^\circ$C &   1.4 &  12.2 \\
-                       & 4\,$^\circ$C &   2.9 &  21.1 \\
+\multirow{3}{*}{1.5}  & 2\,$^\circ$C &   0.9 &   8.4 \\
+                       & 3\,$^\circ$C &   1.3 &  12.0 \\
+                       & 4\,$^\circ$C &   3.1 &  22.4 \\
 \hline
-\multirow{3}{*}{2.0}  & 2\,$^\circ$C &   0.4 &   3.3 \\
-                       & 3\,$^\circ$C &   0.5 &   4.5 \\
-                       & 4\,$^\circ$C &   0.8 &   7.0 \\
+\multirow{3}{*}{2.0}  & 2\,$^\circ$C &   0.5 &   4.2 \\
+                       & 3\,$^\circ$C &   0.6 &   5.1 \\
+                       & 4\,$^\circ$C &   0.7 &   6.7 \\
 \hline
 \end{tabular}
 \end{table}
@@ -444,7 +444,7 @@ The annual value of perfect information is the difference between the hedging co
 \mathrm{EVPI}_{\mathrm{ann}} = C^*_{\mathrm{hedge}} - C^*_{\mathrm{perfect}}.
 \label{eq:evsi}
 \end{equation}
-This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. It is non-negative by construction, because $C^*_{\mathrm{hedge}}$ minimizes a weighted sum of the two cost curves while $C^*_{\mathrm{perfect}}$ minimizes each of them separately. As a minimum over $d$ of functions affine in $p_s$, $C^*_{\mathrm{hedge}}$ is concave in $p_s$, and subtracting the affine $C^*_{\mathrm{perfect}}$ leaves a concave function that vanishes at $p_s = 0$ and $p_s = 1$, so the maximum is interior. Its location is set by the geometry of the two cost curves and need not be at $p_s = 0.5$. Here the two worlds are strongly asymmetric, with optimal designs of 0.90\,m under S1 against 2.95\,m or more under S2, and the maximum falls at $p_s = 0.69$.
+This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. It is non-negative by construction, because $C^*_{\mathrm{hedge}}$ minimizes a weighted sum of the two cost curves while $C^*_{\mathrm{perfect}}$ minimizes each of them separately. As a minimum over $d$ of functions affine in $p_s$, $C^*_{\mathrm{hedge}}$ is concave in $p_s$, and subtracting the affine $C^*_{\mathrm{perfect}}$ leaves a concave function that vanishes at $p_s = 0$ and $p_s = 1$, so the maximum is interior. Its location is set by the geometry of the two cost curves and need not be at $p_s = 0.5$. Here the two worlds are strongly asymmetric, with optimal designs of 0.90\,m under S1 against 2.85\,m under S2, and the maximum falls at $p_s = 0.81$.
 
 \subsection{Discounting and the VoI surface}
 
@@ -455,7 +455,7 @@ The annual EVPI is converted to a present value at the year of arrival by discou
 \end{equation}
 The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
 
-The VoI surface (Fig.~10c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory, the scenario closest to current policies \citep{Hausfather2025}. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The main text quotes the maximum of this surface over both axes as of order US\$5\,T. The exact maximum is US\$4.7\,T, attained at $p_s = 0.69$ for information arriving in 2026. It is not the value at any single prior. At the $p(\mathrm{S1}) = 0.90$ case adopted in the main text the surface gives US\$3.6\,T, and at $p_s = 0.10$, the prior marked on the panel, it gives US\$0.8\,T. The defense heights are searched on a grid capped at 2.95\,m, which binds for the S2 world, so the values are biased low by roughly 6\%; widening the grid leaves the location of the maximum unchanged. 
+The VoI surface (Fig.~10c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory, the scenario closest to current policies \citep{Hausfather2025}. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The main text quotes the maximum of this surface over both axes as about US\$4 trillion. The exact maximum is US\$4.3\,T, attained at $p_s = 0.81$ for information arriving in 2026. It is not the value at any single prior. At the $p(\mathrm{S1}) = 0.90$ case adopted in the main text the surface gives US\$3.7\,T, and at $p_s = 0.10$, the prior marked on the panel, it gives US\$0.8\,T. 
 
 \subsection{Key assumptions and limitations}
 

@@ -63,7 +63,9 @@ def total_cost_curve(samples, d_grid, damage_scale=1.0):
 
 
 def main():
-    d_grid = np.arange(0.0, 4.0, 0.02)
+    # Upper end must exceed every optimum; the unconditional optimum passes
+    # 4 m by 2140 (see the grid-ceiling warnings below).
+    d_grid = np.arange(0.0, 8.0, 0.02)
     target_years = np.arange(2040, 2151, 2)
     panel_years = np.array([2050, 2100, 2150])
 

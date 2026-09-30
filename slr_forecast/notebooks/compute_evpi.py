@@ -40,7 +40,9 @@ SSP = 'SSP2-4.5'
 # etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
 ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
 P_STABLE = 0.10            # AR6 prior
-D_GRID = np.arange(0.3, 3.0, 0.05)
+# Defense heights searched. The upper end must exceed every optimum; the
+# S2 optimum at 2100 is 2.85 m, and _check_interior enforces this.
+D_GRID = np.arange(0.3, 8.0, 0.05)
 DR = 0.03                  # discount rate
 HORIZON = 75               # planning horizon (years)
 
@@ -73,6 +75,14 @@ def _expected_cost_voi(samples, design_m):
     return adapt + np.mean(damages)
 
 
+def _check_interior(costs, label):
+    """Fail if the cost minimum sits on the upper edge of D_GRID, which
+    would mean the grid cap, not the cost curve, set the optimum."""
+    if np.argmin(costs) == len(D_GRID) - 1:
+        raise RuntimeError(f'{label}: optimal defense height hits the '
+                           f'D_GRID cap ({D_GRID[-1]:.2f} m); widen D_GRID.')
+
+
 def _evpi_annual(full_s, stable_s, unstable_mask):
     """EVPI in $B/yr for a single target-year slice of samples.
 
@@ -87,6 +97,8 @@ def _evpi_annual(full_s, stable_s, unstable_mask):
     costs_uc = np.array([_expected_cost_voi(full_s, d) for d in D_GRID])
     costs_st = np.array([_expected_cost_voi(stable_s, d) for d in D_GRID])
     costs_un = np.array([_expected_cost_voi(unstable_s, d) for d in D_GRID])
+    for costs, label in [(costs_uc, 'full'), (costs_st, 'S1'), (costs_un, 'S2')]:
+        _check_interior(costs, label)
     c_star_uc = costs_uc.min()
     c_with_info = P_STABLE * costs_st.min() + (1 - P_STABLE) * costs_un.min()
     return max(c_star_uc - c_with_info, 0.0)
@@ -132,6 +144,10 @@ def main():
     costs_uc = np.array([_expected_cost_voi(full_2100, d) for d in D_GRID])
     costs_st = np.array([_expected_cost_voi(stable_2100, d) for d in D_GRID])
     costs_un = np.array([_expected_cost_voi(unstable_2100, d) for d in D_GRID])
+    for costs, label in [(costs_uc, 'full 2100'), (costs_st, 'S1 2100'), (costs_un, 'S2 2100')]:
+        _check_interior(costs, label)
+    print(f'  Optimal defense at 2100: S1 {D_GRID[np.argmin(costs_st)]:.2f} m, '
+          f'S2 {D_GRID[np.argmin(costs_un)]:.2f} m')
     c_star_uc = float(costs_uc.min())
     c_with_info = float(P_STABLE * costs_st.min() + (1 - P_STABLE) * costs_un.min())
     evpi_annual_B = max(c_star_uc - c_with_info, 0.0)
