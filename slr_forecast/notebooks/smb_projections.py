@@ -47,6 +47,8 @@ class SMBSensitivity:
 
 # ── Published sensitivities ──
 
+# SUPERSEDED for Greenland projections by smb_emulator.py (RACMO/MAR emulator,
+# 2026-10-03).  Retained for the tests and for comparison with earlier runs.
 # Greenland SMB sensitivity — RCM-derived with inter-RCM structural uncertainty.
 # Central: mean across MAR (~100-150 Gt/yr/°C local) and RACMO (~100 Gt/yr/°C local),
 # converted to GMST via AA~2.0 → ~200 Gt/yr/°C GMST.

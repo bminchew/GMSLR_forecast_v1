@@ -535,6 +535,8 @@ def save_greenland(
             val = getattr(smb_sensitivity, field, None)
             if val is not None:
                 sg.attrs[field] = val if isinstance(val, str) else float(val)
+        for key, val in getattr(smb_sensitivity, 'extra_attrs', {}).items():
+            sg.attrs[key] = val
 
         # ── Ocean transfer function ──
         otg = cg.create_group("ocean_transfer")
