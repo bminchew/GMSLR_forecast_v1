@@ -10,3 +10,19 @@ manuscripts/00_ddpi_slrforecast2026/v1/abstract.pdf
 # Overleaf upload bundle, rebuilt by build_overleaf_bundle.sh
 manuscripts/00_ddpi_slrforecast2026/v1/overleaf/
 manuscripts/00_ddpi_slrforecast2026/v1/overleaf.zip
+
+# Local planning file for the WAIS ocean-forced discharge prototype
+plan_wais_ocean_discharge.md
+
+# WAIS ocean-forced discharge prototype: scripts, intermediate data, figures
+scripts/prototype_wais_ecco_shelf.py
+scripts/prototype_wais_en4_shelf.py
+scripts/prototype_wais_ocean_state.py
+scripts/prototype_wais_ocean_state_smb.py
+data/processed/ecco_amundsen_shelf_200_700m.csv
+data/processed/ecco_amundsen_shelf_mask.npz
+data/processed/en4_amundsen_shelf_200_700m.csv
+data/processed/en4_amundsen_shelf_mask.npz
+figures/prototype_wais_ecco_shelf.png
+figures/prototype_wais_en4_shelf.png
+figures/prototype_wais_ocean_state.png

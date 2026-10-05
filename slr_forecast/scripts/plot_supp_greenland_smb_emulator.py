@@ -12,7 +12,7 @@ positive for sea-level rise, with a the quadratic and b the linear term,
     SMB contribution = c_gris + b_gris dT + a_gris dT^2,
 
 so b_gris = -b1 / 362.5 and a_gris = -b2 / 362.5 for the module's mass-gain
-coefficients (b1, b2) in Gt/yr.  dT is the GMST anomaly relative to
+coefficients (b1, b2) in Gt/yr.  T (dT in the module) is the GMST anomaly relative to
 1995-2005 (11-yr centred mean).  The member draws (seed 600) and the anchor
 draws (seed 602) are those of component_greenland.ipynb.
 
@@ -61,13 +61,13 @@ def segments_xy(g, mar, temp):
 
 # ── Figure 1: fits and coefficients ──────────────────────────────────────
 def fig_fit(emu, mar, temp):
-    fig, axes = plt.subplots(2, 4, figsize=(15, 7.6))
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8.4))
     axes = axes.ravel()
     xg = np.linspace(-0.8, 6.7, 200)
     for k, g in enumerate(S.GCMS):
         ax = axes[k]
         for n, x, y in segments_xy(g, mar, temp):
-            ax.scatter(x, to_slr(y), s=7, color=SEG_COLOR[n], alpha=0.7, lw=0,
+            ax.scatter(x, to_slr(y), s=9, color=SEG_COLOR[n], alpha=0.7, lw=0,
                        label='history' if n == 'history' else SCEN_LABEL[n])
         f = emu['fits'][g]
         lo, hi = f['x_range']
@@ -76,19 +76,19 @@ def fig_fit(emu, mar, temp):
         curve = to_slr(B[:, [0]] + B[:, [1]] * xs + B[:, [2]] * xs**2)
         ax.fill_between(xs, *np.percentile(curve, [5, 95], 0), color='k', alpha=0.25, lw=0)
         ax.plot(xs, np.median(curve, 0), 'k', lw=1.5)
-        ax.set_title(g, fontsize=12)
+        ax.set_title(g, fontsize=14)
         ax.axhline(0, color='0.7', lw=0.6)
         ax.set_xlim(-0.9, 6.8); ax.set_ylim(-1.2, 7.0)
         if k % 4 == 0:
-            ax.set_ylabel('SMB contribution\n(mm SLE yr$^{-1}$)', fontsize=11)
+            ax.set_ylabel('SMB contribution\n(mm SLE yr$^{-1}$)', fontsize=13)
         if k >= 4:
-            ax.set_xlabel(r'$\Delta T$ ($^\circ$C)', fontsize=11)
-        ax.tick_params(labelsize=10)
+            ax.set_xlabel(r'Temperature anomaly $T$ ($^\circ$C)', fontsize=13)
+        ax.tick_params(labelsize=12)
     h, l = axes[0].get_legend_handles_labels()
     h2, l2 = axes[1].get_legend_handles_labels()
     seen = dict(zip(l + l2, h + h2))
     order = [s for s in ['history', 'SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5'] if s in seen]
-    axes[0].legend([seen[s] for s in order], order, fontsize=9, loc='upper left',
+    axes[0].legend([seen[s] for s in order], order, fontsize=11, loc='upper left',
                    bbox_to_anchor=(0.0, 0.92), markerscale=2, frameon=False)
 
     ax = axes[7]
@@ -96,13 +96,14 @@ def fig_fit(emu, mar, temp):
         B = emu['fits'][g]['beta'][:600]
         ax.scatter(to_slr(B[:, 1]), to_slr(B[:, 2]), s=3, color=GCM_COLOR[g], alpha=0.35,
                    lw=0, label=g)
-    ax.set_xlabel(r'$b_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)', fontsize=11)
-    ax.set_ylabel(r'$a_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)', fontsize=11)
-    ax.tick_params(labelsize=10)
-    ax.legend(fontsize=8, markerscale=4, frameon=False, loc='upper right')
+    ax.set_xlabel(r'$b_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)', fontsize=13)
+    ax.set_ylabel(r'$a_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)', fontsize=13)
+    ax.tick_params(labelsize=12)
+    ax.legend(fontsize=10, markerscale=4, frameon=True, framealpha=0.85,
+              facecolor='white', edgecolor='none', loc='lower left')
     for k, ax in enumerate(axes):
         ax.text(0.03, 0.97, f'({chr(97 + k)})', transform=ax.transAxes,
-                fontweight='bold', fontsize=11, va='top')
+                fontweight='bold', fontsize=13, va='top')
     fig.tight_layout()
     out = FIG / 'supp_greenland_smb_emulator_fit.png'
     fig.savefig(out, dpi=200, bbox_inches='tight'); plt.close(fig)
