@@ -378,10 +378,14 @@ class TestHeadlineStatistics:
                 assert probs[i] >= probs[i + 1]
 
     def test_100pct_exceed_0_5m(self, headline):
-        """P(>0.5m) should be 100% for all SSPs at 2100."""
+        """P(>0.5m) should be at least 99.5% for all SSPs at 2100.
+
+        SSP1-2.6 is 99.8% since the MAR multi-GCM Greenland SMB emulator
+        (2026-10-05); the other SSPs are 100%.
+        """
         for ssp in PROJ_SSPS:
             p = headline['scenarios'][ssp]['2100']['P_exceed_0.5m_preindustrial']
-            assert p == 100.0, f"{ssp} P(>0.5m) = {p}%, expected 100%"
+            assert p >= 99.5, f"{ssp} P(>0.5m) = {p}%, expected >= 99.5%"
 
     def test_percentile_ordering(self, headline):
         """p5 < median < p95 at every report year."""

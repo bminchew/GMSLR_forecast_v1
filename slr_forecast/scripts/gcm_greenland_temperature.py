@@ -9,6 +9,9 @@ area-weighted global mean.
 
 Output: data/raw/ice_sheets/greenland/mar_protect/gcm_temperature.csv
   columns: gcm, member, experiment, year, gmst_K, tgris_K
+  Runs already in the file are skipped and new runs are appended, so
+  existing values are not recomputed.  Members follow the tas files in the
+  PROTECT directory.
 
 Usage:  python scripts/gcm_greenland_temperature.py
 """
@@ -26,7 +29,10 @@ OUT = ROOT / 'data/raw/ice_sheets/greenland/mar_protect/gcm_temperature.csv'
 RUNS = [('CESM2', 'r11i1p1f1', ['historical', 'ssp126', 'ssp245', 'ssp585']),
         ('MPI-ESM1-2-HR', 'r1i1p1f1', ['historical', 'ssp126', 'ssp245', 'ssp585']),
         ('NorESM2-MM', 'r1i1p1f1', ['historical', 'ssp245', 'ssp585']),
-        ('UKESM1-0-LL', 'r1i1p1f2', ['historical', 'ssp245', 'ssp585'])]
+        ('UKESM1-0-LL', 'r1i1p1f2', ['historical', 'ssp245', 'ssp585']),
+        ('CNRM-CM6-1', 'r1i1p1f2', ['historical', 'ssp585']),
+        ('CNRM-ESM2-1', 'r1i1p1f2', ['historical', 'ssp585']),
+        ('IPSL-CM6A-LR', 'r1i1p1f1', ['historical', 'ssp585'])]
 
 
 def https(zstore):
@@ -46,8 +52,13 @@ def area_weights(ds):
 def main():
     cat = pd.read_csv(CATALOG, usecols=['source_id', 'experiment_id', 'member_id',
                                         'table_id', 'variable_id', 'zstore', 'version'])
+    old = pd.read_csv(OUT) if OUT.exists() else None
+    have = set() if old is None else set(zip(old.gcm, old.member, old.experiment))
     rows = []
     for gcm, member, exps in RUNS:
+        exps = [e for e in exps if (gcm, member, e) not in have]
+        if not exps:
+            continue
         lf = cat[(cat.source_id == gcm) & (cat.variable_id == 'sftlf') & (cat.table_id == 'fx')]
         if lf.empty:
             raise RuntimeError(f'no sftlf for {gcm}')
@@ -82,9 +93,12 @@ def main():
             print(f'{gcm} {exp}: {ann.index.min()}-{ann.index.max()}, '
                   f'{int(wb.astype(bool).sum())} Greenland cells', flush=True)
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows, columns=['gcm', 'member', 'experiment', 'year', 'gmst_K', 'tgris_K']
-                 ).to_csv(OUT, index=False, float_format='%.4f')
-    print(f'saved {OUT}')
+    new = pd.DataFrame(rows, columns=['gcm', 'member', 'experiment', 'year', 'gmst_K', 'tgris_K'])
+    if new.empty:
+        print('nothing new to add')
+        return
+    new.to_csv(OUT, mode='a', header=old is None, index=False, float_format='%.4f')
+    print(f'appended {len(new)} rows to {OUT}')
 
 
 if __name__ == '__main__':

@@ -48,9 +48,9 @@ TIER1 = [('CESM2-CMIP6', 'CESM2', ['ssp126', 'ssp245', 'ssp585'], 1948),
          ('UKESM1-0-LL-CMIP6', 'UKESM1-0-LL', ['ssp245', 'ssp585'], 1949)]
 TIER2 = [('CNRM-CM6', 'CNRM-CM6-1', ['ssp585'], 1950),
          ('CNRM-ESM2', 'CNRM-ESM2-1', ['ssp585'], 1950),
-         ('IPSL-CM6A-LR', 'IPSL-CM6A-LR', ['ssp585'], 1948),
-         ('UKESM1-0-LL-Robin', 'UKESM1-0-LL (Robin)', ['ssp585'], 1960),
-         ('CESM2-Leo', 'CESM2 (Leo branch)', ['ssp585'], 1950)]
+         ('IPSL-CM6A-LR', 'IPSL-CM6A-LR', ['ssp585'], 1948)]
+# Not extracted: UKESM1-0-LL-Robin (likely the same member as the CMIP6 UKESM
+# run) and CESM2-Leo (no archived GMST for its forcing run).
 
 _lock = threading.Lock()
 
