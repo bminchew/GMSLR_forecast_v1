@@ -89,6 +89,13 @@ class TestProjection:
         assert np.allclose(out['s']['samples'][0], 0.0)
         assert np.all(np.diff(out['s']['samples'][1]) > 0)
 
+    def test_per_member_anchor(self):
+        n, years = 3, np.arange(2000, 2006, dtype=float)
+        M0 = np.array([300.0, 374.0, 450.0])
+        out = S.project_smb_emulator(self._emu(n), {'s': np.zeros(len(years))}, years, M0=M0)
+        rate = np.diff(out['s']['samples'], axis=1)
+        assert np.allclose(rate, -M0[:, None] * S.GT_TO_M_SLE)
+
     def test_smoothing_only_through_cutoff(self):
         years = np.arange(1990, 2031, dtype=float)
         T = np.where(years >= 2010, 1.0, 0.0)

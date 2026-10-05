@@ -17,7 +17,7 @@ File layout (single HDF5 file, one group per component)::
     │   ...
     ├── greenland/
     │   ├── posteriors/discharge/ discharge delay-model posteriors
-    │   ├── smb_sensitivity/      literature C_T values
+    │   ├── smb_sensitivity/      SMB model attributes (Greenland: MAR emulator)
     │   ├── ocean_transfer/       surface→ocean T regression
     │   ├── observations/smb/     Mouginot SMB
     │   ├── observations/discharge/
@@ -528,7 +528,7 @@ def save_greenland(
             if val is not None:
                 dg.attrs[cal_attr] = float(val)
 
-        # ── SMB sensitivity (literature values, not posteriors) ──
+        # ── SMB model attributes (literature C_T, or the Greenland emulator) ──
         sg = cg.create_group("smb_sensitivity")
         for field in ("C_T", "C_T_sigma", "C_T2", "C_T2_sigma",
                       "SMB_0", "reference", "temperature_frame", "AA_factor"):

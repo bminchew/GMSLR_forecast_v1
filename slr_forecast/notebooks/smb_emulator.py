@@ -215,7 +215,8 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
     emulator : dict from fit_smb_emulator
     T_proj : {ssp: ndarray} annual-mean GMST anomaly rel. 1995-2005 on time_proj
     time_proj : ndarray of years
-    M0 : float, observed 1995-2005 SMB (Gt/yr, mass-gain convention)
+    M0 : float or (n_samples,) array, observed 1995-2005 SMB (Gt/yr,
+        mass-gain convention); an array gives one anchor per member
     T_offsets : {ssp: (n_samples, n_times)} per-member warming-path offsets,
         zero over the observed record; added after smoothing
     baseline_year : rebase cumulative values to zero at this year
@@ -227,6 +228,9 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
     'rate_median' (m SLE/yr)}} -- the same structure as project_smb_ensemble.
     """
     b1, b2 = emulator['b1'][:, None], emulator['b2'][:, None]
+    M0 = np.asarray(M0, dtype=float)
+    if M0.ndim == 1:
+        M0 = M0[:, None]
     time_proj = np.asarray(time_proj, dtype=float)
     dt = np.diff(time_proj, prepend=time_proj[0] - 1.0)
     out = {}
@@ -258,13 +262,15 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
 class EmulatorSummary:
     """Attributes stored in component_results.h5 under smb_sensitivity."""
 
-    def __init__(self, emulator, M0):
+    def __init__(self, emulator, M0, M0_sigma=None):
         gcms = list(emulator['fits'])
         self.reference = ('Statistical emulator of MARv3.12 driven by CMIP6 GCMs '
                           '(PROTECT ensemble): ' + ', '.join(gcms))
         self.temperature_frame = 'driving GCM GMST anomaly rel. 1995-2005, 11-yr mean'
-        self.SMB_0 = float(M0)
+        self.SMB_0 = float(np.mean(M0))
         self.extra_attrs = {'gcms': ','.join(gcms)}
+        if M0_sigma is not None:
+            self.extra_attrs['SMB_0_sigma'] = float(M0_sigma)
         for g, f in emulator['fits'].items():
             self.extra_attrs[f'{g}_b1_median'] = float(np.median(f['beta'][:, 1]))
             self.extra_attrs[f'{g}_b2_median'] = float(np.median(f['beta'][:, 2]))
