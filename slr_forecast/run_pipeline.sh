@@ -24,6 +24,7 @@ ENTRIES=(
     "ocean:component_ocean.ipynb:2400"
     "glacier:component_glacier.ipynb:1200"
     "greenland:component_greenland.ipynb:1200"
+    "smbsupp:scripts/plot_supp_greenland_smb_emulator.py:0"
     "eais:component_eais.ipynb:1200"
     "peninsula:component_apeninsula.ipynb:1200"
     "wais:component_wais.ipynb:1200"
