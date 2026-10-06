@@ -20,6 +20,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'notebooks'))
@@ -132,13 +133,35 @@ def main():
               f'gap {gap:.2f} m -> {dpop:.0f} M people, US${dadapt:.0f}B/yr '
               f'adaptation, US${ddam / 1000:.1f}T/yr damages')
 
-    # Multiple of the observed rise over the past 125 years, as quoted at 418
-    past_125yr_m = float(np.percentile(Tf['SSP2-4.5'], 95)) / 8.0
-    print(f'\nObserved rise over the past 125 yr implied by the published '
-          f'"eight times" ratio: {past_125yr_m:.3f} m')
+    # Multiple of the observed rise over the past 125 years, as quoted at 436.
+    # Observed rise 1900 -> end of altimetry: each reconstruction's 1900-2000
+    # change plus the altimetry 2000 -> end change.  Projected rise over the
+    # next 75 years: the 95th percentile at 2100 (rel. 2000) minus the
+    # observed 2000 -> end change.
+    H5_OBS = ROOT / 'data' / 'processed' / 'slr_processed_data.h5'
+    fr = pd.read_hdf(H5_OBS, '/harmonized/df_frederikse_h')
+    dg = pd.read_hdf(H5_OBS, '/harmonized/df_dangendorf_h')
+    na = pd.read_hdf(H5_OBS, '/harmonized/df_nasa_gmsl_h')
+    nt, nv = na['decimal_year'].values, na['gmsl_smoothed'].values
+    alt_rise = float(np.interp(nt[-1], nt, nv) - np.interp(2000.0, nt, nv))
+    past = {}
+    for name, t, v in [('Frederikse', fr['year'].values.astype(float), fr['gmsl'].values),
+                       ('Dangendorf', dg['decimal_year'].values, dg['gmsl'].values)]:
+        past[name] = float(np.interp(2000.0, t, v) - np.interp(1900.0, t, v)) + alt_rise
+    print(f'\nObserved rise 1900-{nt[-1]:.0f}: ' + ', '.join(f'{k} {v:.3f} m' for k, v in past.items())
+          + f' (altimetry 2000-{nt[-1]:.0f}: {alt_rise:.3f} m)')
+    fast_next = float(fast95) - alt_rise
+    print(f'  fast WAIS (5% exceedance, 3 C): {fast_next:.3f} m over the next 75 yr = '
+          + ' to '.join(f'{fast_next / v:.1f}x' for v in sorted(past.values(), reverse=True)))
     for p in P_CASES:
-        slow95 = out[f'p{p:g}']['threshold_5pct']['slow_95th_m_rel2000']
-        print(f'  p(S1)={p:.1f}: slow-WAIS multiple {slow95 / past_125yr_m:.1f}x')
+        slow_next = out[f'p{p:g}']['threshold_5pct']['slow_95th_m_rel2000'] - alt_rise
+        print(f'  p(S1)={p:.1f}: slow WAIS {slow_next:.3f} m = '
+              + ' to '.join(f'{slow_next / v:.1f}x' for v in sorted(past.values(), reverse=True)))
+        out[f'p{p:g}']['threshold_5pct']['slow_multiple_of_past_rise'] = {
+            k: slow_next / v for k, v in past.items()}
+    for p in P_CASES:
+        out[f'p{p:g}']['threshold_5pct']['fast_multiple_of_past_rise'] = {
+            k: fast_next / v for k, v in past.items()}
 
     dest = ROOT / 'data' / 'processed' / 'slow_wais_p90_numbers.json'
     with open(dest, 'w') as f:
