@@ -106,6 +106,45 @@ class TestProjection:
         assert 0.0 < rate[years == 2008][0] < 1.0              # step smoothed before cutoff
         assert np.allclose(rate[years > 2015], 1.0)            # untouched after
 
+    def test_noise_is_added_to_the_rate(self):
+        n, years = 2, np.arange(2000, 2006, dtype=float)
+        e = np.arange(n * len(years), dtype=float).reshape(n, -1)
+        out = S.project_smb_emulator(self._emu(n), {'s': np.zeros(len(years))}, years,
+                                     M0=0.0, noise=e)
+        assert np.allclose(out['s']['samples'], np.cumsum(-e * S.GT_TO_M_SLE, axis=1))
+
+    def test_ar1_noise_statistics(self):
+        n = 4000
+        e = S.ar1_noise(np.full(n, 80.0), np.full(n, 0.4), 50, np.random.default_rng(5))
+        assert e[:, 0].std() == pytest.approx(80 / np.sqrt(1 - 0.16), rel=0.05)
+        assert e[:, -1].std() == pytest.approx(80 / np.sqrt(1 - 0.16), rel=0.05)
+        assert np.corrcoef(e[:, 20], e[:, 21])[0, 1] == pytest.approx(0.4, abs=0.05)
+
+    def test_feedback_reproduces_fettweis_reference(self):
+        # a constant anomaly whose 2000-2080 cumulative equals C_ref gives an
+        # extra eps * A_ref at 2080
+        years = np.arange(2000, 2101, dtype=float)
+        a = S.FB_C_REF / 80.0
+        F = S.elevation_feedback(np.full((1, len(years)), a), years, np.array([0.08]))
+        assert F[0, years == 2000][0] == 0.0
+        assert F[0, years == 2080][0] == pytest.approx(0.08 * S.FB_A_REF)
+
+    def test_feedback_adds_loss_and_zero_eps_is_off(self):
+        n, years = 2, np.arange(1990, 2101, dtype=float)
+        T = np.clip(years - 2000, 0, None) / 25.0
+        args = (self._emu(n), {'s': T}, years)
+        base = S.project_smb_emulator(*args, M0=0.0)['s']['samples']
+        off = S.project_smb_emulator(*args, M0=0.0, feedback_eps=np.zeros(n))['s']['samples']
+        on = S.project_smb_emulator(*args, M0=0.0, feedback_eps=np.full(n, 0.08))['s']['samples']
+        assert np.allclose(off, base)
+        assert np.allclose(on[:, years <= 2000], base[:, years <= 2000])
+        assert np.all(on[:, -1] > base[:, -1])
+
+    def test_feedback_eps_truncated_at_zero(self):
+        eps = S.draw_feedback_eps(20000, np.random.default_rng(6))
+        assert eps.min() == 0.0
+        assert np.median(eps) == pytest.approx(0.08, abs=0.005)
+
     def test_centred_mean_shortens_window_at_ends(self):
         T = np.arange(20, dtype=float)
         m = S._centred_mean(T)

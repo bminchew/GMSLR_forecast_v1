@@ -40,7 +40,7 @@ FIG = ROOT / 'figures'
 H5 = ROOT / 'data/processed/slr_processed_data.h5'
 GT = 362.5                                    # Gt per mm SLE
 N = 2000                                      # members, as in the notebook
-M0_SIGMA = 37.0                               # Gt/yr, as in the notebook
+M0_SIGMA = 57.0                               # Gt/yr, as in the notebook
 SCEN_LABEL = {'ssp126': 'SSP1-2.6', 'SSP1-2.6': 'SSP1-2.6', 'ssp245': 'SSP2-4.5',
               'ssp585': 'SSP5-8.5'}
 SEG_COLOR = {'history': '0.55', 'ssp126': SSP_COLORS['SSP1-2.6'],

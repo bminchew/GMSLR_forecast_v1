@@ -17,11 +17,31 @@ mean and x the GCM's GMST anomaly relative to 1995-2005, smoothed with an
 each AR(1) coefficient on a grid, a normal-inverse-gamma prior, and the grid
 mixed by marginal likelihood.
 
-In projections SMB = M0 + b1 x + b2 x^2, with x the GMST anomaly and M0 the
-observed 1995-2005 SMB.  The ensemble is an equal-weight mixture across GCMs:
-each Monte Carlo member uses one GCM and one posterior draw of (b1, b2).  No
-scaling or tuning to the observed SMB is applied; the spread between regional
-climate models is not sampled (MAR only).
+In projections SMB = M0 + b1 x + b2 x^2 + eps + F, with x the GMST anomaly,
+M0 the observed 1995-2005 SMB, eps AR(1) weather noise with the member's
+posterior (sigma, rho), and F the SMB-elevation feedback.  The ensemble is an
+equal-weight mixture across GCMs: each Monte Carlo member uses one GCM and one
+posterior draw of (b1, b2, sigma, rho).  No scaling or tuning to the observed
+SMB is applied; the spread between regional climate models is not sampled
+(MAR only).
+
+The MAR runs use a fixed ice-sheet topography, so they omit the
+SMB-elevation feedback.  F is taken from the fixed-topography sensitivity
+experiments of Fettweis et al. (2013, Sect. 6 and Table 3): lowering the
+surface by 0.5, 1.0 and 1.5 times the 2000-2080 SMB-driven height anomaly of
+MARMIROC5 (RCP8.5) changed the 2080-2100 SMB by -27, -57 and -83 Gt/yr, on a
+-742 Gt/yr anomaly, i.e. an extra loss of 8 +/- 5 %.  Surface lowering scales
+with the cumulative SMB anomaly, so F is linear in it:
+
+    F(t) = eps_fb * (A_ref / C_ref) * C(t),
+
+where C(t) is the member's cumulative SMB anomaly (relative to M0) since
+FB_START_YEAR, A_ref = -742 Gt/yr and C_ref = -16,928 Gt is the MARMIROC5
+RCP8.5 cumulative anomaly over 2000-2080 (8.8 cm SLE over 2000-2100 with
+their ocean area of 361e6 km2, minus 20 yr at -742 Gt/yr).  eps_fb ~
+N(0.08, 0.05), truncated at zero.  C(t) excludes F itself (first order),
+matching the experiment, in which the lowering came from fixed-topography
+SMB alone.
 
 Data files (produced by scripts/extract_mar_protect_smb.py and
 scripts/gcm_greenland_temperature.py):
@@ -65,6 +85,12 @@ RHO_GRID = np.linspace(-0.6, 0.8, 29)
 SIGMA0 = 100.0                                   # Gt/yr, prior-typical noise
 A0, B0 = 2.0, SIGMA0**2                          # inverse-gamma prior on sigma^2
 PRIOR_SD = np.array([2000.0, 1000.0, 1000.0])    # (M, b1, b2) prior sd at SIGMA0
+
+# SMB-elevation feedback (Fettweis et al. 2013, Sect. 6 and Table 3)
+FB_EPS_MEAN, FB_EPS_SD = 0.08, 0.05              # extra loss fraction at the reference
+FB_A_REF = -742.0                                # Gt/yr, MARMIROC5 RCP8.5 2080-2099 anomaly
+FB_C_REF = -(88.0 * 361.0 - 20 * 742.0)          # Gt, its cumulative anomaly 2000-2080
+FB_START_YEAR = 2000.0                           # lowering accumulates from here
 
 
 def load_data():
@@ -175,19 +201,21 @@ def fit_smb_emulator(n_samples, seed=600, gcms=GCMS):
     """Fit each GCM and assign one GCM and one posterior draw to each Monte
     Carlo member (GCMs alternate, so the weights are equal).
 
-    Returns dict: 'b1', 'b2' (n_samples,), 'gcm' (n_samples,) labels, and
-    'fits' {gcm: fit dict} for diagnostics.
+    Returns dict: 'b1', 'b2', 'sigma', 'rho' (n_samples,), 'gcm'
+    (n_samples,) labels, and 'fits' {gcm: fit dict} for diagnostics.
     """
     rng = np.random.default_rng(seed)
     mar, temp = load_data()
     fits = {g: fit_gcm(g, n_samples, rng, mar, temp) for g in gcms}
     gcm = np.array([gcms[i % len(gcms)] for i in range(n_samples)])
-    b1 = np.empty(n_samples); b2 = np.empty(n_samples)
+    b1, b2, sig, rho = (np.empty(n_samples) for _ in range(4))
     for g in gcms:
         idx = np.where(gcm == g)[0]
         b1[idx] = fits[g]['beta'][idx, 1]
         b2[idx] = fits[g]['beta'][idx, 2]
-    return {'b1': b1, 'b2': b2, 'gcm': gcm, 'fits': fits}
+        sig[idx] = fits[g]['sigma'][idx]
+        rho[idx] = fits[g]['rho'][idx]
+    return {'b1': b1, 'b2': b2, 'sigma': sig, 'rho': rho, 'gcm': gcm, 'fits': fits}
 
 
 def _centred_mean(T, n=SMOOTH_YRS):
@@ -206,8 +234,36 @@ def smooth_observed(T, years, through):
     return np.where(np.asarray(years) <= through, _centred_mean(T), T)
 
 
+def ar1_noise(sigma, rho, n_times, rng):
+    """(n_members, n_times) AR(1) series with innovation sd `sigma` and
+    lag-1 coefficient `rho` (one value per member), started from the
+    stationary distribution."""
+    sigma, rho = np.asarray(sigma, dtype=float), np.asarray(rho, dtype=float)
+    z = rng.standard_normal((len(sigma), n_times))
+    e = np.empty_like(z)
+    e[:, 0] = sigma / np.sqrt(1.0 - rho**2) * z[:, 0]
+    for t in range(1, n_times):
+        e[:, t] = rho * e[:, t - 1] + sigma * z[:, t]
+    return e
+
+
+def draw_feedback_eps(n_samples, rng):
+    """Per-member SMB-elevation feedback fraction, N(0.08, 0.05) truncated at 0."""
+    return np.maximum(rng.normal(FB_EPS_MEAN, FB_EPS_SD, n_samples), 0.0)
+
+
+def elevation_feedback(anom, time_proj, eps_fb):
+    """SMB-elevation feedback (Gt/yr) for SMB anomalies `anom` (n, n_times,
+    Gt/yr relative to M0): eps_fb * (A_ref / C_ref) * C(t), with C the
+    cumulative anomaly since FB_START_YEAR (zero before)."""
+    after = np.asarray(time_proj) > FB_START_YEAR
+    C = np.cumsum(np.where(after[None, :], anom, 0.0), axis=1)
+    return np.asarray(eps_fb, dtype=float)[:, None] * (FB_A_REF / FB_C_REF) * C
+
+
 def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
-                         baseline_year=None, smooth_through=None):
+                         baseline_year=None, smooth_through=None,
+                         noise=None, feedback_eps=None):
     """Project Greenland SMB as a cumulative sea-level contribution.
 
     Parameters
@@ -223,6 +279,11 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
     smooth_through : last year of the observed GMST record.  T_proj is
         replaced by its 11-yr centred mean up to this year, matching the
         training driver; later years (smooth AR6 paths) are used as given.
+    noise : (n_samples, n_times) AR(1) weather noise in Gt/yr (from
+        ar1_noise with the emulator's 'sigma' and 'rho'), shared across SSPs;
+        None gives the forced response only
+    feedback_eps : (n_samples,) SMB-elevation feedback fractions (from
+        draw_feedback_eps); None omits the feedback
 
     Returns {ssp: {'samples' (m SLE), 'median', 'p5', 'p17', 'p83', 'p95',
     'rate_median' (m SLE/yr)}} -- the same structure as project_smb_ensemble.
@@ -241,7 +302,12 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
         x = T[None, :]
         if T_offsets is not None and ssp in T_offsets:
             x = x + T_offsets[ssp]
-        smb = M0 + b1 * x + b2 * x**2                     # Gt/yr, mass gain
+        anom = b1 * x + b2 * x**2                          # Gt/yr rel. M0
+        if noise is not None:
+            anom = anom + noise
+        if feedback_eps is not None:
+            anom = anom + elevation_feedback(anom, time_proj, feedback_eps)
+        smb = M0 + anom                                    # Gt/yr, mass gain
         slr_rate = -smb * GT_TO_M_SLE                      # m SLE/yr
         cum = np.cumsum(slr_rate * dt[None, :], axis=1)
         if baseline_year is not None:
@@ -262,7 +328,7 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
 class EmulatorSummary:
     """Attributes stored in component_results.h5 under smb_sensitivity."""
 
-    def __init__(self, emulator, M0, M0_sigma=None):
+    def __init__(self, emulator, M0, M0_sigma=None, noise=False, feedback=False):
         gcms = list(emulator['fits'])
         self.reference = ('Statistical emulator of MARv3.12 driven by CMIP6 GCMs '
                           '(PROTECT ensemble): ' + ', '.join(gcms))
@@ -271,6 +337,11 @@ class EmulatorSummary:
         self.extra_attrs = {'gcms': ','.join(gcms)}
         if M0_sigma is not None:
             self.extra_attrs['SMB_0_sigma'] = float(M0_sigma)
+        self.extra_attrs['ar1_noise'] = int(bool(noise))
+        if feedback:
+            self.extra_attrs['elevation_feedback'] = (
+                f'Fettweis et al. 2013: eps ~ N({FB_EPS_MEAN}, {FB_EPS_SD}) trunc. 0, '
+                f'A_ref {FB_A_REF:.0f} Gt/yr, C_ref {FB_C_REF:.0f} Gt, from {FB_START_YEAR:.0f}')
         for g, f in emulator['fits'].items():
             self.extra_attrs[f'{g}_b1_median'] = float(np.median(f['beta'][:, 1]))
             self.extra_attrs[f'{g}_b2_median'] = float(np.median(f['beta'][:, 2]))
