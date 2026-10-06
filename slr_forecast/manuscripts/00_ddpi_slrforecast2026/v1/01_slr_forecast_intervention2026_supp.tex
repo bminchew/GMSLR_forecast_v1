@@ -12,6 +12,14 @@
 \usepackage{pdflscape}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{placeins}
+% Let floats sit near where they are called rather than queue to the end
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
 \graphicspath{{../../../figures/}}
 
 % Define \subsubsubsection (paragraph-level heading, unnumbered)
@@ -58,7 +66,7 @@ All component models are calibrated against published observational products (Ta
 \item \textbf{Temperature scenarios:} IPCC AR6 assessed GMST projections (SSP1-2.6, SSP2-4.5, SSP3-7.0, SSP5-8.5; \citet{Lee2021}).
 \end{itemize}
 
-\begin{table}[ht]
+\begin{table}[!htbp]
 \centering
 \caption{Datasets used in the component framework and the role each plays. Records marked \emph{validation} are withheld from every component calibration, including observed GMSL itself. A complete dataset inventory including versions, spatial domains, and processing details is provided in \texttt{data/dataset\_inventory.xlsx}.}
 \label{tab:obs_datasets}
@@ -99,6 +107,7 @@ Projections & IPCC AR6 FACTS & 2020--2150 & Comparison & Garner et~al.~\citeyear
 \end{tabular}
 \end{table}
 
+\FloatBarrier
 \subsection{Variables and parameters}
 \label{s:variables}
 
@@ -249,14 +258,14 @@ $\chi^2/\mathrm{dof}$ & Reduced chi-square, the error-weighted sum of squared re
 
 This section collects the parameter posteriors of every calibrated component model (Figs.~\ref{fig:greenland_discharge_posteriors}--\ref{fig:eais_corner}). Greenland discharge is fitted by weighted least squares over a discrete set of delays, so its posterior is a mixture of normals weighted by the Bayesian Information Criterion and is shown as marginal densities. The remaining components are sampled by Markov chain Monte Carlo and are shown as corner plots, with marginal histograms on the diagonal and pairwise joint densities on the off-diagonal. Posterior medians and their 90\% credible intervals are reported in the main text, and they are the values carried into the projections. 
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{component_greenland_discharge_posteriors.png}
 \caption{\textbf{Greenland discharge delay model parameter posteriors.} Marginal posteriors for the three parameters of the discharge delay model calibrated against \citet{Mouginot2019}. \textbf{(a)} The sensitivity of discharge to cumulative delayed ocean thermal forcing, $\gamma$, and \textbf{(b)} the background discharge rate, $r_0$. \textbf{(c)} The delay $\delta$ is resolved only to integer years, so its posterior is the set of weights over the candidate delays, which place 99.5\% of the weight on $\delta = 5$\,yr. Panel titles give the median with the 90\% credible interval.}
 \label{fig:greenland_discharge_posteriors}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{component_ocean_posterior_corner.png}
 \caption{\textbf{Two-layer thermosteric model posterior correlation structure.} The joint posterior for the six parameters of the two-layer energy balance model fitted to NOAA 0--700\,m and 0--2000\,m thermosteric sea level data. Diagonal panels show marginal posterior histograms (red), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Only $\tau_u$ has an informative prior (black curve) while the other five parameters have flat, uninformative priors (not shown).}
@@ -265,27 +274,28 @@ This section collects the parameter posteriors of every calibrated component mod
 
 
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{component_glacier_posterior_corner.png}
 \caption{\textbf{Glacier model posterior correlation structure.} The joint posterior for the three parameters of the glacier model fitted to the GlaMBIE record \citep{GlaMBIE2025}, with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms (gray), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Only $b_{gl}$ has an informative prior (black curve), centered on the sensitivity of \citet{Rounce2023} and wide enough that the data set the posterior, while $c_{gl}$ and $H_{gl_0}$ have wide priors that are not shown.}
 \label{fig:glacier_corner}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{component_apeninsula_posterior_corner.png}
 \caption{\textbf{Antarctic Peninsula model posterior correlation structure.} The joint posterior for the four parameters of the Peninsula model fitted to the IMBIE-3 Peninsula record \citep{Otosaka2026}, with the full covariance of the cumulative record in the likelihood. The fourth parameter is the model-inadequacy term $\sigma_{\mathrm{extra}}$, fitted here but not for the other components. Diagonal panels show marginal posterior histograms (blue), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Only $b_{AP}$ has a prior shown (black curve), a symmetric normal that is flat over the range the data support, while the remaining three parameters have wide priors that are not shown.}
 \label{fig:peninsula_corner}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{component_eais_posterior_corner.png}
 \caption{\textbf{EAIS model posterior correlation structure.} The joint posterior for the three parameters of the East Antarctic model fitted to the IMBIE-3 East Antarctic record \citep{Otosaka2026}, with the full covariance of the cumulative record in the likelihood. This fit serves as a diagnostic, the projection instead adopting a literature surface-mass-balance sensitivity. Diagonal panels show marginal posterior histograms (pale blue), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Only $b_{EAIS}$ has an informative prior (black curve), centered on the literature sensitivity $C_T = 60 \pm 20$~Gt\,yr$^{-1}$\,$^\circ$C$^{-1}$ \citep{Frieler2015,Ligtenberg2013} and wide enough that the data set the posterior, while $c_{EAIS}$ and $H_{EAIS0}$ have wide priors that are not shown.}
 \label{fig:eais_corner}
 \end{figure}
 
+\FloatBarrier
 \subsection{Greenland surface mass balance emulator}
 \label{s:greenland_smb_emulator}
 
@@ -300,30 +310,30 @@ In projections, we replace the intercept fitted to MAR with $c_{gris}$, the obse
 
 %A single quadratic in $T$ describes every scenario of a given GCM (Fig.~\ref{fig:greenland_smb_fit}). Within each GCM, $a_{gris}$ and $b_{gris}$ are strongly anticorrelated, with correlation coefficients of $-0.93$ to $-0.95$, so the coefficients are best compared through the SMB contribution they imply. At $T = 3\,^\circ$C, the medians range from 1.23~mm\,SLE\,yr$^{-1}$ (MPI-ESM1-2-HR) to 1.68~mm\,SLE\,yr$^{-1}$ (UKESM1-0-LL) above the 1995--2005 level.
 
-We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). As in the projections, the prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-19.7$ to $+28.7$~mm SLE, with a median absolute difference of 14.0~mm. The largest are for UKESM1-0-LL, at $+17.6$~mm (SSP2-4.5) and $+28.7$~mm (SSP5-8.5), where the other six GCMs underpredict its mass loss.
-
-Driven by observed GMST, the emulator's forced response declines more slowly than the observed SMB (Fig.~\ref{fig:greenland_smb_hindcast}). Its median SMB falls from 387~Gt\,yr$^{-1}$ over 1972--1985 to 358~Gt\,yr$^{-1}$ over 2010--2018, while the \citet{Mouginot2019} SMB falls from 466 to 252~Gt\,yr$^{-1}$. Every Mouginot year lies within the emulator's 90\% range once weather noise is included, and 3 of the 38 years of the withheld \citet{Mankoff2021} SMB lie outside it (2010, 2012, and 2019). The emulator represents the response of SMB to global warming. It does not reproduce multi-year departures from that response, such as the low SMB of 2000--2018.
-
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{supp_greenland_smb_emulator_fit.png}
 \caption{\textbf{Greenland SMB emulator fits.} \textbf{(a--g)} Annual SMB contribution of the contiguous Greenland ice sheet simulated by MARv3.12 driven by each of seven CMIP6 GCMs, relative to the 1995--2005 mean of that GCM's history run, against the GCM's own GMST anomaly $T$ (11-year centered mean, relative to 1995--2005). Points are colored by experiment. Black curves show the posterior median of the fitted quadratic, including the fitted intercept, and gray bands its 90\% credible interval. \textbf{(h)} Joint posterior of $a_{gris}$ and $b_{gris}$ for each GCM. All quantities are contributions to GMSL.}
 \label{fig:greenland_smb_fit}
 \end{figure}
 
-\begin{figure}[ht]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{supp_greenland_smb_lomo.png}
 \caption{\textbf{Leave-one-GCM-out test of the Greenland SMB emulator.} Each GCM is withheld in turn, and its SSP runs are predicted by the emulator fitted to the other six GCMs, driven by the withheld GCM's GMST and anchored to its own 1995--2005 mean. \textbf{(a)} Cumulative SMB contribution over 2015--2100 relative to the 1995--2005 rate, MAR against the emulator. Horizontal bars show the 90\% predictive range, which includes the spread of the six GCMs, the coefficient uncertainty, autoregressive weather noise, and the weather noise of the 1995--2005 anchor. The dashed line is the 1:1 line. \textbf{(b)} MAR minus the emulator median for each withheld run, with the same 90\% range. Positive values mean that the emulator underpredicts the contribution to sea-level rise.}
 \label{fig:greenland_smb_lomo}
 \end{figure}
 
-\begin{figure}[ht]
+We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). As in the projections, the prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-19.7$ to $+28.7$~mm SLE, with a median absolute difference of 14.0~mm. The largest are for UKESM1-0-LL, at $+17.6$~mm (SSP2-4.5) and $+28.7$~mm (SSP5-8.5), where the other six GCMs underpredict its mass loss.
+
+\begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{supp_greenland_smb_hindcast.png}
 \caption{\textbf{Greenland SMB emulator driven by observed GMST.} The emulator's forced response (dark band, 90\% range, and median), driven by the Berkeley Earth GMST anomaly \citep{Rohde2020} with the 11-year centered mean used in training, is compared with the \citet{Mouginot2019} SMB, which sets $c_{gris}$, and the withheld \citet{Mankoff2021} SMB. The forced-response range includes the GCM, the coefficients, and $c_{gris}$. The light band adds autoregressive weather noise with the parameters fitted to each GCM. The centered mean for 2020--2024 uses the IPCC AR6 SSP2-4.5 GMST path \citep{Lee2021} for 2025--2029. The right axis gives the same SMB in Gt\,yr$^{-1}$.}
 \label{fig:greenland_smb_hindcast}
 \end{figure}
+
+Driven by observed GMST, the emulator's forced response declines more slowly than the observed SMB (Fig.~\ref{fig:greenland_smb_hindcast}). Its median SMB falls from 387~Gt\,yr$^{-1}$ over 1972--1985 to 358~Gt\,yr$^{-1}$ over 2010--2018, while the \citet{Mouginot2019} SMB falls from 466 to 252~Gt\,yr$^{-1}$. Every Mouginot year lies within the emulator's 90\% range once weather noise is included, and 3 of the 38 years of the withheld \citet{Mankoff2021} SMB lie outside it (2010, 2012, and 2019). The emulator represents the response of SMB to global warming. It does not reproduce multi-year departures from that response, such as the low SMB of 2000--2018.
 
 \subsection{Variance decomposition}
 
@@ -352,7 +362,7 @@ One further fit enters the framework without being a component model in its own 
 
 These are all within-sample statistics, and on their own they establish only that each model is consistent with the record it was fitted to. The tests that bear on forecasting skill are out of sample. The thermosteric model is compared against the \citet{Frederikse2020} steric reconstruction, withheld from calibration, with an RMS difference of 2.6\,mm over 1957--2018 and 3.8\,mm before 1957, where that reconstruction is itself constrained by models rather than by subsurface observations. Greenland discharge is compared against the \citet{Mankoff2021} record (1986--2023) and the IMBIE-3 time series \citep{Otosaka2026}, neither of which enters the fit. The model falls within error of both for discharge and for total mass balance. As noted in the main text, the \citet{Mankoff2021} comparison is the weaker of the two, because that record shares its underlying raw data with the \citet{Mouginot2019} calibration and differs from it in processing rather than in provenance. IMBIE-3 is the more informative test. It combines mass-balance estimates from satellite observations of ice flow, surface elevation, and gravimetry. Its input-output estimates, which are built from ice flow, share data with the \citet{Mouginot2019} calibration, but its altimetry and gravimetry estimates are independent of it. When the discharge model is refitted to the 1990--2018 part of the \citet{Mouginot2019} record alone, it gives $\gamma = 0.365$ [0.302, 0.426]~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-1}$ and predicts 19.00 [18.64, 19.36]~mm SLE of cumulative discharge over the withheld years 1975--1990, against 19.04 [18.69, 19.38]~mm SLE observed. The WAIS quadratic reaches 8.8 $\pm$ 0.6\,mm at 2024 against the IMBIE-3 value of 9.0 $\pm$ 0.6\,mm. The tests for the framework as a whole rather than one component at a time are budget closure, in which the summed components are compared with satellite altimetry measurements that no component calibration saw, and the hindcast of the level, rate, and transient sensitivity of GMSL since 1950. Both are presented in the Results of the main text.
 
-\begin{table}[h]
+\begin{table}[!htbp]
 \centering
 \caption{Goodness-of-fit for the component models fitted to data. For glaciers, the Peninsula, and EAIS, $\chi^2/\mathrm{dof}$ is evaluated against the full covariance of the cumulative record. For the thermosteric model it is normalized by the number of data points rather than by the degrees of freedom and includes the fitted $\sigma_{\mathrm{extra}}$ in the point variance. For Greenland discharge it is the generalized chi-square before error-scale recalibration. Dataset references are given in Table~\ref{tab:obs_datasets}. Greenland SMB, whose emulator is fitted to regional climate model output rather than to observations (Section~\ref{s:greenland_smb_emulator}), and terrestrial water storage are omitted.}
 \label{tab:skill_metrics}
@@ -374,6 +384,7 @@ WAIS                      & IMBIE-3, 1979--2023 (45)  & ---  & Quadratic in time
 \end{table}
 
 %% ================================================================
+\FloatBarrier
 \section{Exceedance Probability by Threshold and Scenario}
 \label{sec:exceedance_table}
 %% ================================================================
@@ -382,7 +393,7 @@ Table~\ref{tab:exceedance} reports the probability of exceeding selected global 
 
 The tabulated values are the fractions of posterior samples above each threshold. Fig.~9b of the main text plots the same quantity as a continuous curve over sea level. Those curves are smoothed for display only, by replacing each sample with a Gaussian kernel whose width is one quarter of Scott's rule for that ensemble, about 23 mm for the fast-WAIS case and 6 to 7 mm for the slow-WAIS case. At every threshold and warming trajectory in Table~\ref{tab:exceedance}, the smoothed curves differ from the unrounded sample fractions by at most 0.6 percentage points.
 
-\begin{table}[h!]
+\begin{table}[!htbp]
 \centering
 \caption{\textbf{Probability (\%) of exceeding global mean sea-level thresholds by 2100.} Thresholds are relative to the pre-industrial baseline ($\approx$1850--1900). The $p(\mathrm{S1}) = 90\%$ column is the slow-WAIS case, which keeps 10\% weight on the accelerating branch; the $p(\mathrm{S1}) = 10\%$ column is the fast-WAIS case. Values are computed from posterior samples under each warming trajectory.}
 \label{tab:exceedance}
@@ -415,6 +426,7 @@ The tabulated values are the fractions of posterior samples above each threshold
 \end{table}
 
 %% ================================================================
+\FloatBarrier
 \section{Value of Information Analysis}
 \label{sec:voi}
 %% ================================================================
