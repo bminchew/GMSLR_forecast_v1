@@ -20,14 +20,16 @@ the reported observation error: Var(eps_t) = sigma_e^2 + s_t^2. The state
 Steps
   1. Hyperparameters (tau, sigma_d, sigma_e) on a grid, from the Kalman
      marginal likelihood of the residual about the median emulator (pooled
-     over members), with priors: tau lognormal, 90% range 10-50 yr (and a
-     wide log-uniform 3-150 yr for comparison); sigma_d half-normal, scale
+     over members), with priors: tau as in production (smb_state.TAU_PRIOR,
+     lognormal with 90% range 5-25 yr; a wide log-uniform 3-150 yr for
+     comparison); sigma_d half-normal, scale
      150 Gt/yr; sigma_e flat on 20-250 Gt/yr (weak, so the data set it).
   2. Each member draws (tau, sigma_d, sigma_e) from that grid posterior and
      is filtered through its own residual; (M, delta_2018) are drawn jointly
      from the filtered mean and covariance.
-  3. Effect at 2100 relative to the production projection: after the 2018
-     splice the production rate is M0_k + f_k + noise, with M0_k ~ N(M0, 57).
+  3. Effect at 2100 relative to a fixed anchor (the approach before the drift
+     state was adopted): after the 2018 splice that rate was M0_k + f_k +
+     noise, with M0_k ~ N(M0, 57).
      With the state it is M_k + f_k + delta_t + noise, so the cumulative SMB
      sea-level contribution over 2019-2100 changes by
          -(82 (M_k - M0_k) + sum_{2019}^{2100} delta_t) / 362.5  mm,
@@ -46,6 +48,15 @@ Steps
      RCMs), neither used in the fit. Each is put on Mouginot's level by its
      mean offset over 2010-2018 (and, as a check, over the full overlap).
      Compared with the production approach (M0 +/- 57 and MAR AR(1) noise).
+  8. Sensitivity of the production setup (component_greenland.ipynb, which
+     uses smb_state.fit_drift_state with TAU_PRIOR, seed 610) to
+     the tau prior: refit with the wide prior and shift the saved production
+     SMB samples by the change in M and in the delta path after 2018.
+  9. Comparison of tau priors for the production setup: the likelihood
+     profile in tau, then for each prior the fitted level and state, the
+     shift in the 1900-1971 Greenland SMB hindcast relative to a fixed
+     anchor, the 2019-2023 forecast against Mankoff and IMBIE-3, and the
+     2100 SMB relative to the production prior.
   6. Option 2: add c x to the observation (c constant, prior N(0, s_c^2)),
      for s_c = 100 and 300 Gt/yr/K. c x and a slow delta are nearly
      collinear over a monotonic 47-yr warming, so both widths are reported.
@@ -71,7 +82,7 @@ sys.path.insert(0, str(ROOT / 'notebooks')); sys.path.insert(0, str(ROOT / 'src'
 import smb_emulator as S
 from slr_forecast.readers.ice_sheets import read_mouginot2019_greenland
 from bayesian_models import prepare_mouginot_components
-from smb_state import TAU, SD_E, log_prior, kalman, grid_posterior
+from smb_state import TAU, SD_E, TAU_PRIOR, log_prior, kalman, grid_posterior, fit_drift_state
 
 N = 2000
 GT_PER_MM = 362.5
@@ -155,8 +166,8 @@ def main():
           f'2010-18 {r_med[yrs_m >= 2010].mean() - r_med[(yrs_m >= 1995) & (yrs_m <= 2005)].mean():+.0f} '
           f'Gt/yr rel. 1995-2005')
     post = {}
-    for prior in ('narrow', 'wide'):
-        gp = grid_posterior(r_med, sig_m, prior)
+    for prior in ('production', 'wide'):
+        gp = grid_posterior(r_med, sig_m, TAU_PRIOR if prior == 'production' else prior)
         post[prior] = gp
         w = gp['w']
         # likelihood ratio against no state (sigma_d = 0), best sigma_e each
@@ -167,8 +178,8 @@ def main():
         print(f'  max log-likelihood with state {ll1:.1f}, without (sigma_d = 0) {ll0:.1f}; '
               f'P(sigma_d < 20) = {w[gp["sd_d"] < 20].sum():.3f}')
 
-    # ── 2. Per-member filtering (narrow prior) ──
-    gp = post['narrow']
+    # ── 2. Per-member filtering (production prior) ──
+    gp = post['production']
     pick = rng.choice(len(gp['w']), size=N, p=gp['w'])
     th = {k: gp[k][pick] for k in ('tau', 'sd_d', 'sd_e')}
     phi = np.exp(-1 / th['tau'])
@@ -178,7 +189,7 @@ def main():
     draw = a + np.einsum('bij,bj->bi', L, rng.standard_normal((N, 2)))
     M_k, d18 = draw[:, 0], draw[:, 1]
     corr = P[:, 0, 1] / np.sqrt(P[:, 0, 0] * P[:, 1, 1])
-    print('\nFiltered state at 2018 (members, narrow prior):')
+    print('\nFiltered state at 2018 (members, production prior):')
     print(f'  M        {fmt(a[:, 0])} Gt/yr (filtered means); drawn {fmt(M_k)}; '
           f'filtered sd median {np.median(np.sqrt(P[:, 0, 0])):.0f}')
     print(f'  delta_18 {fmt(a[:, 1])} Gt/yr (filtered means); drawn {fmt(d18)}; '
@@ -196,30 +207,20 @@ def main():
     perm = -n_f * (M_k - M0_draws) / GT_PER_MM          # mm SLE, + = more SLR
     decay = -d_path.sum(axis=1) / GT_PER_MM
     dmm = perm + decay
-    print(f'\nChange in cumulative SMB contribution 2019-2100 vs production (mm SLE, + = more SLR):')
+    print(f'\nChange in cumulative SMB contribution 2019-2100 vs a fixed anchor (mm SLE, + = more SLR):')
     print(f'  total {fmt(dmm, f=".1f")}; permanent (M - M0) {fmt(perm, f=".1f")}; '
           f'decaying (delta) {fmt(decay, f=".1f")}')
     # sign check by hand for one member
     k = 0
     print(f'  check member 0: M {M_k[k]:.0f}, M0 {M0_draws[k]:.0f}, sum delta {d_path[k].sum():.0f} Gt -> '
           f'{-(n_f * (M_k[k] - M0_draws[k]) + d_path[k].sum()) / GT_PER_MM:.2f} mm (= {dmm[k]:.2f})')
-    i2100 = END - 1950
-    prod, new = {}, {}
-    with h5py.File(ROOT / 'data/processed/component_results.h5', 'r') as h:
-        for ssp in SSPS:
-            s = h[f'greenland/projections_smb/{ssp}/samples'][:, i2100] * 1000.0
-            prod[ssp], new[ssp] = s, s + dmm
-    print('  SMB contribution at 2100, production -> with state (mm SLE, median [5, 95]):')
-    for ssp in SSPS:
-        print(f'    {ssp}: {fmt(prod[ssp])} -> {fmt(new[ssp])}  '
-              f'(5-95 width {np.ptp(q(prod[ssp], p=(5, 95))):.0f} -> {np.ptp(q(new[ssp], p=(5, 95))):.0f})')
 
     # ── 4. Out of sample: fit 1972-2004, forecast 2005-2018 ──
     HO = 2004
     fit_m = yrs_m <= HO
     x_fit = x_on(yrs_m[fit_m], HO)
     x_fc = x_on(yrs_m, obs_end)
-    gph = grid_posterior(smb_m[fit_m] - np.median(f(x_fit), axis=0), sig_m[fit_m], 'narrow')
+    gph = grid_posterior(smb_m[fit_m] - np.median(f(x_fit), axis=0), sig_m[fit_m], TAU_PRIOR)
     pk = rng.choice(len(gph['w']), size=N, p=gph['w'])
     tau_h, sdd_h, sde_h = gph['tau'][pk], gph['sd_d'][pk], gph['sd_e'][pk]
     phi_h = np.exp(-1 / tau_h)
@@ -250,10 +251,10 @@ def main():
               f'percentile of observed cumulative {np.mean(cum(s) < cum(obs_fc)):.0%}')
 
     # ── 5. Data checks ──
-    print('\nData checks (median-emulator residual, narrow prior):')
+    print('\nData checks (median-emulator residual, production prior):')
     yk = mk['time'].values.astype(int)
     r_mk = mk['SMB'].values - np.median(f(x_on(yk, obs_end)), axis=0)
-    gk = grid_posterior(r_mk, mk['SMB_err'].values, 'narrow')
+    gk = grid_posterior(r_mk, mk['SMB_err'].values, TAU_PRIOR)
     print(f'  Mankoff 3-RCM 1986-2023: tau {fmt(gk["tau"], gk["w"], ".1f")} yr, '
           f'sigma_d {fmt(gk["sd_d"], gk["w"])}, sigma_e {fmt(gk["sd_e"], gk["w"])} Gt/yr; '
           f'P(sigma_d < 20) = {gk["w"][gk["sd_d"] < 20].sum():.3f}; max log-lik with/without state '
@@ -271,9 +272,9 @@ def main():
               f'({len(yy)} years)')
 
     # ── 6. Option 2: add c x ──
-    print('\nOption 2, state [M, c, delta] (median-emulator residual, narrow tau prior):')
+    print('\nOption 2, state [M, c, delta] (median-emulator residual, production tau prior):')
     for s_c in (100.0, 300.0):
-        go = grid_posterior(r_med, sig_m, 'narrow', H=x_m, prior_c=s_c, sd_e=SD_E[::2])
+        go = grid_posterior(r_med, sig_m, TAU_PRIOR, H=x_m, prior_c=s_c, sd_e=SD_E[::2])
         w = go['w']
         c_m = go['a'][:, 1]; c_s = np.sqrt(go['P'][:, 1, 1])
         cdraw = c_m + c_s * rng.standard_normal(len(w))
@@ -317,10 +318,70 @@ def main():
         print(f'  {lab:13s} annual 2019-2023: '
               + ', '.join(f'{ser.loc[y]:.0f}' for y in fy) + ' (unaligned)')
 
+    # ── 8. Production drift state: sensitivity to the tau prior ──
+    grid = np.arange(1900, 2151, dtype=float)
+    fits = {pr_: fit_drift_state(smb_m, sig_m, x_m, b1, b2, yrs_m.astype(float), grid,
+                                 seed=610, prior=TAU_PRIOR if pr_ == 'production' else pr_)
+            for pr_ in ('production', 'wide')}
+    after = (grid > SPLICE) & (grid <= END)
+    dM = fits['wide']['M'] - fits['production']['M']
+    dD = (fits['wide']['delta'] - fits['production']['delta'])[:, after].sum(axis=1)
+    shift = -(after.sum() * dM + dD) / GT_PER_MM            # mm SLE at 2100
+    print('\nProduction drift state, tau prior production (lognormal 5-25 yr) vs wide (log-uniform 3-150 yr):')
+    for pr_, ft in fits.items():
+        print(f'  {pr_:6s}: tau {fmt(ft["tau"], f=".0f")} yr, M {fmt(ft["M"])}, '
+              f'delta_2018 {fmt(ft["delta"][:, grid == SPLICE][:, 0])} Gt/yr')
+    prod, new = {}, {}
+    with h5py.File(ROOT / 'data/processed/component_results.h5', 'r') as h:
+        for ssp in SSPS:
+            s_ = h[f'greenland/projections_smb/{ssp}/samples'][:, END - 1950] * 1000.0
+            prod[ssp], new[ssp] = s_, s_ + shift
+            print(f'  {ssp} SMB at 2100: production {fmt(s_)} -> wide {fmt(s_ + shift)} mm')
+
+    # ── 9. Comparison of tau priors ──
+    gw = grid_posterior(r_med, sig_m, 'wide')
+    prof = pd.Series(gw['ll']).groupby(gw['tau']).max()
+    print('\nProfile log-likelihood in tau (max over sigma_d, sigma_e), relative to its maximum:')
+    sel_t = [prof.index[np.argmin(np.abs(prof.index - t_))] for t_ in (3, 5, 8, 12, 20, 30, 50, 80, 120)]
+    print('  ' + ', '.join(f'{t_:.0f} yr {prof[t_] - prof.max():+.1f}' for t_ in sel_t))
+    i1972 = grid == yrs_m[0]
+    pre = (grid > 1900) & (grid <= yrs_m[0])
+    priors = {'lognormal 10-50': ('lognormal', 10.0, 50.0),
+              'lognormal 5-25 (production)': TAU_PRIOR,
+              'log-uniform 3-15': ('loguniform', 3.0, 15.0),
+              'log-uniform 3-10': ('loguniform', 3.0, 10.0)}
+    obs_al = {}
+    for lab, ser in (('Mankoff', pd.Series(mk['SMB'].values, index=yk)), ('IMBIE-3', im)):
+        yy = ser.index.intersection(mou_s.index); yy = yy[(yy >= 2010) & (yy <= 2018)]
+        obs_al[lab] = ser.loc[2019:2023].mean() - (ser.loc[yy] - mou_s.loc[yy]).mean()
+    base = fit_drift_state(smb_m, sig_m, x_m, b1, b2, yrs_m.astype(float), grid, seed=610,
+                           prior=TAU_PRIOR)
+    print('\nTau priors (production setup, seed 610):')
+    print('  prior                       tau          M     d1972  d2018  1900 shift  '
+          'CRPS 19-23 Mk/IM  2100 SMB shift vs production')
+    for lab, pr_ in priors.items():
+        ft = fit_drift_state(smb_m, sig_m, x_m, b1, b2, yrs_m.astype(float), grid, seed=610, prior=pr_)
+        ph = np.exp(-1 / ft['tau'])
+        # 1900-1971 hindcast: SMB rate differs from a fixed anchor by (M - M0) + delta
+        sh1900 = (pre.sum() * (ft['M'] - M0_draws) + ft['delta'][:, pre].sum(1)) / GT_PER_MM
+        # 2019-2023 forecast from the member's 2018 state (with its weather noise)
+        fc = (ft['M'][:, None] + ff + ft['delta'][:, (grid >= 2019) & (grid <= 2023)]
+              + ft['sd_e'][:, None] * np.random.default_rng(615).standard_normal(ff.shape)).mean(1)
+        cr = [crps(fc, obs_al[k]) for k in ('Mankoff', 'IMBIE-3')]
+        d21 = -(after.sum() * (ft['M'] - base['M'])
+                + (ft['delta'] - base['delta'])[:, after].sum(1)) / GT_PER_MM
+        print(f'  {lab:26s} {fmt(ft["tau"], f=".0f"):12s} {np.median(ft["M"]):4.0f} '
+              f'{np.median(ft["delta"][:, i1972]):+6.0f} {np.median(ft["delta"][:, grid == SPLICE]):+6.0f}  '
+              f'{np.median(sh1900):+5.1f} mm     {cr[0]:3.0f} / {cr[1]:3.0f}       '
+              f'{np.median(d21):+5.1f} mm (5-95 width {np.ptp(np.percentile(prod["SSP2-4.5"] + d21, [5, 95])):.0f} '
+              f'vs {np.ptp(np.percentile(prod["SSP2-4.5"], [5, 95])):.0f} at SSP2-4.5)')
+    print(f'  fixed anchor (before)      M0 {np.median(M0_draws):.0f}; 1900 shift 0 by definition; '
+          f'CRPS 19-23 {crps(pr_f.mean(1), obs_al["Mankoff"]):.0f} / {crps(pr_f.mean(1), obs_al["IMBIE-3"]):.0f}')
+
     # ── Figure ──
     fig, axes = plt.subplots(2, 2, figsize=(13, 9))
     ax = axes[0, 0]
-    tbest = post['narrow']
+    tbest = post['production']
     ib = np.argmax(tbest['w'])
     _, _, _, fmn, fsd, smn, ssd = kalman(r_med, sig_m, np.exp(-1 / tbest['tau'][ib]),
                                          tbest['sd_d'][ib], tbest['sd_e'][ib], return_path=True)
@@ -348,12 +409,12 @@ def main():
     ax.legend(fontsize=8); ax.grid(alpha=0.2)
 
     ax = axes[1, 0]
-    for prior, col in (('narrow', 'k'), ('wide', '#0072B2')):
+    for prior, col in (('production', 'k'), ('wide', '#0072B2')):
         gq = post[prior]
         mt = pd.Series(gq['w']).groupby(gq['tau']).sum()
         ax.plot(mt.index, mt.values / np.gradient(np.log(mt.index)), color=col, lw=2,
                 label=f'posterior, {prior} prior')
-        lp = np.exp(log_prior(TAU, np.zeros_like(TAU), prior))
+        lp = np.exp(log_prior(TAU, np.zeros_like(TAU), TAU_PRIOR if prior == 'production' else prior))
         ax.plot(TAU, lp / np.trapezoid(lp, np.log(TAU)) * 1.0, color=col, ls=':', lw=1.2,
                 label=f'prior, {prior}')
     ax.set_xscale('log'); ax.set_xlabel('tau (yr)'); ax.set_ylabel('density in log tau')
@@ -362,7 +423,8 @@ def main():
 
     ax = axes[1, 1]
     for i, ssp in enumerate(SSPS):
-        for j, (lab, s, col) in enumerate((('production', prod[ssp], '0.4'), ('with state', new[ssp], '#CC79A7'))):
+        for j, (lab, s, col) in enumerate((('tau prior 5-25 yr (production)', prod[ssp], '0.4'),
+                                            ('tau prior log-uniform 3-150 yr', new[ssp], '#CC79A7'))):
             lo, m, hi = np.percentile(s, [5, 50, 95])
             xp = i + (j - 0.5) * 0.25
             ax.plot([xp, xp], [lo, hi], color=col, lw=6, alpha=0.5, solid_capstyle='butt',
@@ -370,7 +432,7 @@ def main():
             ax.plot(xp, m, 'o', color=col)
     ax.set_xticks(range(len(SSPS))); ax.set_xticklabels(SSPS)
     ax.set_ylabel('SMB contribution 2000-2100 (mm SLE)')
-    ax.set_title('(d) 2100 SMB, median and 5-95%', fontsize=10)
+    ax.set_title('(d) Production 2100 SMB by tau prior, median and 5-95%', fontsize=10)
     ax.legend(fontsize=8); ax.grid(alpha=0.2, axis='y')
     OUT_FIG.parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout(); plt.savefig(OUT_FIG, dpi=150, bbox_inches='tight')

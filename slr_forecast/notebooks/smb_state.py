@@ -19,12 +19,30 @@ SD_E = np.linspace(20.0, 250.0, 47)
 
 
 # ── Priors on the grid ──
+# Production tau prior: lognormal with 90% range 5-25 yr, so the 90% upper
+# bound allows about two relaxation times within the 47-yr Mouginot record.
+# The record does not constrain tau (its likelihood is flat from about 10 to
+# over 100 yr), so tau is set by this prior.
+TAU_PRIOR = ('lognormal', 5.0, 25.0)
+
+
 def log_prior(tg, sdg, prior='narrow'):
-    if prior == 'narrow':          # lognormal, 5-95% = 10-50 yr
-        mu, s = np.log(np.sqrt(10 * 50)), np.log(5.0) / (2 * 1.645)
-        lp_tau = -0.5 * ((np.log(tg) - mu) / s) ** 2
-    else:                          # log-uniform over the grid
+    """Log prior on (tau, sigma_d) over the grid.  `prior` is 'narrow'
+    (lognormal, 90% range 10-50 yr), 'wide' (log-uniform over the grid), or
+    a tuple ('lognormal', lo, hi) with 90% range lo-hi yr, or
+    ('loguniform', lo, hi) with zero prior weight outside lo-hi yr."""
+    if prior == 'narrow':
+        prior = ('lognormal', 10.0, 50.0)
+    if prior == 'wide':
         lp_tau = np.zeros_like(tg)
+    elif prior[0] == 'lognormal':
+        lo, hi = prior[1], prior[2]
+        mu, s = np.log(np.sqrt(lo * hi)), np.log(hi / lo) / (2 * 1.645)
+        lp_tau = -0.5 * ((np.log(tg) - mu) / s) ** 2
+    elif prior[0] == 'loguniform':
+        lp_tau = np.where((tg >= prior[1]) & (tg <= prior[2]), 0.0, -np.inf)
+    else:
+        raise ValueError(f'unknown tau prior {prior!r}')
     lp_sd = -0.5 * (sdg / 150.0) ** 2
     return lp_tau + lp_sd
 
@@ -128,15 +146,67 @@ def ffbs(r, s_obs, phi, sd_d, sd_e, rng):
             a = a + K * v[:, None]
             P = P - np.einsum('bi,bj->bij', K, K) * Sv[:, None, None]
         af[:, t], Pf[:, t] = a, P
-    def draw(m, C):
-        L = np.linalg.cholesky(C + 1e-9 * np.eye(2))
-        return m + np.einsum('bij,bj->bi', L, rng.standard_normal((B, 2)))
+    # Last year: joint draw from the filtered distribution.
+    L = np.linalg.cholesky(Pf[:, -1] + 1e-9 * np.eye(2))
     out = np.empty((B, T, 2))
-    out[:, -1] = draw(af[:, -1], Pf[:, -1])
+    out[:, -1] = af[:, -1] + np.einsum('bij,bj->bi', L, rng.standard_normal((B, 2)))
+    # Backward: M is constant, so M_t = M_{t+1} exactly.  delta_t given M
+    # comes from the filtered joint, then is updated on the transition
+    # delta_{t+1} = phi delta_t + eta, eta ~ N(0, q).  With sigma_d = 0
+    # (q = 0 and zero prior variance) delta stays at its filtered mean.
     for t in range(T - 2, -1, -1):
-        Pp = np.einsum('bij,bjk,blk->bil', F, Pf[:, t], F); Pp[:, 1, 1] += q
-        J = np.einsum('bij,bkj,bkl->bil', Pf[:, t], F, np.linalg.inv(Pp))
-        m = af[:, t] + np.einsum('bij,bj->bi', J, out[:, t + 1] - np.einsum('bij,bj->bi', F, af[:, t]))
-        C = Pf[:, t] - np.einsum('bij,bjk,blk->bil', J, Pp, J)
-        out[:, t] = draw(m, 0.5 * (C + np.transpose(C, (0, 2, 1))))
+        M = out[:, t + 1, 0]
+        Pmm, Pdm, Pdd = Pf[:, t, 0, 0], Pf[:, t, 1, 0], Pf[:, t, 1, 1]
+        m = af[:, t, 1] + Pdm / Pmm * (M - af[:, t, 0])
+        v = np.maximum(Pdd - Pdm ** 2 / Pmm, 0.0)
+        pos = (v > 0) & (q > 0)
+        vs = np.where(pos, 1.0 / (1.0 / np.where(pos, v, 1.0) + phi ** 2 / np.where(pos, q, 1.0)), 0.0)
+        ms = np.where(pos, vs * (m / np.where(pos, v, 1.0) + phi * out[:, t + 1, 1] / np.where(pos, q, 1.0)), m)
+        out[:, t, 0] = M
+        out[:, t, 1] = ms + np.sqrt(vs) * rng.standard_normal(B)
     return out
+
+
+def fit_drift_state(smb_obs, sig_obs, x_obs, b1, b2, years_obs, grid_years, seed,
+                    prior=TAU_PRIOR):
+    """Fit the drift state to an observed SMB record and extend it to a grid.
+
+    smb_obs, sig_obs : observed SMB and its reported error (Gt/yr, mass gain)
+        on consecutive years `years_obs`
+    x_obs : emulator driver (GMST anomaly) on `years_obs`
+    b1, b2 : (n,) emulator members; f_k(x) = b1 x + b2 x^2
+    grid_years : consecutive years spanning `years_obs` (the projection grid)
+
+    The hyperparameters come from the grid posterior on the residual about
+    the median emulator; each member draws (tau, sigma_d, sigma_e) from it
+    and one joint path of (M, delta) through the record by forward
+    filtering and backward sampling.  Off the record delta is the member's
+    AR(1) continued forward from the last year and backward from the first
+    (a stationary AR(1) is time-reversible).
+
+    Returns dict: 'M' (n,), 'delta' (n, len(grid_years)), 'tau', 'sd_d',
+    'sd_e' (n,), and 'posterior' (the grid posterior).
+    """
+    years_obs = np.asarray(years_obs, float)
+    grid_years = np.asarray(grid_years, float)
+    if np.any(np.diff(years_obs) != 1) or np.any(np.diff(grid_years) != 1):
+        raise ValueError('years_obs and grid_years must be consecutive years')
+    b1, b2 = np.asarray(b1, float), np.asarray(b2, float)
+    f = b1[:, None] * x_obs[None, :] + b2[:, None] * x_obs[None, :] ** 2
+    gp = grid_posterior(smb_obs - np.median(f, axis=0), sig_obs, prior)
+    rng = np.random.default_rng(seed)
+    pk = rng.choice(len(gp['w']), size=len(b1), p=gp['w'])
+    tau, sd_d, sd_e = gp['tau'][pk], gp['sd_d'][pk], gp['sd_e'][pk]
+    phi = np.exp(-1.0 / tau)
+    paths = ffbs(smb_obs[None, :] - f, sig_obs, phi, sd_d, sd_e, rng)
+    i0 = int(np.where(grid_years == years_obs[0])[0][0])
+    i1 = i0 + len(years_obs) - 1
+    q = sd_d * np.sqrt(1.0 - phi ** 2)
+    delta = np.empty((len(b1), len(grid_years)))
+    delta[:, i0:i1 + 1] = paths[:, :, 1]
+    for t in range(i1 + 1, len(grid_years)):
+        delta[:, t] = phi * delta[:, t - 1] + q * rng.standard_normal(len(b1))
+    for t in range(i0 - 1, -1, -1):
+        delta[:, t] = phi * delta[:, t + 1] + q * rng.standard_normal(len(b1))
+    return {'M': paths[:, -1, 0], 'delta': delta, 'tau': tau, 'sd_d': sd_d,
+            'sd_e': sd_e, 'posterior': gp}

@@ -328,7 +328,8 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
 class EmulatorSummary:
     """Attributes stored in component_results.h5 under smb_sensitivity."""
 
-    def __init__(self, emulator, M0, M0_sigma=None, noise=False, feedback=False):
+    def __init__(self, emulator, M0, M0_sigma=None, noise=False, feedback=False,
+                 drift=None):
         gcms = list(emulator['fits'])
         self.reference = ('Statistical emulator of MARv3.12 driven by CMIP6 GCMs '
                           '(PROTECT ensemble): ' + ', '.join(gcms))
@@ -338,6 +339,12 @@ class EmulatorSummary:
         if M0_sigma is not None:
             self.extra_attrs['SMB_0_sigma'] = float(M0_sigma)
         self.extra_attrs['ar1_noise'] = int(bool(noise))
+        if drift is not None:
+            # drift state from smb_state.fit_drift_state
+            for k in ('tau', 'sd_d', 'sd_e'):
+                self.extra_attrs[f'drift_{k}_median'] = float(np.median(drift[k]))
+            self.extra_attrs['drift_state'] = ('AR(1) drift state fitted to Mouginot SMB '
+                                               '1972-2018; white weather noise sd_e')
         if feedback:
             self.extra_attrs['elevation_feedback'] = (
                 f'Fettweis et al. 2013: eps ~ N({FB_EPS_MEAN}, {FB_EPS_SD}) trunc. 0, '
