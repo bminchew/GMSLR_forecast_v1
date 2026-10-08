@@ -41,7 +41,8 @@ SSP = 'SSP2-4.5'
 ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
 P_STABLE = 0.10            # AR6 prior
 # Defense heights searched. The upper end must exceed every optimum; the
-# S2 optimum at 2100 is 2.85 m, and _check_interior enforces this.
+# S2 optimum at 2100 is about 2.8 m (SSP2-4.5), and _check_interior
+# enforces that every optimum stays inside the grid.
 D_GRID = np.arange(0.3, 8.0, 0.05)
 DR = 0.03                  # discount rate
 HORIZON = 75               # planning horizon (years)
