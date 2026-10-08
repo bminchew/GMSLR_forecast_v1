@@ -21,7 +21,8 @@ Steps
 Fits are generalised least squares in rate space with no prior on b.
 Zemp's geodetic uncertainty (sig_Geod) is constant over long periods and is
 treated as fully correlated across years; its other components, and the
-GlaMBIE errors, as independent. T is Berkeley Earth annual GMST relative to
+GlaMBIE errors, as independent; Zemp's 95% intervals are converted to
+1 sigma (slr_data_readers.read_zemp2019_global). T is Berkeley Earth annual GMST relative to
 1995-2005; for Zemp's hydrological years (October to September, labelled by
 the end year) T is 0.25 T(Y-1) + 0.75 T(Y). Intervals are 90%, inflated by
 sqrt(chi2/dof) where that exceeds 1. Nothing here feeds the pipeline.
@@ -36,6 +37,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
+import sys
+sys.path.insert(0, str(ROOT / 'notebooks'))
+from slr_data_readers import read_zemp2019_global
 ZEMP = ROOT / 'data/raw/glaciers/zemp2019/Zemp_etal_results_global.csv'
 GLAMBIE = (ROOT / 'data/raw/glaciers/glambie/GlaMBIE_Data_DOI_10.5904_wgms-glambie-2024-07/'
            'glambie_results_20240716/calendar_years/0_global.csv')
@@ -51,13 +55,9 @@ def load():
     T = be['temperature'].groupby(be.index.year).mean()
     T = T - T.loc[1995:2005].mean()
 
-    z = pd.read_csv(ZEMP, comment='#', skipinitialspace=True).set_index('Year')
-    z = pd.DataFrame({
-        'rate': -z['INT_Gt'] / GT_PER_MM,                                   # mm/yr SLE, + = SLR
-        'sig_ind': np.sqrt(z['sig_Glac_Gt']**2 + z['sig_Int_Gt']**2 + z['sig_Area_Gt']**2
-                           + z['sig_Crossed_Gt']**2) / GT_PER_MM,
-        'sig_cor': z['sig_Geod_Gt'] / GT_PER_MM,
-        'T': 0.25 * T.reindex(z.index - 1).values + 0.75 * T.reindex(z.index).values})
+    z = read_zemp2019_global(str(ZEMP)) * 1000.0                         # mm/yr SLE, 1 sigma
+    z = pd.DataFrame({'rate': z['rate'], 'sig_ind': z['sigma_ind'], 'sig_cor': z['sigma_cor'],
+                      'T': 0.25 * T.reindex(z.index - 1).values + 0.75 * T.reindex(z.index).values})
 
     g = pd.read_csv(GLAMBIE)
     g = pd.DataFrame({'rate': -g['combined_gt'].values / GT_PER_MM,

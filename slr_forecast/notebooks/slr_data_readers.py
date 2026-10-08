@@ -2878,6 +2878,60 @@ def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFr
     return df
 
 
+
+def read_zemp2019_global(filepath: str) -> pd.DataFrame:
+    """
+    Read Zemp et al. (2019) global glacier mass change, 1962-2016.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to ``Zemp_etal_results_global.csv`` (Data Table 2, Zenodo
+        doi:10.5281/zenodo.1492141).
+
+    Returns
+    -------
+    pd.DataFrame
+        Indexed by hydrological year (October to September, labelled by
+        the end year), with columns
+        rate (m SLE/yr, positive = sea-level contribution),
+        sigma_ind (m SLE/yr, 1-sigma; glaciological, interpolation, area and
+        crossed terms, independent between years), and
+        sigma_cor (m SLE/yr, 1-sigma; the geodetic term, fully correlated
+        between years).
+
+    Notes
+    -----
+    - All 19 RGI regions, including the Greenland (RGI 5) and Antarctic
+      (RGI 19) peripheries, as in GlaMBIE's global total.
+    - Multi-year uncertainties follow Zemp et al.'s own prescription (their
+      Data Table 3): independent terms add in quadrature and the geodetic
+      term adds linearly.
+    - Zemp et al. give uncertainties as 95% confidence intervals (their
+      1961-2016 total, 27 +/- 22 mm, is reproduced by the rule above); this
+      reader divides them by 1.96 so that sigma_ind and sigma_cor are 1-sigma.
+    - Gt are converted with this project's 362.5 Gt per mm SLE (Zemp et al.
+      use 362).
+
+    Reference
+    ---------
+    Zemp, M. et al. (2019). Global glacier mass changes and their
+    contributions to sea-level rise from 1961 to 2016. Nature 568, 382-386.
+    https://doi.org/10.1038/s41586-019-1071-0
+    """
+    df = pd.read_csv(filepath, comment='#', skipinitialspace=True).set_index('Year')
+    gt_to_m = 1.0 / 362500.0
+    z95 = 1.96                                  # 95% half-width -> 1 sigma
+    out = pd.DataFrame({
+        'rate': -df['INT_Gt'] * gt_to_m,
+        'sigma_ind': np.sqrt(df['sig_Glac_Gt'] ** 2 + df['sig_Int_Gt'] ** 2
+                             + df['sig_Area_Gt'] ** 2 + df['sig_Crossed_Gt'] ** 2) * gt_to_m / z95,
+        'sigma_cor': df['sig_Geod_Gt'] * gt_to_m / z95,
+    })
+    out.index.name = 'hydrological_year'
+    return out
+
+
 def read_glambie_regional(filepath: str, convert_to_sle: bool = True) -> pd.DataFrame:
     """
     Read a GlaMBIE regional glacier mass balance CSV.
