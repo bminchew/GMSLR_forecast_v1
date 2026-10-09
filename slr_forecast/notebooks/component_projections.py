@@ -1819,3 +1819,71 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
                                   * dt_f[j - 1])
 
     return forecast_samples, f_years, w_t
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Uncharted glaciers (hindcast only)
+# ═══════════════════════════════════════════════════════════════════════
+
+# Parkes & Marzeion (2018, Nature 563, 551-554): mean SLE contribution of
+# uncharted (missing + disappeared) glaciers, lower / upper bound, mm/yr.
+UNCHARTED_RATE_1901_1990 = (0.17, 0.53)
+UNCHARTED_RATE_1993_2010 = (0.08, 0.21)
+UNCHARTED_END_YEAR = 2000    # zero from here on: covered by GlaMBIE (see below)
+
+
+def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None):
+    """Sea-level contribution of glaciers missing from modern inventories.
+
+    Parkes & Marzeion (2018) estimate that glaciers too small to be in the
+    Randolph Glacier Inventory ('missing') or that melted away after 1901
+    ('disappeared') added 16.7-48.0 mm SLE over 1901-2015, at mean rates of
+    0.17-0.53 mm/yr over 1901-1990 and 0.08-0.21 mm/yr over 1993-2010
+    (lower/upper bounds), largest early in the century. GlaMBIE and Zemp et
+    al. (2019) are built on inventoried glacier area, so the calibrated
+    glacier model does not contain this term before 2000.
+
+    Shape (our construction from those period means): for each bound the
+    rate falls linearly from 2*r1 - r2 in 1901 to r2 in 1990 (so its
+    1901-1990 mean is r1) and stays at r2 through 1999; it is zero before
+    1901. It is set to zero from 2000, the start of the GlaMBIE calibration
+    record, because GlaMBIE's gravimetric and altimetric inputs measure
+    whole-region mass and may already include these glaciers; the term
+    remaining after 2000 is at most r2 = 0.08-0.21 mm/yr. Each sample takes
+    a uniform position between the two bounds (they are bounds, not a
+    confidence interval) and is scaled by N(1, 0.09) for the 95% ranges of
+    the published totals (16.7 +/- 3.0 and 48.0 +/- 8.9 mm).
+
+    Parameters
+    ----------
+    years : array_like
+        Output years (annual grid; level is taken at the end of each year).
+    n_samples : int
+    baseline_year : float
+        Level is rebased to zero here (SLR-positive, so negative before).
+    seed : int, optional
+
+    Returns
+    -------
+    np.ndarray, shape (n_samples, len(years))
+        Cumulative contribution in metres SLE, rebased to ``baseline_year``.
+    """
+    years = np.asarray(years, dtype=float)
+    yy = np.arange(1900, max(int(years.max()), int(baseline_year)) + 1)
+
+    def profile(r1, r2):
+        r = np.zeros(len(yy))
+        early = (yy >= 1901) & (yy <= 1990)
+        r[early] = (2 * r1 - r2) + (r2 - (2 * r1 - r2)) * (yy[early] - 1901) / 89.0
+        r[(yy > 1990) & (yy < UNCHARTED_END_YEAR)] = r2
+        return r * 1e-3                                     # m/yr
+
+    lo = profile(UNCHARTED_RATE_1901_1990[0], UNCHARTED_RATE_1993_2010[0])
+    hi = profile(UNCHARTED_RATE_1901_1990[1], UNCHARTED_RATE_1993_2010[1])
+    rng = np.random.default_rng(seed)
+    u = rng.uniform(size=(n_samples, 1))
+    scale = rng.normal(1.0, 0.09, size=(n_samples, 1))
+    level = np.cumsum((lo + u * (hi - lo)) * scale, axis=1)
+    level -= level[:, [int(np.argmin(np.abs(yy - baseline_year)))]]
+    idx = np.clip(np.searchsorted(yy, np.floor(years).astype(int)), 0, len(yy) - 1)
+    return level[:, idx]

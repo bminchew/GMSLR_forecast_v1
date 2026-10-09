@@ -2958,12 +2958,25 @@ def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
                                 Sigma_inv_fixed, log_det_Sigma_fixed,
                                 prior_scales, H0_prior_mean, H0_prior_sigma,
                                 n_phys, fit_sigma_extra, prior_b_mean=0.0,
-                                symmetric_a=False, symmetric_b=False):
+                                symmetric_a=False, symmetric_b=False,
+                                balance_T_eq0=None):
     """Log-posterior with the true (correlated) cumulative-record covariance.
 
     theta = [ (a,) b, c ] (+ log_sigma_extra if fit_sigma_extra) + [H0]
+
+    With ``balance_T_eq0 = (mean, sigma)`` the slot of c holds T_eq0 instead,
+    with a Normal(mean, sigma) prior, and c = -(a T_eq0^2 + b T_eq0), so the
+    rate is zero at T = T_eq0 (prior_scales' c prior is then not used).
     """
     phys = theta[:n_phys]
+    lp_bal = 0.0
+    if balance_T_eq0 is not None:
+        T_eq0 = phys[-1]
+        a_ = phys[0] if n_phys == 3 else 0.0
+        b_ = phys[-2]
+        phys = np.r_[phys[:-1], -(a_ * T_eq0**2 + b_ * T_eq0)]
+        lp_bal = -0.5 * ((T_eq0 - balance_T_eq0[0]) / balance_T_eq0[1])**2
+        prior_scales = np.r_[prior_scales[:3], np.inf, prior_scales[4:]]
     if fit_sigma_extra:
         log_sigma_extra = theta[n_phys]
         H0 = theta[n_phys + 1]
@@ -2977,6 +2990,7 @@ def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
                                       symmetric_b=symmetric_b)
     if not np.isfinite(lp):
         return -np.inf
+    lp += lp_bal
 
     if fit_sigma_extra:
         sigma_extra = np.exp(log_sigma_extra)
@@ -3030,6 +3044,7 @@ def fit_bayesian_level_annual_correlated(
     fit_sigma_extra: bool = False,
     symmetric_a: bool = False,
     symmetric_b: bool = False,
+    balance_T_eq0: Optional[Tuple[float, float]] = None,
     n_samples: int = 4000,
     n_walkers: int = 32,
     n_burnin: int = 2000,
@@ -3086,6 +3101,14 @@ def fit_bayesian_level_annual_correlated(
         how tight or loose this prior is), the exact value chosen here
         has little effect -- state it as a physically small, honest
         number (e.g. a couple of mm) rather than tuning it.
+    balance_T_eq0 : (float, float), optional
+        (mean, sigma) of a Normal prior on T_eq0, the temperature (same
+        baseline as ``temperature``) at which the component was in balance.
+        When given, c is not a free parameter: c = -(a T_eq0^2 + b T_eq0),
+        so the rate is zero at T_eq0, and T_eq0 is sampled in c's place
+        (prior_c_mean / prior_c_sigma are ignored). ``posterior_samples``
+        still holds [a, b, c]; the T_eq0 draws are in
+        ``design_info['T_eq0_samples']``.
     fit_sigma_extra : bool
         Default False, matching the validated rate-space choice (no
         excess scatter beyond the reported GlaMBIE sigmas). If True,
@@ -3149,6 +3172,10 @@ def fit_bayesian_level_annual_correlated(
             print(f"  Priors: {b_prior_str}, "
                   f"c~N({prior_c_mean*1e3:.1f}, {prior_c_sigma*1e3:.1f}), "
                   f"H0~N({prior_H0_mean*1e3:.2f}, {prior_H0_sigma*1e3:.2f}) mm")
+        if balance_T_eq0 is not None:
+            print(f"  Balance: c = -(a T_eq0^2 + b T_eq0), "
+                  f"T_eq0~N({balance_T_eq0[0]:+.3f}, {balance_T_eq0[1]:.3f}) degC "
+                  f"(replaces the c prior)")
 
     # ---- OLS initialization ----
     if order == 2:
@@ -3176,8 +3203,17 @@ def fit_bayesian_level_annual_correlated(
     b0_init = b0 if symmetric_b else max(b0, 1e-6)
     if not symmetric_b and prior_b_mean > 0 and b0_init <= 0:
         b0_init = prior_b_mean
-    center += [b0_init, c0]
-    scale += [max(abs(b0) * 0.1, 1e-6), max(abs(c0) * 0.1, 1e-6)]
+    if balance_T_eq0 is None:
+        center += [b0_init, c0]
+        scale += [max(abs(b0) * 0.1, 1e-6), max(abs(c0) * 0.1, 1e-6)]
+    else:
+        # Start T_eq0 at its prior, and b at the balance-constrained least-
+        # squares value (H = b (I1 - T_eq0 I0) + H0), not the free OLS fit.
+        Xb = np.column_stack([I1_obs - balance_T_eq0[0] * I0_obs, np.ones(n)])
+        b_bal = np.linalg.lstsq(Xb, H_obs, rcond=None)[0][0]
+        b0_init = b_bal if symmetric_b else max(b_bal, 1e-6)
+        center += [b0_init, balance_T_eq0[0]]
+        scale += [max(abs(b_bal) * 0.05, 1e-6), 0.1 * balance_T_eq0[1]]
     if fit_sigma_extra:
         center += [np.log(sigma_extra_0)]
         scale += [0.2]
@@ -3201,7 +3237,8 @@ def fit_bayesian_level_annual_correlated(
               prior_scales, prior_H0_mean, prior_H0_sigma,
               n_phys, fit_sigma_extra),
         kwargs={'prior_b_mean': prior_b_mean,
-                'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b},
+                'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b,
+                'balance_T_eq0': balance_T_eq0},
     )
     # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
     if seed is not None:
@@ -3210,7 +3247,13 @@ def fit_bayesian_level_annual_correlated(
 
     # ---- Post-process ----
     flat_chain = sampler.get_chain(discard=n_burnin, thin=thin, flat=True)
-    phys_flat = flat_chain[:, :n_phys]
+    phys_flat = flat_chain[:, :n_phys].copy()
+    T_eq0_samples = None
+    if balance_T_eq0 is not None:
+        T_eq0_samples = phys_flat[:, -1].copy()
+        a_s = phys_flat[:, 0] if n_phys == 3 else 0.0
+        phys_flat[:, -1] = -(a_s * T_eq0_samples**2
+                             + phys_flat[:, -2] * T_eq0_samples)
     if order == 2:
         phys_samples = phys_flat
     else:
@@ -3252,6 +3295,8 @@ def fit_bayesian_level_annual_correlated(
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
     n_chains_arviz = min(4, n_walkers)
     param_names = (['a', 'b', 'c'] if order == 2 else ['b', 'c'])
+    if balance_T_eq0 is not None:
+        param_names[-1] = 'T_eq0'
     if fit_sigma_extra:
         param_names = param_names + ['log_sigma_extra']
     param_names = param_names + ['H0']
@@ -3281,7 +3326,9 @@ def fit_bayesian_level_annual_correlated(
         design_info={'prior_scales': prior_scales,
                      'param_names': param_names,
                      'H0_prior_mean': prior_H0_mean,
-                     'H0_prior_sigma': prior_H0_sigma},
+                     'H0_prior_sigma': prior_H0_sigma,
+                     'balance_T_eq0': balance_T_eq0,
+                     'T_eq0_samples': T_eq0_samples},
         chi2_dof=chi2_dof,
     )
 
