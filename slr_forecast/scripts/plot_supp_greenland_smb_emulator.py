@@ -59,55 +59,110 @@ def segments_xy(g, mar, temp):
     return [(n, xs.loc[ys.index].values, ys.values) for n, ys, xs in segs]
 
 
+# ── Print geometry (Figs. S6, S7) ────────────────────────────────────────
+# The supplement is 12-pt article, 1-in margins, letter paper: \textwidth =
+# 6.5 in. Figures are drawn at that width, saved without bbox cropping, and
+# included at width=\textwidth (scale 1.0), so these are the printed sizes,
+# within 2 pt of the 12-pt body text.
+PRINT_W = 6.5
+FS_TICK, FS_LABEL = 10, 11
+SCEN_MARKER = {'history': 'o', 'ssp126': 'v', 'ssp245': 's', 'ssp585': 'o'}
+
+
+def print_style():
+    plt.rcParams.update({'font.size': FS_TICK, 'axes.titlesize': FS_TICK,
+                         'axes.labelsize': FS_LABEL, 'xtick.labelsize': FS_TICK,
+                         'ytick.labelsize': FS_TICK, 'legend.fontsize': FS_TICK,
+                         'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
+                         'ytick.major.width': 0.6, 'xtick.major.size': 2.5,
+                         'ytick.major.size': 2.5, 'lines.linewidth': 1.2})
+
+
+def save_print(fig, stem):
+    for ext, kw in (('png', dict(dpi=300)), ('pdf', {})):
+        out = FIG / f'{stem}.{ext}'
+        fig.savefig(out, **kw)
+    plt.close(fig)
+    print(f'saved {FIG / stem}.png/.pdf')
+
+
+def ellipse90(ax, x, y, **kw):
+    """90% ellipse of a bivariate normal fitted to the draws (chi2_2 = 4.605)."""
+    from matplotlib.patches import Ellipse
+    cov = np.cov(x, y)
+    val, vec = np.linalg.eigh(cov)
+    ang = np.degrees(np.arctan2(vec[1, 1], vec[0, 1]))
+    w, h = 2 * np.sqrt(4.605 * val[::-1])
+    ax.add_patch(Ellipse((np.median(x), np.median(y)), w, h, angle=ang, fill=False, **kw))
+    major = vec[:, 1] * np.sqrt(4.605 * val[1])
+    return np.median(x), np.median(y), major
+
+
 # ── Figure 1: fits and coefficients ──────────────────────────────────────
 def fig_fit(emu, mar, temp):
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8.4))
+    print_style()
+    fig, axes = plt.subplots(3, 3, figsize=(PRINT_W, 6.6), layout='constrained')
+    fig.get_layout_engine().set(w_pad=0.03, h_pad=0.03, wspace=0.05, hspace=0.05)
     axes = axes.ravel()
     xg = np.linspace(-0.8, 6.7, 200)
     for k, g in enumerate(S.GCMS):
         ax = axes[k]
         for n, x, y in segments_xy(g, mar, temp):
-            ax.scatter(x, to_slr(y), s=9, color=SEG_COLOR[n], alpha=0.7, lw=0,
-                       label='history' if n == 'history' else SCEN_LABEL[n])
+            ax.scatter(x, to_slr(y), s=5, color=SEG_COLOR[n], marker=SCEN_MARKER[n],
+                       alpha=0.75, lw=0)
         f = emu['fits'][g]
         lo, hi = f['x_range']
         xs = xg[(xg >= lo) & (xg <= hi)]
         B = f['beta']
         curve = to_slr(B[:, [0]] + B[:, [1]] * xs + B[:, [2]] * xs**2)
         ax.fill_between(xs, *np.percentile(curve, [5, 95], 0), color='k', alpha=0.25, lw=0)
-        ax.plot(xs, np.median(curve, 0), 'k', lw=1.5)
-        ax.set_title(g, fontsize=14)
-        ax.axhline(0, color='0.7', lw=0.6)
+        ax.plot(xs, np.median(curve, 0), 'k', lw=1.2)
+        ax.set_title(f'({chr(97 + k)}) {g}', loc='left', pad=2)
+        ax.axhline(0, color='0.7', lw=0.5)
         ax.set_xlim(-0.9, 6.8); ax.set_ylim(-1.2, 7.0)
-        if k % 4 == 0:
-            ax.set_ylabel('SMB contribution\n(mm SLE yr$^{-1}$)', fontsize=13)
-        if k >= 4:
-            ax.set_xlabel(r'Temperature anomaly $T$ ($^\circ$C)', fontsize=13)
-        ax.tick_params(labelsize=12)
-    h, l = axes[0].get_legend_handles_labels()
-    h2, l2 = axes[1].get_legend_handles_labels()
-    seen = dict(zip(l + l2, h + h2))
-    order = [s for s in ['history', 'SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5'] if s in seen]
-    axes[0].legend([seen[s] for s in order], order, fontsize=11, loc='upper left',
-                   bbox_to_anchor=(0.0, 0.92), markerscale=2, frameon=False)
+        ax.set_xticks([0, 2, 4, 6]); ax.set_yticks([0, 2, 4, 6])
+        ax.tick_params(pad=1.5)
+        if k % 3:
+            ax.tick_params(labelleft=False)
+        if k < 4:                                   # panels with a GCM panel below
+            ax.tick_params(labelbottom=False)
+        else:
+            ax.set_xlabel(r'$T$ ($^\circ$C)')
+        if k % 3 == 0:
+            ax.set_ylabel('SMB contribution\n(mm SLE yr$^{-1}$)')
 
     ax = axes[7]
-    for g in S.GCMS:
-        B = emu['fits'][g]['beta'][:600]
-        ax.scatter(to_slr(B[:, 1]), to_slr(B[:, 2]), s=3, color=GCM_COLOR[g], alpha=0.35,
-                   lw=0, label=g)
-    ax.set_xlabel(r'$b_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)', fontsize=13)
-    ax.set_ylabel(r'$a_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)', fontsize=13)
-    ax.tick_params(labelsize=12)
-    ax.legend(fontsize=10, markerscale=4, frameon=True, framealpha=0.85,
-              facecolor='white', edgecolor='none', loc='lower left')
-    for k, ax in enumerate(axes):
-        ax.text(0.03, 0.97, f'({chr(97 + k)})', transform=ax.transAxes,
-                fontweight='bold', fontsize=13, va='top')
-    fig.tight_layout()
-    out = FIG / 'supp_greenland_smb_emulator_fit.png'
-    fig.savefig(out, dpi=200, bbox_inches='tight'); plt.close(fig)
-    print(f'saved {out}')
+    cents = {}
+    for k, g in enumerate(S.GCMS):
+        B = emu['fits'][g]['beta']
+        cx, cy, _ = ellipse90(ax, to_slr(B[:, 1]), to_slr(B[:, 2]), color='0.15', lw=0.8)
+        cents[g] = (k, cx, cy)
+    # labels in a column right of the ellipses, ordered by a_gris, with leader lines
+    order = sorted(S.GCMS, key=lambda g: -cents[g][2])
+    for i, g in enumerate(order):
+        k, cx, cy = cents[g]
+        ly = 0.200 - i * 0.025
+        ax.annotate(f'({chr(97 + k)})', (cx, cy), xytext=(0.53, ly), textcoords='data',
+                    ha='left', va='center', fontsize=FS_TICK,
+                    arrowprops=dict(arrowstyle='-', color='0.55', lw=0.5,
+                                    shrinkA=1, shrinkB=0))
+    ax.set_title('(h) Posteriors, 90%', loc='left', pad=2)
+    ax.set_xlabel(r'$b_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)')
+    ax.set_ylabel(r'$a_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)')
+    ax.set_xlim(-0.3, 0.68); ax.set_ylim(0.0, 0.22)
+    ax.set_xticks([-0.2, 0, 0.2, 0.4]); ax.set_yticks([0, 0.1, 0.2])
+    ax.tick_params(pad=1.5)
+
+    leg = axes[8]; leg.axis('off')
+    h = [plt.Line2D([], [], ls='', marker=SCEN_MARKER[n], color=SEG_COLOR[n], ms=4)
+         for n in ['history', 'ssp126', 'ssp245', 'ssp585']]
+    h += [plt.Line2D([], [], color='k', lw=1.2),
+          plt.Rectangle((0, 0), 1, 1, color='k', alpha=0.25, lw=0)]
+    leg.legend(h, ['History', 'SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5', 'Fit, median', 'Fit, 90%'],
+               loc='center', frameon=False, borderaxespad=0, labelspacing=0.4)
+    save_print(fig, 'supp_greenland_smb_emulator_fit')
+
+
 
 
 # ── Figure 2: leave-one-GCM-out ──────────────────────────────────────────
@@ -143,38 +198,37 @@ def lomo(emu, mar, temp, rng):
 
 
 def fig_lomo(df):
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 5.4), gridspec_kw={'width_ratios': [1, 1.25]})
+    print_style()
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(PRINT_W, 3.9), layout='constrained',
+                                 gridspec_kw={'width_ratios': [1, 1.05]})
+    fig.get_layout_engine().set(w_pad=0.03, h_pad=0.03, wspace=0.06)
     for _, r in df.iterrows():
         c = SSP_COLORS[SCEN_LABEL[r.scen]]
-        a1.errorbar(r.pred, r.actual, xerr=[[r.pred - r.lo], [r.hi - r.pred]], fmt='o',
-                    color=c, ms=5, elinewidth=1, capsize=0)
+        a1.errorbar(r.pred, r.actual, xerr=[[r.pred - r.lo], [r.hi - r.pred]], ls='',
+                    marker=SCEN_MARKER[r.scen], color=c, ms=4, elinewidth=0.9, capsize=0)
     lim = [0, df[['actual', 'hi']].max().max() * 1.05]
     a1.plot(lim, lim, color='0.5', lw=0.8, ls='--')
-    a1.set_xlim(lim); a1.set_ylim(lim)
-    a1.set_xlabel('Emulator prediction (mm SLE)', fontsize=12)
-    a1.set_ylabel('MAR (mm SLE)', fontsize=12)
-    for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5']:
-        a1.plot([], [], 'o', color=SSP_COLORS[s], label=s)
-    a1.legend(fontsize=10, frameon=False, loc='lower right')
+    a1.set_xlim(lim); a1.set_ylim(lim); a1.set_aspect('equal')
+    a1.set_xlabel('Emulator prediction (mm SLE)')
+    a1.set_ylabel('MAR (mm SLE)')
+    for s, n in [('SSP1-2.6', 'ssp126'), ('SSP2-4.5', 'ssp245'), ('SSP5-8.5', 'ssp585')]:
+        a1.plot([], [], ls='', marker=SCEN_MARKER[n], color=SSP_COLORS[s], ms=4, label=s)
+    a1.legend(frameon=False, loc='lower right', borderaxespad=0.2, handletextpad=0.2)
 
-    xs = np.arange(len(df))
-    for i, (_, r) in enumerate(df.iterrows()):
+    ys = np.arange(len(df))[::-1]
+    for y, (_, r) in zip(ys, df.iterrows()):
         c = SSP_COLORS[SCEN_LABEL[r.scen]]
-        a2.errorbar(i, r.miss, yerr=[[r.hi - r.pred], [r.pred - r.lo]], fmt='o', color=c,
-                    ms=5, elinewidth=1.2, capsize=0)
-    a2.axhline(0, color='0.5', lw=0.8, ls='--')
-    a2.set_xticks(xs)
-    a2.set_xticklabels([f'{r.gcm} {SCEN_LABEL[r.scen]}' for _, r in df.iterrows()],
-                       rotation=60, ha='right', fontsize=9)
-    a2.set_ylabel('MAR minus emulator (mm SLE)', fontsize=12)
+        a2.errorbar(r.miss, y, xerr=[[r.pred - r.lo], [r.hi - r.pred]], ls='',
+                    marker=SCEN_MARKER[r.scen], color=c, ms=4, elinewidth=0.9, capsize=0)
+    a2.axvline(0, color='0.5', lw=0.8, ls='--')
+    a2.set_yticks(ys)
+    a2.set_yticklabels([f'{r.gcm} {SCEN_LABEL[r.scen]}' for _, r in df.iterrows()])
+    a2.set_ylim(-0.7, len(df) - 0.3)
+    a2.set_xlabel('MAR minus emulator (mm SLE)')
     for ax, lab in [(a1, '(a)'), (a2, '(b)')]:
-        ax.text(0.02, 0.97, lab, transform=ax.transAxes, fontweight='bold', fontsize=12,
-                va='top')
-        ax.tick_params(labelsize=10)
-    fig.tight_layout()
-    out = FIG / 'supp_greenland_smb_lomo.png'
-    fig.savefig(out, dpi=200, bbox_inches='tight'); plt.close(fig)
-    print(f'saved {out}')
+        ax.set_title(lab, loc='left', pad=2)
+        ax.tick_params(pad=1.5)
+    save_print(fig, 'supp_greenland_smb_lomo')
 
 
 # ── Figure 3: observed-GMST hindcast ─────────────────────────────────────
@@ -225,30 +279,30 @@ def fig_hindcast(emu, rng):
         e[:, k] = rho * e[:, k - 1] + sig * rng.standard_normal(N)
     weather = forced + e
 
-    fig, ax = plt.subplots(figsize=(10, 4.8))
+    print_style()
+    fig, ax = plt.subplots(figsize=(PRINT_W, 3.4), layout='constrained')
+    fig.get_layout_engine().set(w_pad=0.03, h_pad=0.03)
     ax.fill_between(years, *np.percentile(to_slr(weather), [5, 95], 0), color='#2E8B57',
                     alpha=0.12, lw=0, label='Emulator with weather noise, 90%')
     ax.fill_between(years, *np.percentile(to_slr(forced), [5, 95], 0), color='#2E8B57',
                     alpha=0.35, lw=0, label='Emulator forced response, 90%')
-    ax.plot(years, np.median(to_slr(forced), 0), color='#2E8B57', lw=2,
+    ax.plot(years, np.median(to_slr(forced), 0), color='#2E8B57', lw=1.2,
             label='Emulator forced response, median')
-    ax.plot(mou_smb.index, to_slr(mou_smb.values), 'o', color='k', ms=4,
+    ax.plot(mou_smb.index, to_slr(mou_smb.values), 'o', color='k', ms=3,
             label='Mouginot et al. (2019), sets $c_{gris}$')
-    ax.plot(mank.index, to_slr(mank.values), 's', mfc='white', mec='0.25', mew=1.0, ms=4.5,
+    ax.plot(mank.index, to_slr(mank.values), 's', mfc='white', mec='0.25', mew=0.8, ms=3.5,
             label='Mankoff et al. (2021), withheld')
     ax.set_xlim(1970, years[-1] + 1)
-    ax.set_ylabel('SMB contribution (mm SLE yr$^{-1}$)', fontsize=12)
-    ax.set_xlabel('Year', fontsize=12)
-    ax.tick_params(labelsize=10)
+    ax.set_ylabel('SMB contribution (mm SLE yr$^{-1}$)')
+    ax.set_xlabel('Year')
+    ax.tick_params(pad=1.5)
     sec = ax.secondary_yaxis('right', functions=(lambda v: -v * GT, lambda v: -v / GT))
-    sec.set_ylabel('SMB (Gt yr$^{-1}$)', fontsize=12)
-    sec.tick_params(labelsize=10)
-    ax.legend(fontsize=9, frameon=False, loc='upper left', ncol=2)
-    lo, hi = ax.get_ylim(); ax.set_ylim(lo, hi + 0.25 * (hi - lo))
-    fig.tight_layout()
-    out = FIG / 'supp_greenland_smb_hindcast.png'
-    fig.savefig(out, dpi=200, bbox_inches='tight'); plt.close(fig)
-    print(f'saved {out}')
+    sec.set_ylabel('SMB (Gt yr$^{-1}$)')
+    sec.tick_params(pad=1.5)
+    ax.legend(frameon=False, loc='upper left', ncol=2, borderaxespad=0.3,
+              columnspacing=1.0, handletextpad=0.4, labelspacing=0.3)
+    lo, hi = ax.get_ylim(); ax.set_ylim(lo, hi + 0.38 * (hi - lo))
+    save_print(fig, 'supp_greenland_smb_hindcast')
 
     # numbers for the text
     f_med = pd.Series(np.median(forced, 0), index=years)

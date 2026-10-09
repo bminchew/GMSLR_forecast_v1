@@ -284,7 +284,7 @@ This section collects the parameter posteriors of every calibrated component mod
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{component_glacier_posterior_corner.png}
-\caption{\textbf{Glacier model posterior correlation structure.} The joint posterior for the three free parameters of the glacier model ($b_{gl}$, $T_{gl,eq}$, and $H_{gl_0}$) fitted to the GlaMBIE record \citep{GlaMBIE2025}, with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms (gray), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Black curves show the two informative priors, on $b_{gl}$, which is centered on the sensitivity of \citet{Rounce2023} and weakly informative, and on $T_{gl,eq}$, which is centered on the 1850--1879 mean GMST and fixes the committed rate $c_{gl} = -b_{gl}T_{gl,eq}$, while $H_{gl_0}$ has a wide prior that is not shown.}
+\caption{\textbf{Glacier model posterior correlation structure.} The joint posterior for the three free parameters of the glacier model ($b_{gl}$, $T_{gl,eq}$, and $H_{gl_0}$) fitted to the GlaMBIE record \citep{GlaMBIE2025}, with the full covariance of the cumulative record in the likelihood. Diagonal panels show marginal posterior histograms (gray), with dashed vertical lines marking the median and 90\% credible interval. Off-diagonal panels show the joint posterior density, with contours denoting 1, 2, and 3 standard deviations. Black curves show the two priors: $b_{gl}$, which is centered on the sensitivity of \citet{Rounce2023} and weakly informative, and $T_{gl,eq}$, which is centered on the 1850--1879 mean GMST and fixes the committed rate $c_{gl} = -b_{gl}T_{gl,eq}$, while $H_{gl_0}$ has a wide prior that is not shown.}
 \label{fig:glacier_corner}
 \end{figure}
 
@@ -319,23 +319,30 @@ In projections, we replace the intercept fitted to MAR with a level $c_{gris}$ a
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{supp_greenland_smb_emulator_fit.png}
-\caption{\textbf{Greenland SMB emulator fits.} \textbf{(a--g)} Annual SMB contribution of the contiguous Greenland ice sheet simulated by MARv3.12 driven by each of seven CMIP6 GCMs, relative to the 1995--2005 mean of that GCM's history run, against the GCM's own GMST anomaly $T$ (11-year centered mean, relative to 1995--2005). Points are colored by experiment. Black curves show the posterior median of the fitted quadratic, including the fitted intercept, and gray bands its 90\% credible interval. \textbf{(h)} Joint posterior of $a_{gris}$ and $b_{gris}$ for each GCM. All quantities are contributions to GMSL.}
+\includegraphics[width=\textwidth]{supp_greenland_smb_emulator_fit.pdf}
+\caption{\textbf{Greenland SMB emulator fits.} \textbf{(a--g)} Annual SMB contribution of the contiguous Greenland ice sheet simulated by MARv3.12 driven by each of seven CMIP6 GCMs, relative to the 1995--2005 mean of that GCM's history run, against the GCM's own GMST anomaly $T$ (11-year centered mean, relative to 1995--2005). Points are colored and shaped by experiment. Black curves show the posterior median of the fitted quadratic, including the fitted intercept, and gray bands its 90\% credible interval. \textbf{(h)} 90\% ellipse of the joint posterior of $a_{gris}$ and $b_{gris}$ for each GCM, labeled with the letter of its panel. All quantities are contributions to GMSL.}
 \label{fig:greenland_smb_fit}
 \end{figure}
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{supp_greenland_smb_lomo.png}
+\includegraphics[width=\textwidth]{supp_greenland_smb_lomo.pdf}
 \caption{\textbf{Leave-one-GCM-out test of the Greenland SMB emulator.} Each GCM is withheld in turn, and its SSP runs are predicted by the emulator fitted to the other six GCMs, driven by the withheld GCM's GMST and anchored to its own 1995--2005 mean. \textbf{(a)} Cumulative SMB contribution over 2015--2100 relative to the 1995--2005 rate, MAR against the emulator. Horizontal bars show the 90\% predictive range, which includes the spread of the six GCMs, the coefficient uncertainty, autoregressive weather noise, and the weather noise of the 1995--2005 anchor. The dashed line is the 1:1 line. \textbf{(b)} MAR minus the emulator median for each withheld run, with the same 90\% range. Positive values mean that the emulator underpredicts the contribution to sea-level rise.}
 \label{fig:greenland_smb_lomo}
 \end{figure}
 
-We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). As in the projections, the prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-19.7$ to $+28.7$~mm SLE, with a median absolute difference of 14.0~mm. The largest are for UKESM1-0-LL, at $+17.6$~mm (SSP2-4.5) and $+28.7$~mm (SSP5-8.5), where the other six GCMs underpredict its mass loss.
+We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). As in the projections, the prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-19.7$ to $+28.7$~mm SLE, with a median absolute difference of 14.0~mm. The largest are for UKESM1-0-LL, at $+17.6$~mm (SSP2-4.5) and $+28.7$~mm (SSP5-8.5), where the other six GCMs underpredict its mass loss. Fig.~\ref{fig:greenland_smb_rcm} shows the same comparison year by year. The emulator is trained on MAR alone, so it does not sample the differences between regional climate models. Forced by the same CESM2 SSP5-8.5 run, RACMO gives an SMB contribution of 87~mm over 2015--2099 and MAR gives 145~mm, against an emulator prediction of 117 [88, 146]~mm. The two regional models differ by 58~mm, as much as the width of the emulator's 90\% range (Fig.~\ref{fig:greenland_smb_rcm}n).
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\textwidth]{supp_greenland_smb_hindcast.png}
+\includegraphics[width=0.8\textwidth]{greenland_smb_mar_vs_emulator.pdf}
+\caption{\textbf{Greenland SMB projections of regional climate models against the emulator, 2015--2100.} \textbf{(a--m)} Cumulative SMB contribution since 2015 of each MARv3.12 scenario run \citep{Boberg2026} (green), relative to the 1995--2005 mean of that GCM's history run, with the prediction of the emulator fitted to the other six GCMs and driven by the withheld GCM's GMST (dashed median and shaded 90\% range, colored by scenario). The range includes the spread of the six GCMs, the coefficient uncertainty, autoregressive weather noise, and the weather noise of the 1995--2005 anchor, and the values at 2100 are those of Fig.~\ref{fig:greenland_smb_lomo}. \textbf{(n)} RACMO2.3p2 \citep{Noel2021} (purple) and MAR (green dotted), both forced by a CESM2 SSP5-8.5 branch run, and HIRHAM (orange dash-dot), forced by CESM2 r1i1p1f1 under SSP5-8.5, all from \citet{Glaude2024}, integrated over the contiguous ice sheet and taken relative to their own 1995--2005 means. RACMO ends in 2099. The emulator in (n) is fitted to the six GCMs other than CESM2 and driven by the CMIP6 CESM2 SSP5-8.5 GMST, because the GMST of the branch run is not archived. All quantities are contributions to GMSL.}
+\label{fig:greenland_smb_rcm}
+\end{figure}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{supp_greenland_smb_hindcast.pdf}
 \caption{\textbf{Greenland SMB emulator driven by observed GMST.} The emulator's forced response (dark band, 90\% range, and median), driven by the Berkeley Earth GMST anomaly \citep{Rohde2020} with the 11-year centered mean used in training, is compared with the \citet{Mouginot2019} SMB, whose 1995--2005 mean anchors the emulator in this comparison, and the withheld \citet{Mankoff2021} SMB. The forced-response range includes the GCM, the coefficients, and the uncertainty of that anchor. The drift state is not included. The light band adds autoregressive weather noise with the parameters fitted to each GCM. The centered mean for 2020--2024 uses the IPCC AR6 SSP2-4.5 GMST path \citep{Lee2021} for 2025--2029. The right axis gives the same SMB in Gt\,yr$^{-1}$.}
 \label{fig:greenland_smb_hindcast}
 \end{figure}

@@ -99,68 +99,77 @@ def main():
                  mar_same=cum('MAR_sheet'), hirham=cum('HIRHAM_sheet'), med=np.median(em, 0),
                  lo=np.percentile(em, 5, 0), hi=np.percentile(em, 95, 0), rcm='RACMO')
     runs.append(racmo)
-    ncol = 4
-    nrow = int(np.ceil(len(runs) / ncol))
-    fig, axes = plt.subplots(nrow, ncol, figsize=(4.2 * ncol, 3.3 * nrow), sharex=True)
+    plot(runs)
+
+
+# Print geometry: the supplement is 12-pt article with 1-in margins on letter
+# paper, so \textwidth is 6.5 in. The supplement includes this figure at
+# width=0.8\textwidth (5.2 in), so it is drawn at exactly that width and saved
+# without bbox cropping (scale 1.0 in print), so the
+# font sizes below are the printed sizes: 8-9 pt against 12-pt body text.
+FIG_W, FIG_H = 0.8 * 6.5, 6.0    # in; matches width=0.8\textwidth
+FS_TICK, FS_LABEL, FS_TITLE, FS_LEGEND = 8, 9, 8, 8
+MAR_C, RACMO_C, HIRHAM_C = '#1a9850', '#7b3294', '#e66101'   # validated with dataviz
+
+
+def plot(runs):
+    plt.rcParams.update({'font.size': FS_LABEL, 'axes.titlesize': FS_TITLE,
+                         'axes.labelsize': FS_LABEL, 'xtick.labelsize': FS_TICK,
+                         'ytick.labelsize': FS_TICK, 'legend.fontsize': FS_LEGEND,
+                         'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
+                         'ytick.major.width': 0.6, 'xtick.major.size': 2.5,
+                         'ytick.major.size': 2.5, 'lines.linewidth': 1.2})
+    ncol, nrow = 3, 5
+    fig, axes = plt.subplots(nrow, ncol, figsize=(FIG_W, FIG_H), sharex=True,
+                             layout='constrained')
+    fig.get_layout_engine().set(w_pad=0.03, h_pad=0.03, wspace=0.04, hspace=0.04)
     axes = axes.ravel()
-    ymax = {s: max(max(r['mar'].max(), r['hi'].max()) for r in runs if r['scen'] == s) * 1.05
-            for s in SCENS}
-    ymin = {s: min(min(r['mar'].min(), r['lo'].min()) for r in runs if r['scen'] == s) * 1.05
-            for s in SCENS}
+    ylim = {'ssp126': 65, 'ssp245': 120, 'ssp585': 230}
     for k, (ax, r) in enumerate(zip(axes, runs)):
         c = P.SEG_COLOR[r['scen']]
-        ax.fill_between(r['years'], r['lo'], r['hi'], color=c, alpha=0.2, lw=0,
-                        label='Emulator, 90%')
-        ax.plot(r['years'], r['med'], color=c, lw=2, ls='--', label='Emulator, median')
+        ax.fill_between(r['years'], r['lo'], r['hi'], color=c, alpha=0.2, lw=0)
+        ax.plot(r['years'], r['med'], color=c, lw=1.2, ls='--')
         if r.get('rcm') == 'RACMO':
-            ax.plot(r['years'], r['hirham'], color='#e66101', lw=1.4, ls='-.',
-                    label='HIRHAM')
-            ax.plot(r['years'], r['mar_same'], color='0.45', lw=1.4, ls=':',
-                    label='MAR, same forcing')
-            ax.plot(r['years'], r['mar'], color='#7b3294', lw=1.8, label='RACMO')
+            ax.plot(r['years'], r['mar_same'], color=MAR_C, lw=1.2, ls=':')
+            ax.plot(r['years'], r['hirham'], color=HIRHAM_C, lw=1.2, ls='-.')
+            ax.plot(r['years'], r['mar'], color=RACMO_C, lw=1.2)
+            title = f'({chr(97 + k)}) CESM2, three RCMs'
         else:
-            ax.plot(r['years'], r['mar'], color='k', lw=1.6, label='MAR')
-        ax.axhline(0, color='0.7', lw=0.6)
-        ax.set_ylim(min(ymin[r['scen']], 0), ymax[r['scen']])
+            ax.plot(r['years'], r['mar'], color=MAR_C, lw=1.2)
+            title = f"({chr(97 + k)}) {r['gcm']}"
+        ax.set_title(title, loc='left', pad=2)
+        ax.text(0.04, 0.95, P.SCEN_LABEL[r['scen']], transform=ax.transAxes, va='top',
+                fontsize=FS_TICK, color='0.25')
+        ax.axhline(0, color='0.7', lw=0.5)
         ax.set_xlim(2015, 2100)
+        ax.set_ylim(-5 if r['scen'] == 'ssp126' else -8, ylim[r['scen']])
+        ax.set_xticks([2020, 2060, 2100])
+        ax.grid(alpha=0.2, lw=0.4)
+        ax.tick_params(pad=1.5)
         rcm = r.get('rcm', 'MAR')
-        title = (f"RACMO, MAR, HIRHAM, CESM2, {P.SCEN_LABEL[r['scen']]}" if rcm == 'RACMO'
-                 else f"{rcm}, {r['gcm']}, {P.SCEN_LABEL[r['scen']]}")
-        ax.set_title(title, fontsize=12)
-        miss = r['mar'][-1] - r['med'][-1]
-        yend = int(r['years'][-1])
-        extra = (f", MAR {r['mar_same'][-1]:.0f}, HIRHAM {r['hirham'][-1]:.0f}"
-                 if rcm == 'RACMO' else '')
-        sep = '\n      ' if extra else ' '
-        ax.text(0.03, 0.95, f"({chr(97 + k)})  {yend}: {rcm} {r['mar'][-1]:.0f}{extra},{sep}"
-                f"emulator {r['med'][-1]:.0f} mm", transform=ax.transAxes,
-                fontsize=9.5, va='top')
-        if k % ncol == 0:
-            ax.set_ylabel('SMB contribution\nsince 2015 (mm SLE)', fontsize=11)
-        ax.tick_params(labelsize=10)
-        ax.grid(alpha=0.2)
         print(f"{rcm:5s} {r['gcm']:16s} {P.SCEN_LABEL[r['scen']]}: {r['mar'][-1]:6.1f}  "
               f"emulator {r['med'][-1]:6.1f} [{r['lo'][-1]:6.1f}, {r['hi'][-1]:6.1f}]  "
-              f"miss {miss:+5.1f} mm")
-    for ax in axes[len(runs):]:
-        ax.axis('off')
-    for ax in axes[max(0, len(runs) - ncol):len(runs)]:
-        ax.set_xlabel('Year', fontsize=11)
+              f"miss {r['mar'][-1] - r['med'][-1]:+5.1f} mm")
+    axes[len(runs) - ncol].xaxis.set_tick_params(labelbottom=True)   # column above legend
+    leg = axes[len(runs)]
+    leg.axis('off')
+    h = [plt.Line2D([], [], color=MAR_C, lw=1.2),
+         plt.Line2D([], [], color='0.35', lw=1.2, ls='--'),
+         plt.Rectangle((0, 0), 1, 1, color='0.35', alpha=0.25, lw=0),
+         plt.Line2D([], [], color=RACMO_C, lw=1.2),
+         plt.Line2D([], [], color=MAR_C, lw=1.2, ls=':'),
+         plt.Line2D([], [], color=HIRHAM_C, lw=1.2, ls='-.')]
+    fig.legend(h, ['MAR', 'Emulator median', 'Emulator 90%', 'RACMO (n)',
+                   'MAR, same run (n)', 'HIRHAM (n)'], loc='outside lower center', ncol=3,
+               frameon=False, handlelength=2.0, columnspacing=1.2, labelspacing=0.3)
+    fig.supylabel('SMB contribution since 2015 (mm SLE)', fontsize=FS_LABEL)
+    for ax in (axes[9], axes[10]):                    # panels (j) and (k)
         ax.xaxis.set_tick_params(labelbottom=True)
-    leg = axes[len(runs)] if len(runs) < len(axes) else axes[-1]
-    h = [plt.Line2D([], [], color='k', lw=1.6),
-         plt.Line2D([], [], color='#7b3294', lw=1.8),
-         plt.Line2D([], [], color='0.45', lw=1.4, ls=':'),
-         plt.Line2D([], [], color='#e66101', lw=1.4, ls='-.'),
-         plt.Line2D([], [], color='0.4', lw=2, ls='--'),
-         plt.Rectangle((0, 0), 1, 1, color='0.4', alpha=0.25, lw=0)]
-    leg.legend(h, ['MAR (held-out GCM)', 'RACMO, CESM2 branch run (Noël et al. 2021)',
-                   'MAR, same CESM2 branch run (Glaude et al. 2024)',
-                   'HIRHAM, CESM2 r1i1p1f1 (Glaude et al. 2024)',
-                   'Emulator fitted to the other six GCMs, median',
-                   'Emulator 90% range'], loc='center left', fontsize=10, frameon=False)
-    fig.tight_layout()
-    fig.savefig(OUT, dpi=200, bbox_inches='tight')
+    for ax in (axes[9], axes[10], axes[len(runs) - ncol], axes[len(runs) - 2],
+               axes[len(runs) - 1]):
+        ax.set_xlabel('Year', fontsize=FS_LABEL, labelpad=1)
+    fig.savefig(OUT, dpi=300)
+    fig.savefig(OUT.with_suffix('.pdf'))
     plt.close(fig)
     print(f'saved {OUT}')
 
