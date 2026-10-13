@@ -31,7 +31,7 @@
 \renewcommand{\thefigure}{S\arabic{figure}}
 \renewcommand{\thetable}{S\arabic{table}}
 
-\title{Supplementary Materials for:\\A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
+\title{Supplementary Material for:\\A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
 \author{Minchew, Meyer, et al.}
 \date{}
 
@@ -58,7 +58,7 @@ Unless otherwise noted, all reported intervals are 90\% Bayesian credible interv
 All component models are calibrated against published observational products (Table~\ref{tab:obs_datasets}). We use:
 \begin{itemize}
 \item \textbf{Global mean sea level:} NASA satellite altimetry (TOPEX/Jason, 1993--2025; \citealp{Beckley2017,Hamlington2020}), with the Frederikse et~al.~\citeyearpar{Frederikse2020} tide-gauge reconstruction (1900--2018) and the Dangendorf et~al.~\citeyearpar{Dangendorf2024} reconstruction (1900--2021) for pre-satellite validation. None of these records enters any component calibration.
-\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. Both records are scaled by 1.14 before fitting. This corrects the 14\% low bias that \citet{Li2022} find in thermosteric trends computed with linear vertical interpolation. A residual structural uncertainty of 5\% of the corrected signal is retained. The 700--2000\,m layer is carried by the 0--2000\,m record from 2005 onward and by the deep layer of the two-layer model at earlier times. A constant $0.07 \pm 0.04$~mm\,yr$^{-1}$ \citep{Purkey2010, Desbruyeres2016} is added over the full record for the contribution below 2000\,m. Two reconstructions of global-mean steric sea level are withheld for validation, from Frederikse et~al.~\citeyearpar{Frederikse2020} (1900--2018) and Dangendorf et~al.~\citeyearpar{Dangendorf2024} (1900--2021). Over 1957--2018 the Frederikse et~al.~reconstruction draws on the same archive of in situ profiles as the NOAA record \citep{Levitus2012, Ishii2017, Cheng2016}, so it is not fully independent of it there. The Dangendorf et~al.~reconstruction uses no in situ ocean temperature or salinity. Its steric term is the residual of a sea-level budget whose barystatic input is from \citet{Frederikse2020}. Neither reconstruction carries the 1.14 scaling.
+\item \textbf{Ocean thermal expansion:} NOAA thermosteric sea level (doi:10.7289/V53F4MVP), 0--700\,m (1955--2025) and 0--2000\,m (2005--2025) \citep{Levitus2012}. Both records are scaled by 1.14 before fitting. This corrects the 14\% low bias that \citet{Li2022} find in thermosteric trends computed with linear vertical interpolation. A residual structural uncertainty of 5\% of the corrected signal is retained. The 700--2000\,m layer is carried by the 0--2000\,m record from 2005 onward and by the deep layer of the two-layer model at earlier times. A constant $0.12 \pm 0.04$~mm\,yr$^{-1}$ (one standard deviation, 1991--2010) \citep{Desbruyeres2016} is added over the full record for the contribution below 2000\,m. Two reconstructions of global-mean steric sea level are withheld for validation, from Frederikse et~al.~\citeyearpar{Frederikse2020} (1900--2018) and Dangendorf et~al.~\citeyearpar{Dangendorf2024} (1900--2021). Over 1957--2018 the Frederikse et~al.~reconstruction draws on the same archive of in situ profiles as the NOAA record \citep{Levitus2012, Ishii2017, Cheng2016}, so it is not fully independent of it there. The Dangendorf et~al.~reconstruction uses no in situ ocean temperature or salinity. Its steric term is the residual of a sea-level budget whose barystatic input is from \citet{Frederikse2020}. Neither reconstruction carries the 1.14 scaling.
 \item \textbf{Glaciers:} GlaMBIE global consensus (The GlaMBIE Team~\citeyear{GlaMBIE2025}), combining glaciological field measurements, satellite altimetry, DEM differencing, and GRACE/GRACE-FO gravimetry across all 19 RGI regions. We use 2000--2023 (24 annual points) for calibration. For validation we use the global glacier mass changes of \citet{Zemp2019} for 1962--1999 (38 hydrological years).
 \item \textbf{Greenland:} \citet{Mouginot2019} SMB and discharge (1972--2018), of which the 44 years from 1975 enter the discharge fit, the earlier years being excluded because the lagged ocean forcing is undefined before then. \citet{Mankoff2021} discharge (1986--2023) and the IMBIE-3 Greenland record (1972--2023; \citet{Otosaka2026}) are withheld for validation. Subsurface ocean temperature from EN4 v4.2.2 with g10 bias corrections (200--500\,m, Greenland peripheral waters, 1970--2021; \citet{Good2013}). Surface temperature from Berkeley Earth \citep{Rohde2020}. Greenland SMB is projected with a statistical emulator of the regional climate model MARv3.12 driven by seven CMIP6 global climate models (CESM2, MPI-ESM1-2-HR, NorESM2-MM, UKESM1-0-LL, CNRM-CM6-1, CNRM-ESM2-1, and IPSL-CM6A-LR). These simulations were produced for the PROTECT project \citep{Boberg2026} and are publicly available at \url{http://ftp.climato.be/fettweis/MARv3.12/Greenland/PROTECT}. We use the annual SMB of the contiguous ice sheet, excluding peripheral glaciers, over 1980--2014 and over each available SSP to 2100, together with the global mean surface temperature of each driving model from the CMIP6 archive. \citet{Mankoff2021} SMB (1986--2023), the mean of three regional climate models driven by reanalysis, is withheld for validation of the emulator.
 \item \textbf{Antarctica:} IMBIE-3 mass balance (1979--2023, 45 annual points per region; \citet{Otosaka2026}), partitioned into West Antarctica, East Antarctica, and the Antarctic Peninsula.
@@ -166,7 +166,7 @@ $A_{\mathrm{ocean}}$ & Global ocean area, setting the convention 1\,mm\,SLE $=36
 \midrule
 \multicolumn{5}{@{}l}{\textbf{Thermosteric two-layer model}}\\
 $H_{\mathrm{u}}$ & Steric height of the upper ocean layer & --- & mm & --- \\
-$H_{ud}$ & Steric height of the upper 2000\,m & --- & mm & --- \\
+$H_{\mathrm{ud}}$ & Steric height of the upper 2000\,m & --- & mm & --- \\
 $H_{\mathrm{full}}$ & Full-depth thermosteric contribution to GMSL & --- & mm & --- \\
 $\alpha_{sw}$ & Thermal expansion coefficient of seawater & --- & $^\circ$C$^{-1}$ & --- \\
 $\alpha'_{sw}$ & Derivative of $\alpha_{sw}$ with respect to temperature & --- & $^\circ$C$^{-2}$ & --- \\
@@ -176,13 +176,13 @@ $h_u$ & Thickness of the upper layer & 700 & m & --- \\
 $h_d$ & Lower bound of the deep layer & 2000 & m & --- \\
 $S_u$ & Thermal state of the upper layer, the amplitude of its temperature anomaly & --- & $^\circ$C & --- \\
 $S_d$ & Thermal state of the deep layer & --- & $^\circ$C & --- \\
-$a$ & Quadratic expansion coefficient of the upper layer, from the temperature dependence of $\alpha_{sw}$ & calibrated & mm\,$^\circ$C$^{-2}$ & this study \\
+$a_u$ & Quadratic expansion coefficient of the upper layer, from the temperature dependence of $\alpha_{sw}$ and other departures from a linear response & calibrated & mm\,$^\circ$C$^{-2}$ & this study \\
 $b_u$ & Linear expansion coefficient of the upper layer & calibrated & mm\,$^\circ$C$^{-1}$ & this study \\
 $b_d$ & Linear expansion coefficient of the deep layer & calibrated & mm\,$^\circ$C$^{-1}$ & this study \\
 $\epsilon_u$ & Instrument drift absorbed during calibration & calibrated & mm\,yr$^{-1}$ & this study \\
 $\tau_u$ & Relaxation time of the upper layer toward GMST & calibrated & yr & this study \\
 $\tau_d$ & Relaxation time of the deep layer toward the upper layer, held fixed & 150 & yr & \citet{Geoffroy2013} \\
-$\dot{H}_{b}$ & Rate of steric expansion below 2000\,m, adopted rather than calibrated & $0.07\pm0.04$ & mm\,yr$^{-1}$ & \citet{Purkey2010} \\
+$\dot{H}_{b}$ & Rate of steric expansion below 2000\,m, adopted rather than calibrated & $0.12\pm0.04$ & mm\,yr$^{-1}$ & \citet{Desbruyeres2016} \\
 $t_{\mathrm{ref}}$ & Reference year for the below-2000\,m term & 2000 & yr & --- \\
 $\sigma_{\mathrm{extra}}$ & Noise term absorbing misfit beyond the reported observational error & calibrated & mm & this study \\
 $\boldsymbol{\phi}$ & Vector of the six fitted thermosteric parameters & --- & --- & --- \\
