@@ -10,6 +10,16 @@ from __future__ import annotations
 import numpy as np
 
 
+# Damage function knots from Jevrejeva et al. (2018), SSP2 without
+# additional adaptation. The single source for every damage calculation.
+#   0.52, 0.63 m: 2100 medians for 1.5 and 2 C, US$10.2T and 11.7T (text)
+#   0.86, 1.80 m: RCP8.5 median and 95th percentile, US$14.3T and 27.0T (text)
+#   0.20 m: read from their Fig. 4a, where the 1.5 C, 2 C and RCP8.5
+#           median curves pass through about US$2.3-2.7T
+JEVREJEVA2018_SLR_M = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
+JEVREJEVA2018_COST_B = np.array([0.0, 2500.0, 10200.0, 11700.0, 14300.0, 27000.0])
+
+
 def people_displaced_kulpstrauss2019(slr_m) -> np.ndarray:
     """Estimate millions of people on land below annual flood level.
 
@@ -37,10 +47,10 @@ def people_displaced_kulpstrauss2019(slr_m) -> np.ndarray:
 def slr_cost_jevrejeva2018(slr_m) -> np.ndarray:
     """Estimate global annual flood cost without additional adaptation.
 
-    Piecewise-linear interpolation of Jevrejeva et al. (2018),
-    Fig 4a. SSP2 socioeconomics, no additional coastal adaptation.
-    Exact at all reported data points; linear extrapolation beyond
-    1.8 m. Costs in billions USD/yr (2014$).
+    Piecewise-linear interpolation through ``JEVREJEVA2018_SLR_M`` and
+    ``JEVREJEVA2018_COST_B``, linearly extrapolated beyond 1.8 m using
+    the slope of the last segment (~13,510 B$/m). SSP2 socioeconomics,
+    no additional coastal adaptation. Costs in billions USD/yr (2014$).
 
     Parameters
     ----------
@@ -56,8 +66,8 @@ def slr_cost_jevrejeva2018(slr_m) -> np.ndarray:
     ---------
     Jevrejeva et al. (2018), Env. Res. Lett., 13, 074014.
     """
-    _slr_pts = np.array([0.0, 0.20, 0.52, 0.63, 0.86, 1.80])
-    _cost_pts = np.array([0.0, 1000.0, 10200.0, 11700.0, 14000.0, 27000.0])
+    _slr_pts = JEVREJEVA2018_SLR_M
+    _cost_pts = JEVREJEVA2018_COST_B
     _last_slope = (_cost_pts[-1] - _cost_pts[-2]) / (_slr_pts[-1] - _slr_pts[-2])
 
     slr = np.asarray(slr_m, dtype=float)

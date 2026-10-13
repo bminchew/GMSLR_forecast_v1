@@ -17,6 +17,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from slr_forecast.config import PROCESSED_DATA_DIR
+from slr_forecast.readers.impacts import slr_cost_jevrejeva2018 as damage_vec
 
 H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 
@@ -29,20 +30,6 @@ COMP_LABELS = {
     'greenland': 'Greenland', 'apeninsula': 'Peninsula',
     'wais': 'WAIS', 'eais': 'EAIS',
 }
-
-# ── Vectorized damage function (numpy piecewise, no Python loop) ──
-_SLR_KNOTS = np.array([0.00, 0.20, 0.52, 0.63, 0.86, 1.80])
-_COST_KNOTS = np.array([0.0, 1000.0, 10200.0, 11700.0, 14000.0, 27000.0])
-
-def damage_vec(slr_m):
-    """Vectorized Jevrejeva (2018) damage function. Input/output: arrays."""
-    slr_m = np.asarray(slr_m, dtype=float)
-    result = np.interp(slr_m, _SLR_KNOTS, _COST_KNOTS)
-    # Extrapolate beyond 1.80 m with final slope
-    slope = (_COST_KNOTS[-1] - _COST_KNOTS[-2]) / (_SLR_KNOTS[-1] - _SLR_KNOTS[-2])
-    mask = slr_m > _SLR_KNOTS[-1]
-    result[mask] = _COST_KNOTS[-1] + slope * (slr_m[mask] - _SLR_KNOTS[-1])
-    return result
 
 
 def main():

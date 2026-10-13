@@ -472,7 +472,7 @@ where $r = 0.03$ is the real discount rate and $n = 75$\,yr is the planning hori
 
 \subsubsection{Damage function}
 
-Residual flood damages are computed using the piecewise-linear global damage function of Jevrejeva et~al.~\citeyearpar{Jevrejeva2018}, which maps SLR to annual global flood costs based on estimated asset exposure. For SLR beyond the tabulated range (1.80~m), we extrapolate linearly using the slope of the final segment ($\sim$\$13.8\,T/yr per meter).
+Residual flood damages are computed from the estimates of Jevrejeva et~al.~\citeyearpar{Jevrejeva2018}, which relate GMSL rise to annual global flood costs without additional adaptation, based on estimated asset exposure. We interpolate linearly between six points. Four are values stated in their text, \$10.2, 11.7, 14.3, and 27.0\,T/yr at 0.52, 0.63, 0.86, and 1.80~m of rise. One is zero cost at zero rise. The sixth, \$2.5\,T/yr at 0.20~m, is read from their Fig.~4a, where the curves for their 1.5$\,^\circ$C, 2$\,^\circ$C, and RCP8.5 median scenarios pass through \$2.3--2.7\,T/yr at that level of rise. Beyond 1.80~m we extrapolate linearly using the slope of the final segment, \$13.5\,T/yr per meter.
 
 \subsection{Two-world structure}
 

@@ -3636,47 +3636,5 @@ def people_displaced_kulpstrauss2019(slr_m):
     return 17.03 * slr**2 + 145.0 * slr + 260.0
 
 
-def slr_cost_jevrejeva2018(slr_m):
-    """Estimate global annual flood cost without additional adaptation.
-
-    Piecewise-linear interpolation of data from Jevrejeva et al. (2018),
-    Environmental Research Letters, Figure 4(a) and conclusions.  Exact
-    at all reported data points; linearly extrapolated beyond 1.8 m
-    using the slope of the last segment (~13,830 B$/m).
-
-    Costs are in billions of USD per year (2014 dollars), assuming the
-    SSP2 socioeconomic pathway with no additional coastal adaptation
-    beyond the base-year standard of protection.
-
-    Parameters
-    ----------
-    slr_m : float or array-like
-        Global mean sea-level rise in **meters** above present (~year 2000).
-
-    Returns
-    -------
-    float or np.ndarray
-        Annual global flood costs in **billions USD** per year.
-
-    Reference
-    ---------
-    Jevrejeva, S., Jackson, L. P., Grinsted, A., Lincke, D., &
-    Marzeion, B. (2018). Flood damage costs under the sea level rise
-    with warming of 1.5 C and 2 C. Environmental Research Letters,
-    13, 074014.
-    """
-    # Reported data points (Fig 4a, SSP2 without additional adaptation):
-    #   SLR (m):  0.00   0.20    0.52    0.63    0.86    1.80
-    #   Cost (B):    0   1000   10200   11700   14000   27000
-    _slr_pts = np.array([0.0, 0.20, 0.52, 0.63, 0.86, 1.80])
-    _cost_pts = np.array([0.0, 1000.0, 10200.0, 11700.0, 14000.0, 27000.0])
-    _last_slope = (_cost_pts[-1] - _cost_pts[-2]) / (_slr_pts[-1] - _slr_pts[-2])
-
-    slr = np.asarray(slr_m, dtype=float)
-    scalar = slr.ndim == 0
-    slr = np.atleast_1d(slr)
-    result = np.interp(slr, _slr_pts, _cost_pts)
-    mask = slr > _slr_pts[-1]
-    result[mask] = _cost_pts[-1] + _last_slope * (slr[mask] - _slr_pts[-1])
-    result = np.where(slr < 0, 0.0, result)
-    return float(result[0]) if scalar else result
+# The damage knots live only in the package; see JEVREJEVA2018_* there.
+from slr_forecast.readers.impacts import slr_cost_jevrejeva2018  # noqa: E402
