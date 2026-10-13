@@ -33,7 +33,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 H5 = ROOT / 'data' / 'processed' / 'component_results.h5'
-SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
+SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'SSP1-1.9']
 P_S1 = 0.9
 N_OUT = 20_000
 M_TO_MM = 1000.0

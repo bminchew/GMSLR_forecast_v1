@@ -28,6 +28,7 @@ except ImportError:
 SSP_COLORS = {
     'SSP1-2.6': '#2166ac', 'SSP2-4.5': '#4393c3',
     'SSP3-7.0': '#d6604d', 'SSP5-8.5': '#b2182b',
+    'SSP1-1.9': '#00adcf',
 }
 
 COMP_COLORS = {

@@ -52,7 +52,7 @@ except ImportError:
 DEFAULT_H5_PATH = PROCESSED_DATA_DIR / "component_results.h5"
 
 PROJ_YEARS = np.arange(1950, 2151, dtype=float)
-PROJ_SSPS = ["SSP1-2.6", "SSP2-4.5", "SSP3-7.0", "SSP5-8.5"]
+PROJ_SSPS = ["SSP1-2.6", "SSP2-4.5", "SSP3-7.0", "SSP5-8.5", "SSP1-1.9"]
 
 # Standard percentile keys stored per SSP
 _PCTILE_KEYS = ("median", "p5", "p17", "p83", "p95")

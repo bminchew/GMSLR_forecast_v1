@@ -63,6 +63,7 @@ SSP_TO_CODE = {
     "SSP2-4.5": "ssp245",
     "SSP3-7.0": "ssp370",
     "SSP5-8.5": "ssp585",
+    "SSP1-1.9": "ssp119",
 }
 
 # Components whose AR6 quantiles are near-symmetric are fit with a plain
@@ -145,6 +146,9 @@ def fit_normal_to_quantiles(q05, q17, q50, q83, q95):
 def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
     rng = np.random.default_rng(seed)
     rng_ridge = np.random.default_rng(ridge_seed)
+    # SSP1-1.9 was added later; separate generators keep the other draws unchanged.
+    rng_119 = np.random.default_rng(seed + 1)
+    rng_ridge_119 = np.random.default_rng(ridge_seed + 1)
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -204,7 +208,8 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                 for j in range(n_years):
                     samples_mm[:, j] = skewnorm.rvs(
                         alphas[j], loc=locs[j], scale=scales[j],
-                        size=n_samples, random_state=rng,
+                        size=n_samples,
+                        random_state=rng_119 if ssp == "SSP1-1.9" else rng,
                     )
 
                 # Draw oversampled set (mm) — for ridge plots
@@ -212,7 +217,8 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                 for j in range(n_years):
                     ridge_mm[:, j] = skewnorm.rvs(
                         alphas[j], loc=locs[j], scale=scales[j],
-                        size=n_ridge, random_state=rng_ridge,
+                        size=n_ridge,
+                        random_state=rng_ridge_119 if ssp == "SSP1-1.9" else rng_ridge,
                     )
 
                 # Save parameters
