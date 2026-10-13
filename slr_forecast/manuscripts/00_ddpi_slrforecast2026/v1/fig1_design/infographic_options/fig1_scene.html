@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SPECTRUM Earth-system scene</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Rubik:wght@900&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#ffffff}
+  #fig{position:relative;width:1344px;height:880px;overflow:hidden;background:#ffffff;
+       font-family:'Outfit',sans-serif;font-size:20px;line-height:23px;color:#07456C}
+  #fig svg.bg{position:absolute;left:0;top:0}
+  .card{position:absolute;background:#ffffff;border-radius:12px;padding:9px 12px 10px 14px;
+        box-shadow:0 2px 6px rgba(3,29,58,.22);box-sizing:border-box}
+  .card .nm{font-weight:600;color:#031D3A;margin-bottom:1px}
+  .num{position:absolute;left:-11px;top:-13px;width:30px;height:30px;border-radius:15px;
+       background:#031D3A;color:#fff;font-weight:600;font-size:20px;line-height:30px;text-align:center;
+       box-shadow:0 0 0 2px #ffffff}
+  .tag{display:inline-block;margin-top:6px;font-weight:600;font-size:20px;line-height:22px;
+       padding:1px 10px 2px;border-radius:12px}
+  .cal{background:#036C9A;color:#fff;border:2px solid #036C9A}
+  .emu{background:#B5D5E9;color:#031D3A;border:2px solid #B5D5E9}
+  .ado{background:#fff;color:#07456C;border:2px dashed #72A3C3}
+  .sto{background:#AB6638;color:#fff;border:2px solid #AB6638}
+  .chip{display:inline-block;font-weight:700;font-size:20px;line-height:22px;letter-spacing:.06em;
+        color:#fff;background:#031D3A;border-radius:6px;padding:3px 9px 3px}
+  .hdr{position:absolute;left:0;top:0;width:1344px;height:48px;display:flex;align-items:center}
+  .title{font-family:'Rubik',sans-serif;font-weight:900;font-size:30px;color:#031D3A;letter-spacing:.02em;margin:0 22px 0 16px}
+  .spine{display:flex;align-items:center;gap:8px;color:#036C9A;font-weight:600}
+  .spine .st{color:#031D3A;font-weight:600}
+  .spine .ar{color:#72A3C3;font-weight:700}
+  .chk{position:relative;padding-left:26px;margin-top:8px}
+  .chk:before{content:"";position:absolute;left:2px;top:4px;width:7px;height:13px;border:solid #036C9A;
+              border-width:0 3px 3px 0;transform:rotate(45deg)}
+  .wais{border:2px solid #AB6638}
+</style>
+</head>
+<body>
+<div id="fig">
+
+<svg class="bg" width="1344" height="880" viewBox="0 0 1344 880">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D8E7F1"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07456C"/><stop offset="0.55" stop-color="#052F50"/><stop offset="1" stop-color="#031D3A"/>
+    </linearGradient>
+    <linearGradient id="earth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#AB6638"/><stop offset="1" stop-color="#7E4A27"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#B5D5E9"/><stop offset="1" stop-color="#D8E7F1"/>
+    </linearGradient>
+    <marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#036C9A"/>
+    </marker>
+    <marker id="ahw" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#FFFFFF"/>
+    </marker>
+  </defs>
+
+  <!-- sky and ocean -->
+  <rect x="0" y="48" width="1344" height="432" fill="url(#sky)"/>
+  <rect x="0" y="480" width="1344" height="40" fill="#72A3C3"/>
+  <rect x="0" y="520" width="1344" height="55" fill="#036C9A"/>
+  <rect x="0" y="575" width="1344" height="70" fill="#07456C"/>
+  <rect x="0" y="645" width="1344" height="235" fill="#052F50"/>
+  <!-- crust / seafloor -->
+  <rect x="0" y="705" width="1010" height="175" fill="#031D3A"/>
+
+  <!-- ===== GMST band ===== -->
+  <rect x="0" y="52" width="1012" height="88" rx="0" fill="url(#band)"/>
+  <path d="M1012 52 L1032 96 L1012 140 Z" fill="#D8E7F1"/>
+  <!-- schematic GMST mini plot -->
+  <polyline points="14,124 26,121 36,123 48,119 60,120 72,116 84,117 96,112 108,113 120,108" fill="none" stroke="#031D3A" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M120 108 C150 104 175 106 196 106" fill="none" stroke="#72A3C3" stroke-width="4" stroke-linecap="round"/>
+  <path d="M120 108 C150 100 175 92 196 85" fill="none" stroke="#036C9A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M120 108 C150 94 175 76 196 64" fill="none" stroke="#07456C" stroke-width="4" stroke-linecap="round"/>
+  <line x1="120" y1="60" x2="120" y2="132" stroke="#031D3A" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <text x="201" y="71" font-size="20" font-weight="600" fill="#07456C">4 °C</text>
+  <text x="201" y="92" font-size="20" font-weight="600" fill="#036C9A">3 °C</text>
+  <text x="201" y="113" font-size="20" font-weight="600" fill="#72A3C3">2 °C</text>
+
+  <!-- feeds from band (temperature-driven contributors) -->
+  <g stroke="#036C9A" stroke-width="3" fill="none" marker-end="url(#ah)">
+    <line x1="118" y1="140" x2="118" y2="156"/>
+    <line x1="372" y1="140" x2="372" y2="156"/>
+    <line x1="660" y1="140" x2="660" y2="156"/>
+    <line x1="898" y1="140" x2="898" y2="156"/>
+  </g>
+  <!-- long feed into ocean (thermosteric) -->
+  <line x1="514" y1="140" x2="514" y2="470" stroke="#036C9A" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ah)"/>
+  <!-- long feed to Greenland ocean temperature -->
+  <path d="M245 140 L245 300 C245 330 250 360 262 390 L268 470" fill="none" stroke="#036C9A" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ah)"/>
+
+  <!-- ===== Left continent: mountain glaciers + land water ===== -->
+  <path d="M0 880 L0 420 L34 372 L72 300 L100 344 L132 312 L166 404 L178 448 L238 450 L250 520 L262 705 L262 880 Z" fill="url(#rock)"/>
+  <!-- glacier caps -->
+  <path d="M50 342 L72 300 L94 334 L84 330 L76 342 L66 334 L58 346 Z" fill="#FFFFFF"/>
+  <path d="M114 336 L132 312 L152 362 L142 356 L134 370 L124 352 Z" fill="#FFFFFF"/>
+  <path d="M96 338 L104 346 L114 336 L128 356 L136 372 L146 392 L134 386 L118 366 Z" fill="#D8E7F1"/>
+  <!-- land water: reservoir + groundwater -->
+  <path d="M182 450 L234 450 L230 458 L188 458 Z" fill="#72A3C3"/>
+  <rect x="176" y="438" width="8" height="14" fill="#D9D9D9"/>
+  <g fill="#72A3C3">
+    <circle cx="40" cy="560" r="3.5"/><circle cx="64" cy="566" r="3.5"/><circle cx="88" cy="558" r="3.5"/>
+    <circle cx="112" cy="566" r="3.5"/><circle cx="136" cy="558" r="3.5"/><circle cx="160" cy="566" r="3.5"/>
+    <circle cx="184" cy="558" r="3.5"/><circle cx="208" cy="566" r="3.5"/><circle cx="52" cy="582" r="3.5"/>
+    <circle cx="76" cy="588" r="3.5"/><circle cx="100" cy="580" r="3.5"/><circle cx="124" cy="588" r="3.5"/>
+    <circle cx="148" cy="580" r="3.5"/><circle cx="172" cy="588" r="3.5"/><circle cx="196" cy="580" r="3.5"/>
+  </g>
+  <line x1="206" y1="458" x2="206" y2="552" stroke="#72A3C3" stroke-width="2" stroke-dasharray="3 4"/>
+
+  <!-- ===== Greenland ===== -->
+  <path d="M298 705 L310 520 L320 500 L345 472 L470 466 L488 520 L500 705 Z" fill="url(#rock)"/>
+  <!-- warm water tongue toward calving front -->
+  <path d="M250 548 C262 532 282 526 304 524 L304 552 C282 552 266 556 250 560 Z" fill="#72A3C3"/>
+  <!-- ice sheet with marine calving front on left -->
+  <path d="M300 506 L300 438 C318 404 348 336 396 328 C440 330 466 396 484 468 L470 466 L345 472 L320 500 Z" fill="#FFFFFF" stroke="#72A3C3" stroke-width="1.5"/>
+  <!-- calving front face -->
+  <rect x="300" y="438" width="6" height="68" fill="#B5D5E9"/>
+  <!-- icebergs -->
+  <path d="M272 480 L276 468 L290 466 L292 480 Z" fill="#FFFFFF"/>
+  <path d="M272 480 L292 480 L288 492 L276 492 Z" fill="#D8E7F1"/>
+  <!-- surface melt: ponds and runoff -->
+  <ellipse cx="428" cy="372" rx="9" ry="3" fill="#72A3C3"/>
+  <ellipse cx="446" cy="404" rx="11" ry="3.5" fill="#72A3C3"/>
+  <ellipse cx="460" cy="434" rx="8" ry="3" fill="#72A3C3"/>
+  <path d="M470 442 C476 452 480 462 488 476" fill="none" stroke="#72A3C3" stroke-width="3"/>
+
+  <!-- ===== Open ocean: thermosteric warming layers ===== -->
+  <g stroke="#FFFFFF" stroke-width="2.5" fill="none" opacity="0.9">
+    <path d="M520 492 c6 6 -6 12 0 18 c6 6 -6 12 0 18" marker-end="url(#ahw)"/>
+    <path d="M548 492 c6 6 -6 12 0 18 c6 6 -6 12 0 18 c6 6 -6 12 0 18" marker-end="url(#ahw)"/>
+    <path d="M576 492 c6 6 -6 12 0 18 c6 6 -6 12 0 18 c6 6 -6 12 0 18 c6 6 -6 12 0 18" marker-end="url(#ahw)"/>
+  </g>
+
+  <!-- ===== Antarctic Peninsula ===== -->
+  <path d="M600 705 L612 540 L628 488 L646 396 L664 488 L676 540 L690 705 Z" fill="url(#rock)"/>
+  <path d="M624 486 L646 394 L668 486 L658 480 L646 490 L634 480 Z" fill="#FFFFFF" stroke="#72A3C3" stroke-width="1.5"/>
+
+  <!-- ===== West Antarctica: Earth bed below sea level ===== -->
+  <path d="M708 880 L708 705 L728 640 L752 506 L800 562 L840 612 L862 560 L880 470 L880 880 Z" fill="url(#earth)"/>
+  <!-- warm water under shelf -->
+  <path d="M694 520 C712 512 732 506 750 504 L752 508 C740 516 722 524 694 532 Z" fill="#B5D5E9"/>
+  <!-- WAIS ice: floating shelf + grounded ice on retrograde bed -->
+
+
+  <!-- ===== East Antarctica ===== -->
+  <path d="M880 880 L880 470 L900 452 L992 450 L1000 520 L1006 705 L1006 880 Z" fill="url(#rock)"/>
+  <path d="M704 468 L750 462 C790 436 840 404 880 386 C910 366 940 348 962 346 C984 348 1000 358 1004 372 L1004 470 L992 450 L900 452 L880 470 L862 560 L840 612 L800 562 L752 506 L704 490 Z" fill="#FFFFFF" stroke="#72A3C3" stroke-width="1.5"/>
+  <circle cx="752" cy="506" r="5" fill="#031D3A" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- snowfall -->
+  <g fill="#72A3C3">
+    <circle cx="912" cy="304" r="3.5"/><circle cx="936" cy="298" r="3.5"/><circle cx="960" cy="306" r="3.5"/>
+    <circle cx="984" cy="300" r="3.5"/><circle cx="924" cy="322" r="3.5"/><circle cx="948" cy="320" r="3.5"/><circle cx="972" cy="324" r="3.5"/>
+    <circle cx="900" cy="332" r="3.5"/><circle cx="996" cy="326" r="3.5"/><circle cx="912" cy="344" r="3"/>
+  </g>
+
+  <!-- sea surface: the sum line -->
+  <line x1="0" y1="480" x2="1344" y2="480" stroke="#FFFFFF" stroke-width="3"/>
+  <g fill="#FFFFFF">
+    <path d="M216 494 l10 6 l-10 6 Z"/><path d="M592 494 l10 6 l-10 6 Z"/><path d="M1010 494 l10 6 l-10 6 Z"/>
+  </g>
+
+  <!-- leader lines from cards to features -->
+  <g stroke="#031D3A" stroke-width="2" fill="none">
+    <line x1="100" y1="288" x2="104" y2="336"/>
+    <line x1="430" y1="288" x2="444" y2="398"/>
+    <line x1="646" y1="288" x2="646" y2="392"/>
+    <line x1="960" y1="288" x2="960" y2="344"/>
+  </g>
+  <g fill="#031D3A">
+    <circle cx="104" cy="338" r="4"/><circle cx="444" cy="400" r="4"/><circle cx="646" cy="394" r="4"/><circle cx="960" cy="346" r="4"/>
+  </g>
+  <g stroke="#FFFFFF" stroke-width="2" fill="none">
+    <line x1="150" y1="728" x2="206" y2="458"/>
+    <line x1="380" y1="728" x2="304" y2="510"/>
+    <line x1="590" y1="728" x2="590" y2="580"/>
+    <line x1="820" y1="728" x2="806" y2="600"/>
+  </g>
+  <g fill="#FFFFFF">
+    <circle cx="206" cy="458" r="4"/><circle cx="304" cy="510" r="4"/><circle cx="590" cy="578" r="4"/><circle cx="806" cy="598" r="4"/>
+  </g>
+
+  <!-- ===== Tide staff (sum) ===== -->
+  <rect x="1028" y="150" width="14" height="330" fill="#031D3A"/>
+  <rect x="1028" y="480" width="14" height="390" fill="#FFFFFF"/>
+  <g fill="#031D3A">
+    <rect x="1042" y="160" width="10" height="9"/><rect x="1042" y="192" width="14" height="9"/>
+    <rect x="1042" y="224" width="18" height="9"/><rect x="1042" y="256" width="22" height="9"/>
+    <rect x="1042" y="288" width="26" height="9"/><rect x="1042" y="320" width="30" height="9"/>
+    <rect x="1042" y="352" width="34" height="9"/><rect x="1042" y="384" width="38" height="9"/>
+    <rect x="1042" y="416" width="40" height="9"/><rect x="1042" y="448" width="40" height="9"/>
+  </g>
+  <g fill="#B5D5E9">
+    <rect x="1042" y="504" width="40" height="9"/><rect x="1042" y="536" width="40" height="9"/>
+    <rect x="1042" y="568" width="40" height="9"/><rect x="1042" y="600" width="40" height="9"/>
+    <rect x="1042" y="632" width="40" height="9"/><rect x="1042" y="664" width="40" height="9"/>
+    <rect x="1042" y="696" width="40" height="9"/><rect x="1042" y="728" width="40" height="9"/>
+    <rect x="1042" y="760" width="40" height="9"/><rect x="1042" y="792" width="40" height="9"/>
+    <rect x="1042" y="824" width="40" height="9"/><rect x="1042" y="856" width="40" height="9"/>
+  </g>
+  <!-- sigma marker at sea level -->
+  <circle cx="1035" cy="480" r="19" fill="#FFFFFF" stroke="#031D3A" stroke-width="3"/>
+  <text x="1035" y="488" text-anchor="middle" font-size="24" font-weight="700" fill="#031D3A">Σ</text>
+  <!-- Earth pointer for the tail -->
+
+  <!-- scene labels -->
+  <text x="12" y="472" font-size="20" font-weight="600" fill="#FFFFFF">Sea level</text>
+  <text x="254" y="584" font-size="20" font-weight="500" fill="#FFFFFF">warm</text>
+  <text x="254" y="606" font-size="20" font-weight="500" fill="#FFFFFF">water</text>
+  <text x="506" y="640" font-size="20" font-weight="500" fill="#FFFFFF">warming</text>
+  <text x="506" y="662" font-size="20" font-weight="500" fill="#FFFFFF">layers</text>
+  <text x="888" y="326" font-size="20" font-weight="500" fill="#036C9A" text-anchor="end">snowfall</text>
+  <text x="370" y="420" font-size="20" font-weight="500" fill="#036C9A" text-anchor="middle">melt</text>
+</svg>
+
+<!-- ===== Header with stage spine ===== -->
+<div class="hdr">
+  <div class="title">SPECTRUM</div>
+  <div class="spine">
+    <span class="st">Forcing</span><span class="ar">→</span>
+    <span class="st">One model per contributor</span><span class="ar">→</span>
+    <span class="st">Sum and test</span><span class="ar">→</span>
+    <span class="st">Forecast to 2100</span>
+  </div>
+</div>
+
+<!-- band text -->
+<div style="position:absolute;left:264px;top:60px;width:740px;color:#031D3A">
+  <span class="chip">FORCING</span>&nbsp; <b style="font-weight:600">Global mean surface temperature</b>, observed to 2025,<br>
+  then AR6 paths near 2, 3 and 4 °C (schematic). Greenland ocean<br>temperature follows from it via Arctic amplification.
+</div>
+
+<!-- ===== Sky cards ===== -->
+<div class="card" style="left:14px;top:160px;width:216px;height:128px">
+  <div class="num">1</div><div class="nm">Glaciers</div>
+  Linear in warming<br>GlaMBIE<br><span class="tag cal">calibrated</span>
+</div>
+<div class="card" style="left:262px;top:160px;width:222px;height:128px">
+  <div class="num">3</div><div class="nm">Greenland SMB</div>
+  MAR emulator<br>7 CMIP6 models<br><span class="tag emu">emulated</span>
+</div>
+<div class="card" style="left:546px;top:160px;width:230px;height:128px">
+  <div class="num">6</div><div class="nm">Antarctic Peninsula</div>
+  Linear in warming<br>IMBIE-3<br><span class="tag cal">calibrated</span>
+</div>
+<div class="card" style="left:788px;top:160px;width:220px;height:128px">
+  <div class="num">8</div><div class="nm">East Antarctica</div>
+  Snowfall sensitivity<br>from the literature<br><span class="tag ado">adopted</span>
+</div>
+
+<!-- ===== Ocean / crust cards ===== -->
+<div class="card" style="left:14px;top:728px;width:216px;height:128px">
+  <div class="num">2</div><div class="nm">Land water</div>
+  Terrestrial storage<br>IPCC AR6<br><span class="tag ado">adopted</span>
+</div>
+<div class="card" style="left:256px;top:728px;width:236px;height:128px">
+  <div class="num">4</div><div class="nm">Greenland discharge</div>
+  Ocean-forced, lagged<br>Mouginot 2019<br><span class="tag cal">calibrated</span>
+</div>
+<div class="card" style="left:502px;top:728px;width:220px;height:128px">
+  <div class="num">5</div><div class="nm">Thermosteric</div>
+  Two-layer ocean<br>NOAA 0–2000 m<br><span class="tag cal">calibrated</span>
+</div>
+<div class="card wais" style="left:734px;top:728px;width:268px;height:128px">
+  <div class="num" style="background:#AB6638">7</div><div class="nm">West Antarctica</div>
+  Slow/fast storyline,<br>independent of emissions<br><span class="tag sto">storyline</span>
+</div>
+
+<!-- ===== Sum and test ===== -->
+<div class="card" style="left:1092px;top:150px;width:244px;height:300px">
+  <span class="chip">SUM AND TEST</span>
+  <div style="margin-top:8px;font-weight:600;color:#031D3A">GMSL = sum of 1–8</div>
+  <div class="chk">Observed GMSL withheld from every calibration</div>
+  <div class="chk">Closes the altimetry budget, 1993–2025</div>
+  <div class="chk">Hindcasts GMSL back to 1950</div>
+</div>
+
+<!-- ===== Forecast ===== -->
+<div class="card" style="left:1092px;top:500px;width:244px;height:370px">
+  <span class="chip">FORECAST</span>
+  <div style="margin-top:6px;color:#031D3A">2000 members to 2100<br>under 2, 3 and 4 °C</div>
+  <svg width="220" height="156" viewBox="0 0 220 156" style="display:block;margin-top:4px">
+    <!-- tail (West Antarctica) -->
+    <path d="M14 112 C70 100 120 60 168 8 L168 40 C120 70 80 92 14 112 Z" fill="#AB6638" opacity="0.35"/>
+    <!-- fans -->
+    <path d="M14 112 C70 104 120 92 168 70 L168 30 C120 62 70 96 14 112 Z" fill="#07456C" opacity="0.25"/>
+    <path d="M14 112 C70 108 120 102 168 92 L168 60 C120 80 70 100 14 112 Z" fill="#036C9A" opacity="0.25"/>
+    <path d="M14 112 C70 110 120 108 168 106 L168 80 C120 92 70 104 14 112 Z" fill="#72A3C3" opacity="0.4"/>
+    <path d="M14 112 C70 104 120 82 168 50" fill="none" stroke="#07456C" stroke-width="3"/>
+    <path d="M14 112 C70 106 120 94 168 76" fill="none" stroke="#036C9A" stroke-width="3"/>
+    <path d="M14 112 C70 109 120 104 168 93" fill="none" stroke="#72A3C3" stroke-width="3"/>
+    <polyline points="0,120 5,118 9,116 14,112" fill="none" stroke="#031D3A" stroke-width="3"/>
+    <line x1="0" y1="128" x2="170" y2="128" stroke="#031D3A" stroke-width="1.5"/>
+    <text x="173" y="22" font-size="20" font-weight="600" fill="#AB6638">tail</text>
+    <text x="173" y="56" font-size="20" font-weight="600" fill="#07456C">4 °C</text>
+    <text x="173" y="80" font-size="20" font-weight="600" fill="#036C9A">3 °C</text>
+    <text x="173" y="104" font-size="20" font-weight="600" fill="#72A3C3">2 °C</text>
+    <text x="0" y="152" font-size="20" fill="#031D3A">2025</text>
+    <text x="168" y="152" font-size="20" fill="#031D3A" text-anchor="end">2100</text>
+    <text x="22" y="22" font-size="20" font-style="italic" fill="#72A3C3">schematic</text>
+  </svg>
+  <div style="margin-top:6px;color:#031D3A">Emissions set the other seven</div>
+  <div style="margin-top:4px;color:#AB6638;font-weight:600">West Antarctica sets the tail</div>
+</div>
+
+</div>
+</body>
+</html>

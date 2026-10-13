@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="384" height="384"><defs><clipPath id="cc"><circle cx="48" cy="48" r="46"/></clipPath></defs>
+      <g clip-path="url(#cc)">
+        <rect width="96" height="96" fill="#D8E7F1"/>
+        <path d="M0 30 Q12 24 24 30 T48 30 T72 30 T96 30 V60 H0Z" fill="#72A3C3"/>
+        <rect y="60" width="96" height="36" fill="#07456C"/>
+        <path d="M0 60 H96" stroke="#D8E7F1" stroke-width="2" stroke-dasharray="5 4"/>
+        <!-- expansion arrows -->
+        <g stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" fill="none">
+          <path d="M30 54 V38 M24 44 L30 38 L36 44"/>
+          <path d="M66 54 V38 M60 44 L66 38 L72 44"/>
+        </g>
+        <g stroke="#72A3C3" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".9">
+          <path d="M18 76 Q28 72 38 76 T58 76 T78 76"/>
+          <path d="M26 86 Q36 82 46 86 T66 86"/>
+        </g>
+      </g>
+      <circle cx="48" cy="48" r="46" fill="none" stroke="#72A3C3" stroke-width="2"/>
+    </svg>

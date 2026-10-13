@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="400" height="400">
+<title>SPECTRUM</title>
+<path d="M13,8.00 L12,8.00 C36,8.00 30,80.00 50.0,80.00" fill="none" stroke="#AB6638" stroke-width="6.0"/>
+<path d="M3,6.10 L14,6.10" fill="none" stroke="#AB6638" stroke-width="2.2"/>
+<path d="M3,9.90 L14,9.90" fill="none" stroke="#AB6638" stroke-width="2.2"/>
+<path d="M3,16.00 L12,16.00 C36,16.00 30,80.00 50.0,80.00" fill="none" stroke="#031D3A" stroke-width="6.0"/>
+<path d="M3,24.00 L12,24.00 C36,24.00 30,80.00 50.0,80.00" fill="none" stroke="#07456C" stroke-width="6.0"/>
+<path d="M3,32.00 L12,32.00 C36,32.00 30,80.00 50.0,80.00" fill="none" stroke="#036C9A" stroke-width="6.0"/>
+<path d="M3,40.00 L12,40.00 C36,40.00 30,80.00 50.0,80.00" fill="none" stroke="#3A88AF" stroke-width="6.0"/>
+<path d="M3,48.00 L12,48.00 C36,48.00 30,80.00 50.0,80.00" fill="none" stroke="#72A3C3" stroke-width="6.0"/>
+<path d="M3,56.00 L12,56.00 C36,56.00 30,80.00 50.0,80.00" fill="none" stroke="#93BCD6" stroke-width="6.0"/>
+<path d="M3,64.00 L12,64.00 C36,64.00 30,80.00 50.0,80.00" fill="none" stroke="#B5D5E9" stroke-width="6.0"/>
+<path d="M48.0,80.0 C74,80.0 88,74.0 97,36.0" fill="none" stroke="#031D3A" stroke-width="14" stroke-linecap="butt"/>
+</svg>

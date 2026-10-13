@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="384" height="384"><defs><clipPath id="cc"><circle cx="48" cy="48" r="46"/></clipPath></defs>
+      <g clip-path="url(#cc)">
+        <rect width="96" height="96" fill="#D8E7F1"/>
+        <polygon points="-4,82 34,20 50,44 64,30 100,82" fill="#07456C"/>
+        <polygon points="64,30 74,44 68,46 62,40 56,44" fill="#ffffff"/>
+        <path d="M34 20 L46 38 L42 46 L50 58 L46 82 L32 82 L36 62 L28 50 L30 38 Z" fill="#ffffff" stroke="#72A3C3" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M33 66 H45 M34 73 H46" stroke="#B5D5E9" stroke-width="2"/>
+        <rect y="82" width="96" height="14" fill="#031D3A"/>
+        <path d="M38 82 Q40 88 36 96" stroke="#72A3C3" stroke-width="3" fill="none"/>
+      </g>
+      <circle cx="48" cy="48" r="46" fill="none" stroke="#72A3C3" stroke-width="2"/>
+    </svg>

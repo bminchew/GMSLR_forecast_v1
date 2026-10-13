@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="384" height="384"><defs><clipPath id="cc"><circle cx="48" cy="48" r="46"/></clipPath></defs>
+      <g clip-path="url(#cc)">
+        <rect width="96" height="96" fill="#D8E7F1"/>
+        <rect y="50" width="96" height="46" fill="#036C9A"/>
+        <path d="M-2 28 Q30 30 58 36 L58 70 L-2 74 Z" fill="#ffffff" stroke="#72A3C3" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M58 40 L54 46 L58 52" stroke="#B5D5E9" stroke-width="2" fill="none"/>
+        <polygon points="68,44 78,42 80,50 66,52" fill="#ffffff" stroke="#72A3C3" stroke-width="1.6"/>
+        <polygon points="66,52 80,50 76,58 68,58" fill="#B5D5E9"/>
+        <rect y="84" width="96" height="12" fill="#031D3A"/>
+        <!-- warm inflow -->
+        <path d="M92 76 Q84 72 78 76 T66 76" stroke="#D8E7F1" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+        <path d="M70 71 L62 76 L70 81" stroke="#D8E7F1" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <circle cx="48" cy="48" r="46" fill="none" stroke="#72A3C3" stroke-width="2"/>
+    </svg>
