@@ -343,7 +343,7 @@ We test the emulator out of sample by leaving out each GCM in turn and predictin
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\textwidth]{supp_greenland_smb_hindcast.pdf}
-\caption{\textbf{Greenland SMB emulator driven by observed GMST.} The emulator's forced response (dark band, 90\% range, and median), driven by the Berkeley Earth GMST anomaly \citep{Rohde2020} with the 11-year centered mean used in training, is compared with the \citet{Mouginot2019} SMB, whose 1995--2005 mean anchors the emulator in this comparison, and the withheld \citet{Mankoff2021} SMB. The forced-response range includes the GCM, the coefficients, and the uncertainty of that anchor. The drift state is not included. The light band adds autoregressive weather noise with the parameters fitted to each GCM. The centered mean for 2020--2024 uses the IPCC AR6 SSP2-4.5 GMST path \citep{Lee2021} for 2025--2029. The right axis gives the same SMB in Gt\,yr$^{-1}$.}
+\caption{\textbf{Greenland SMB emulator driven by observed GMST.} The emulator's forced response (dark band, 90\% range, and median), driven by the Berkeley Earth GMST anomaly \citep{Rohde2020} with the 11-year centered mean used in training, is compared with the \citet{Mouginot2019} SMB, whose 1995--2005 mean anchors the emulator in this comparison, and the withheld \citet{Mankoff2021} SMB. The forced-response range includes the GCM, the coefficients, and the uncertainty of that anchor. The drift state is not included. The light band adds autoregressive weather noise with the parameters fitted to each GCM. The centered mean for 2020--2024 uses the IPCC AR6 2.7$\,^\circ$C GMST path \citep{Lee2021} for 2025--2029. The right axis gives the same SMB in Gt\,yr$^{-1}$.}
 \label{fig:greenland_smb_hindcast}
 \end{figure}
 
@@ -353,15 +353,15 @@ The drift state described above accounts for these departures. Fitted to the \ci
 
 \subsection{Variance decomposition}
 
-We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. The total here is the sum of the component models before blending with the observed trend, excluding terrestrial water storage. Under the fast-WAIS weighting, WAIS accounts for 98.4\%, 96.7\%, and 92.7\% of the total variance at 2, 3, and 4\,$^\circ$C. The thermosteric, glacier, and Greenland contributions together account for 1.2\%, 2.8\%, and 6.5\%, a share that includes the covariance among them from the warming path they share. EAIS and the Antarctic Peninsula account for the small remainder. WAIS does not depend on the warming trajectory or on the parameters of any other component, so these shares nearly sum to one.
+We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. The total here is the sum of the component models before blending with the observed trend, excluding terrestrial water storage. Under the fast-WAIS weighting, WAIS accounts for 98.4\%, 96.7\%, and 92.7\% of the total variance at 1.8, 2.7, and 3.6\,$^\circ$C. The thermosteric, glacier, and Greenland contributions together account for 1.2\%, 2.8\%, and 6.5\%, a share that includes the covariance among them from the warming path they share. EAIS and the Antarctic Peninsula account for the small remainder. WAIS does not depend on the warming trajectory or on the parameters of any other component, so these shares nearly sum to one.
 
 \subsection{Temperature scenarios}
 
-The component projections are driven by the IPCC AR6 projections of global mean surface temperature for each SSP \citep{Lee2021}. Each SSP has a median trajectory and a 5--95\% range, which comes mostly from uncertainty in the response of the climate to a given emissions pathway. A world that warms faster than the median tends to stay warmer for the whole century. We therefore treat this range as a set of warming paths rather than as independent noise in each year.
+The component projections are driven by the IPCC AR6 projections of global mean surface temperature for each SSP \citep{Lee2021}. As in the main text, we label each scenario by the AR6 central estimate of its warming over 2081--2100 relative to 1850--1900 \citep[][Table~4.5]{Lee2021}: 1.8$\,^\circ$C (SSP1-2.6), 2.7$\,^\circ$C (SSP2-4.5), 3.6$\,^\circ$C (SSP3-7.0), and 4.4$\,^\circ$C (SSP5-8.5). Each SSP has a median trajectory and a 5--95\% range, which comes mostly from uncertainty in the response of the climate to a given emissions pathway. A world that warms faster than the median tends to stay warmer for the whole century. We therefore treat this range as a set of warming paths rather than as independent noise in each year.
 
-Each ensemble member $k$ is assigned one value $z_k$ drawn from a standard normal distribution. Its temperature is the median trajectory plus an offset $\delta_k(t) = z_k\,[h(t) - h(t_0)]$ for $t > t_0$, and zero before $t_0$. When $z_k > 0$, $h(t)$ is the distance from the median to the 95th percentile divided by 1.645. When $z_k < 0$, it is the distance from the 5th percentile to the median divided by 1.645. This keeps the asymmetry of the AR6 range. We set $t_0 = 2024$ because warming up to the present is observed, so the offset adds spread only to future warming. As a result, the spread at 2100 is somewhat narrower than the full AR6 range. For SSP2-4.5 the upper half-width at 2099 is 0.64$\,^\circ$C rather than 0.82$\,^\circ$C.
+Each ensemble member $k$ is assigned one value $z_k$ drawn from a standard normal distribution. Its temperature is the median trajectory plus an offset $\delta_k(t) = z_k\,[h(t) - h(t_0)]$ for $t > t_0$, and zero before $t_0$. When $z_k > 0$, $h(t)$ is the distance from the median to the 95th percentile divided by 1.645. When $z_k < 0$, it is the distance from the 5th percentile to the median divided by 1.645. This keeps the asymmetry of the AR6 range. We set $t_0 = 2024$ because warming up to the present is observed, so the offset adds spread only to future warming. As a result, the spread at 2100 is somewhat narrower than the full AR6 range. For the 2.7$\,^\circ$C scenario the upper half-width at 2099 is 0.64$\,^\circ$C rather than 0.82$\,^\circ$C.
 
-Member $k$ uses the same $z_k$ in every component and every SSP. Each member therefore represents one world, in which the ocean, the glaciers, and the ice sheets all respond to the same warming. The $z_k$ are drawn with their own random seed, so the parameter draws of each component do not change. Sampling the warming range widens the 2100 intervals of the temperature-driven components, most strongly for thermal expansion. At 3$\,^\circ$C its 90\% interval grows from 87 to 156\,mm.
+Member $k$ uses the same $z_k$ in every component and every SSP. Each member therefore represents one world, in which the ocean, the glaciers, and the ice sheets all respond to the same warming. The $z_k$ are drawn with their own random seed, so the parameter draws of each component do not change. Sampling the warming range widens the 2100 intervals of the temperature-driven components, most strongly for thermal expansion. At 2.7$\,^\circ$C its 90\% interval grows from 87 to 156\,mm.
 
 
 
@@ -418,25 +418,25 @@ The tabulated values are the fractions of posterior samples above each threshold
 \textbf{SLR threshold} & \textbf{Warming} & \textbf{SPECTRUM} & \textbf{SPECTRUM} \\
 \textbf{(m, pre-ind.)} & \textbf{trajectory} & \textbf{p(s1)=90\%} & \textbf{p(s1)=10\%} \\
 \hline
-\multirow{3}{*}{0.5}  & 2\,$^\circ$C &  98.2 &  99.5 \\
-                       & 3\,$^\circ$C & 100.0 & 100.0 \\
-                       & 4\,$^\circ$C & 100.0 & 100.0 \\
+\multirow{3}{*}{0.5}  & 1.8\,$^\circ$C &  98.2 &  99.5 \\
+                       & 2.7\,$^\circ$C & 100.0 & 100.0 \\
+                       & 3.6\,$^\circ$C & 100.0 & 100.0 \\
 \hline
-\multirow{3}{*}{0.75} & 2\,$^\circ$C &  11.3 &  57.0 \\
-                       & 3\,$^\circ$C &  65.8 &  91.0 \\
-                       & 4\,$^\circ$C &  97.7 &  99.7 \\
+\multirow{3}{*}{0.75} & 1.8\,$^\circ$C &  11.3 &  57.0 \\
+                       & 2.7\,$^\circ$C &  65.8 &  91.0 \\
+                       & 3.6\,$^\circ$C &  97.7 &  99.7 \\
 \hline
-\multirow{3}{*}{1.0}  & 2\,$^\circ$C &   2.7 &  24.4 \\
-                       & 3\,$^\circ$C &   5.4 &  38.8 \\
-                       & 4\,$^\circ$C &  37.1 &  72.7 \\
+\multirow{3}{*}{1.0}  & 1.8\,$^\circ$C &   2.7 &  24.4 \\
+                       & 2.7\,$^\circ$C &   5.4 &  38.8 \\
+                       & 3.6\,$^\circ$C &  37.1 &  72.7 \\
 \hline
-\multirow{3}{*}{1.5}  & 2\,$^\circ$C &   0.9 &   7.6 \\
-                       & 3\,$^\circ$C &   1.1 &  10.2 \\
-                       & 4\,$^\circ$C &   1.8 &  15.5 \\
+\multirow{3}{*}{1.5}  & 1.8\,$^\circ$C &   0.9 &   7.6 \\
+                       & 2.7\,$^\circ$C &   1.1 &  10.2 \\
+                       & 3.6\,$^\circ$C &   1.8 &  15.5 \\
 \hline
-\multirow{3}{*}{2.0}  & 2\,$^\circ$C &   0.4 &   3.8 \\
-                       & 3\,$^\circ$C &   0.5 &   4.5 \\
-                       & 4\,$^\circ$C &   0.6 &   5.8 \\
+\multirow{3}{*}{2.0}  & 1.8\,$^\circ$C &   0.4 &   3.8 \\
+                       & 2.7\,$^\circ$C &   0.5 &   4.5 \\
+                       & 3.6\,$^\circ$C &   0.6 &   5.8 \\
 \hline
 \end{tabular}
 \end{table}
@@ -524,7 +524,7 @@ The annual EVPI is converted to a present value at the year of arrival by discou
 \end{equation}
 The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
 
-The VoI surface (Fig.~10c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 3$\,^\circ$C (SSP2-4.5) warming trajectory, the scenario closest to current policies \citep{Hausfather2025}. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The main text quotes the maximum of this surface over both axes, US\$4.5 trillion, which is attained at $p_s = 0.81$ for information arriving in 2026. It is not the value at any single prior. At the $p(\mathrm{S1}) = 0.90$ case adopted in the main text the surface gives US\$3.9\,T, and at $p_s = 0.10$, the prior marked on the panel, it gives US\$0.8\,T. 
+The VoI surface (Fig.~11c of the main text) is computed over a grid of arrival years ($t_a \in [2026, 2150]$) and prior probabilities ($p_s \in [0.01, 0.99]$). All calculations use the 2.7$\,^\circ$C warming trajectory, the scenario closest to current policies \citep{Hausfather2025}. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The main text quotes the maximum of this surface over both axes, US\$4.5 trillion, which is attained at $p_s = 0.81$ for information arriving in 2026. It is not the value at any single prior. At the $p(\mathrm{S1}) = 0.90$ case adopted in the main text the surface gives US\$3.9\,T, and at $p_s = 0.10$, the prior marked on the panel, it gives US\$0.8\,T. 
 
 \subsection{Key assumptions and limitations}
 
