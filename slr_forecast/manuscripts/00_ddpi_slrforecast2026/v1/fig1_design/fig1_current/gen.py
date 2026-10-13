@@ -248,7 +248,7 @@ add(f'<g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round">'
     f'<line x1="{tx_+9}" y1="{ty_+24}" x2="{tx_+13}" y2="{ty_+24}"/></g>')
 add(f'<text x="{BX0+16}" y="{BT+44}" class="h" style="fill:#fff;font-size:34px">GMST</text>')
 add(f'<text x="{BX0+16}" y="{BT+76}" style="fill:#fff">observed to 2025</text>')
-add(f'<text x="{BX0+16}" y="{BT+102}" style="fill:#fff">AR6 paths: 2, 3, 4 °C</text>')
+add(f'<text x="{BX0+16}" y="{BT+102}" style="fill:#fff">AR6: 1.8, 2.7, 3.6 °C</text>')
 add(f'<text x="{BX0}" y="{BT-42}" style="fill:{B400}">Global mean</text>')
 add(f'<text x="{BX0}" y="{BT-16}" style="fill:{B400}">surface temperature</text>')
 
@@ -283,8 +283,8 @@ fx = [i for i, x in enumerate(xs) if x >= SX1]
 tail_top = [L2[i] - (L2[i] - TAIL_TOP) * ((xs[i] - SX1) / (SX2 - SX1)) ** 1.6 for i in fx]
 pts = [f"{xs[i]},{yy:.1f}" for i, yy in zip(fx, tail_top)] + [f"{xs[i]},{L2[i]:.1f}" for i in reversed(fx)]
 add(f'<path d="M{" L".join(pts)} Z" fill="url(#tail)"/>')
-# scenario paths (2, 3, 4 C) drawn through the tail
-for name, yl in (("2 °C", L2), ("3 °C", L3), ("4 °C", L4)):
+# scenario paths (1.8, 2.7, 3.6 C) drawn through the tail
+for name, yl in (("1.8 °C", L2), ("2.7 °C", L3), ("3.6 °C", L4)):
     d = "M" + " L".join(f"{xs[i]},{yl[i]:.1f}" for i in fx)
     add(f'<path d="{d}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>')
     add(f'<path d="{d}" fill="none" stroke="{B500}" stroke-width="3" stroke-linecap="round"/>')
@@ -318,7 +318,7 @@ for x, yr in ((SX0, "1950"), (SX1, "2025"), (SX2, "2100")):
 add(f'<line x1="{SX1}" x2="{SX1}" y1="280" y2="{BASE}" stroke="{GREY}" stroke-width="1.5" stroke-dasharray="4 4"/>')
 add(f'<line x1="{SX2}" x2="{SX2}" y1="{TAIL_TOP}" y2="{BASE}" stroke="{OVER}" stroke-width="2" stroke-dasharray="4 4"/>')
 add(f'<text x="{(SX0+SX2)/2}" y="{BASE+56}" text-anchor="middle" class="tag" style="fill:{GREY}">schematic stack and fan</text>')
-add(f'<text x="1062" y="156">2000 members under 2, 3, 4 °C</text>')
+add(f'<text x="1062" y="156">2000 members per scenario</text>')
 
 # test block below the stack
 tx, ty = 890, BASE + 98
