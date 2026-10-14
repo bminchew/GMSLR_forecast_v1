@@ -147,8 +147,8 @@ def fig_fit(emu, mar, temp):
                     arrowprops=dict(arrowstyle='-', color='0.55', lw=0.5,
                                     shrinkA=1, shrinkB=0))
     ax.set_title('(h) Posteriors, 90%', loc='left', pad=2)
-    ax.set_xlabel(r'$b_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)')
-    ax.set_ylabel(r'$a_{gris}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)')
+    ax.set_xlabel(r'$b_{\mathrm{gris}}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-1}$)')
+    ax.set_ylabel(r'$a_{\mathrm{gris}}$ (mm SLE yr$^{-1}$ $^\circ$C$^{-2}$)')
     ax.set_xlim(-0.3, 0.68); ax.set_ylim(0.0, 0.22)
     ax.set_xticks([-0.2, 0, 0.2, 0.4]); ax.set_yticks([0, 0.1, 0.2])
     ax.tick_params(pad=1.5)
@@ -289,7 +289,7 @@ def fig_hindcast(emu, rng):
     ax.plot(years, np.median(to_slr(forced), 0), color='#2E8B57', lw=1.2,
             label='Emulator forced response, median')
     ax.plot(mou_smb.index, to_slr(mou_smb.values), 'o', color='k', ms=3,
-            label='Mouginot et al. (2019), sets $c_{gris}$')
+            label='Mouginot et al. (2019), sets $c_{\mathrm{gris}}$')
     ax.plot(mank.index, to_slr(mank.values), 's', mfc='white', mec='0.25', mew=0.8, ms=3.5,
             label='Mankoff et al. (2021), withheld')
     ax.set_xlim(1970, years[-1] + 1)
