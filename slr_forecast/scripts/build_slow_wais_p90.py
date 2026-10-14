@@ -37,6 +37,7 @@ SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'SSP1-1.9']
 P_S1 = 0.9
 N_OUT = 20_000
 M_TO_MM = 1000.0
+TOL_MM = 2.0
 
 
 def weighted_quantile(v, w, q):
@@ -74,7 +75,13 @@ def build(s1, s2, i2100):
 
 
 def check(mix, s1, s2, i2100, label):
-    """Compare the realized ensemble against exact weighted quantiles."""
+    """Compare the realized ensemble against exact weighted quantiles.
+
+    The allowed deviation at each quantile is 2 mm or the gap between the two
+    distinct member values that bracket the exact quantile, whichever is
+    larger: in the sparse tail the realized ensemble cannot land closer than
+    that spacing. Returns the largest deviation in excess of its tolerance.
+    """
     v = np.concatenate([s1[:, i2100], s2[:, i2100]])
     w = np.concatenate([np.full(s1.shape[0], P_S1 / s1.shape[0]),
                         np.full(s2.shape[0], (1 - P_S1) / s2.shape[0])])
@@ -82,13 +89,17 @@ def check(mix, s1, s2, i2100, label):
     exact = weighted_quantile(v, w, qs) * M_TO_MM
     got = np.percentile(mix[:, i2100], [q * 100 for q in qs]) * M_TO_MM
     dev = np.abs(got - exact)
+    u = np.unique(v) * M_TO_MM
+    k = np.clip(np.searchsorted(u, exact), 1, len(u) - 1)
+    tol = np.maximum(TOL_MM, u[k] - u[k - 1])
     print(f'  {label}: max deviation from exact weighted quantiles '
-          f'{dev.max():.2f} mm  (95th: {got[-1]:.1f} vs {exact[-1]:.1f})')
-    return dev.max()
+          f'{dev.max():.2f} mm, tolerance {tol[np.argmax(dev)]:.2f} mm  '
+          f'(95th: {got[-1]:.1f} vs {exact[-1]:.1f})')
+    return (dev - tol).max()
 
 
 def main():
-    worst = 0.0
+    worst = -np.inf
     with h5py.File(H5, 'a') as hf:
         yrs = hf['blended/forecast_years'][:]
         i2100 = int(np.argmin(np.abs(yrs - 2100)))
@@ -111,9 +122,9 @@ def main():
         wais_mix = build(w_s1, w_s2, iw)
         worst = max(worst, check(wais_mix, w_s1, w_s2, iw, 'WAIS'))
 
-        if worst > 2.0:
-            raise SystemExit(f'Realized ensemble deviates by {worst:.2f} mm; '
-                             'not written.')
+        if worst > 0:
+            raise SystemExit(f'Realized ensemble exceeds its tolerance by '
+                             f'{worst:.2f} mm; not written.')
 
         for name in ('blended_slow90', 'wais_slow90'):
             if name in hf:

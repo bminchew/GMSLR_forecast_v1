@@ -289,7 +289,7 @@ def fig_hindcast(emu, rng):
     ax.plot(years, np.median(to_slr(forced), 0), color='#2E8B57', lw=1.2,
             label='Emulator forced response, median')
     ax.plot(mou_smb.index, to_slr(mou_smb.values), 'o', color='k', ms=3,
-            label='Mouginot et al. (2019), sets $c_{\mathrm{gris}}$')
+            label=r'Mouginot et al. (2019), sets $c_{\mathrm{gris}}$')
     ax.plot(mank.index, to_slr(mank.values), 's', mfc='white', mec='0.25', mew=0.8, ms=3.5,
             label='Mankoff et al. (2021), withheld')
     ax.set_xlim(1970, years[-1] + 1)

@@ -738,7 +738,9 @@ def compute_kinematics(
     span_years: float,
     weights: Optional[np.ndarray] = None,
     min_effective_obs: int = 12,
-    kernel: str = 'tricube'
+    kernel: str = 'tricube',
+    error_cov: Optional[np.ndarray] = None,
+    inflate_by_misfit: bool = False,
 ) -> KinematicsResult:
     """
     Estimate rate and acceleration using kernel-weighted local polynomial regression.
@@ -801,7 +803,20 @@ def compute_kinematics(
         Minimum effective observations for regression.
     kernel : str, default 'tricube'
         Kernel function: 'tricube', 'gaussian', 'epanechnikov'.
-    
+    error_cov : np.ndarray, optional
+        (n, n) covariance of the measurement errors in *value*. Default
+        None keeps the original standard errors (diagonal WLS, scaled by
+        the weighted residual variance). When given, the point estimates
+        are unchanged and the standard errors come from the sandwich
+        A X'W C W X A, with A = (X'WX)^-1 and W the combined weights on
+        the local window. Use this for cumulative records, whose errors
+        are strongly correlated in time (see cumulative_record_cov);
+        diagonal weights on such a record understate the rate SE.
+    inflate_by_misfit : bool
+        With *error_cov*, multiply the sandwich covariance by
+        max(1, kernel-weighted reduced chi-square), so a poor local fit widens the
+        standard errors but never narrows them. Default False.
+
     Returns
     -------
     KinematicsResult
@@ -846,6 +861,12 @@ def compute_kinematics(
     
     if np.any(sigma <= 0):
         raise ValueError("All sigma values must be positive")
+
+    if error_cov is not None:
+        error_cov = np.asarray(error_cov, dtype=np.float64)
+        if error_cov.shape != (n, n):
+            raise ValueError(
+                f"error_cov shape {error_cov.shape} must be ({n}, {n})")
     
     if np.any(np.isnan(value)):
         warnings.warn(
@@ -910,9 +931,27 @@ def compute_kinematics(
         try:
             model = sm.WLS(y_loc, X, weights=w_loc).fit()
             rate[i] = model.params[1]
-            rate_se[i] = model.bse[1]
             accel[i] = model.params[2]
-            accel_se[i] = model.bse[2]
+            if error_cov is None:
+                rate_se[i] = model.bse[1]
+                accel_se[i] = model.bse[2]
+            else:
+                # Sandwich covariance of the same WLS estimator under the
+                # supplied (correlated) error covariance.
+                XtW = X.T * w_loc[None, :]
+                A = np.linalg.inv(XtW @ X)
+                V = A @ (XtW @ error_cov[np.ix_(valid, valid)] @ XtW.T) @ A
+                if inflate_by_misfit:
+                    # Widen (never narrow) by the local misfit: the
+                    # kernel-weighted reduced chi-square of the residuals
+                    # against the reported sigma, floored at 1.
+                    _k = (k_weights * weights)[valid]
+                    _chi = np.sum(_k * (model.resid / sigma[valid])**2) / np.sum(_k)
+                    _neff = np.sum(_k)**2 / np.sum(_k**2)
+                    _misfit = _chi * _neff / max(_neff - 3.0, 1.0)
+                    V = V * max(1.0, float(_misfit))
+                rate_se[i] = np.sqrt(V[1, 1])
+                accel_se[i] = np.sqrt(V[2, 2])
         except (np.linalg.LinAlgError, ValueError):
             continue
     
@@ -926,6 +965,61 @@ def compute_kinematics(
         span_years=span_years,
         kernel=kernel
     )
+
+
+def cumulative_record_cov(
+    time: np.ndarray,
+    sigma: np.ndarray,
+    smooth_years: Optional[float] = None,
+) -> np.ndarray:
+    """
+    Error covariance of a cumulative (integrated) record from its reported sigma.
+
+    A published sigma on a cumulative record (e.g. a GMSL reconstruction)
+    is the uncertainty accumulated from the record's reference epoch, so
+    neighboring values share nearly all of their error. The error is
+    modeled as a random walk of independent annual increments, with the
+    increment variance between consecutive values |sigma_k^2 - sigma_{k-1}^2|
+    (the convention of component_projections.cumulative_error_paths).
+    The covariance is then C_ij = c_min(i,j), with c the cumulated
+    increment variance (a min(i,j) structure). Where the walk is anchored
+    only adds a constant to C, which changes the intercept of a local
+    regression but not its rate or acceleration.
+
+    Year-to-year jitter in a reported sigma would count every rise and
+    fall as a positive increment and inflate the walk. With
+    *smooth_years*, sigma^2 is first LOWESS-smoothed over that span; the
+    random walk is built from the smoothed sigma^2, and the remainder
+    max(sigma^2 - smoothed, 0) is added on the diagonal as independent
+    (white) error, so each year keeps at least its reported variance.
+
+    Parameters
+    ----------
+    time : np.ndarray
+        Record times (increasing).
+    sigma : np.ndarray
+        Reported 1-sigma of the cumulative record.
+    smooth_years : float, optional
+        LOWESS span (years) for sigma^2. Default None uses the raw sigma.
+
+    Returns
+    -------
+    np.ndarray
+        (n, n) covariance matrix, in units of sigma^2.
+    """
+    time = np.asarray(time, dtype=np.float64)
+    s2 = np.asarray(sigma, dtype=np.float64) ** 2
+    if smooth_years is None:
+        s2_rw = s2
+        white = np.zeros_like(s2)
+    else:
+        frac = min(1.0, smooth_years / (time[-1] - time[0]))
+        s2_rw = sm.nonparametric.lowess(s2, time, frac=frac,
+                                        return_sorted=False)
+        s2_rw = np.maximum(s2_rw, 0.0)
+        white = np.maximum(s2 - s2_rw, 0.0)
+    c = np.concatenate([[0.0], np.cumsum(np.abs(np.diff(s2_rw)))])
+    return np.minimum.outer(c, c) + np.diag(white)
 
 
 def compute_kinematics_multibandwidth(

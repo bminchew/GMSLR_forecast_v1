@@ -944,6 +944,29 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
     else:
         anchor_draws = np.full(n_samples, anchor_value_mm)
 
+    # Correlated observation errors for the pre-anchor IMBIE record. The
+    # record is cumulative, so its errors are drawn as independent annual
+    # increments and cumulated (cumulative_error_paths), zero where the
+    # record is rebased (smallest sigma), then conditioned so each path ends
+    # at that member's anchor draw (random-walk bridge, weights from the
+    # accumulated variance). A separate generator leaves the main stream as
+    # before.
+    obs_err = None
+    if (obs_years is not None and obs_values_mm is not None
+            and obs_sigmas_mm is not None and np.any(np.asarray(obs_sigmas_mm) > 0)):
+        _oy = np.asarray(obs_years, dtype=float)
+        _os = np.asarray(obs_sigmas_mm, dtype=float)
+        _ref = _oy[int(np.argmin(_os))]
+        _paths = cumulative_error_paths(_oy, _os, n_samples,
+                                        np.random.default_rng(20261014), _ref)
+        _v = np.clip(_os**2 - _os.min()**2, 0.0, None)
+        _v_end = float(np.interp(anchor_year, _oy, _v))
+        _w = np.where(_oy >= _ref, _v / _v_end, 0.0) if _v_end > 0 else np.zeros_like(_v)
+        _p_end = np.array([np.interp(anchor_year, _oy, _paths[k])
+                           for k in range(n_samples)])
+        _target = anchor_draws - float(obs_interp(anchor_year))
+        obs_err = _paths + (_target - _p_end)[:, None] * _w[None, :]
+
     # Pre-draw n for Mode B
     if rheology_mode == 'B':
         n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
@@ -1029,11 +1052,16 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
             # level (zero rate before the record begins)
             continue
         elif yr <= anchor_year:
-            # Pre-anchor: IMBIE observation with measurement uncertainty
+            # Pre-anchor: IMBIE observation with correlated measurement
+            # error (obs_err above). The independent draw is kept and
+            # discarded so the main random stream is unchanged.
             val = float(obs_interp(yr))
             sig = float(sig_interp(yr))
             if sig > 0:
-                samples_mm[:, j] = rng.normal(val, sig, size=n_samples)
+                rng.normal(val, sig, size=n_samples)
+            if obs_err is not None:
+                samples_mm[:, j] = val + np.array(
+                    [np.interp(yr, obs_years, obs_err[k]) for k in range(n_samples)])
             else:
                 samples_mm[:, j] = val
         else:
