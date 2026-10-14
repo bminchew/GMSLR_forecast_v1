@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / 'notebooks'))
 sys.path.insert(0, str(ROOT / 'src'))
 
 M_TO_MM = 1000.0
-PREIND_M = 0.19          # observed rise, pre-industrial to the 2000 baseline
+PREIND_M = None          # pre-industrial to 2000, from blended attrs (component_forecast)
 ADAPT_COST_PER_M = None  # filled from compute_evpi
 SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']
 LABEL = {'SSP1-2.6': '1.8 C', 'SSP2-4.5': '2.7 C', 'SSP3-7.0': '3.6 C'}
@@ -49,11 +49,14 @@ def main():
         yrs = hf['blended/forecast_years'][:]
         i = int(np.argmin(np.abs(yrs - 2100)))
         idx = hf['blended/wais_scenario_idx'][:].astype(int)
+        global PREIND_M
+        PREIND_M = float(hf['blended'].attrs['preindustrial_to_baseline_m'])
         T1 = {s: hf[f'blended_stable/{s}/samples'][:, i] for s in SSPS}
         Tf = {s: hf[f'blended/{s}/samples'][:, i] for s in SSPS}
 
     T2 = {s: Tf[s][idx == 1] for s in SSPS}
-    print(f'Branch sizes: S1 {len(T1[SSPS[0]])}, S2 {len(T2[SSPS[0]])}\n')
+    print(f'Branch sizes: S1 {len(T1[SSPS[0]])}, S2 {len(T2[SSPS[0]])}')
+    print(f'Pre-industrial to 2000 offset: {PREIND_M:.4f} m\n')
 
     def branches(s, p):
         v = np.concatenate([T1[s], T2[s]])

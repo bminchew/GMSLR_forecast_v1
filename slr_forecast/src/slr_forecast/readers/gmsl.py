@@ -201,13 +201,21 @@ def read_frederikse2020(filepath: str) -> pd.DataFrame:
 # =========================================================================
 
 def read_dangendorf2024(filepath: str) -> pd.DataFrame:
-    """Read Dangendorf et al. (2024) Kalman Smoother GMSL reconstruction.
+    """Read the Dangendorf et al. (2024) Kalman smoother global-mean NetCDF.
 
     Returns DataFrame with datetime index (annual, 1900–2021),
     all values in **meters** (native unit).
 
-    Columns: gmsl, gmsl_sigma, steric, steric_sigma, barystatic,
-    barystatic_sigma, gia, gia_sigma, decimal_year.
+    Columns: barystatic, barystatic_sigma, gia, gia_sigma, decimal_year.
+
+    The distributed NetCDF does not contain total GMSL. Its ``GMSLHR``
+    variable is the cosine-latitude mean of the barystatic field
+    (``BarySL`` in ``dangendorf2024_KSSLfin.mat``) plus a constant offset,
+    and ``GMSLHRSE`` equals the barystatic standard error ``GBSLHRSE``.
+    ``GMSSLHR`` and ``GBSLHR`` are empty. They are read here as barystatic.
+    For total GMSL use ``read_dangendorf2024_fields`` in
+    ``notebooks/slr_data_readers.py``, which averages the ``SL_multi`` field
+    of the .mat files (1900–2000 rise 0.137 m, against 0.109 m here).
 
     Reference
     ---------
@@ -236,12 +244,8 @@ def read_dangendorf2024(filepath: str) -> pd.DataFrame:
 
     df = pd.DataFrame(
         {
-            "gmsl": _safe("GMSLHR"),
-            "gmsl_sigma": _safe("GMSLHRSE"),
-            "steric": _safe("GMSSLHR"),
-            "steric_sigma": _safe("GMSSLHRSE"),
-            "barystatic": _safe("GBSLHR"),
-            "barystatic_sigma": _safe("GBSLHRSE"),
+            "barystatic": _safe("GMSLHR"),
+            "barystatic_sigma": _safe("GMSLHRSE"),
             "gia": _safe("GGIAHR"),
             "gia_sigma": _safe("GGIAHRSE"),
             "decimal_year": time_decimal,
@@ -253,14 +257,13 @@ def read_dangendorf2024(filepath: str) -> pd.DataFrame:
 
     # Already in meters (native NetCDF units)
     tag_sign_convention(df, "slr")
-    sl_cols = ["gmsl", "gmsl_sigma", "steric", "steric_sigma",
-               "barystatic", "barystatic_sigma", "gia", "gia_sigma"]
+    sl_cols = ["barystatic", "barystatic_sigma", "gia", "gia_sigma"]
     tag_units(df, {**{c: "m" for c in sl_cols}, "decimal_year": "yr"})
     df.attrs["dataset"] = "dangendorf2024"
     df.attrs["reference"] = "Dangendorf et al. (2024)"
     df.attrs["doi"] = "10.5194/essd-16-3471-2024"
 
-    assert_units_meters(df["gmsl"].dropna(), "dangendorf2024.gmsl")
+    assert_units_meters(df["barystatic"].dropna(), "dangendorf2024.barystatic")
 
     return df
 

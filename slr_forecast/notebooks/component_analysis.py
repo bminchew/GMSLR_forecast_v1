@@ -18,17 +18,46 @@ from bayesian_models import (
 # so the module works standalone from the notebooks/ directory)
 # ---------------------------------------------------------------------------
 try:
-    from slr_forecast.config import BASELINE_YEAR, N_SAMPLES
+    from slr_forecast.config import BASELINE_YEAR, N_SAMPLES, PREIND_TO_1900_M
     from slr_forecast import M_TO_MM
 except ImportError:
     BASELINE_YEAR = 2000.0
     M_TO_MM = 1000.0
     N_SAMPLES = 2000
+    PREIND_TO_1900_M = 0.010
 
 
 # =========================================================================
 # Data preparation helpers
 # =========================================================================
+
+def preindustrial_to_baseline_m(h5_path, baseline_year=BASELINE_YEAR):
+    """GMSL rise from the pre-industrial (1850-1900) mean to *baseline_year* (m).
+
+    The observed rise from 1900 to *baseline_year* is the mean of the
+    Frederikse et al. (2020) and Dangendorf et al. (2024) reconstructions
+    (annual values, ``raw/df_frederikse`` and ``raw/df_dangendorf`` in the
+    processed HDF5). No record starts before 1900, so the rise from the
+    1850-1900 mean to 1900 is the literature estimate ``PREIND_TO_1900_M``.
+
+    Returns
+    -------
+    total : float
+        Rise from pre-industrial to *baseline_year* (m).
+    parts : dict
+        Each reconstruction's 1900 -> baseline rise, their mean, and the
+        pre-1900 increment (m).
+    """
+    fr = pd.read_hdf(h5_path, 'raw/df_frederikse')
+    dg = pd.read_hdf(h5_path, 'raw/df_dangendorf')
+    rise = lambda t, v: float(np.interp(baseline_year, t, v) - np.interp(1900.0, t, v))
+    parts = {'frederikse2020': rise(fr['year'].values.astype(float), fr['gmsl'].values),
+             'dangendorf2024': rise(dg['decimal_year'].values, dg['gmsl'].values)}
+    parts['observed_1900'] = float(np.mean([parts['frederikse2020'],
+                                            parts['dangendorf2024']]))
+    parts['preind_to_1900'] = PREIND_TO_1900_M
+    return parts['observed_1900'] + PREIND_TO_1900_M, parts
+
 
 def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     """Resample monthly IMBIE to annual, rebase to *baseline_year*.

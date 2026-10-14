@@ -89,6 +89,9 @@ def main():
         w_idx = hf['wais_2k/scenario_idx'][:].astype(int)
         wslow = hf['wais_slow90/samples'][:]
         wslow_y = hf['wais_slow90/years'][:]
+        wobs_y = hf['wais/observations/years'][:]
+        wobs_h = hf['wais/observations/H_obs'][:]
+        preind = float(hf['blended'].attrs['preindustrial_to_baseline_m'])
     j21 = int(np.argmin(np.abs(cy - 2100)))
 
     # ── Storylines on the AR6 baseline (Discussion: comparison with AR6) ──
@@ -128,10 +131,35 @@ def main():
         out['hierarchy'] = {'quadratic_m': quad, 'rahmstorf2007_m': r07, 'slow_2p7_m': sl}
         print(f'\nAt 2.7 C, 2100 (m, rel. 2000): slow {fmt(sl)}, quadratic {fmt(quad)}, '
               f'Rahmstorf (2007) {fmt(r07)}')
-        print(f'  slow median minus quadratic: {(sl[0] - quad[0]) * 100:+.1f} cm; '
-              f'minus Rahmstorf: {(sl[0] - r07[0]) * 100:+.1f} cm')
+        print(f'  slow median minus quadratic: {(sl[0] - quad[0]) * M_TO_MM:+.0f} mm; '
+              f'minus Rahmstorf: {(sl[0] - r07[0]) * M_TO_MM:+.0f} mm')
     else:
         print(f'\n{REF_JSON.name} missing: run component_forecast.ipynb first')
+
+    # ── WAIS share of observed GMSL rise over the altimetry era (Results) ──
+    # IMBIE-3 annual levels are end-of-year values (annualize_imbie: time
+    # Y + 1 is the end of calendar year Y), so 1993.0 to the last IMBIE time
+    # spans calendar years 1993 to the last full IMBIE year. GMSL is the
+    # smoothed NASA altimetry record over the same window.
+    na = pd.read_hdf(H5_OBS, '/harmonized/df_nasa_gmsl_h')
+    nt, nv = na['decimal_year'].values, na['gmsl_smoothed'].values
+    t0, t1 = 1993.0, float(wobs_y[-1])
+    d_wais = float(np.interp(t1, wobs_y, wobs_h) - np.interp(t0, wobs_y, wobs_h))
+    d_gmsl = float(np.interp(t1, nt, nv) - np.interp(t0, nt, nv))
+    out['wais_share_altimetry'] = dict(first_year=int(t0), last_year=int(t1) - 1,
+                                       wais_mm=d_wais * M_TO_MM, gmsl_mm=d_gmsl * M_TO_MM,
+                                       share_pct=100 * d_wais / d_gmsl)
+    print(f'\nWAIS share of observed GMSL rise, calendar years {int(t0)}-{int(t1) - 1}: '
+          f'{d_wais * M_TO_MM:.1f} of {d_gmsl * M_TO_MM:.1f} mm = {100 * d_wais / d_gmsl:.1f}%')
+
+    # ── Pre-industrial (1850-1900) to 2000 offset (Results; set in component_forecast) ──
+    from component_analysis import preindustrial_to_baseline_m
+    _, parts = preindustrial_to_baseline_m(H5_OBS, BASELINE_YEAR)
+    out['preindustrial_to_baseline_m'] = dict(total=preind, **parts)
+    print(f'\nPre-industrial to 2000 (m): {preind:.3f} = observed 1900-2000 '
+          f'{parts["observed_1900"]:.3f} (Frederikse {parts["frederikse2020"]:.3f}, '
+          f'Dangendorf {parts["dangendorf2024"]:.3f}) + 1850-1900 to 1900 '
+          f'{parts["preind_to_1900"]:.3f}')
 
     # ── Calibrated components on both baselines (Results) ──
     ar6_name = {'ocean': 'oceandynamics', 'glacier': 'glaciers', 'greenland': 'GIS'}

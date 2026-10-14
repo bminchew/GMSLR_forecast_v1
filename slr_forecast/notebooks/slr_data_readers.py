@@ -807,48 +807,36 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
 
 def read_dangendorf2024(filepath: str) -> pd.DataFrame:
     """
-    Read Dangendorf et al. Kalman Smoother GMSL reconstruction.
-    
-    Hybrid tide gauge reconstruction using Kalman smoother methodology,
-    providing total GMSL and its steric/barystatic decomposition.
-    
+    Read the Dangendorf et al. (2024) Kalman smoother global-mean NetCDF.
+
+    The distributed NetCDF does not contain total GMSL. Its ``GMSLHR``
+    variable is the cosine-latitude mean of the barystatic field
+    (``BarySL`` in ``dangendorf2024_KSSLfin.mat``) plus a constant offset,
+    and ``GMSLHRSE`` equals the barystatic standard error ``GBSLHRSE``.
+    ``GMSSLHR`` and ``GBSLHR`` are empty. They are read here as barystatic.
+    For total GMSL and its decomposition use ``read_dangendorf2024_fields``,
+    which averages the ``SL_multi`` field of the .mat files (1900-2000 rise
+    0.137 m, against 0.109 m for the barystatic series here).
+
     Parameters
     ----------
     filepath : str
         Path to NetCDF file (dangendorf2024_KalmanSmootherHR_Global.nc)
-        
+
     Returns
     -------
     pd.DataFrame
-        DataFrame with datetime index (annual, 1900-2021). 
+        DataFrame with datetime index (annual, 1900-2021).
         All values in meters.
-        
-        Columns (with *_sigma uncertainty variants):
-        - gmsl: Global Mean Sea Level, hybrid reconstruction
-        - steric: Global Mean Steric Sea Level
-        - barystatic: Global Barystatic Sea Level
-        - gia: GIA correction
+
+        Columns:
+        - barystatic, barystatic_sigma: global mean barystatic sea level
+          (NetCDF ``GMSLHR``, ``GMSLHRSE``)
+        - gia, gia_sigma: GIA correction (``GGIAHR``, ``GGIAHRSE``)
         - decimal_year: Original time values
-        
-        Note: Some fields may be NaN if empty in source file.
-        
-    Note
-    ----
-    NetCDF structure (from ncdump -h):
-        dimensions: x = 122, y = 1
-        variables (all in meters):
-            t(y, x)        - time in decimal years (1900-2021)
-            GMSLHR(y, x)   - Global Mean Sea Level (Hybrid Reconstruction)
-            GMSSLHR(y, x)  - Global Mean Steric Sea Level
-            GBSLHR(y, x)   - Global Barystatic Sea Level  
-            GMSLHRSE(y, x) - GMSL standard error
-            GMSSLHRSE(y, x)- Steric standard error
-            GBSLHRSE(y, x) - Barystatic standard error
-            GGIAHR(y, x)   - GIA correction
-            GGIAHRSE(y, x) - GIA standard error
-    
+
     Requires: pip install xarray netCDF4
-        
+
     Reference
     ---------
     Dangendorf, S., et al. (2019). Persistent acceleration in global sea-level
@@ -896,12 +884,8 @@ def read_dangendorf2024(filepath: str) -> pd.DataFrame:
     
     # Build dataframe, safely extracting each variable
     df = pd.DataFrame({
-        'gmsl': safe_extract('GMSLHR'),
-        'gmsl_sigma': safe_extract('GMSLHRSE'),
-        'steric': safe_extract('GMSSLHR'),
-        'steric_sigma': safe_extract('GMSSLHRSE'),
-        'barystatic': safe_extract('GBSLHR'),
-        'barystatic_sigma': safe_extract('GBSLHRSE'),
+        'barystatic': safe_extract('GMSLHR'),
+        'barystatic_sigma': safe_extract('GMSLHRSE'),
         'gia': safe_extract('GGIAHR'),
         'gia_sigma': safe_extract('GGIAHRSE'),
         'decimal_year': time_decimal
@@ -983,9 +967,9 @@ def read_dangendorf2024_fields(
       (the IBA term is small and absorbed into gmsl but not output separately).
     - No re-referencing is applied. Use ``harmonize_baseline`` to set a common
       reference period.
-    - ``read_dangendorf2024()`` reads the pre-computed global means from a
-      NetCDF file; this function recomputes them from the spatial fields and
-      additionally provides the sterodynamic/barystatic decomposition.
+    - ``read_dangendorf2024()`` reads the distributed global-mean NetCDF,
+      which holds only the barystatic series and GIA. This function is the
+      source of total GMSL and its sterodynamic/barystatic decomposition.
 
     Requires: pip install h5py
 

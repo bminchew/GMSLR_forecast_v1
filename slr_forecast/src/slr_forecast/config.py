@@ -95,9 +95,14 @@ SSPS: list[str] = [
 GT_TO_M_SLE: float = 1.0 / 362500.0
 """Gigatonnes of ice to metres of sea-level equivalent."""
 
-PREIND_TO_BASELINE_M: float = 0.19
-"""SLR from pre-industrial to BASELINE_YEAR (metres).
-Frederikse et al. (2020): ~0.19 m from pre-industrial to ~2000."""
+PREIND_TO_1900_M: float = 0.010
+"""GMSL rise from the pre-industrial (1850-1900) mean to 1900 (metres).
+The 1850-1900 mean sits ~25 yr before 1900, and the late-19th-century rate
+was 0-1 mm/yr: Kopp et al. (2016, PNAS, p. E1436) give 0.0 +/- 0.4 mm/yr
+(2 sigma) for 1800-1900, and AR6 WG1 Ch. 9 (p. 1295) dates the onset of the
+sustained rise to 1820-1860. 25 yr x 0-1 mm/yr gives 0.010 [0.000, 0.025] m.
+The observed rise from 1900 to BASELINE_YEAR is computed from the
+reconstructions by ``component_analysis.preindustrial_to_baseline_m``."""
 
 # ---------------------------------------------------------------------------
 # Statistical constants
