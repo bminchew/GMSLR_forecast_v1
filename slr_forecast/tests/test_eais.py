@@ -227,13 +227,13 @@ class TestEAISSaveLoad:
     def test_metadata_model_type(self, loaded):
         assert loaded['metadata']['model_type'] == 'trend_only'
 
-    def test_metadata_has_r2(self, loaded):
-        """R² is stored as metadata only. The paper reports reduced
-        chi-square for this fit (0.91 against the full cumulative
-        covariance), because R² on a cumulative record is dominated by its
-        trend, so only its presence and range are checked here."""
-        r2 = loaded['metadata']['r2']
-        assert 0.0 <= r2 <= 1.0, f"R² = {r2:.4f}, outside [0, 1]"
+    def test_metadata_chi2_dof(self, loaded):
+        """The paper reports reduced chi-square for this fit, against the
+        fitted correlated covariance (AR(1) annual increments). Level-space
+        R² is stored but not checked: with persistent increments the
+        posterior-mean curve need not track the cumulative points."""
+        chi2 = loaded['metadata']['chi2_dof']
+        assert 0.5 < chi2 < 1.5, f"chi2/dof = {chi2:.3f}, expected ~1"
 
     def test_metadata_projection_method(self, loaded):
         assert loaded['metadata']['projection_method'] == 'smb_literature'

@@ -116,9 +116,13 @@ class TestAPeninsulaSaveLoad:
     def test_metadata_model_type(self, loaded):
         assert loaded['metadata']['model_type'] == 'linear_dols'
 
-    def test_metadata_has_r2(self, loaded):
-        r2 = loaded['metadata']['r2']
-        assert 0.9 < r2 < 1.0, f"R² = {r2:.4f}, expected ~0.96"
+    def test_metadata_chi2_dof(self, loaded):
+        # Reduced chi-square against the fitted correlated covariance (AR(1)
+        # annual increments). Level-space R² is not a fit metric here: with
+        # persistent increments the posterior-mean curve need not track the
+        # cumulative points.
+        chi2 = loaded['metadata']['chi2_dof']
+        assert 0.5 < chi2 < 1.5, f"chi2/dof = {chi2:.3f}, expected ~1"
 
     def test_all_ssps_present(self, loaded):
         for ssp in PROJ_SSPS:

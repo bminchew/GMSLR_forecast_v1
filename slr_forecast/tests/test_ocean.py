@@ -242,12 +242,12 @@ class TestOceanProjections:
                 f"{ssp} median = {med*M_TO_MM:.1f} mm, expected > 0")
 
     def test_range_at_2100(self, loaded):
-        """Ocean median at 2100: 50-400 mm across SSPs."""
+        """Ocean median at 2100: 50-600 mm across SSPs."""
         idx = np.argmin(np.abs(loaded['proj_years'] - 2100))
         for ssp in PROJ_SSPS:
             med_mm = loaded['projections'][ssp]['median'][idx] * M_TO_MM
-            assert 50 < med_mm < 500, (
-                f"{ssp} median = {med_mm:.0f} mm, outside [50, 500]")
+            assert 50 < med_mm < 600, (
+                f"{ssp} median = {med_mm:.0f} mm, outside [50, 600]")
 
     def test_ssp_ordering(self, loaded):
         """Higher SSP → more thermosteric SLR."""

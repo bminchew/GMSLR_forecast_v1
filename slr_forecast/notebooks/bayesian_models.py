@@ -2917,6 +2917,27 @@ def fit_bayesian_level(
 class BayesianLevelCorrelatedResult(BayesianLevelResult):
     """BayesianLevelResult plus the diagnostics specific to this fitter."""
     chi2_dof: float = float('nan')
+    phi_posterior: Optional[np.ndarray] = None   # AR(1) coefficient draws (fit_ar1)
+
+
+def _level_correlated_cov(sigma_rate_obs, dt, sigma_extra=0.0, phi=0.0):
+    """Covariance of a cumulative record built from annual increments.
+
+    Increment k has variance (sigma_rate_obs[k] dt)^2 + sigma_extra^2 and
+    the increments follow AR(1) with lag-1 correlation ``phi`` (phi = 0
+    gives independent increments, Sigma_ij = sum_{k <= min(i,j)} v_k).
+    The level is the running sum, so Sigma = L C L^T with L the
+    lower-triangular matrix of ones.
+    """
+    sd = np.sqrt((sigma_rate_obs * dt)**2 + sigma_extra**2)
+    n = len(sd)
+    if phi == 0.0:
+        cv = np.cumsum(sd**2)
+        idx = np.arange(n)
+        return cv[np.minimum(idx[:, None], idx[None, :])]
+    lag = np.abs(np.subtract.outer(np.arange(n), np.arange(n)))
+    C = np.outer(sd, sd) * phi**lag
+    return np.cumsum(np.cumsum(C, axis=0), axis=1)
 
 
 def _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
@@ -2959,10 +2980,15 @@ def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
                                 prior_scales, H0_prior_mean, H0_prior_sigma,
                                 n_phys, fit_sigma_extra, prior_b_mean=0.0,
                                 symmetric_a=False, symmetric_b=False,
-                                balance_T_eq0=None):
+                                balance_T_eq0=None, fit_ar1=False,
+                                phi_bounds=(-0.95, 0.95)):
     """Log-posterior with the true (correlated) cumulative-record covariance.
 
-    theta = [ (a,) b, c ] (+ log_sigma_extra if fit_sigma_extra) + [H0]
+    theta = [ (a,) b, c ] (+ log_sigma_extra if fit_sigma_extra)
+            (+ phi if fit_ar1) + [H0]
+
+    With ``fit_ar1`` the annual increments follow AR(1) with lag-1
+    correlation phi, uniform prior on ``phi_bounds``.
 
     With ``balance_T_eq0 = (mean, sigma)`` the slot of c holds T_eq0 instead,
     with a Normal(mean, sigma) prior, and c = -(a T_eq0^2 + b T_eq0), so the
@@ -2977,11 +3003,18 @@ def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
         phys = np.r_[phys[:-1], -(a_ * T_eq0**2 + b_ * T_eq0)]
         lp_bal = -0.5 * ((T_eq0 - balance_T_eq0[0]) / balance_T_eq0[1])**2
         prior_scales = np.r_[prior_scales[:3], np.inf, prior_scales[4:]]
+    k = n_phys
+    log_sigma_extra = None
     if fit_sigma_extra:
-        log_sigma_extra = theta[n_phys]
-        H0 = theta[n_phys + 1]
-    else:
-        H0 = theta[n_phys]
+        log_sigma_extra = theta[k]
+        k += 1
+    phi = 0.0
+    if fit_ar1:
+        phi = theta[k]
+        k += 1
+        if not (phi_bounds[0] < phi < phi_bounds[1]):
+            return -np.inf
+    H0 = theta[k]
 
     lp = _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
                                       H0_prior_sigma, n_phys,
@@ -2992,23 +3025,22 @@ def _level_correlated_log_prob(theta, I2, I1, I0, H_obs, dt, sigma_rate_obs,
         return -np.inf
     lp += lp_bal
 
-    if fit_sigma_extra:
-        sigma_extra = np.exp(log_sigma_extra)
-        if sigma_extra < 1e-12:
-            return -np.inf
-        v = (sigma_rate_obs * dt)**2 + sigma_extra**2
-        cv = np.cumsum(v)
-        n = len(v)
-        idx = np.arange(n)
-        Sigma = cv[np.minimum(idx[:, None], idx[None, :])]
+    if fit_sigma_extra or fit_ar1:
+        sigma_extra = 0.0
+        if fit_sigma_extra:
+            sigma_extra = np.exp(log_sigma_extra)
+            if sigma_extra < 1e-12:
+                return -np.inf
+            gamma = prior_scales[4]
+            lp += -np.log(1.0 + (sigma_extra / gamma)**2) + log_sigma_extra
+        Sigma = _level_correlated_cov(sigma_rate_obs, dt, sigma_extra, phi)
+        n = len(Sigma)
         try:
             L = la.cholesky(Sigma, lower=True)
         except la.LinAlgError:
             return -np.inf
         Sigma_inv = la.cho_solve((L, True), np.eye(n))
         log_det_Sigma = 2.0 * np.sum(np.log(np.diag(L)))
-        gamma = prior_scales[4]
-        lp += -np.log(1.0 + (sigma_extra / gamma)**2) + log_sigma_extra
     else:
         Sigma_inv = Sigma_inv_fixed
         log_det_Sigma = log_det_Sigma_fixed
@@ -3042,6 +3074,8 @@ def fit_bayesian_level_annual_correlated(
     prior_H0_sigma: float = 0.002,
     prior_sigma_extra_scale: float = 0.0002,
     fit_sigma_extra: bool = False,
+    fit_ar1: bool = False,
+    phi_bounds: Tuple[float, float] = (-0.95, 0.95),
     symmetric_a: bool = False,
     symmetric_b: bool = False,
     balance_T_eq0: Optional[Tuple[float, float]] = None,
@@ -3114,6 +3148,13 @@ def fit_bayesian_level_annual_correlated(
         excess scatter beyond the reported GlaMBIE sigmas). If True,
         the covariance is rebuilt (new Cholesky) every MCMC step --
         negligible cost at n ~ 20-30 but does slow sampling somewhat.
+    fit_ar1 : bool
+        If True, the annual increments (reported error plus sigma_extra)
+        follow AR(1) with lag-1 correlation phi, sampled with a uniform
+        prior on ``phi_bounds``. Use when the rate residuals are
+        autocorrelated, as for the IMBIE-3 records, whose monthly rates are
+        smoothed and whose interannual surface mass balance anomalies
+        persist from year to year. phi = 0 recovers independent increments.
 
     Returns
     -------
@@ -3193,7 +3234,7 @@ def fit_bayesian_level_annual_correlated(
     resid_ols = H_obs - X0 @ beta_ols
     sigma_extra_0 = max(np.std(resid_ols), 1e-6)
 
-    ndim = n_phys + (1 if fit_sigma_extra else 0) + 1  # (+H0)
+    ndim = n_phys + (1 if fit_sigma_extra else 0) + (1 if fit_ar1 else 0) + 1  # (+H0)
 
     # ---- Initialize walkers ----
     rng = np.random.default_rng(seed)
@@ -3219,6 +3260,9 @@ def fit_bayesian_level_annual_correlated(
     if fit_sigma_extra:
         center += [np.log(sigma_extra_0)]
         scale += [0.2]
+    if fit_ar1:
+        center += [0.3]
+        scale += [0.1]
     center += [H0_0]
     scale += [max(abs(H0_0) * 0.1, 1e-4)]
     p0_center = np.array(center)
@@ -3240,7 +3284,8 @@ def fit_bayesian_level_annual_correlated(
               n_phys, fit_sigma_extra),
         kwargs={'prior_b_mean': prior_b_mean,
                 'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b,
-                'balance_T_eq0': balance_T_eq0},
+                'balance_T_eq0': balance_T_eq0,
+                'fit_ar1': fit_ar1, 'phi_bounds': phi_bounds},
     )
     # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
     if seed is not None:
@@ -3260,12 +3305,17 @@ def fit_bayesian_level_annual_correlated(
         phys_samples = phys_flat
     else:
         phys_samples = np.column_stack([np.zeros(len(phys_flat)), phys_flat])
+    k = n_phys
     if fit_sigma_extra:
-        sigma_extra_samples = np.exp(flat_chain[:, n_phys])
-        H0_samples = flat_chain[:, n_phys + 1]
+        sigma_extra_samples = np.exp(flat_chain[:, k])
+        k += 1
     else:
         sigma_extra_samples = np.zeros(len(flat_chain))
-        H0_samples = flat_chain[:, n_phys]
+    phi_samples = None
+    if fit_ar1:
+        phi_samples = flat_chain[:, k]
+        k += 1
+    H0_samples = flat_chain[:, k]
 
     phys_mean = phys_samples.mean(axis=0)
     phys_cov = np.cov(phys_samples, rowvar=False)
@@ -3278,10 +3328,10 @@ def fit_bayesian_level_annual_correlated(
     resid = H_obs - H_model_mean
     r2 = 1.0 - np.sum(resid**2) / np.sum((H_obs - H_obs.mean())**2)
 
-    if fit_sigma_extra:
-        v_mean = (sigma_rate_obs * dt)**2 + sigma_extra_samples.mean()**2
-        cv_mean = np.cumsum(v_mean)
-        Sigma_mean = cv_mean[np.minimum(idx[:, None], idx[None, :])]
+    if fit_sigma_extra or fit_ar1:
+        Sigma_mean = _level_correlated_cov(
+            sigma_rate_obs, dt, sigma_extra_samples.mean(),
+            phi_samples.mean() if fit_ar1 else 0.0)
         Sigma_inv_mean = np.linalg.inv(Sigma_mean)
     else:
         Sigma_inv_mean = Sigma_inv0
@@ -3301,6 +3351,8 @@ def fit_bayesian_level_annual_correlated(
         param_names[-1] = 'T_eq0'
     if fit_sigma_extra:
         param_names = param_names + ['log_sigma_extra']
+    if fit_ar1:
+        param_names = param_names + ['phi']
     param_names = param_names + ['H0']
     var_dict = {name: chain_full[:, :n_chains_arviz, k].T
                 for k, name in enumerate(param_names)}
@@ -3330,8 +3382,10 @@ def fit_bayesian_level_annual_correlated(
                      'H0_prior_mean': prior_H0_mean,
                      'H0_prior_sigma': prior_H0_sigma,
                      'balance_T_eq0': balance_T_eq0,
-                     'T_eq0_samples': T_eq0_samples},
+                     'T_eq0_samples': T_eq0_samples,
+                     'fit_ar1': fit_ar1, 'phi_bounds': phi_bounds},
         chi2_dof=chi2_dof,
+        phi_posterior=phi_samples,
     )
 
 

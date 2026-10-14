@@ -44,9 +44,15 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     Returns
     -------
     years : ndarray
-        Annual decimal years.
+        Annual times, Y + 1.0 for calendar year Y.  Each value is the
+        December cumulative level, which includes December's increment
+        (the cumulative column is the running sum of the monthly rates),
+        so it is the level at the end of year Y.  The increment of year Y
+        therefore ends at ``years`` and its midpoint is ``years - 0.5``,
+        which is where an annual-mean covariate belongs.
     H_rebase : ndarray
-        Cumulative SLR (m), rebased.
+        Cumulative SLR (m), rebased.  With integer ``baseline_year`` the
+        zero falls exactly at that time (the end of the previous year).
     sigma : ndarray
         Uncertainty of the *rebased* level (m, non-negative), i.e. of
         ``H(t) - H(baseline_year)`` rather than of the published
@@ -63,7 +69,7 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
 
     for i, yr in enumerate(unique_years):
         mask = year_int == yr
-        years[i] = yr + 0.5
+        years[i] = yr + 1.0
         H[i] = df['cumulative_mass_balance'].values[mask][-1]
         sigma[i] = np.abs(df['cumulative_mass_balance_sigma'].values[mask][-1])
 
@@ -90,6 +96,145 @@ def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     sigma = np.sqrt(np.abs(sigma**2 - sigma[bl_idx]**2))
 
     return years, H_rebase, sigma
+
+
+def imbie_annual_rates(df):
+    """Calendar years and annual-mean mass-balance rate and 1-sigma (m/yr).
+
+    ``df`` is a monthly IMBIE-3 frame from ``read_imbie3``.  Year Y's
+    rate is the mean of its monthly rates, so rate * 1 yr is the increment
+    of the cumulative record over year Y, whose end-of-year level
+    ``annualize_imbie`` labels Y + 1.0.
+    """
+    t = df['decimal_year'].values
+    yi = np.floor(t).astype(int)
+    years = np.unique(yi)
+    rate = np.array([df['mass_balance_rate'].values[yi == y].mean() for y in years])
+    sigma = np.array([df['mass_balance_rate_sigma'].values[yi == y].mean() for y in years])
+    return years, rate, sigma
+
+
+def fit_imbie_time_model(H_obs, years, rate, sigma_rate, order=1,
+                         baseline_year=BASELINE_YEAR, seed=700,
+                         n_samples=6000, n_burnin=3000,
+                         prior_scale_acc=5e-5, prior_scale_jerk=1e-5,
+                         prior_rate_sigma=0.002, prior_sigma_extra_scale=0.0002,
+                         prior_H0_sigma=0.005, ar1=False, progress=False):
+    """Fit a rate polynomial in time to an IMBIE-3 cumulative record.
+
+    order=1: rate(t) = v + a tau;  order=2 adds A tau^2 (jerk j = 2A),
+    with tau = t - baseline_year.  The likelihood is that of the annual
+    increments (``fit_bayesian_level_annual_correlated``): each increment
+    carries the reported rate error plus a fitted sigma_extra, independent
+    across years (``ar1=True`` adds a fitted lag-1 correlation).  Year Y's
+    increment is evaluated at its midpoint, tau = Y + 0.5 - baseline_year.
+    Priors are signed Normals: a ~ N(0, prior_scale_acc), A ~ N(0,
+    prior_scale_jerk), v ~ N(0, prior_rate_sigma) (m, yr units).
+
+    Parameters
+    ----------
+    H_obs : ndarray
+        End-of-year cumulative levels (m) from ``annualize_imbie``.
+    years, rate, sigma_rate : ndarray
+        Calendar years and annual rates and 1-sigma (m/yr) from
+        ``imbie_annual_rates``, aligned with ``H_obs``.
+
+    Returns
+    -------
+    dict with 'fit' (BayesianLevelCorrelatedResult), 'years', 'tau',
+    'order', 'baseline_year'.
+    """
+    from bayesian_models import fit_bayesian_level_annual_correlated
+    years = np.asarray(years, dtype=int)
+    rate = np.asarray(rate, dtype=float)
+    tau = years + 0.5 - baseline_year
+    fit = fit_bayesian_level_annual_correlated(
+        H_obs=np.asarray(H_obs, dtype=float), rate_obs=rate,
+        sigma_rate_obs=np.asarray(sigma_rate, dtype=float),
+        temperature=tau, time=years + 1.0, order=order,
+        fit_sigma_extra=True, fit_ar1=ar1, symmetric_a=True, symmetric_b=True,
+        prior_scale_a=prior_scale_jerk, prior_scale_b=prior_scale_acc,
+        prior_b_mean=0.0, prior_c_mean=0.0, prior_c_sigma=prior_rate_sigma,
+        prior_H0_mean=float(H_obs[0] - rate[0]), prior_H0_sigma=prior_H0_sigma,
+        prior_sigma_extra_scale=prior_sigma_extra_scale,
+        n_samples=n_samples, n_walkers=32, n_burnin=n_burnin, thin=2,
+        seed=seed, progress=progress)
+    return {'fit': fit, 'years': years, 'tau': tau, 'order': order,
+            'baseline_year': baseline_year}
+
+
+def time_model_draws(tm):
+    """Posterior draws (A, a, v, H0) of a ``fit_imbie_time_model`` result.
+
+    H0 is the level at ``baseline_year``: the level before the first
+    increment plus the modelled increments of the years before baseline.
+    A is zero for order=1.
+    """
+    fit = tm['fit']
+    A = fit.posterior_samples[:, 0]
+    a = fit.posterior_samples[:, 1]
+    v = fit.posterior_samples[:, 2]
+    pre = tm['years'] < tm['baseline_year']
+    tp = tm['tau'][pre]
+    H0 = fit.H0_posterior + pre.sum() * v + tp.sum() * a + (tp**2).sum() * A
+    return A, a, v, H0
+
+
+def time_model_levels(tm, t):
+    """Posterior draws of the level (m) at times ``t``, shape (n_draws, len(t))."""
+    A, a, v, H0 = time_model_draws(tm)
+    tau = np.asarray(t, dtype=float) - tm['baseline_year']
+    return (H0[:, None] + v[:, None] * tau + 0.5 * a[:, None] * tau**2
+            + A[:, None] * tau**3 / 3.0)
+
+
+def time_model_bic(tm, sigma_rate):
+    """BIC of a ``fit_imbie_time_model`` result at the posterior mean.
+
+    -2 ln L uses the cumulative-record covariance at the posterior-mean
+    sigma_extra (and phi when fitted).  k counts the rate coefficients, H0,
+    sigma_extra and phi when fitted.
+    """
+    from bayesian_models import _level_correlated_cov
+    fit = tm['fit']
+    r = fit.residuals
+    n = len(r)
+    phi = fit.phi_posterior
+    C = _level_correlated_cov(np.asarray(sigma_rate, dtype=float), np.ones(n),
+                              fit.sigma_extra_posterior.mean(),
+                              phi.mean() if phi is not None else 0.0)
+    _, logdet = np.linalg.slogdet(C)
+    m2ll = float(r @ np.linalg.solve(C, r) + logdet + n * np.log(2 * np.pi))
+    k = (tm['order'] + 1) + 2 + (1 if phi is not None else 0)
+    return {'m2lnL': m2ll, 'k': k, 'n': n, 'bic': m2ll + k * np.log(n)}
+
+
+def anchor_to_observed(samples, proj_years, obs_years, obs_H, obs_sigma,
+                       baseline_year=BASELINE_YEAR, seed=0):
+    """Shift projection members so they pass through the observed level.
+
+    Each member's model path M_k(t) (zero at ``baseline_year``) is offset by
+    D_k = A_k - M_k(t_a), where t_a is the end of the observed record and
+    A_k ~ N(obs_H[-1], obs_sigma[-1]) is the observed level there with its
+    uncertainty (relative to the baseline, as returned by
+    ``annualize_imbie``).  The offset ramps linearly from zero at the
+    baseline to D_k at t_a and is constant after it, so members keep their
+    modelled shape, the projection is conditioned on the observed record's
+    end point (as the WAIS trajectories are), and the baseline and the
+    pre-baseline hindcast are unchanged.  The draws A_k are shared across
+    scenarios when the same ``seed`` is used.
+
+    Returns the shifted samples (same shape) and the offsets D_k.
+    """
+    samples = np.asarray(samples, dtype=float)
+    proj_years = np.asarray(proj_years, dtype=float)
+    t_a = float(obs_years[-1])
+    rng = np.random.default_rng(seed)
+    A = float(obs_H[-1]) + rng.normal(0.0, float(obs_sigma[-1]), size=samples.shape[0])
+    M_a = np.array([np.interp(t_a, proj_years, row) for row in samples])
+    D = A - M_a
+    w = np.clip((proj_years - baseline_year) / (t_a - baseline_year), 0.0, 1.0)
+    return samples + D[:, None] * w[None, :], D
 
 
 def apply_sigma_taper(sigma, years, t_ref, f_max):
