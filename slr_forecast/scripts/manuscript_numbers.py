@@ -1,0 +1,250 @@
+"""Manuscript numbers derived from stored pipeline results.
+
+Prints, with the main-text passage each one supports, the quantities that
+are computed from component_results.h5 and the AR6 files rather than printed
+by a component notebook. Every number here comes from results the pipeline
+has already written; nothing is refit. Companion scripts cover the rest:
+slow_wais_p90_numbers.py (slow-WAIS exceedance, widths, impacts) and
+variance_shares.py (variance shares). Writes manuscript_numbers.json.
+
+Conventions: levels in metres relative to 2000 unless a line says otherwise.
+"AR6 baseline" values subtract the 1995-2014 mean of Frederikse et al.
+(2020) relative to 2000, as component_forecast.ipynb does. Component values
+on the AR6 baseline subtract each member's own 1995-2014 mean.
+
+Run from the repository root:  python scripts/manuscript_numbers.py
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import h5py
+import numpy as np
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'notebooks'))
+sys.path.insert(0, str(ROOT / 'src'))
+
+from component_projections import read_ipcc_component_nc, ipcc_extract  # noqa: E402
+
+H5 = ROOT / 'data' / 'processed' / 'component_results.h5'
+H5_OBS = ROOT / 'data' / 'processed' / 'slr_processed_data.h5'
+REF_JSON = ROOT / 'data' / 'processed' / 'forecast_reference_models.json'
+OUT_JSON = ROOT / 'data' / 'processed' / 'manuscript_numbers.json'
+CONF_BASE = str(ROOT / 'data' / 'raw' / 'ipcc_ar6' / 'slr' / 'ar6' / 'global'
+                / 'confidence_output_files')
+M_TO_MM = 1000.0
+BASELINE_YEAR = 2000.0
+LABEL = {'SSP1-2.6': '1.8 C', 'SSP2-4.5': '2.7 C', 'SSP3-7.0': '3.6 C',
+         'SSP5-8.5': '4.4 C'}
+CODE = {'SSP1-2.6': 'ssp126', 'SSP2-4.5': 'ssp245', 'SSP3-7.0': 'ssp370',
+        'SSP5-8.5': 'ssp585'}
+POLICY = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']
+
+
+def q(x):
+    """Median, 5th and 95th percentiles."""
+    return [float(np.median(x)), float(np.percentile(x, 5)),
+            float(np.percentile(x, 95))]
+
+
+def fmt(v, scale=1.0, nd=2):
+    return f'{v[0] * scale:.{nd}f} [{v[1] * scale:.{nd}f}, {v[2] * scale:.{nd}f}]'
+
+
+def ar6(ssp, comp, conf='medium_confidence', year=2100):
+    """AR6 (q05, q50, q95) in mm at *year* (relative to 1995-2014)."""
+    d = read_ipcc_component_nc(CONF_BASE, conf, CODE[ssp], comp)
+    if d is None:
+        return None
+    e = ipcc_extract(d)
+    i = int(np.argmin(np.abs(e['years'] - year)))
+    return float(e['q05'][i]), float(e['q50'][i]), float(e['q95'][i])
+
+
+def main():
+    out = {}
+
+    # ── AR6 baseline offset (as component_forecast.ipynb) ──
+    fred = pd.read_hdf(H5_OBS, 'raw/df_frederikse')
+    ft, fv = fred['year'].values, fred['gmsl'].values
+    off = float(np.mean(fv[(ft >= 1995) & (ft <= 2014)]) - np.interp(BASELINE_YEAR, ft, fv))
+    out['ar6_baseline_offset_m'] = off
+    print(f'AR6 baseline (1995-2014 mean) minus 2000: {off * M_TO_MM:.1f} mm')
+
+    with h5py.File(H5, 'r') as hf:
+        fy = hf['blended/forecast_years'][:]
+        i21 = int(np.argmin(np.abs(fy - 2100)))
+        fast = {s: hf[f'blended/{s}/samples'][:, i21] for s in LABEL}
+        slow = {s: hf[f'blended_slow90/{s}/samples'][:, i21] for s in LABEL}
+        cy = hf['proj_years'][:] if 'proj_years' in hf else np.arange(1950, 2151.)
+        comp = {c: {s: hf[f'{c}/projections/{s}/samples'][:] for s in LABEL}
+                for c in ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula']}
+        oc_layers = {s: {k: hf[f'ocean/projections/{s}/{k}_samples'][:]
+                         for k in ['upper', 'twolayer']} for s in LABEL}
+        w2k_y = hf['wais_2k/years'][:]
+        w2k = hf['wais_2k/full_samples'][:]
+        w_idx = hf['wais_2k/scenario_idx'][:].astype(int)
+        wslow = hf['wais_slow90/samples'][:]
+        wslow_y = hf['wais_slow90/years'][:]
+    j21 = int(np.argmin(np.abs(cy - 2100)))
+
+    # ── Storylines on the AR6 baseline (Discussion: comparison with AR6) ──
+    print('\nTotal GMSL at 2100 on the AR6 baseline (m) vs AR6 medium confidence:')
+    out['ar6'] = {}
+    for s in LABEL:
+        mc = ar6(s, 'total')
+        lc = ar6(s, 'total', 'low_confidence')
+        out['ar6'][s] = {'medium': mc, 'low': lc}
+        sl, fa = q(slow[s] - off), q(fast[s] - off)
+        out.setdefault('slow_ar6_baseline_m', {})[s] = sl
+        out.setdefault('fast_ar6_baseline_m', {})[s] = fa
+        line = (f'  {LABEL[s]}: slow {fmt(sl)}, fast {fmt(fa)}; AR6 mc median '
+                f'{mc[1] / M_TO_MM:.3f}, 95th {mc[2] / M_TO_MM:.3f}')
+        if lc is not None:
+            line += f'; AR6 lc median {lc[1] / M_TO_MM:.3f}, 95th {lc[2] / M_TO_MM:.3f}'
+        print(line)
+        if s in POLICY:
+            pct = 100 * (sl[0] / (mc[1] / M_TO_MM) - 1)
+            out.setdefault('slow_pct_above_ar6', {})[s] = pct
+            print(f'      slow median {pct:.1f}% above the AR6 mc median; slow 95th '
+                  f'{"inside" if sl[2] < mc[2] / M_TO_MM else "outside"} the AR6 mc range')
+
+    # ── Upper tail of the full (fast) forecast ──
+    print('\nFull forecast, 95th percentile minus median at 2100 (m, rel. 2000):')
+    for s in POLICY:
+        v = q(fast[s])
+        out.setdefault('fast_tail_spread_m', {})[s] = v[2] - v[0]
+        print(f'  {LABEL[s]}: {v[2] - v[0]:.3f}')
+
+    # ── Hierarchy comparison (Discussion; Conclusions) ──
+    if REF_JSON.exists():
+        ref = json.loads(REF_JSON.read_text())
+        quad = ref['quadratic_2100_m']
+        r07 = ref['rahmstorf2007_2100_m']['SSP2-4.5']
+        sl = q(slow['SSP2-4.5'])
+        out['hierarchy'] = {'quadratic_m': quad, 'rahmstorf2007_m': r07, 'slow_2p7_m': sl}
+        print(f'\nAt 2.7 C, 2100 (m, rel. 2000): slow {fmt(sl)}, quadratic {fmt(quad)}, '
+              f'Rahmstorf (2007) {fmt(r07)}')
+        print(f'  slow median minus quadratic: {(sl[0] - quad[0]) * 100:+.1f} cm; '
+              f'minus Rahmstorf: {(sl[0] - r07[0]) * 100:+.1f} cm')
+    else:
+        print(f'\n{REF_JSON.name} missing: run component_forecast.ipynb first')
+
+    # ── Calibrated components on both baselines (Results) ──
+    ar6_name = {'ocean': 'oceandynamics', 'glacier': 'glaciers', 'greenland': 'GIS'}
+    ref_mask = (cy >= 1995) & (cy <= 2014)
+    print('\nCalibrated components at 2100 (mm): rel. 2000 | AR6 baseline | AR6 median | ratio')
+    for c, an in ar6_name.items():
+        for s in POLICY:
+            S = comp[c][s] * M_TO_MM
+            v0 = q(S[:, j21])
+            va = q(S[:, j21] - S[:, ref_mask].mean(axis=1))
+            a = ar6(s, an)[1]
+            out.setdefault('components', {}).setdefault(c, {})[s] = dict(
+                rel2000_mm=v0, ar6_baseline_mm=va, ar6_median_mm=a, ratio=va[0] / a)
+            print(f'  {c:<9} {LABEL[s]}: {fmt(v0, nd=0)} | {fmt(va, nd=0)} | {a:.0f} | {va[0] / a:.2f}')
+
+    # ── Thermosteric layers on the AR6 baseline (Results: divergence from AR6) ──
+    # Upper layer (a_u S_u^2 + b_u S_u), deep layer (b_d S_d), and the
+    # below-2000 m rate, each on the member's own 1995-2014 mean.
+    print('\nThermosteric at 2100 by layer, AR6 baseline (mm, medians): '
+          'upper | deep | below 2000 m | total - AR6 median')
+    for s in POLICY:
+        rb = lambda X: (X[:, j21] - X[:, ref_mask].mean(axis=1)) * M_TO_MM
+        up = rb(oc_layers[s]['upper'])
+        dp = rb(oc_layers[s]['twolayer']) - up
+        bl = rb(comp['ocean'][s]) - rb(oc_layers[s]['twolayer'])
+        gap = np.median(rb(comp['ocean'][s])) - ar6(s, 'oceandynamics')[1]
+        out.setdefault('thermosteric_layers_mm', {})[s] = dict(
+            upper=float(np.median(up)), deep=float(np.median(dp)),
+            below_2000=float(np.median(bl)), gap_to_ar6=float(gap))
+        print(f'  {LABEL[s]}: {np.median(up):.0f} | {np.median(dp):.0f} | '
+              f'{np.median(bl):.0f} | {gap:+.0f}')
+
+    # ── Greenland relative to 2008 (Results: Aschwanden & Brinkerhoff 2022,
+    # whose simulations start in 2008) ──
+    i08 = int(np.argmin(np.abs(cy - 2008)))
+    print('\nGreenland at 2100 relative to 2008 (mm):')
+    for s in POLICY:
+        S = comp['greenland'][s] * M_TO_MM
+        v = q(S[:, j21] - S[:, i08])
+        out.setdefault('greenland_rel2008_mm', {})[s] = v
+        print(f'  {LABEL[s]}: {fmt(v, nd=0)}')
+
+    # ── Calibrated components vs total gap to AR6 (Discussion) ──
+    # Sum of median excesses over the AR6 medians for thermosteric, glaciers
+    # and Greenland, against the gap between the full and slow-WAIS
+    # forecast medians and the AR6 medium-confidence total median.
+    print('\nExcess over AR6 medians at 2100, AR6 baseline (mm): '
+          'thermo + glaciers + Greenland | full forecast | slow-WAIS forecast')
+    for s in POLICY:
+        cal = sum(out['components'][c][s]['ar6_baseline_mm'][0]
+                  - out['components'][c][s]['ar6_median_mm'] for c in ar6_name)
+        mc = out['ar6'][s]['medium'][1]
+        full_gap = out['fast_ar6_baseline_m'][s][0] * M_TO_MM - mc
+        slow_gap = out['slow_ar6_baseline_m'][s][0] * M_TO_MM - mc
+        out.setdefault('excess_over_ar6_mm', {})[s] = dict(
+            calibrated=cal, full=full_gap, slow=slow_gap)
+        print(f'  {LABEL[s]}: {cal:.0f} | {full_gap:.0f} | {slow_gap:.0f}')
+
+    # ── Glacier comparison with GlacierMIP2 (2015-2100, rel. 2015) ──
+    i15 = int(np.argmin(np.abs(cy - 2015)))
+    print('\nGlaciers, 2015 level and 2015-2100 change (mm):')
+    for s in POLICY:
+        S = comp['glacier'][s] * M_TO_MM
+        lev, d = np.median(S[:, i15]), np.median(S[:, j21] - S[:, i15])
+        out.setdefault('glacier_2015', {})[s] = dict(level_2015_mm=lev, change_2015_2100_mm=d)
+        print(f'  {LABEL[s]}: 2015 level {lev:.1f}, 2015-2100 median {d:.0f}')
+
+    # ── Antarctic Peninsula + EAIS (Results) ──
+    print('\nAntarctic Peninsula + EAIS at 2100 (mm, rel. 2000):')
+    for s in POLICY:
+        ap = comp['apeninsula'][s][:, j21] * M_TO_MM
+        ea = comp['eais'][s][:, j21] * M_TO_MM
+        v = q(ap + ea)
+        out.setdefault('ap_plus_eais_mm', {})[s] = dict(sum=v, eais_median=float(np.median(ea)),
+                                                        apeninsula_median=float(np.median(ap)))
+        print(f'  {LABEL[s]}: sum {fmt(v, nd=1)}; EAIS median {np.median(ea):.1f}, '
+              f'Peninsula median {np.median(ap):.1f}')
+
+    # ── 90% interval shares (Results, Discussion; as in Fig. 4b) ──
+    # Each component's own 90% interval width over the summed widths of
+    # thermosteric, glaciers, Greenland and WAIS at 2100.
+    w90 = lambda a: np.percentile(a, 95) - np.percentile(a, 5)
+    wf = w90(w2k[:, int(np.argmin(np.abs(w2k_y - 2100)))])
+    ws = w90(wslow[:, int(np.argmin(np.abs(wslow_y - 2100)))])
+    print('\n90% interval shares at 2100 (%): WAIS | calibrated (thermosteric + glaciers + Greenland)')
+    for s in POLICY:
+        cal = sum(w90(comp[c][s][:, j21]) for c in ['ocean', 'glacier', 'greenland'])
+        sh = {'fast': (100 * wf / (wf + cal), 100 * cal / (wf + cal)),
+              'slow': (100 * ws / (ws + cal), 100 * cal / (ws + cal))}
+        out.setdefault('interval_shares_pct', {})[s] = sh
+        print(f'  {LABEL[s]}: fast {sh["fast"][0]:.1f} | {sh["fast"][1]:.1f};  '
+              f'slow {sh["slow"][0]:.1f} | {sh["slow"][1]:.1f}')
+
+    # ── S2 95th percentile against the AR6 Antarctic range (WAIS subsection) ──
+    s2 = w2k[w_idx == 1] * M_TO_MM
+    s2_95 = np.percentile(s2, 95, axis=0)
+    print('\nS2 95th percentile vs AR6 AIS medium-confidence 95th (mm):')
+    for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5']:
+        d = read_ipcc_component_nc(CONF_BASE, 'medium_confidence', CODE[s], 'AIS')
+        e = ipcc_extract(d)
+        yrs = np.arange(2025, 2101)
+        a95 = np.interp(yrs, e['years'], e['q95'])
+        m95 = np.interp(yrs, w2k_y, s2_95)
+        above = yrs[m95 > a95]
+        first = int(above[0]) if above.size else None
+        out.setdefault('s2_first_exceeds_ar6_ais95', {})[s] = first
+        print(f'  {s}: first exceeds in {first}; 2045 {np.interp(2045, w2k_y, s2_95):.0f} vs '
+              f'{np.interp(2045, e["years"], e["q95"]):.0f}, 2050 {np.interp(2050, w2k_y, s2_95):.0f} vs '
+              f'{np.interp(2050, e["years"], e["q95"]):.0f}')
+
+    OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
+    print(f'\nWrote {OUT_JSON}')
+
+
+if __name__ == '__main__':
+    main()

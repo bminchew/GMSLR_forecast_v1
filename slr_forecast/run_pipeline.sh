@@ -32,9 +32,12 @@ ENTRIES=(
     "summation:component_summation.ipynb:1200"
     "forecast:component_forecast.ipynb:1200"
     "slowwais:scripts/build_slow_wais_p90.py:0"
+    "slownums:scripts/slow_wais_p90_numbers.py:0"
+    "varshares:scripts/variance_shares.py:0"
     "evpi:notebooks/compute_evpi.py:0"
     "defense:notebooks/compute_optimal_defense.py:0"
     "shapley:notebooks/compute_shapley_risk.py:0"
+    "numbers:scripts/manuscript_numbers.py:0"
     "figures:results_figures.ipynb:1200"
 )
 

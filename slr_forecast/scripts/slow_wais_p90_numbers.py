@@ -30,7 +30,7 @@ M_TO_MM = 1000.0
 PREIND_M = 0.19          # observed rise, pre-industrial to the 2000 baseline
 ADAPT_COST_PER_M = None  # filled from compute_evpi
 SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']
-LABEL = {'SSP1-2.6': '2 C', 'SSP2-4.5': '3 C', 'SSP3-7.0': '4 C'}
+LABEL = {'SSP1-2.6': '1.8 C', 'SSP2-4.5': '2.7 C', 'SSP3-7.0': '3.6 C'}
 P_CASES = [0.9, 1.0]
 
 
@@ -65,7 +65,7 @@ def main():
 
     # ---- line 387: exceedance probabilities relative to pre-industrial -----
     print('=== Exceedance probabilities at 2100, relative to pre-industrial ===')
-    print(f'{"case":>7}{"scenario":<10}{"P>1 m":>8}{"P>1.5 m":>9}{"P>2 m":>8}')
+    print(f'{"p(S1)":>7}  {"scenario":<10}{"P>1 m":>8}{"P>1.5 m":>9}{"P>2 m":>8}')
     for p in P_CASES:
         for s in SSPS:
             v, w = branches(s, p)
@@ -73,12 +73,12 @@ def main():
             pr = [100 * w[pi > t].sum() / w.sum() for t in (1.0, 1.5, 2.0)]
             out.setdefault(f'p{p:g}', {}).setdefault(s, {}).update(
                 P_exceed_1m=pr[0], P_exceed_1p5m=pr[1], P_exceed_2m=pr[2])
-            print(f'{p:7.1f}{LABEL[s]:<10}{pr[0]:8.1f}{pr[1]:9.1f}{pr[2]:8.1f}')
+            print(f'{p:7.1f}  {LABEL[s]:<10}{pr[0]:8.1f}{pr[1]:9.1f}{pr[2]:8.1f}')
         print()
 
     # ---- lines 391 and 403: intervals, widths, variance and interval shares -
     print('=== Interval and variance structure at 2100 (rel. 2000) ===')
-    print(f'{"case":>7}{"scenario":<10}{"median cm":>11}{"90% CI cm":>20}'
+    print(f'{"p(S1)":>7}  {"scenario":<10}{"median cm":>11}{"90% CI cm":>20}'
           f'{"width cm":>10}{"S2 var share":>14}{"S1 width share":>16}')
     for p in P_CASES:
         for s in SSPS:
@@ -96,7 +96,7 @@ def main():
                 s2_variance_share_pct=s2_share,
                 s1_width_share_pct=100 * w1 / width,
                 narrower_than_full_factor=(full[1] - full[0]) / width)
-            print(f'{p:7.1f}{LABEL[s]:<10}{q[1]:11.1f}'
+            print(f'{p:7.1f}  {LABEL[s]:<10}{q[1]:11.1f}'
                   f'{f"[{q[0]:.1f}, {q[2]:.1f}]":>20}{width:10.1f}'
                   f'{s2_share:14.1f}{100 * w1 / width:16.1f}')
         print()
@@ -106,7 +106,7 @@ def main():
         f = [out[f'p{p:g}'][s]['narrower_than_full_factor'] for s in SSPS]
         print(f'  p(S1)={p:.1f}: ' + ', '.join(f'{x:.1f}x' for x in f))
 
-    print('\n2 C to 4 C shift in the median:')
+    print('\n1.8 C to 3.6 C shift in the median:')
     for p in P_CASES:
         d = out[f'p{p:g}']['SSP3-7.0']['median_cm'] - out[f'p{p:g}']['SSP1-2.6']['median_cm']
         pop = kulp(out[f'p{p:g}']['SSP3-7.0']['median_cm'] / 100) - \
@@ -115,7 +115,7 @@ def main():
               f'US${ADAPT * d / 100:.0f}B/yr adaptation')
 
     # ---- line 418: the 5% exceedance design threshold and its impacts ------
-    print('\n=== 5% exceedance threshold at 3 C (Fig. 2b stars) ===')
+    print('\n=== 5% exceedance threshold at 2.7 C (Fig. 2b stars) ===')
     fast95 = np.percentile(Tf['SSP2-4.5'], 95)
     for p in P_CASES:
         v, w = branches('SSP2-4.5', p)
@@ -151,7 +151,7 @@ def main():
     print(f'\nObserved rise 1900-{nt[-1]:.0f}: ' + ', '.join(f'{k} {v:.3f} m' for k, v in past.items())
           + f' (altimetry 2000-{nt[-1]:.0f}: {alt_rise:.3f} m)')
     fast_next = float(fast95) - alt_rise
-    print(f'  fast WAIS (5% exceedance, 3 C): {fast_next:.3f} m over the next 75 yr = '
+    print(f'  fast WAIS (5% exceedance, 2.7 C): {fast_next:.3f} m over the next 75 yr = '
           + ' to '.join(f'{fast_next / v:.1f}x' for v in sorted(past.values(), reverse=True)))
     for p in P_CASES:
         slow_next = out[f'p{p:g}']['threshold_5pct']['slow_95th_m_rel2000'] - alt_rise

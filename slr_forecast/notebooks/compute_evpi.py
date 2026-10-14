@@ -216,6 +216,12 @@ def main():
     print(f'EVPI at 2100 (smoothed): {evpi_smooth[iy2100_tgt]:.1f} $B/yr')
     print(f'Max VOI surface 1:       {np.nanmax(VOI_1):.1f} $T')
     print(f'Max VOI surface 2:       {np.nanmax(VOI_2):.1f} $T')
+    # Manuscript values: information arriving now (first arrival year)
+    _i_max = int(np.nanargmax(VOI_2[:, 0]))
+    print(f'  surface 2, arrival {arr_yrs_2[0]}: max {VOI_2[_i_max, 0]:.2f} $T '
+          f'at p(S1) = {p_stable_range[_i_max]:.3f} (grid step '
+          f'{p_stable_range[1] - p_stable_range[0]:.3f}); at p(S1) = 0.90: '
+          f'{np.interp(0.90, p_stable_range, VOI_2[:, 0]):.2f} $T')
     print(f'Max VOI surface 3:       {np.nanmax(VOI_3):.1f} $T')
     print(f'P95 unconditional:       {p95_unconditional:.3f} m')
     print(f'P95 stable:              {p95_stable:.3f} m')

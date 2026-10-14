@@ -36,7 +36,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 H5 = ROOT / 'data' / 'processed' / 'component_results.h5'
-SSPS = {'SSP1-2.6': '2 C', 'SSP2-4.5': '3 C', 'SSP3-7.0': '4 C'}
+SSPS = {'SSP1-2.6': '1.8 C', 'SSP2-4.5': '2.7 C', 'SSP3-7.0': '3.6 C'}
 YEAR = 2100.0
 P_S1 = [1.0, 0.9, 0.5, 0.1]
 
