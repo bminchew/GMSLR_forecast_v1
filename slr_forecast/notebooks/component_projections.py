@@ -1025,7 +1025,8 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
 
     for j, yr in enumerate(years):
         if yr < (obs_years[0] if obs_years is not None else anchor_year):
-            # Before observations: zero
+            # Before observations: filled below with the first observed
+            # level (zero rate before the record begins)
             continue
         elif yr <= anchor_year:
             # Pre-anchor: IMBIE observation with measurement uncertainty
@@ -1048,6 +1049,13 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='A',
             samples_mm[s1_mask, j] = (anchor_draws[s1_mask]
                                        + (s1_curve_mm[s1_mask, j]
                                           - s1_anchor_model_mm[s1_mask]))
+
+    # Zero rate before the record: hold each member at its first observed
+    # level rather than at zero, which would put a step into the hindcast.
+    pre_obs = years < (obs_years[0] if obs_years is not None else anchor_year)
+    if pre_obs.any() and not pre_obs.all():
+        j_first = int(np.argmax(~pre_obs))
+        samples_mm[:, pre_obs] = samples_mm[:, [j_first]]
 
     # ── S2_fast_wais: rate-space blend of the power-law path with the
     # IMBIE quadratic (naive "nothing new happens" continuation), so the
