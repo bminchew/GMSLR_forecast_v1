@@ -611,6 +611,15 @@ def fit_discharge_delay_model(
 
     # ── Demeaned WLS fit + rate constraint for each candidate delta ──
     fit_results = {}
+    # Common fit window: every candidate delta is fit to, and its BIC
+    # evaluated on, the same years -- those the delayed forcing covers for
+    # all candidates.  The likelihood includes -0.5*sum(log sigma^2), so
+    # per-delta windows of different length (a shorter delay reaches
+    # earlier years) make the BICs incomparable and favour short delays.
+    common = np.asarray(sigma_dyn) > 0
+    for delta in delta_candidates:
+        common &= np.isfinite(np.interp(dyn_years, T_ocean_years + delta, T_ocean_ann,
+                                        left=np.nan, right=np.nan))
     for delta in delta_candidates:
         T_shifted = np.interp(dyn_years, T_ocean_years + delta, T_ocean_ann,
                               left=np.nan, right=np.nan)
@@ -622,7 +631,7 @@ def fit_discharge_delay_model(
         # component_levelspace_robust_se.  Records whose sigma comes
         # from bayesian_models._cumulate are floored above zero, so this
         # leaves the Mouginot and Mankoff fits unchanged.
-        valid = np.isfinite(T_shifted) & (np.asarray(sigma_dyn) > 0)
+        valid = common & np.isfinite(T_shifted) & (np.asarray(sigma_dyn) > 0)
         if valid.sum() < 4:
             continue
 
