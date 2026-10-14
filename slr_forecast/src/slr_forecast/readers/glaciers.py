@@ -74,6 +74,10 @@ def read_glambie_global(filepath: str) -> pd.DataFrame:
     # Sigma: ensure positive
     df["mass_balance_sigma"] = np.abs(df["mass_balance_sigma"])
     df["mass_balance_mwe_sigma"] = np.abs(df["mass_balance_mwe_sigma"])
+    # GlaMBIE reports uncertainties as 95% confidence intervals (1.96 sigma;
+    # GlaMBIE Team 2025, Methods). Convert to 1-sigma.
+    df["mass_balance_sigma"] = df["mass_balance_sigma"] / 1.96
+    df["mass_balance_mwe_sigma"] = df["mass_balance_mwe_sigma"] / 1.96
 
     df = df.drop(columns=["region", "start_dates", "end_dates"], errors="ignore")
 
@@ -127,6 +131,10 @@ def read_glambie_regional(filepath: str) -> pd.DataFrame:
     df["mass_balance_mwe"] = -df["mass_balance_mwe"]
     df["mass_balance_sigma"] = np.abs(df["mass_balance_sigma"])
     df["mass_balance_mwe_sigma"] = np.abs(df["mass_balance_mwe_sigma"])
+    # GlaMBIE reports uncertainties as 95% confidence intervals (1.96 sigma;
+    # GlaMBIE Team 2025, Methods). Convert to 1-sigma.
+    df["mass_balance_sigma"] = df["mass_balance_sigma"] / 1.96
+    df["mass_balance_mwe_sigma"] = df["mass_balance_mwe_sigma"] / 1.96
 
     df = df.drop(columns=["region", "start_dates", "end_dates"], errors="ignore")
 

@@ -2807,9 +2807,13 @@ def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFr
     - Positive mass_balance in the raw file = mass gain (opposite sign to SLR);
       this reader flips sign so that positive = sea level contribution.
     - 1 Gt water = 1/362.5 mm SLE.
-    - GlaMBIE excludes ice-sheet peripheral glaciers by default, but
-      Region 5 (Greenland periphery) and Region 19 (Antarctic & Subantarctic)
-      overlap with IMBIE boundaries.  Check before combining with ice-sheet data.
+    - The global total sums all 19 RGI regions, so it INCLUDES Region 5
+      (Greenland periphery, ~0.10 mm/yr SLE over 2000-2023) and Region 19
+      (Antarctic & Subantarctic, ~0.05 mm/yr). Mouginot (2019) SMB includes
+      Greenland ice caps, and IMBIE-3 Antarctic gravimetry includes the
+      periphery, so check for overlap before combining with ice-sheet data.
+    - combined_gt_errors are 95% half-widths (1.96 sigma); converted to
+      1-sigma below.
 
     Reference
     ---------
@@ -2843,6 +2847,10 @@ def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFr
     # Ensure sigma columns are always positive
     df['mass_balance_sigma'] = np.abs(df['mass_balance_sigma'])
     df['mass_balance_mwe_sigma'] = np.abs(df['mass_balance_mwe_sigma'])
+    # GlaMBIE reports uncertainties as 95% confidence intervals (1.96 sigma;
+    # GlaMBIE Team 2025, Methods). Convert to 1-sigma.
+    df['mass_balance_sigma'] = df['mass_balance_sigma'] / 1.96
+    df['mass_balance_mwe_sigma'] = df['mass_balance_mwe_sigma'] / 1.96
 
     # Drop 'region', 'start_dates', 'end_dates' columns
     df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
@@ -2977,6 +2985,10 @@ def read_glambie_regional(filepath: str, convert_to_sle: bool = True) -> pd.Data
     # Ensure sigma columns are always positive
     df['mass_balance_sigma'] = np.abs(df['mass_balance_sigma'])
     df['mass_balance_mwe_sigma'] = np.abs(df['mass_balance_mwe_sigma'])
+    # GlaMBIE reports uncertainties as 95% confidence intervals (1.96 sigma;
+    # GlaMBIE Team 2025, Methods). Convert to 1-sigma.
+    df['mass_balance_sigma'] = df['mass_balance_sigma'] / 1.96
+    df['mass_balance_mwe_sigma'] = df['mass_balance_mwe_sigma'] / 1.96
 
     df = df.drop(columns=['region', 'start_dates', 'end_dates'], errors='ignore')
 

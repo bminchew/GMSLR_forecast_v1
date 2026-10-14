@@ -3161,6 +3161,8 @@ def fit_bayesian_level_annual_correlated(
                        f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
         b_prior_str = (f"b~N(0,{prior_scale_b*1e3:.2f} mm/yr/°C)"
                        if symmetric_b else
+                       f"b~N({prior_b_mean*1e3:.2f},{prior_scale_b*1e3:.1f} mm/yr/°C) truncated b>=0"
+                       if prior_b_mean != 0 else
                        f"b~HN({prior_scale_b*1e3:.1f} mm/yr/°C)")
         print(f"Bayesian level-space (annual, correlated) fit: n={n}, "
               f"order={order}")

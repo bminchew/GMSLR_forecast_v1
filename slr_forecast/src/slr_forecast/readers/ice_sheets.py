@@ -247,8 +247,9 @@ def read_mouginot2019_greenland(filepath: str) -> pd.DataFrame:
     """Read Mouginot et al. (2019) Greenland ice sheet mass balance.
 
     Input-output method: SMB from RACMO, discharge from satellite
-    velocity + ice thickness.  Annual, 1972–2018, ice sheet proper
-    (excludes peripheral glaciers).
+    velocity + ice thickness.  Annual, 1972–2018.  The 260 basins include
+    seven peripheral ice-cap units (ICE_CAPS_*), whose SMB is in the total;
+    peripheral discharge is not counted.
 
     Returns annual DataFrame in SLR convention (positive = sea level
     rise), units in meters SLE.
