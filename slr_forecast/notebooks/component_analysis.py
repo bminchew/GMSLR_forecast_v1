@@ -365,12 +365,16 @@ def compute_variance_fractions(ssp, components, proj_years, comp_proj,
 
 def fit_ocean_transfer_function(T_surface_monthly, time_surface,
                                 T_ocean_monthly, time_ocean,
-                                lag_years=0, annual=True):
+                                lag_years=0, annual=True, hac_maxlags=None):
     """Calibrate a linear transfer function: T_ocean = α·T_surface + β.
 
     Aligns surface and ocean temperature on common annual (or monthly)
-    time points, fits OLS with uncertainty, and returns parameters for
-    projecting ocean temperature under SSP surface-T scenarios.
+    time points, fits OLS with HAC (Newey–West) standard errors, and
+    returns parameters for projecting ocean temperature under SSP
+    surface-T scenarios.  The residuals are serially correlated, so the
+    plain OLS covariance is replaced by the HAC covariance (as in
+    ``slr_analysis.calibrate_dols``) and the residual lag-1
+    autocorrelation is returned for AR(1) residual noise in projections.
 
     Parameters
     ----------
@@ -389,14 +393,22 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
     annual : bool
         If True (default), annualise both series before fitting to reduce
         noise.  If False, fit on monthly data.
+    hac_maxlags : int, optional
+        Maximum lags for the HAC covariance.  If None, uses the Newey–West
+        rule floor(4·(n/100)^(2/9)) (3 for n = 52 annual values).
 
     Returns
     -------
     dict with keys:
         'alpha'       : float — slope (°C_ocean / °C_surface)
         'beta'        : float — intercept (°C)
-        'alpha_se'    : float — standard error on alpha
-        'beta_se'     : float — standard error on beta
+        'alpha_se'    : float — HAC standard error on alpha
+        'beta_se'     : float — HAC standard error on beta
+        'cov'         : ndarray (2, 2) — HAC covariance of (alpha, beta),
+                        ordered [alpha, beta]
+        'corr'        : float — HAC correlation of alpha and beta
+        'hac_maxlags' : int   — lags used in the HAC covariance
+        'resid_ar1'   : float — lag-1 autocorrelation of the residuals
         'r2'          : float — R² of fit
         'r'           : float — Pearson correlation
         'n'           : int   — number of data points used
@@ -457,20 +469,31 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
     T_o = T_o[valid]
     years = years[valid]
 
-    # OLS: T_ocean = alpha * T_surface + beta
+    # OLS: T_ocean = alpha * T_surface + beta, HAC (Newey–West) covariance
+    if hac_maxlags is None:
+        hac_maxlags = int(np.floor(4 * (len(T_s) / 100) ** (2 / 9)))
     X = sm.add_constant(T_s)
-    model = sm.OLS(T_o, X).fit()
+    model = sm.OLS(T_o, X).fit(cov_type='HAC',
+                               cov_kwds={'maxlags': hac_maxlags})
 
     beta = model.params[0]
     alpha = model.params[1]
     beta_se = model.bse[0]
     alpha_se = model.bse[1]
+    # statsmodels orders [const, slope]; reorder to [alpha, beta]
+    cov = np.asarray(model.cov_params())[::-1, ::-1]
+    resid = np.asarray(model.resid)
+    resid_ar1 = np.corrcoef(resid[:-1], resid[1:])[0, 1]
 
     return {
         'alpha': float(alpha),
         'beta': float(beta),
         'alpha_se': float(alpha_se),
         'beta_se': float(beta_se),
+        'cov': cov,
+        'corr': float(cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])),
+        'hac_maxlags': int(hac_maxlags),
+        'resid_ar1': float(resid_ar1),
         'r2': float(model.rsquared),
         'r': float(np.corrcoef(T_s, T_o)[0, 1]),
         'n': int(len(T_s)),
@@ -747,7 +770,9 @@ def project_ocean_temperature(transfer, T_surface_proj, time_proj,
     time_proj : ndarray
         Decimal-year times for projections.
     n_samples : int
-        If > 0, draw MC samples propagating parameter and residual uncertainty.
+        If > 0, draw MC samples propagating parameter and residual uncertainty:
+        (alpha, beta) jointly from the HAC covariance and the residual as a
+        stationary AR(1) on the ``time_proj`` grid (assumed annual).
         Returns ``(T_ocean_median, T_ocean_samples)`` instead of a single array.
     rng : np.random.Generator or None
         Random number generator for MC samples.
@@ -769,10 +794,17 @@ def project_ocean_temperature(transfer, T_surface_proj, time_proj,
     if rng is None:
         rng = np.random.default_rng()
 
-    alpha_draws = rng.normal(alpha, transfer['alpha_se'], size=n_samples)
-    beta_draws = rng.normal(beta, transfer['beta_se'], size=n_samples)
-    resid_draws = rng.normal(0, transfer['residual_std'],
-                             size=(n_samples, len(T_surface_proj)))
+    ab_draws = rng.multivariate_normal([alpha, beta], transfer['cov'],
+                                       size=n_samples)
+    alpha_draws, beta_draws = ab_draws[:, 0], ab_draws[:, 1]
+    # Stationary AR(1) residual: marginal SD = residual_std
+    phi, sd = transfer['resid_ar1'], transfer['residual_std']
+    z = rng.standard_normal((n_samples, len(T_surface_proj)))
+    resid_draws = np.empty_like(z)
+    resid_draws[:, 0] = sd * z[:, 0]
+    for k in range(1, z.shape[1]):
+        resid_draws[:, k] = (phi * resid_draws[:, k - 1]
+                             + sd * np.sqrt(1 - phi**2) * z[:, k])
 
     T_ocean_samples = (alpha_draws[:, None] * T_surface_proj[None, :]
                        + beta_draws[:, None] + resid_draws)

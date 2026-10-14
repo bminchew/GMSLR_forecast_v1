@@ -1460,6 +1460,91 @@ def read_ipcc_workflow_samples(workflow_base, wf_id, ssp_code, fname, year=2100)
 
 
 # =========================================================================
+# Terrestrial water storage (TWS)
+# =========================================================================
+
+IPCC_DIST_PATH = (Path(__file__).resolve().parent.parent
+                  / 'data' / 'processed' / 'ipcc_distributions.h5')
+
+
+def load_ipcc_tws_projection(ssp, proj_years, n_samples=N_SAMPLES,
+                             h5_path=IPCC_DIST_PATH):
+    """IPCC AR6 TWS ensemble on *proj_years* (meters).
+
+    The single source of the projected TWS ensemble, shared by
+    component_summation.ipynb and component_forecast.ipynb so both sum the
+    same members. Reads ``samples/landwaterstorage/{ssp}`` from
+    ipcc_distributions.h5 (precompute_ipcc_distributions.py): a normal fit
+    to the five AR6 quantiles (5, 17, 50, 83, 95) at each AR6 year, with
+    each member holding one quantile across all years. Member paths are
+    linearly interpolated to *proj_years*. Values are on the AR6
+    reference, which is zero at 2005 (and, by the interpolation, before
+    2005).
+
+    Raises KeyError if the SSP is not in the file, and ValueError if the
+    file holds a different number of members than *n_samples* (rerun
+    precompute_ipcc_distributions.py with ``--n-samples``).
+    """
+    import h5py
+    with h5py.File(h5_path, 'r') as f:
+        grp = f[f'samples/landwaterstorage/{ssp}']
+        ipcc_years = grp['years'][:]
+        raw_mm = grp['samples'][:]
+    if raw_mm.shape[0] != n_samples:
+        raise ValueError(
+            f'{h5_path} holds {raw_mm.shape[0]} TWS members, expected '
+            f'{n_samples}; rerun precompute_ipcc_distributions.py '
+            f'--n-samples {n_samples}')
+
+    samples_m = np.array([np.interp(proj_years, ipcc_years, raw_mm[k] / M_TO_MM)
+                          for k in range(n_samples)])
+    return {
+        'samples': samples_m,
+        'median': np.median(samples_m, axis=0),
+        'p5': np.percentile(samples_m, 5, axis=0),
+        'p17': np.percentile(samples_m, 17, axis=0),
+        'p83': np.percentile(samples_m, 83, axis=0),
+        'p95': np.percentile(samples_m, 95, axis=0),
+    }
+
+
+def cumulative_error_paths(years, sigma, n_samples, rng, anchor_year):
+    """Correlated error paths for a cumulative record, zero at *anchor_year*.
+
+    A published cumulative sigma is the uncertainty accumulated from the
+    record's own reference epoch, so adjacent values share nearly all of
+    their error. Treating it as a sum of independent annual increments,
+    the increment variance between consecutive values is
+    |sigma_j^2 - sigma_{j-1}^2| (the convention of
+    component_analysis.annualize_imbie). This draws those increments and
+    cumulates them, re-anchored so every path is zero at *anchor_year*.
+
+    Parameters
+    ----------
+    years : ndarray (T,)
+        Record times (increasing).
+    sigma : ndarray (T,)
+        Published 1-sigma of the cumulative record (same units as output).
+    n_samples : int
+    rng : numpy.random.Generator
+    anchor_year : float
+        Epoch at which the error is zero (the record is rebased there).
+
+    Returns
+    -------
+    ndarray (n_samples, T)
+        Error paths on *years*.
+    """
+    inc_sd = np.sqrt(np.abs(np.diff(sigma ** 2)))
+    inc = rng.normal(0.0, 1.0, (n_samples, len(inc_sd))) * inc_sd[None, :]
+    err = np.concatenate([np.zeros((n_samples, 1)), np.cumsum(inc, axis=1)],
+                         axis=1)
+    err_anchor = np.array([np.interp(anchor_year, years, err[k])
+                           for k in range(n_samples)])
+    return err - err_anchor[:, None]
+
+
+# =========================================================================
 # Projection statistics helpers
 # =========================================================================
 
@@ -1770,9 +1855,11 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
     sq_time : ndarray (T_sq,)
         Time axis for quadratic samples.
     t_origin : float
-        Forecast origin (end of obs record).
-    h_origin : float
-        Observed GMSL at t_origin (meters, rel. to baseline).
+        Forecast origin (end of obs record). Need not lie on proj_years:
+        the level is integrated from t_origin to the first grid year.
+    h_origin : float or ndarray (N,)
+        Observed GMSL at t_origin (meters, rel. to baseline); an array
+        gives each sample its own origin level.
     t_center : float
         Centre of sigmoid transition.
     tau_blend : float
@@ -1783,7 +1870,7 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
     forecast_samples : ndarray (N, T_forecast)
         Blended level forecast (meters, rel. to baseline).
     forecast_years : ndarray (T_forecast,)
-        Time axis for the forecast (from t_origin onward).
+        Time axis for the forecast (grid years >= t_origin).
     w_t : ndarray (T_forecast,)
         Sigmoid weight at each forecast year (1 = pure quadratic).
     """
@@ -1817,10 +1904,23 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
     # Blended rate (sample-by-sample)
     blended_rate = w_t[None, :] * sq_rate_f + (1.0 - w_t[None, :]) * comp_rate_f
 
+    # Blended rate at t_origin itself, for the partial first step from
+    # t_origin to the first grid year (t_origin generally falls between
+    # grid years; assigning h_origin to f_years[0] would lag the forecast
+    # by f_years[0] - t_origin).
+    w_o = 1.0 - expit((t_origin - t_center) / tau_blend)
+    sq_rate_o = np.array([np.interp(t_origin, sq_time, sq_rate_samples[k])
+                          for k in range(n_samples)])
+    comp_rate_o = np.array([np.interp(t_origin, proj_years, comp_rate_full[k])
+                            for k in range(n_samples)])
+    blended_rate_o = w_o * sq_rate_o + (1.0 - w_o) * comp_rate_o
+
     # Integrate from h_origin via cumulative trapezoidal rule
     dt_f = np.diff(f_years)
     forecast_samples = np.zeros((n_samples, n_t))
-    forecast_samples[:, 0] = h_origin
+    forecast_samples[:, 0] = (h_origin
+                              + 0.5 * (blended_rate_o + blended_rate[:, 0])
+                              * (f_years[0] - t_origin))
     for j in range(1, n_t):
         forecast_samples[:, j] = (forecast_samples[:, j - 1]
                                   + 0.5 * (blended_rate[:, j - 1] + blended_rate[:, j])

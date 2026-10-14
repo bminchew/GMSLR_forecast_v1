@@ -13,7 +13,11 @@ data/processed/ipcc_distributions.h5
     │     years, alpha, loc, scale    (skew-normal parameters)
     ├── samples/{component}/{ssp}
     │     samples  (N_SAMPLES, n_years) in mm
-    └── attrs: n_samples, seed, baseline_year
+    └── attrs: n_samples, seed, baseline_year, rebase_mm_total
+
+Only the "total" quantiles are shifted to BASELINE_YEAR (+10.7 mm); the
+component quantiles stay on the AR6 reference (zero at the 2005 node).
+Each member of samples/ follows one quantile path across all years.
 
 Usage
 -----
@@ -51,12 +55,19 @@ except ImportError:
     M_TO_MM = 1000.0
 
 # IPCC AR6 projections are relative to the 1995-2014 mean (~2005).
-# If BASELINE_YEAR != 2005, we shift all quantiles by the observed GMSL
-# difference (mm) between 2000 and 2005.
+# If BASELINE_YEAR != 2005, we shift the *total* quantiles by the observed
+# GMSL difference (mm) between 2000 and 2005.
 # NASA altimetry: ~10.7 mm rise from 2000 to 2005.
+# That offset is the total's own rebase and is applied to "total" only.
+# Adding it to every component (as before 2026-10-14) put each component,
+# including TWS, ~10.7 mm too high. The AR6 component files are zero at
+# their 2005 node and carry no per-component 2000-2005 change, so the
+# components stay on the AR6 reference; for TWS this matches the
+# hindcast, which holds TWS at zero before 2003.
 _IPCC_NATIVE_BASELINE = 2005.0
 _GMSL_2000_TO_2005_MM = 10.7  # NASA satellite altimetry
 _IPCC_REBASE_MM = _GMSL_2000_TO_2005_MM if BASELINE_YEAR < _IPCC_NATIVE_BASELINE else 0.0
+_IPCC_REBASE_COMPONENTS = {"total"}
 
 SSP_TO_CODE = {
     "SSP1-2.6": "ssp126",
@@ -164,6 +175,7 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
         f.attrs["seed"] = seed
         f.attrs["ridge_seed"] = ridge_seed
         f.attrs["baseline_year"] = BASELINE_YEAR
+        f.attrs["rebase_mm_total"] = _IPCC_REBASE_MM
 
         for comp in IPCC_COMPONENTS:
             print(f"\n{comp}:")
@@ -182,8 +194,8 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                 years = ie["years"]
                 n_years = len(years)
 
-                # Rebase from IPCC native (~2005) to BASELINE_YEAR
-                if _IPCC_REBASE_MM != 0.0:
+                # Rebase from IPCC native (~2005) to BASELINE_YEAR (total only)
+                if _IPCC_REBASE_MM != 0.0 and comp in _IPCC_REBASE_COMPONENTS:
                     for qk in ("q05", "q17", "q50", "q83", "q95"):
                         ie[qk] = ie[qk] + _IPCC_REBASE_MM
 
@@ -203,16 +215,23 @@ def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
                     locs[j] = loc
                     scales[j] = scale
 
-                # Draw MC samples (mm) — standard count for component use
+                # Draw MC samples (mm) — standard count for component use.
+                # One uniform quantile per member, reused at every node, so
+                # each member follows a single quantile path through time
+                # (drawing each node independently made per-member paths
+                # incoherent; 2050-2060 correlation was ~0). Marginals at
+                # each node are unchanged.
+                u = (rng_119 if ssp == "SSP1-1.9" else rng).uniform(size=n_samples)
                 samples_mm = np.zeros((n_samples, n_years))
                 for j in range(n_years):
-                    samples_mm[:, j] = skewnorm.rvs(
-                        alphas[j], loc=locs[j], scale=scales[j],
-                        size=n_samples,
-                        random_state=rng_119 if ssp == "SSP1-1.9" else rng,
-                    )
+                    if scales[j] > 0:
+                        samples_mm[:, j] = skewnorm.ppf(
+                            u, alphas[j], loc=locs[j], scale=scales[j])
+                    else:  # degenerate node (e.g. the all-zero 2005 node)
+                        samples_mm[:, j] = locs[j]
 
-                # Draw oversampled set (mm) — for ridge plots
+                # Draw oversampled set (mm) — for ridge plots. Consumed only
+                # as per-year marginals, so nodes are drawn independently.
                 ridge_mm = np.zeros((n_ridge, n_years))
                 for j in range(n_years):
                     ridge_mm[:, j] = skewnorm.rvs(
