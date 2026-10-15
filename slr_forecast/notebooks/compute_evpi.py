@@ -42,7 +42,7 @@ SSP = 'SSP2-4.5'
 ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
 P_STABLE = 0.10            # AR6 prior
 # Defense heights searched. The upper end must exceed every optimum; the
-# S2 optimum at 2100 is about 2.8 m (SSP2-4.5), and _check_interior
+# S2 optimum at 2100 is about 3.1 m (SSP2-4.5), and _check_interior
 # enforces that every optimum stays inside the grid.
 D_GRID = np.arange(0.3, 8.0, 0.05)
 DR = 0.03                  # discount rate
@@ -221,7 +221,8 @@ def main():
     print(f'  surface 2, arrival {arr_yrs_2[0]}: max {VOI_2[_i_max, 0]:.2f} $T '
           f'at p(S1) = {p_stable_range[_i_max]:.3f} (grid step '
           f'{p_stable_range[1] - p_stable_range[0]:.3f}); at p(S1) = 0.90: '
-          f'{np.interp(0.90, p_stable_range, VOI_2[:, 0]):.2f} $T')
+          f'{np.interp(0.90, p_stable_range, VOI_2[:, 0]):.2f} $T; at p(S1) = 0.10: '
+          f'{np.interp(0.10, p_stable_range, VOI_2[:, 0]):.2f} $T')
     print(f'Max VOI surface 3:       {np.nanmax(VOI_3):.1f} $T')
     print(f'P95 unconditional:       {p95_unconditional:.3f} m')
     print(f'P95 stable:              {p95_stable:.3f} m')

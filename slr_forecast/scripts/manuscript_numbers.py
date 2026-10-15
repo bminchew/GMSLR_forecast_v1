@@ -270,6 +270,21 @@ def main():
               f'{np.interp(2045, e["years"], e["q95"]):.0f}, 2050 {np.interp(2050, w2k_y, s2_95):.0f} vs '
               f'{np.interp(2050, e["years"], e["q95"]):.0f}')
 
+    # ── Warming-path spread at 2099 (supplement, Temperature scenarios) ──
+    # A member at z = 1.645 follows the AR6 95th percentile path offset to
+    # zero at WARMING_ANCHOR_YEAR; compare its 2099 excess over the median
+    # with the full AR6 upper half-width.
+    from warming_paths import ssp_row_offsets, WARMING_ANCHOR_YEAR
+    print(f'\nUpper half-width of AR6 GMST at 2099 (95th minus median, C), '
+          f'full vs warming path anchored at {WARMING_ANCHOR_YEAR:.0f}:')
+    for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']:
+        df = pd.read_hdf(H5_OBS, f'projections/temp/{s.replace("-", "_").replace(".", "_")}')
+        i99 = int(np.argmin(np.abs(df['decimal_year'].values - 2099)))
+        full = float(df['temperature_upper'].values[i99] - df['temperature'].values[i99])
+        path = float(ssp_row_offsets(df, np.array([1.645]))[0, i99])
+        out.setdefault('warming_upper_halfwidth_2099_C', {})[s] = dict(full=full, path=path)
+        print(f'  {LABEL[s]}: full {full:.2f}, path {path:.2f}')
+
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')
 

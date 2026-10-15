@@ -99,6 +99,13 @@ def main():
                  mar_same=cum('MAR_sheet'), hirham=cum('HIRHAM_sheet'), med=np.median(em, 0),
                  lo=np.percentile(em, 5, 0), hi=np.percentile(em, 95, 0), rcm='RACMO')
     runs.append(racmo)
+    # Supplement, Greenland SMB emulator section: the two regional models forced
+    # by the same CESM2 SSP5-8.5 branch run, against the emulator's 90% range
+    print(f"CESM2 branch run SSP5-8.5, 2015-{yrs[-1]}: RACMO {racmo['mar'][-1]:.1f} mm, "
+          f"MAR {racmo['mar_same'][-1]:.1f} mm, MAR - RACMO "
+          f"{racmo['mar_same'][-1] - racmo['mar'][-1]:.1f} mm; emulator "
+          f"{racmo['med'][-1]:.1f} [{racmo['lo'][-1]:.1f}, {racmo['hi'][-1]:.1f}] mm, "
+          f"90% width {racmo['hi'][-1] - racmo['lo'][-1]:.1f} mm")
     plot(runs)
 
 
