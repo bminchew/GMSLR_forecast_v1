@@ -23,6 +23,7 @@ DEFAULT_TIMEOUT=600  # 10 minutes
 ENTRIES=(
     "ocean:component_ocean.ipynb:2400"
     "glacier:component_glacier.ipynb:1200"
+    "glacierdelay:scripts/glacier_delayed_response.py:0"
     "greenland:component_greenland.ipynb:1200"
     "smbsupp:scripts/plot_supp_greenland_smb_emulator.py:0"
     "smbrcm:scripts/plot_greenland_smb_mar_vs_emulator.py:0"
