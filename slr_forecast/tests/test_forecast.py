@@ -24,6 +24,7 @@ from component_projections import read_ipcc_component_nc, ipcc_extract
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'component_results.h5')
+OBS_H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'slr_processed_data.h5')
 IPCC_DIST_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'ipcc_distributions.h5')
 HEADLINE_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed',
                               'manuscript_headline_stats.json')
@@ -38,6 +39,10 @@ HAS_IPCC = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245'))
 
 from slr_forecast import M_TO_MM
+
+# PROJ_SSPS is append-only (SSP1-1.9 is last), so order by 2100 forcing
+# (W/m^2, the number after the dash) for monotonicity checks.
+SSPS_BY_FORCING = sorted(PROJ_SSPS, key=lambda s: float(s.split('-')[-1]))
 from slr_forecast.config import BASELINE_YEAR
 
 # Expected components in HDF5
@@ -156,7 +161,7 @@ class TestComponentSummation:
         """Higher SSP → higher total SLR at 2100."""
         idx = np.argmin(np.abs(PROJ_YEARS - 2100))
         medians = []
-        for ssp in PROJ_SSPS:
+        for ssp in SSPS_BY_FORCING:
             total = np.zeros(N_SAMPLES)
             for comp in EXPECTED_COMPONENTS:
                 total += comp_samples[comp][ssp]['samples'][:, idx]
@@ -341,7 +346,11 @@ class TestHeadlineStatistics:
         assert headline['baseline_year'] == BASELINE_YEAR
 
     def test_preindustrial_offset(self, headline):
-        assert headline['preindustrial_to_baseline_m'] == 0.19
+        """Offset matches the value computed from the GMSL reconstructions."""
+        from component_analysis import preindustrial_to_baseline_m
+        expected, _ = preindustrial_to_baseline_m(OBS_H5_PATH)
+        assert headline['preindustrial_to_baseline_m'] == pytest.approx(
+            expected, abs=1e-6)
 
     def test_all_ssps_present(self, headline):
         for ssp in PROJ_SSPS:
@@ -352,16 +361,20 @@ class TestHeadlineStatistics:
         assert headline['forecast_years'] == expected
 
     def test_2100_values_plausible(self, headline):
-        """2100 medians should be between 0.7 and 2.0 m rel. preindustrial."""
+        """2100 medians should be between 0.6 and 2.0 m rel. preindustrial.
+
+        SSP1-1.9 is 0.70 m since the computed 0.150 m pre-industrial offset
+        replaced 0.19 m (2026-10-14).
+        """
         for ssp in PROJ_SSPS:
             med = headline['scenarios'][ssp]['2100']['median_m_rel_preindustrial']
-            assert 0.7 < med < 2.0, (
-                f"{ssp} 2100 median = {med:.2f} m, outside [0.7, 2.0]")
+            assert 0.6 < med < 2.0, (
+                f"{ssp} 2100 median = {med:.2f} m, outside [0.6, 2.0]")
 
     def test_ssp_ordering(self, headline):
         """Higher SSP → higher median at 2100."""
         medians = [headline['scenarios'][ssp]['2100']['median_m_rel_preindustrial']
-                    for ssp in PROJ_SSPS]
+                    for ssp in SSPS_BY_FORCING]
         for i in range(len(medians) - 1):
             assert medians[i] <= medians[i + 1] * 1.01
 
@@ -377,15 +390,15 @@ class TestHeadlineStatistics:
             for i in range(len(probs) - 1):
                 assert probs[i] >= probs[i + 1]
 
-    def test_100pct_exceed_0_5m(self, headline):
-        """P(>0.5m) should be at least 99.5% for all SSPs at 2100.
+    def test_nearly_all_exceed_0_5m(self, headline):
+        """P(>0.5m) should be at least 95% for all SSPs at 2100.
 
-        SSP1-2.6 is 99.8% since the MAR multi-GCM Greenland SMB emulator
-        (2026-10-05); the other SSPs are 100%.
+        Since the computed 0.150 m pre-industrial offset (2026-10-14),
+        SSP1-1.9 is 97.0% and SSP1-2.6 is 98.9%; the other SSPs are 100%.
         """
         for ssp in PROJ_SSPS:
             p = headline['scenarios'][ssp]['2100']['P_exceed_0.5m_preindustrial']
-            assert p >= 99.5, f"{ssp} P(>0.5m) = {p}%, expected >= 99.5%"
+            assert p >= 95.0, f"{ssp} P(>0.5m) = {p}%, expected >= 95%"
 
     def test_percentile_ordering(self, headline):
         """p5 < median < p95 at every report year."""

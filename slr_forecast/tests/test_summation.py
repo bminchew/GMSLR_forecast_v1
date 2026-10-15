@@ -37,6 +37,10 @@ HAS_IPCC = os.path.exists(os.path.join(
 HAS_IPCC_DIST = os.path.exists(IPCC_DIST_PATH)
 
 from slr_forecast import M_TO_MM
+
+# PROJ_SSPS is append-only (SSP1-1.9 is last), so order by 2100 forcing
+# (W/m^2, the number after the dash) for monotonicity checks.
+SSPS_BY_FORCING = sorted(PROJ_SSPS, key=lambda s: float(s.split('-')[-1]))
 BASELINE_YEAR = 2005.0
 
 # Components that should be summed. EAIS was previously excluded (IMBIE
@@ -131,7 +135,7 @@ class TestSampleSummation:
         """Higher SSP → higher total median at 2100."""
         idx = np.argmin(np.abs(PROJ_YEARS - 2100))
         medians = []
-        for ssp in PROJ_SSPS:
+        for ssp in SSPS_BY_FORCING:
             total = np.zeros(N_SAMPLES)
             for comp in SUMMED_COMPONENTS:
                 total += comp_samples[comp][ssp]['samples'][:, idx]
