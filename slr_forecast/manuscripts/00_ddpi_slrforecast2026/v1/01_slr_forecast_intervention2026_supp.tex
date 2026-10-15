@@ -228,7 +228,7 @@ $b_{\mathrm{gris}}$ & Linear sensitivity of the Greenland SMB contribution to wa
 $c_{\mathrm{gris}}$ & Greenland SMB contribution at zero GMST anomaly, fitted with the drift state & $-1.07$ [$-1.44$, $-0.78$] & mm\,SLE\,yr$^{-1}$ & this study, from \citet{Mouginot2019} \\
 $s$ & Drift state, the slowly varying departure of observed SMB from the emulator & fitted & Gt\,yr$^{-1}$ & this study, from \citet{Mouginot2019} \\
 $\tau$ & Relaxation timescale of the drift state, set by a lognormal prior with 90\% range 5--25~yr & 12 [6, 26] & yr & this study \\
-$\sigma_s$ & Standard deviation of the drift state & 108 [60, 180] & Gt\,yr$^{-1}$ & this study \\
+$\sigma_s$ & Standard deviation of the drift state & 108 [60, 174] & Gt\,yr$^{-1}$ & this study \\
 $\sigma_\varepsilon$ & Standard deviation of year-to-year weather in Greenland SMB & 50 [25, 80] & Gt\,yr$^{-1}$ & this study \\
 $\epsilon_{\mathrm{fb}}$ & Fractional SMB--elevation feedback at the reference simulation, truncated at zero & $0.08 \pm 0.05$ & --- & \citet{Fettweis2013} \\
 $C_T$ & Linear sensitivity of EAIS SMB to GMST, positive for mass gain by accumulation & $60\pm20$ & Gt\,yr$^{-1}$ $^\circ$C$^{-1}$ & \citet{Frieler2015,Ligtenberg2013} \\
@@ -360,7 +360,7 @@ The component projections are driven by the IPCC AR6 projections of global mean 
 
 Each ensemble member $k$ is assigned one value $z_k$ drawn from a standard normal distribution. Its temperature is the median trajectory plus an offset $\delta_k(t) = z_k\,[h(t) - h(t_0)]$ for $t > t_0$, and zero before $t_0$. When $z_k > 0$, $h(t)$ is the distance from the median to the 95th percentile divided by 1.645. When $z_k < 0$, it is the distance from the 5th percentile to the median divided by 1.645. This keeps the asymmetry of the AR6 range. We set $t_0 = 2024$ because warming up to the present is observed, so the offset adds spread only to future warming. As a result, the spread at 2100 is somewhat narrower than the full AR6 range. For the 2.7 $^\circ$C scenario the upper half-width at 2099 is 0.64 $^\circ$C rather than 0.82 $^\circ$C.
 
-Member $k$ uses the same $z_k$ in every component and every SSP. Each member therefore represents one world, in which the ocean, the glaciers, and the ice sheets all respond to the same warming. The $z_k$ are drawn with their own random seed, so the parameter draws of each component do not change. Sampling the warming range widens the 2100 intervals of the temperature-driven components, most strongly for thermal expansion. At 2.7 $^\circ$C its 90\% interval grows from 87 to 156\,mm.
+Member $k$ uses the same $z_k$ in every component and every SSP. Each member therefore represents one world, in which the ocean, the glaciers, and the ice sheets all respond to the same warming. The $z_k$ are drawn with their own random seed, so the parameter draws of each component do not change. Sampling the warming range widens the 2100 intervals of the temperature-driven components, most strongly for thermal expansion. At 2.7 $^\circ$C its 90\% interval grows from 85 to 156\,mm.
 
 
 
