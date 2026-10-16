@@ -285,6 +285,24 @@ def main():
         out.setdefault('warming_upper_halfwidth_2099_C', {})[s] = dict(full=full, path=path)
         print(f'  {LABEL[s]}: full {full:.2f}, path {path:.2f}')
 
+    # ── Warming still to come on the AR6 median paths (main text) ──
+    # Compared with the 1950-2025 validation window (component_summation).
+    print('\nAR6 median GMST, warming added from 2025 to 2099 (C):')
+    for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']:
+        df = pd.read_hdf(H5_OBS, f'projections/temp/{s.replace("-", "_").replace(".", "_")}')
+        yrs, t = df['decimal_year'].values, df['temperature'].values
+        added = float(np.interp(2099, yrs, t) - np.interp(2025, yrs, t))
+        out.setdefault('warming_added_2025_2099_C', {})[s] = added
+        print(f'  {LABEL[s]}: {added:.2f}')
+
+    # ── People on land below the annual flood level per cm of GMSL rise ──
+    # Secant slope of our quadratic fit to Kulp & Strauss (2019) over 0-1 m.
+    from slr_data_readers import people_displaced_kulpstrauss2019 as kulp
+    per_cm = float((kulp(1.0) - kulp(0.0)) / 100)
+    out['kulp_people_per_cm_M'] = per_cm
+    print(f'\nPeople below the annual flood level per cm of rise, 0-1 m secant '
+          f'(Kulp & Strauss 2019 fit): {per_cm:.2f} million')
+
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')
 
