@@ -3,9 +3,18 @@ Compute EVPI / Value-of-Information surfaces and save to component_results.h5.
 
 Three VOI surfaces are computed:
   1. Arrival year × target year: EVPI smoothed over target years, discounted
-  2. Arrival year × P(stable): analytic EVSI as function of prior belief
+  2. Arrival year × prior p(S1): EVPI as a function of the prior
+     (Fig. 11c of the main text; source of every VoI value in the manuscript)
   3. Arrival year × SLR threshold: exceedance probability shift and
      threshold-specific VOI
+
+Prior on S1. Surface 2 treats the prior p(S1) as an axis and evaluates
+the full range p_stable_range; it adopts no single prior. The scalar EVPI,
+surface 1, and the break-even values instead compare against the stored
+``blended`` ensemble, which is the fast-WAIS mixture with S1 weight 0.10.
+To stay consistent with that ensemble they weight S1 by the same 0.10
+(P_S1_BLENDED). That constant describes how ``blended`` was built; it is
+not an estimate of how likely S1 is.
 
 Usage:
     python compute_evpi.py
@@ -40,7 +49,9 @@ SSP = 'SSP2-4.5'
 # societal adaptation burden (seawalls, green barriers, managed retreat,
 # etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
 ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
-P_STABLE = 0.10            # AR6 prior
+# S1 weight of the stored `blended` ensemble (fast-WAIS mixture). Used only
+# where results are compared with `blended`; see the module docstring.
+P_S1_BLENDED = 0.10
 # Defense heights searched. The upper end must exceed every optimum; the
 # S2 optimum at 2100 is about 3.1 m (SSP2-4.5), and _check_interior
 # enforces that every optimum stays inside the grid.
@@ -87,7 +98,7 @@ def _evpi_annual(full_s, stable_s, unstable_mask):
     for costs, label in [(costs_uc, 'full'), (costs_st, 'S1'), (costs_un, 'S2')]:
         _check_interior(costs, label)
     c_star_uc = costs_uc.min()
-    c_with_info = P_STABLE * costs_st.min() + (1 - P_STABLE) * costs_un.min()
+    c_with_info = P_S1_BLENDED * costs_st.min() + (1 - P_S1_BLENDED) * costs_un.min()
     return max(c_star_uc - c_with_info, 0.0)
 
 
@@ -136,7 +147,7 @@ def main():
     print(f'  Optimal defense at 2100: S1 {D_GRID[np.argmin(costs_st)]:.2f} m, '
           f'S2 {D_GRID[np.argmin(costs_un)]:.2f} m')
     c_star_uc = float(costs_uc.min())
-    c_with_info = float(P_STABLE * costs_st.min() + (1 - P_STABLE) * costs_un.min())
+    c_with_info = float(P_S1_BLENDED * costs_st.min() + (1 - P_S1_BLENDED) * costs_un.min())
     evpi_annual_B = max(c_star_uc - c_with_info, 0.0)
 
     print(f'  Intervention value: ${delta_annual_B:.0f} B/yr')
@@ -165,9 +176,9 @@ def main():
     print('  Done.')
 
     # ================================================================
-    # Figure 2: analytic EVSI as function of P(stable) and arrival year
+    # Figure 2: EVPI as a function of the prior p(S1) and arrival year
     # ================================================================
-    print('Computing Figure 2 data: arrival year x resolution degree ...')
+    print('Computing Figure 2 data: arrival year x prior p(S1) ...')
     p_stable_range = np.linspace(0.01, 0.99, 60)
     arr_yrs_2 = np.arange(2026, 2152, 2)
 
@@ -181,9 +192,9 @@ def main():
         costs_hedge = ps * costs_st_g + (1 - ps) * costs_un_g
         c_opt_hedge = costs_hedge.min()
         c_perfect = ps * c_opt_st + (1 - ps) * c_opt_un
-        evsi_ann = max(c_opt_hedge - c_perfect, 0.0)
+        evpi_ann = max(c_opt_hedge - c_perfect, 0.0)
         for j, ay in enumerate(arr_yrs_2):
-            VOI_2[i, j] = evsi_ann * _npv_factor(ay, 2100) / 1000
+            VOI_2[i, j] = evpi_ann * _npv_factor(ay, 2100) / 1000
     print('  Done.')
 
     # ================================================================
@@ -237,7 +248,7 @@ def main():
         # Attributes
         g.attrs['ssp'] = SSP
         g.attrs['adapt_cost_per_m'] = ADAPT_COST_PER_M
-        g.attrs['p_stable_prior'] = P_STABLE
+        g.attrs['p_s1_blended'] = P_S1_BLENDED
         g.attrs['discount_rate'] = DR
         g.attrs['damage_function'] = 'Jevrejeva2018'
 
