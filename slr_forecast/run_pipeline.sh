@@ -22,6 +22,7 @@ DEFAULT_TIMEOUT=600  # 10 minutes
 # Pipeline order and mapping (name:filename:timeout_seconds)
 ENTRIES=(
     "ocean:component_ocean.ipynb:2400"
+    "oceanholdout:scripts/ocean_early_holdout.py:0"
     "glacier:component_glacier.ipynb:1200"
     "glacierdelay:scripts/glacier_delayed_response.py:0"
     "greenland:component_greenland.ipynb:1200"
