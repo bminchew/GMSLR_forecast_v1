@@ -93,6 +93,7 @@ Unless otherwise noted, all sea-level values in the main text are global-mean 21
 
 The Greenland Ice Sheet (GrIS) is among the largest land-ice contributors to sea-level rise and has lost mass every year since 1998 \citep{Mouginot2019}. That loss is the imbalance between solid-ice discharge and surface mass balance (SMB), where SMB is the difference between mass gained by snow accumulation and mass lost to meltwater runoff and sublimation. GrIS discharge is sensitive to ocean temperature and surface melt runoff \citep{Straneo2013,Slater2020,Wood2021}. Warm subsurface waters thin and undercut the calving fronts of marine-terminating glaciers, driving increased calving and net terminus retreat. This effect is amplified where surface runoff drives mixing and buoyant upwelling along the calving face \citep{Slater2022}. Surface melt also lubricates glacier beds, but that effect is generally short-lived and localized as the subglacial hydrological system evolves to accommodate changes in meltwater flux \citep{Schoof2010,Tedstone2013,Ultee2022}. We therefore model discharge as a lagged response to ocean temperature.
 
+\subsubsubsection{Discharge}
 We approximate the GrIS-wide discharge as
 \begin{equation}
 	D = \gamma\,T_{\mathrm{ocean}}(t - \delta) + r_0,
