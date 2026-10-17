@@ -6,14 +6,15 @@ alternative Arctic amplification factor or ocean-temperature layer. Keeping
 one implementation means the sensitivity tests run exactly the production
 code with one input changed.
 
-The code was moved here from the notebook cells unchanged; the production
-outputs are identical to those of the inline version.
+Since 2026-10-17 the delay model is fitted to the annual increments of the
+cumulative discharge record (fit_discharge_delay_model with sigma_rate),
+which replaces the level fit with diagonal weights, the end-of-record rate
+row and the sandwich covariance of component_greenland_robust_se.
 """
 
 import numpy as np
 
 from component_analysis import fit_ocean_transfer_function, fit_discharge_delay_model
-from component_greenland_robust_se import robust_delay_intervals
 
 
 def annualize(t_monthly, x_monthly):
@@ -39,20 +40,22 @@ def full_years_only(t_monthly, x_monthly):
 def calibrate_greenland_discharge(gr_temp_monthly, gr_time_monthly,
                                   T_ocean_monthly, time_ocean_monthly,
                                   mou_comp, delta_candidates,
-                                  rate_window_yrs, rate_constraint_weight,
-                                  n_samples, seed=2026, verbose=True):
-    """Ocean transfer function, delay-model fit and robust posterior draws.
+                                  rate_window_yrs, n_samples, seed=2026):
+    """Ocean transfer function and delay-model fit with posterior draws.
+
+    The delay model is fitted to the annual increments of the Mouginot
+    cumulative discharge with the reported annual rate errors
+    (fit_discharge_delay_model with sigma_rate), which is the
+    correlation-aware fit to the cumulative record. Each delta's covariance
+    includes the excess-scatter scale chi2/dof, and the BIC weights use the
+    same estimated scale.
 
     Returns
     -------
     ocean_transfer : dict
         fit_ocean_transfer_function output (T_ocean = alpha T_surface + beta).
-    result_discharge : DischargeDelayResult
-        fit_discharge_delay_model output with gamma/r0/delta posteriors
-        redrawn from the correlation-aware covariance (robust_delay_intervals),
-        preserving the per-delta point estimates and BIC weights.
-    robust_discharge : dict
-        robust_delay_intervals output.
+    result_discharge : SimpleNamespace
+        fit_discharge_delay_model output with gamma/r0/delta posteriors.
     T_ocean_ann, T_ocean_years : ndarray
         Annual ocean temperature used in the fit.
     """
@@ -69,44 +72,20 @@ def calibrate_greenland_discharge(gr_temp_monthly, gr_time_monthly,
         T_ocean_ann=T_ocean_ann, T_ocean_years=T_ocean_years,
         delta_candidates=delta_candidates,
         rate_window_yrs=rate_window_yrs,
-        rate_constraint_weight=rate_constraint_weight,
-        n_samples=n_samples, seed=seed)
+        n_samples=n_samples, seed=seed,
+        sigma_rate=discharge_rate_sigma(mou_comp))
+    return ocean_transfer, result_discharge, T_ocean_ann, T_ocean_years
 
-    # Correlation-aware parameter covariance: the calibration target is a
-    # cumulative record, so the least-squares covariance is too narrow.
-    # Point estimates are unchanged; only the posterior spread widens.
-    robust_discharge = robust_delay_intervals(
-        result_discharge,
-        mou_comp['time_dyn'], mou_comp['H_dyn'], mou_comp['sigma_dyn'],
-        T_ocean_ann, T_ocean_years, mou_comp=mou_comp,
-        rate_window_yrs=rate_window_yrs,
-        rate_constraint_weight=rate_constraint_weight,
-        scale='auto', verbose=verbose)
 
-    # Redraw the posterior from the corrected covariance, preserving the
-    # per-delta point estimates and the BIC mixture weights.
-    rng = np.random.default_rng(seed)
-    w = np.asarray(result_discharge.bic_weights, float)
-    w = w / w.sum()
-    deltas = np.asarray(result_discharge.DELTA_CANDIDATES, float)
-    n_per = np.round(n_samples * w).astype(int)
-    n_per[np.argmax(w)] += n_samples - n_per.sum()
-    g = np.empty(n_samples); r = np.empty(n_samples); d = np.empty(n_samples)
-    i0 = 0
-    for dl, nd in zip(deltas, n_per):
-        if nd <= 0:
-            continue
-        pd_ = robust_discharge['per_delta'][float(dl)]
-        draws = rng.multivariate_normal([pd_['gamma'], pd_['r0']], pd_['cov_robust'], size=nd)
-        g[i0:i0 + nd] = draws[:, 0]
-        r[i0:i0 + nd] = draws[:, 1]
-        d[i0:i0 + nd] = dl
-        i0 += nd
-    sh = rng.permutation(n_samples)
-    result_discharge.gamma_posterior = g[sh]
-    result_discharge.r0_posterior = r[sh]
-    result_discharge.delta_posterior = d[sh]
-    return ocean_transfer, result_discharge, robust_discharge, T_ocean_ann, T_ocean_years
+def discharge_rate_sigma(mou_comp, years=None):
+    """Reported 1-sigma of the annual discharge rate (m SLE/yr) at *years*
+    (default: mou_comp['time_dyn'])."""
+    df = mou_comp['df']
+    yrs_df = df['decimal_year'].values.astype(float)
+    years = mou_comp['time_dyn'] if years is None else years
+    idx = np.searchsorted(yrs_df, np.asarray(years, float))
+    assert np.allclose(yrs_df[idx], years)
+    return df['discharge_rate_sigma'].values[idx].astype(float)
 
 
 def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,

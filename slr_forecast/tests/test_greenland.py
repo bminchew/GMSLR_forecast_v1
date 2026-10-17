@@ -861,6 +861,78 @@ class TestDischargeDelayModelWLS:
         assert fitted_result.peak_r > 0  # should find some positive correlation
 
 
+class TestDischargeDelayModelIncrements:
+    """Production estimator: fit_discharge_delay_model with sigma_rate.
+
+    Synthetic record built like the Mouginot one: annual rates
+    gamma*T(t - delta) + r0 plus independent noise, cumulated and rebased
+    with bayesian_models._cumulate.
+    """
+
+    @pytest.fixture
+    def synth(self):
+        from bayesian_models import _cumulate
+        rng = np.random.default_rng(7)
+        T_years = np.arange(1960, 2025, dtype=float) + 0.5
+        T_ann = 0.02 * (T_years - 1990) + 0.3 * np.sin(2 * np.pi * (T_years - 1960) / 13)
+        gamma, r0, delta = 0.0004, 0.0012, 6.0
+        yrs = np.arange(1972, 2019, dtype=float) + 0.5
+        sig_rate = np.full(len(yrs), 0.00003)
+        rate = (gamma * np.interp(yrs - delta, T_years, T_ann) + r0
+                + rng.normal(0, 1.5 * sig_rate))          # scatter 1.5x reported
+        H, sig_H = _cumulate(rate, sig_rate, yrs, (1995, 2005))
+        return dict(yrs=yrs, H=H, sig_H=sig_H, sig_rate=sig_rate, T_years=T_years,
+                    T_ann=T_ann, gamma=gamma, r0=r0, delta=delta)
+
+    @pytest.fixture
+    def fit(self, synth):
+        d = synth
+        return fit_discharge_delay_model(
+            d['yrs'], d['H'], d['sig_H'], d['T_ann'], d['T_years'],
+            delta_candidates=[4, 5, 6, 7, 8], n_samples=N_SMALL, seed=1,
+            sigma_rate=d['sig_rate'])
+
+    def test_recovers_parameters(self, synth, fit):
+        fr = fit.fit_results[synth['delta']]
+        se = np.sqrt(np.diag(fr['cov']))
+        assert abs(fr['gamma'] - synth['gamma']) < 3 * se[0]
+        assert abs(fr['r0'] - synth['r0']) < 3 * se[1]
+
+    def test_selects_true_delta(self, synth, fit):
+        assert fit.delta_best == synth['delta']
+
+    def test_scale_absorbs_excess_scatter(self, synth, fit):
+        fr = fit.fit_results[synth['delta']]
+        assert fr['estimator'] == 'increments'
+        assert fr['dof'] == fr['n_valid'] - 2
+        assert 1.5 < fr['scale'] < 3.5            # true variance ratio 2.25
+
+    def test_equals_gls_on_levels(self, synth, fit):
+        """Increment WLS = GLS on the demeaned levels with the _cumulate covariance."""
+        from component_greenland_robust_se import _increment_covariance
+        d = synth
+        fr = fit.fit_results[d['delta']]
+        valid = fr['valid_mask']
+        yrs_v = d['yrs'][valid]
+        dt_v = np.diff(yrs_v, prepend=yrs_v[0] - 1)
+        T_v = np.interp(yrs_v, d['T_years'] + d['delta'], d['T_ann'])
+        int_T = np.cumsum(T_v * dt_v)
+        Sigma, _ = _increment_covariance(yrs_v, d['sig_rate'][valid], dt_v, (1995, 2005))
+        # Sigma is singular (the rebase anchor has zero variance) and the
+        # level intercept is free, so GLS is taken on the differenced levels
+        n = len(yrs_v)
+        D = np.diff(np.eye(n), axis=0)
+        Sd = D @ Sigma @ D.T
+        Xd = D @ np.column_stack([int_T, yrs_v])
+        yd = D @ d['H'][valid]
+        b = np.linalg.solve(Xd.T @ np.linalg.solve(Sd, Xd), Xd.T @ np.linalg.solve(Sd, yd))
+        assert np.allclose(b, [fr['gamma'], fr['r0']], rtol=1e-8)
+
+    def test_rate_check_reported(self, synth, fit):
+        fr = fit.fit_results[synth['delta']]
+        assert abs(fr['r_model'] - fit.r_obs_dyn) < 5 * fit.sigma_r_obs * np.sqrt(fr['scale'])
+
+
 class TestExtendWithArc:
     """Test the ARC cumulative discharge extension."""
 

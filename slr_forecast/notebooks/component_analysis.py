@@ -691,17 +691,38 @@ def fit_discharge_delay_model(
     rate_constraint_weight=1,
     n_samples=2000,
     seed=None,
+    sigma_rate=None,
 ):
-    """Fit the Greenland discharge delay model by demeaned WLS.
+    """Fit the Greenland discharge delay model.
 
     The model is:
 
         H_dyn(t) = gamma * integral(T_ocean(t' - delta), t0..t) + r0 * t
 
-    fitted in demeaned form (intercept absorbed by demeaning).  The time delay
-    ``delta`` is selected from ``delta_candidates`` by BIC, and the
-    posterior is a BIC-weighted mixture of Gaussian draws from each
-    candidate's WLS covariance.
+    The time delay ``delta`` is selected from ``delta_candidates`` by BIC,
+    and the posterior is a BIC-weighted mixture of Gaussian draws from each
+    candidate's covariance.
+
+    Two estimators:
+
+    * ``sigma_rate`` given (production): weighted least squares on the
+      annual increments H_i - H_{i-1} = (gamma T_i + r0) dt_i, with weights
+      1/(sigma_rate_i dt_i)^2.  The cumulative record is a running sum of
+      annual rates whose errors are independent, so this is the
+      generalized-least-squares fit to the cumulative record under its
+      correlated error covariance (bayesian_models._cumulate).  The excess
+      scatter is absorbed by a common error scale s^2: the covariance is
+      s^2 (X'WX)^{-1} with s^2 = chi2/dof, and the BIC uses the profile
+      likelihood with s^2 estimated (k = 3: gamma, r0, s^2).  There is no
+      rate-constraint row: the end-of-record rate is a linear function of
+      the same increments, so a separate row would count them twice.  The
+      end-of-record rate is still computed and returned as a check
+      (``r_obs_dyn`` against each fit's ``r_model``).
+    * ``sigma_rate`` None (the estimator used before 2026-10-17): demeaned
+      WLS on the cumulative levels with diagonal weights 1/sigma_dyn^2 plus
+      the end-of-record rate-constraint row.  Its BIC treats the cumulative
+      values as independent, which is not correct for a running sum; kept
+      for comparison and tests.
 
     Parameters
     ----------
@@ -727,6 +748,9 @@ def fit_discharge_delay_model(
         Number of posterior MC samples.
     seed : int or None
         Random seed for posterior draws.
+    sigma_rate : ndarray or None
+        1-sigma of the annual discharge rate (m SLE/yr), aligned with
+        ``dyn_years``.  Selects the increment estimator (see above).
 
     Returns
     -------
@@ -790,7 +814,15 @@ def fit_discharge_delay_model(
     # all candidates.  The likelihood includes -0.5*sum(log sigma^2), so
     # per-delta windows of different length (a shorter delay reaches
     # earlier years) make the BICs incomparable and favour short delays.
-    common = np.asarray(sigma_dyn) > 0
+    # The level estimator drops points with sigma_dyn == 0 (the rebase
+    # anchor of annualize_imbie, where 1/sigma^2 is undefined).  The
+    # increment estimator weights by the rate errors, and the anchor level
+    # is an ordinary point of the running sum, so it keeps it.
+    if sigma_rate is not None:
+        sig_ok = np.isfinite(np.asarray(sigma_rate, float)) & (np.asarray(sigma_rate, float) > 0)
+    else:
+        sig_ok = np.asarray(sigma_dyn) > 0
+    common = sig_ok.copy()
     for delta in delta_candidates:
         common &= np.isfinite(np.interp(dyn_years, T_ocean_years + delta, T_ocean_ann,
                                         left=np.nan, right=np.nan))
@@ -805,7 +837,7 @@ def fit_discharge_delay_model(
         # component_levelspace_robust_se.  Records whose sigma comes
         # from bayesian_models._cumulate are floored above zero, so this
         # leaves the Mouginot and Mankoff fits unchanged.
-        valid = common & np.isfinite(T_shifted) & (np.asarray(sigma_dyn) > 0)
+        valid = common & np.isfinite(T_shifted) & sig_ok
         if valid.sum() < 4:
             continue
 
@@ -826,27 +858,51 @@ def fit_discharge_delay_model(
         t_dm = yrs_v - t_mean
 
         # Level equations
-        W_level = 1.0 / sig_v**2
+        W_level = 1.0 / sig_v**2 if sigma_rate is None else None
         X_level = np.column_stack([int_T_dm, t_dm])
-
-        # Rate constraint: gamma * T_ocean(t_end - delta) + r0 = r_obs
         T_ocean_at_end = np.interp(t_end - delta, T_ocean_years, T_ocean_ann)
-        X_rate_eq = np.array([[T_ocean_at_end, 1.0]])
-        y_rate_eq = np.array([r_obs_dyn])
-        W_rate_eq = np.array([rate_constraint_weight / sigma_r_obs**2])
 
-        # Combined WLS
-        X = np.vstack([X_level, X_rate_eq])
-        y = np.concatenate([H_dm, y_rate_eq])
-        W = np.concatenate([W_level, W_rate_eq])
+        if sigma_rate is not None:
+            # Annual increments, independent errors (GLS on the levels)
+            idx_v = np.flatnonzero(valid)
+            if not np.all(np.diff(idx_v) == 1):
+                raise ValueError('increment fit needs a contiguous fit window')
+            dt_i = np.diff(yrs_v)
+            dH = np.diff(H_v)
+            X_inc = np.column_stack([T_v[1:] * dt_i, dt_i])
+            w_inc = 1.0 / (np.asarray(sigma_rate, float)[valid][1:] * dt_i) ** 2
+            XtWX = X_inc.T @ (w_inc[:, None] * X_inc)
+            beta_hat = np.linalg.solve(XtWX, X_inc.T @ (w_inc * dH))
+            gamma_fit, r0_fit = beta_hat
+            r_inc = dH - X_inc @ beta_hat
+            n_valid = len(dH)
+            chi2 = float(np.sum(w_inc * r_inc**2))
+            dof = n_valid - 2
+            scale = chi2 / dof
+            cov_beta = np.linalg.inv(XtWX) * scale
+            # Profile log-likelihood, common error scale at its ML value
+            s2_ml = chi2 / n_valid
+            log_lik = -0.5 * (n_valid + np.sum(np.log(s2_ml / w_inc))
+                              + n_valid * np.log(2 * np.pi))
+            bic = 3 * np.log(n_valid) - 2 * log_lik
+        else:
+            # Rate constraint: gamma * T_ocean(t_end - delta) + r0 = r_obs
+            X_rate_eq = np.array([[T_ocean_at_end, 1.0]])
+            y_rate_eq = np.array([r_obs_dyn])
+            W_rate_eq = np.array([rate_constraint_weight / sigma_r_obs**2])
 
-        XtWX = X.T @ np.diag(W) @ X
-        XtWy = X.T @ (W * y)
-        beta_hat = np.linalg.solve(XtWX, XtWy)
-        gamma_fit, r0_fit = beta_hat
-        cov_beta = np.linalg.inv(XtWX)
+            # Combined WLS
+            X = np.vstack([X_level, X_rate_eq])
+            y = np.concatenate([H_dm, y_rate_eq])
+            W = np.concatenate([W_level, W_rate_eq])
 
-        # Residuals on level equations (for BIC likelihood)
+            XtWX = X.T @ np.diag(W) @ X
+            XtWy = X.T @ (W * y)
+            beta_hat = np.linalg.solve(XtWX, XtWy)
+            gamma_fit, r0_fit = beta_hat
+            cov_beta = np.linalg.inv(XtWX)
+
+        # Level residuals (BIC likelihood of the level estimator; plots)
         H_pred_dm = X_level @ beta_hat
         resid = H_dm - H_pred_dm
 
@@ -859,11 +915,24 @@ def fit_discharge_delay_model(
         SS_tot_rate = np.sum((rate_obs - rate_mean)**2)
         r2_rate = 1.0 - SS_res_rate / SS_tot_rate
 
-        r_model = gamma_fit * T_ocean_at_end + r0_fit
+        if sigma_rate is not None:
+            # Same operator as r_obs_dyn (WLS slope of the levels over the
+            # final window) applied to the modelled levels
+            in_rate = rate_mask[valid]
+            if in_rate.sum() != rate_mask.sum():
+                raise ValueError('end-of-record window lies outside the fit window')
+            r_model = float(np.linalg.solve(
+                XtWX_rate, X_rate_fit.T @ (W_rate * H_pred_dm[in_rate]))[1])
+        else:
+            r_model = gamma_fit * T_ocean_at_end + r0_fit
 
-        n_valid = len(H_dm)
-        log_lik = -0.5 * np.sum(W_level * resid**2 + np.log(sig_v**2))
-        bic = 2 * np.log(n_valid) - 2 * log_lik
+        if sigma_rate is None:
+            n_valid = len(H_dm)
+            log_lik = -0.5 * np.sum(W_level * resid**2 + np.log(sig_v**2))
+            bic = 2 * np.log(n_valid) - 2 * log_lik
+            chi2 = float(np.sum(W_level * resid**2))
+            dof = n_valid - 1 - 2
+            scale = 1.0
 
         fit_results[float(delta)] = {
             'gamma': gamma_fit, 'r0': r0_fit,
@@ -874,6 +943,9 @@ def fit_discharge_delay_model(
             'yrs_valid': yrs_v, 'valid_mask': valid,
             'r_model': r_model, 'r_obs': r_obs_dyn,
             'T_ocean_at_end': T_ocean_at_end,
+            'chi2': chi2, 'dof': dof, 'chi2_over_dof': chi2 / dof,
+            'scale': scale,
+            'estimator': 'increments' if sigma_rate is not None else 'level',
         }
 
     # ── Select best delta by BIC ──
