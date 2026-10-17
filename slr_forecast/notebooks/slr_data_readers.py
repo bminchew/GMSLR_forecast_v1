@@ -1502,11 +1502,20 @@ def read_berkeley_earth(filepath: str) -> pd.DataFrame:
     return df
 
 
+def _cell_mask_grid(cell_mask, lat, lon):
+    """Boolean (lat, lon) grid: True where (lat, lon) is listed in *cell_mask*."""
+    cm = cell_mask if isinstance(cell_mask, pd.DataFrame) else pd.read_csv(cell_mask)
+    listed = set(zip(np.round(cm['lat'].values, 3), np.round(cm['lon'].values, 3)))
+    return np.array([[(round(float(y), 3), round(float(x), 3)) in listed for x in lon]
+                     for y in lat])
+
+
 def read_berkeley_earth_gridded(
     filepath: str,
     lat_bounds: tuple = (60.0, 84.0),
     lon_bounds: tuple = (-73.0, -12.0),
     land_threshold: float = 0.5,
+    cell_mask=None,
 ) -> pd.DataFrame:
     """
     Read Berkeley Earth 1° gridded NetCDF and return area-weighted monthly
@@ -1527,6 +1536,12 @@ def read_berkeley_earth_gridded(
     land_threshold : float
         Minimum ``land_mask`` fraction for a cell to be included.
         Default 0.5 retains mixed land/ocean coastal cells.
+    cell_mask : str, path or DataFrame, optional
+        Cell centres to keep (columns ``lat``, ``lon``), e.g.
+        ``data/processed/greenland_mask_berkeley_1deg.csv`` from
+        scripts/make_greenland_mask.py, which drops the non-Greenland land
+        in the box.  Applied in addition to the box and the land threshold.
+        Default None keeps every cell in the box.
 
     Returns
     -------
@@ -1557,6 +1572,9 @@ def read_berkeley_earth_gridded(
 
     # Combined weight: land fraction × cell area, zeroing sub-threshold cells
     weight = np.where(lm >= land_threshold, lm * aw, 0.0)
+    if cell_mask is not None:
+        keep = _cell_mask_grid(cell_mask, lat[lat_mask], lon[lon_mask])
+        weight = np.where(keep, weight, 0.0)
     weight_sum = weight.sum()
 
     # Area-weighted mean for each time step
@@ -1593,6 +1611,8 @@ def read_berkeley_earth_gridded(
         'region_lat': lat_bounds,
         'region_lon': lon_bounds,
         'land_threshold': land_threshold,
+        'cell_mask': None if cell_mask is None else str(cell_mask)
+                     if not isinstance(cell_mask, pd.DataFrame) else 'DataFrame',
         'n_cells': int((weight > 0).sum()),
     }
 

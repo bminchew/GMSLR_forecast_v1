@@ -93,6 +93,7 @@ def read_berkeley_earth_gridded(
     lon_bounds: tuple[float, float] = (-73.0, -12.0),
     land_threshold: float = 0.5,
     ocean_only: bool = False,
+    cell_mask=None,
 ) -> pd.DataFrame:
     """Read Berkeley Earth 1° gridded NetCDF and extract a regional average.
 
@@ -117,6 +118,11 @@ def read_berkeley_earth_gridded(
         If True, weight cells by ``(1 - land_mask) * areal_weight``,
         giving an ocean-dominated average.  Cells with ``land_mask >= 1``
         are excluded.  Default False.
+    cell_mask : str, path or DataFrame, optional
+        Cell centres to keep (columns ``lat``, ``lon``), e.g.
+        ``data/processed/greenland_mask_berkeley_1deg.csv`` from
+        scripts/make_greenland_mask.py.  Applied in addition to the box and
+        the weighting.  Default None keeps every cell in the box.
 
     Returns
     -------
@@ -154,6 +160,12 @@ def read_berkeley_earth_gridded(
         weight = np.where(ocean_frac > 0, ocean_frac * aw, 0.0)
     else:
         weight = np.where(lm >= land_threshold, lm * aw, 0.0)
+    if cell_mask is not None:
+        cm = cell_mask if isinstance(cell_mask, pd.DataFrame) else pd.read_csv(cell_mask)
+        listed = set(zip(np.round(cm["lat"].values, 3), np.round(cm["lon"].values, 3)))
+        keep = np.array([[(round(float(y), 3), round(float(x), 3)) in listed
+                          for x in lon[lon_mask]] for y in lat[lat_mask]])
+        weight = np.where(keep, weight, 0.0)
 
     # Area-weighted mean for each time step (NaN-safe)
     temp_region = temp[:, lat_mask, :][:, :, lon_mask]
