@@ -898,3 +898,32 @@ def list_components(h5_path=None):
             print(f"    saved: {saved}")
 
     return components
+
+
+# =========================================================================
+# Provenance of groups derived from the blended forecast
+# =========================================================================
+
+DERIVED_FROM_BLENDED = ('blended_slow90', 'wais_slow90', 'voi',
+                        'optimal_defense', 'risk_shapley')
+"""Groups computed from `blended` (and the groups component_forecast writes
+with it) by scripts that run after component_forecast."""
+
+
+def stamp_derived(hf, group):
+    """Record which `blended` run a derived group was computed from."""
+    hf[group].attrs['source_saved_at'] = str(hf['blended'].attrs['saved_at'])
+    hf[group].attrs['saved_at'] = datetime.now(timezone.utc).isoformat()
+
+
+def check_derived(hf, groups=DERIVED_FROM_BLENDED):
+    """Raise if a derived group is missing or was computed from an earlier
+    `blended` run (e.g. after a partial rerun of component_forecast)."""
+    current = str(hf['blended'].attrs['saved_at'])
+    stale = [g for g in groups
+             if g not in hf or hf[g].attrs.get('source_saved_at') != current]
+    if stale:
+        raise RuntimeError(
+            f'Derived groups {stale} are missing or predate the current '
+            f'blended forecast ({current}); rerun the pipeline steps after '
+            f'`forecast` (slowwais, evpi, defense, shapley).')

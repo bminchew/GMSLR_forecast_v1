@@ -193,10 +193,11 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
                 pre = unique_yrs < np.floor(en4_start)
             T_oc_ann_proj[pre] += oc_noise_pre[i, unique_yrs[pre] - oc_noise_pre_years[0]]
 
-            # Delay: T_delayed(t) = T_ocean(t - delta); zero before ocean data
+            # Delay: T_delayed(t) = T_ocean(t - delta); zero before the ocean
+            # series starts, and the last annual value held flat after it ends
+            # (the scenario forcing ends in 2099, as GMST is held flat for SMB)
             T_delayed = np.interp(proj_years, t_oc_ann_proj + delta_i, T_oc_ann_proj,
-                                  left=np.nan, right=np.nan)
-            T_delayed[np.isnan(T_delayed)] = 0.0
+                                  left=0.0, right=T_oc_ann_proj[-1])
             int_T_delayed = np.cumsum(T_delayed * dt_proj)
 
             # Un-demean: H = gamma (int T - mean_cal) + r0 (t - t_mean_cal) + H_mean_cal

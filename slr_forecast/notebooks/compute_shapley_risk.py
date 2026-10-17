@@ -97,6 +97,8 @@ def main():
         if grp_name in hf:
             del hf[grp_name]
         g = hf.create_group(grp_name)
+        from component_io import stamp_derived
+        stamp_derived(hf, grp_name)
         g.attrs['ssps'] = ','.join(SSPS)
         g.attrs['warming_labels'] = ','.join(WARMING_LABELS[s] for s in SSPS)
         g.attrs['damage_function'] = 'Jevrejeva2018'

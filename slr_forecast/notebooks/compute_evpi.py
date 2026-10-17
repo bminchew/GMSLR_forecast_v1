@@ -244,6 +244,8 @@ def main():
         if grp_name in hf:
             del hf[grp_name]
         g = hf.create_group(grp_name)
+        from component_io import stamp_derived
+        stamp_derived(hf, grp_name)
 
         # Attributes
         g.attrs['ssp'] = SSP

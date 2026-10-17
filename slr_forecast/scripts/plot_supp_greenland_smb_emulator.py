@@ -39,7 +39,7 @@ arete_mpl.use('poster')
 FIG = ROOT / 'figures'
 H5 = ROOT / 'data/processed/slr_processed_data.h5'
 GT = 362.5                                    # Gt per mm SLE
-N = 2000                                      # members, as in the notebook
+from slr_forecast.config import N_SAMPLES as N   # members, as in the notebook
 M0_SIGMA = 57.0                               # Gt/yr, as in the notebook
 SCEN_LABEL = {'ssp126': 'SSP1-2.6', 'SSP1-2.6': 'SSP1-2.6', 'ssp245': 'SSP2-4.5',
               'ssp585': 'SSP5-8.5'}

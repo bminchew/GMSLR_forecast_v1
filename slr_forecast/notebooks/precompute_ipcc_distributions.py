@@ -21,7 +21,11 @@ Each member of samples/ follows one quantile path across all years.
 
 Usage
 -----
-    python precompute_ipcc_distributions.py [--n-samples 2000] [--seed 777]
+    python precompute_ipcc_distributions.py [--n-samples N] [--seed 777]
+
+The default --n-samples is slr_forecast.config.N_SAMPLES, the ensemble size
+of every component, so run_pipeline.sh (step `ipccdist`, before `forecast`)
+regenerates this file at the size the forecast expects.
 """
 
 import argparse
@@ -49,6 +53,7 @@ try:
     from slr_forecast.config import BASELINE_YEAR
 except ImportError:
     BASELINE_YEAR = 2000.0
+from slr_forecast.config import N_SAMPLES   # must match the components; no fallback
 try:
     from slr_forecast import M_TO_MM
 except ImportError:
@@ -154,7 +159,7 @@ def fit_normal_to_quantiles(q05, q17, q50, q83, q95):
 # Main
 # ---------------------------------------------------------------------------
 
-def main(n_samples=2000, seed=777, n_ridge=10000, ridge_seed=888):
+def main(n_samples=N_SAMPLES, seed=777, n_ridge=10000, ridge_seed=888):
     rng = np.random.default_rng(seed)
     rng_ridge = np.random.default_rng(ridge_seed)
     # SSP1-1.9 was added later; separate generators keep the other draws unchanged.
@@ -284,7 +289,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Precompute IPCC AR6 skew-normal fits and samples."
     )
-    parser.add_argument("--n-samples", type=int, default=2000)
+    parser.add_argument("--n-samples", type=int, default=N_SAMPLES)
     parser.add_argument("--seed", type=int, default=777)
     parser.add_argument("--n-ridge", type=int, default=10000)
     parser.add_argument("--ridge-seed", type=int, default=888)

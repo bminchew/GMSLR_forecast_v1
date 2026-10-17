@@ -34,6 +34,7 @@ ENTRIES=(
     "wais:component_wais.ipynb:1200"
     "ratestate:bayesian_ratestate.ipynb:5400"
     "summation:component_summation.ipynb:1200"
+    "ipccdist:notebooks/precompute_ipcc_distributions.py:0"
     "forecast:component_forecast.ipynb:1200"
     "slowwais:scripts/build_slow_wais_p90.py:0"
     "grsens:scripts/greenland_sensitivity_forecast.py:0"

@@ -60,6 +60,8 @@ def main():
         full = {s: hf[f'blended/{s}/samples'][:] for s in SSPS}
         stab = {s: hf[f'blended_stable/{s}/samples'][:] for s in SSPS}
         slow_stored = {s: hf[f'blended_slow90/{s}/samples'][:] for s in SSPS}
+        from component_io import check_derived
+        check_derived(hf, ('blended_slow90',))
 
     # The blended ensembles must come from the same run as the Greenland changes
     n = full[SSPS[0]].shape[0]
@@ -72,12 +74,11 @@ def main():
     zeros = np.zeros((n, len(g_years)))
 
     # Slow-WAIS rows exactly as build_slow_wais_p90.py builds them
-    n1 = int(round(bsw.P_S1 * bsw.N_OUT))
-    rows1 = np.tile(np.arange(n), n1 // n)
-    rows2 = {s: bsw.s2_row_index(full[s][sidx == 1][:, i_f], bsw.N_OUT - n1) for s in SSPS}
+    mix_rows = {s: bsw.mixture_rows(stab[s][:, i_f], full[s][sidx == 1][:, i_f]) for s in SSPS}
 
     def slow(s, dT):
-        return np.concatenate([(stab[s] + dT)[rows1, i_f], (full[s] + dT)[sidx == 1][rows2[s], i_f]])
+        r1, r2 = mix_rows[s]
+        return np.concatenate([(stab[s] + dT)[r1, i_f], (full[s] + dT)[sidx == 1][r2, i_f]])
 
     for s in SSPS:   # the reconstruction reproduces the stored slow-WAIS ensemble
         assert np.allclose(np.sort(slow(s, 0.0)), np.sort(slow_stored[s][:, i_f]))

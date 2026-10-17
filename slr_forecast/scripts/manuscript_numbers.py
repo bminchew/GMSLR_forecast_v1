@@ -75,6 +75,8 @@ def main():
     print(f'AR6 baseline (1995-2014 mean) minus 2000: {off * M_TO_MM:.1f} mm')
 
     with h5py.File(H5, 'r') as hf:
+        from component_io import check_derived
+        check_derived(hf)
         fy = hf['blended/forecast_years'][:]
         i21 = int(np.argmin(np.abs(fy - 2100)))
         fast = {s: hf[f'blended/{s}/samples'][:, i21] for s in LABEL}

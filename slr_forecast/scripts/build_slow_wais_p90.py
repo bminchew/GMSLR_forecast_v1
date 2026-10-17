@@ -11,11 +11,14 @@ ensembles, so the mixture needs no re-blending and no new projection run:
     wais_2k/full_samples[idx == 1]    WAIS | S2         (1805)
 
 Figure code takes equally weighted samples, so the mixture is realized as
-20,000 trajectories: nine copies of each S1 member (18,000 rows, exactly 90% of
-the ensemble) and 2,000 S2 rows. The S2 rows are the 1,805 members plus 195
-systematically spaced duplicates, chosen after sorting on the 2100 value so the
-duplication is spread evenly through the branch rather than concentrated in one
-part of it. Quantiles of the result are checked against exact weighted
+20,000 trajectories: 18,000 S1 rows (exactly 90% of the ensemble) and 2,000 S2
+rows. With 2000 members, the S1 rows are nine copies of each member, and the S2
+rows are the 1,805 members plus 195 systematically spaced duplicates, chosen
+after sorting on the 2100 value so the duplication is spread evenly through the
+branch rather than concentrated in one part of it. A branch whose row count is
+not a whole multiple of its size (e.g. at N_SAMPLES = 10000) is realized the
+same way: every member once plus evenly spaced duplicates, or, when the branch
+has more members than rows, an evenly spaced subset by rank (branch_row_index). Quantiles of the result are checked against exact weighted
 quantiles of the two branches before anything is written.
 
 Writes groups `blended_slow90` and `wais_slow90` to component_results.h5.
@@ -47,15 +50,21 @@ def weighted_quantile(v, w, q):
     return np.interp(q, cdf, v)
 
 
-def s2_row_index(s2_vals, n_rows):
-    """Row picks for the S2 branch: every member once, duplicates spread evenly.
+def branch_row_index(vals, n_rows):
+    """Row picks for one branch of the mixture, given its 2100 values.
 
-    Members are ordered by their 2100 value and the extra rows are taken at
-    evenly spaced ranks, so the duplication does not distort the shape of the
-    branch the way a random draw or a head-of-array repeat would.
+    If n_rows is a whole multiple of the branch size, every member is repeated
+    the same number of times. Otherwise members are ordered by their 2100 value
+    and the extra rows (or, if there are fewer rows than members, all rows) are
+    taken at evenly spaced ranks, so the duplication or thinning does not
+    distort the shape of the branch the way a random draw or a head-of-array
+    repeat would.
     """
-    n = len(s2_vals)
-    order = np.argsort(s2_vals)
+    n = len(vals)
+    reps, rem = divmod(n_rows, n)
+    if rem == 0:
+        return np.tile(np.arange(n), reps)
+    order = np.argsort(vals)
     extra = n_rows - n
     if extra <= 0:
         return order[np.linspace(0, n - 1, n_rows).round().astype(int)]
@@ -63,14 +72,16 @@ def s2_row_index(s2_vals, n_rows):
     return np.concatenate([order, picks])
 
 
+def mixture_rows(s1_vals, s2_vals):
+    """Row indices into the S1 and S2 branches (2100 values given)."""
+    n_s1_rows = int(round(P_S1 * N_OUT))
+    return (branch_row_index(s1_vals, n_s1_rows),
+            branch_row_index(s2_vals, N_OUT - n_s1_rows))
+
+
 def build(s1, s2, i2100):
     """Mixture rows from two trajectory ensembles, S1 first then S2."""
-    n_s1_rows = int(round(P_S1 * N_OUT))
-    n_s2_rows = N_OUT - n_s1_rows
-    reps, rem = divmod(n_s1_rows, s1.shape[0])
-    assert rem == 0, (n_s1_rows, s1.shape[0])
-    rows_s1 = np.tile(np.arange(s1.shape[0]), reps)
-    rows_s2 = s2_row_index(s2[:, i2100], n_s2_rows)
+    rows_s1, rows_s2 = mixture_rows(s1[:, i2100], s2[:, i2100])
     return np.vstack([s1[rows_s1], s2[rows_s2]])
 
 
@@ -161,6 +172,11 @@ def main():
         gw.create_dataset('median', data=np.median(wais_mix, axis=0))
         for p in (5, 95):
             gw.create_dataset(f'p{p}', data=np.percentile(wais_mix, p, axis=0))
+
+        sys.path.insert(0, str(ROOT / 'notebooks'))
+        from component_io import stamp_derived
+        stamp_derived(hf, 'blended_slow90')
+        stamp_derived(hf, 'wais_slow90')
 
         print(f'\nWrote blended_slow90 and wais_slow90 to {H5}')
 

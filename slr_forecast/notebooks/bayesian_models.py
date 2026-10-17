@@ -3345,7 +3345,7 @@ def fit_bayesian_level_annual_correlated(
               f"(against true correlated covariance)")
 
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     param_names = (['a', 'b', 'c'] if order == 2 else ['b', 'c'])
     if balance_T_eq0 is not None:
         param_names[-1] = 'T_eq0'
@@ -3357,6 +3357,25 @@ def fit_bayesian_level_annual_correlated(
     var_dict = {name: chain_full[:, :n_chains_arviz, k].T
                 for k, name in enumerate(param_names)}
     trace = az.from_dict(var_dict)
+
+    # Convergence: integrated autocorrelation time over all walkers (emcee),
+    # plus R-hat and ESS from arviz. emcee's guidance is a post-burn-in chain
+    # of at least ~50 tau; the burn-in should also span several tau.
+    tau = np.asarray(sampler.get_autocorr_time(discard=n_burnin, quiet=True), float)
+    tau_max = float(np.max(tau))
+    conv = check_convergence(trace, quiet=True)
+    conv_ok = (n_samples >= 50 * tau_max and n_burnin >= 5 * tau_max
+               and conv['converged'])
+    if progress or not conv_ok:
+        print(f"  Convergence: max autocorrelation time {tau_max:.1f} steps "
+              f"(chain {n_samples}, burn-in {n_burnin}), max R-hat "
+              f"{max(conv['rhat'].values()):.3f}, min bulk ESS "
+              f"{min(conv['ess_bulk'].values()):.0f}"
+              + ('' if conv_ok else '  ** NOT CONVERGED by these criteria **'))
+    if not conv_ok:
+        warnings.warn(f'fit_bayesian_level_annual_correlated: chain may not have '
+                      f'converged (tau_max = {tau_max:.1f}, n_samples = {n_samples}, '
+                      f'n_burnin = {n_burnin}, R-hat/ESS ok = {conv["converged"]})')
 
     return BayesianLevelCorrelatedResult(
         trace=trace,
@@ -3376,7 +3395,11 @@ def fit_bayesian_level_annual_correlated(
         sampler_diagnostics={'acceptance_fraction':
                               sampler.acceptance_fraction.mean(),
                               'n_walkers': n_walkers, 'n_samples': n_samples,
-                              'n_burnin': n_burnin, 'thin': thin},
+                              'n_burnin': n_burnin, 'thin': thin,
+                              'autocorr_time': tau, 'autocorr_time_max': tau_max,
+                              'rhat_max': max(conv['rhat'].values()),
+                              'ess_bulk_min': min(conv['ess_bulk'].values()),
+                              'converged': conv_ok},
         design_info={'prior_scales': prior_scales,
                      'param_names': param_names,
                      'H0_prior_mean': prior_H0_mean,

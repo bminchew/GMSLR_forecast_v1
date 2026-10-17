@@ -127,6 +127,8 @@ def main():
         if grp_name in hf:
             del hf[grp_name]
         g = hf.create_group(grp_name)
+        from component_io import stamp_derived
+        stamp_derived(hf, grp_name)
 
         g.attrs['ssp'] = SSP
         g.attrs['adapt_cost_per_m'] = ADAPT_COST_PER_M
