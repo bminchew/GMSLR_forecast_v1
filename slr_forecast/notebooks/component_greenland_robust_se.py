@@ -1,6 +1,12 @@
 """
 Correlation-aware standard errors for the Greenland discharge delay model.
 
+Not used in production since 2026-10-17: the delay model is now fitted to the
+annual increments of the cumulative record (fit_discharge_delay_model with
+sigma_rate), which is the GLS fit this module approximated with a sandwich
+covariance around the level fit. Kept for comparison; tests use
+_increment_covariance to check the increment fit against GLS on the levels.
+
 This does NOT refit anything.  It takes the published estimator exactly as
 it is -- demeaned weighted least squares on the cumulative discharge record
 with the end-of-record rate constraint, ``component_analysis.

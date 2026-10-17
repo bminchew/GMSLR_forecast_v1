@@ -979,7 +979,7 @@ Verification scripts and outputs: `$S/verify_GL/` (h5glac.py, sx.py, gain.py, gd
 (component_greenland; from nb_greenland_A; nb_greenland_B has no old-report section; spot-checked items marked *)
 - §1.2 Projections flat/unforced after ~2099 — STILL OPEN* — greenland_discharge.py:177–179 zero-fill; stored increment 1.62 → 1.40 mm/yr at 2104 (GR-4).
 - §1.4 annualize_imbie labels — FIXED — component_analysis annualize_imbie `years[i] = yr + 1.0`.
-- §1.5 δ BIC on unequal n — FIXED* — common window, n = 41 for every δ (dof 38). The diagonal-likelihood weighting remains (GR-1).
+- §1.5 δ BIC on unequal n — FIXED* — common window, n = 41 for every δ (dof 38). The diagonal-likelihood weighting remained (GR-1); fixed 2026-10-17 by the increment refit.
 - xcorr rate-vs-rate — STILL OPEN* — GR-21.
 - Ocean-T gap 2022–2024 by interpolation — STILL OPEN* — greenland_discharge.py:135 `hist_mask_oc = time_ocean_monthly < ssp_start`; EN4 has 6 months in 2021 (GR-2).
 - Cell 10 (now 11) panel (c) GMST without AA — STILL OPEN* — cell 11 `be_T_oc = ocean_transfer['alpha'] * be_ann.values + ...` (GR-2).
