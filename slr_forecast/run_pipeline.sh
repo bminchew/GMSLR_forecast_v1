@@ -36,6 +36,7 @@ ENTRIES=(
     "summation:component_summation.ipynb:1200"
     "forecast:component_forecast.ipynb:1200"
     "slowwais:scripts/build_slow_wais_p90.py:0"
+    "grsens:scripts/greenland_sensitivity_forecast.py:0"
     "slownums:scripts/slow_wais_p90_numbers.py:0"
     "varshares:scripts/variance_shares.py:0"
     "evpi:notebooks/compute_evpi.py:0"
