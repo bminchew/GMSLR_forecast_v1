@@ -26,7 +26,8 @@ referenced to their means over the 1990.5-2025.5 fit years.
 Reported:
   - posterior parameters, full vs holdout
   - withheld window: OLS rate 1955.5-1989.5 (model vs NOAA), mean level of
-    the withheld window relative to the fit window, reduced chi^2 of the
+    the withheld window relative to the fit window and to the 1995-2005
+    mean (the paper's 2000 baseline, used in the supplement), reduced chi^2 of the
     35 withheld points against the predictive distribution (obs sigma +
     sigma_extra + parametric spread), and 90% coverage
   - GMST change over the withheld window
@@ -36,7 +37,10 @@ structural term, treated as independent between years.
 Nothing here feeds the pipeline. Results go to the 'ocean_early_holdout'
 group in data/processed/component_results.h5.
 
-Usage:  python scripts/ocean_early_holdout.py
+Usage:  python scripts/ocean_early_holdout.py               # fit, save, plot
+        python scripts/ocean_early_holdout.py --plot-only   # redraw figure from HDF5
+        python scripts/ocean_early_holdout.py --from-posterior  # metrics, HDF5 and
+                                                  # figure from stored posteriors
 """
 
 import os
@@ -52,11 +56,11 @@ import emcee
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
-from slr_forecast.config import SEEDS
+from slr_forecast.config import SEEDS, Z_90
 
 H5_DATA = ROOT / 'data/processed/slr_processed_data.h5'
 H5_OUT = ROOT / 'data/processed/component_results.h5'
-OUT_FIG = ROOT / 'figures/diagnostics/ocean_early_holdout.png'
+OUT_FIG = ROOT / 'figures/component_ocean_early_holdout.png'
 M_TO_MM = 1000.0
 
 HOLDOUT_SPLIT = 1990.5            # first fit year of 0-700 m in the holdout
@@ -216,16 +220,18 @@ def run_fit(label):
                 r_hat=r_hat, minutes=(time.time() - t0) / 60)
 
 
-def predict(flat, rng):
-    """Upper-layer model at every 0-700 m year, referenced to the fit-window
-    mean (1990.5-2025.5) so it is comparable with data referenced the same way."""
+def predict(flat, rng, ref=None):
+    """Upper-layer model at every 0-700 m year, referenced to the mean over
+    `ref` (default: the 1990.5-2025.5 fit years, the reference of the
+    withheld-window metrics)."""
     draws = flat[rng.choice(flat.shape[0], N_DRAW, replace=False)]
     a, b_u = draws[:, 0], draws[:, 1]
     tau_u, sig_x = np.exp(draws[:, 3]), np.exp(draws[:, 4])
     Su, _ = solve_layers(tau_u)
     s = Su[idx700_all]                                   # (n_obs, N_DRAW)
     H = a * s**2 + b_u * s
-    ref = noaa_year >= HOLDOUT_SPLIT - 0.01
+    if ref is None:
+        ref = noaa_year >= HOLDOUT_SPLIT - 0.01
     return H - H[ref].mean(0), sig_x
 
 
@@ -251,9 +257,16 @@ def withheld_metrics(H, sig_x, rng):
     lev_obs = y[wh].mean()
     lev_obs_se = np.sqrt(np.sum(sig700[wh]**2) / wh.sum()**2
                          + np.sum(sig700[ref]**2) / ref.sum()**2)
+    # the same relative to the 1995-2005 mean (the paper's 2000 baseline)
+    lev2000_mod = (H[wh] - H[_bl].mean(0)).mean(0)
+    lev2000_obs = y[wh].mean() - y[_bl].mean()
+    lev2000_obs_se = np.sqrt(np.sum(sig700[wh]**2) / wh.sum()**2
+                             + np.sum(sig700[_bl]**2) / _bl.sum()**2)
     return dict(cover=cover, chi2n=chi2n, n=int(wh.sum()),
                 rate_mod=rate_mod, rate_obs=rate_obs, rate_obs_se=rate_obs_se,
                 lev_mod=lev_mod, lev_obs=lev_obs, lev_obs_se=lev_obs_se,
+                lev2000_mod=lev2000_mod, lev2000_obs=lev2000_obs,
+                lev2000_obs_se=lev2000_obs_se,
                 lo=lo, hi=hi, yrs=yrs, y=y)
 
 
@@ -268,10 +281,6 @@ def main():
     with Pool(2) as pool:
         full, hold = pool.map(run_fit, ['full', 'holdout'])
 
-    rng = np.random.default_rng(SEEDS['tests'])
-    names = ['a (mm/C^2)', 'b_u (mm/C)', 'b_d (mm/C)', 'tau_u (yr)', 'sigma_extra (mm)']
-    tf = [lambda v: v * M_TO_MM] * 3 + [np.exp, lambda v: np.exp(v) * M_TO_MM]
-
     print('\n' + '=' * 78)
     print('OCEAN 0-700 m EARLY-RECORD HOLDOUT (two-layer model)')
     print('=' * 78)
@@ -279,6 +288,15 @@ def main():
         print(f"{r['label']:8s}: n(0-700 m) = {r['n_fit700']}, acceptance {r['acc']:.3f}, "
               f"min ESS {r['ess'].min():.0f}, max R_hat {r['r_hat'].max():.4f}, "
               f"{r['minutes']:.1f} min")
+    report_and_save(full, hold)
+
+
+def report_and_save(full, hold):
+    """Parameter table, withheld-window metrics, HDF5 output and figure.
+    Needs only each fit's label and flat posterior."""
+    rng = np.random.default_rng(SEEDS['tests'])
+    names = ['a (mm/C^2)', 'b_u (mm/C)', 'b_d (mm/C)', 'tau_u (yr)', 'sigma_extra (mm)']
+    tf = [lambda v: v * M_TO_MM] * 3 + [np.exp, lambda v: np.exp(v) * M_TO_MM]
     print(f"\n{'parameter':18s}{'full record':>30s}{'holdout (0-700 m from 1990.5)':>34s}")
     for i, (nm, f) in enumerate(zip(names, tf)):
         a, b = q(f(full['flat'][:, i])), q(f(hold['flat'][:, i]))
@@ -305,6 +323,9 @@ def main():
         m = q(mt['lev_mod'] * M_TO_MM)
         print(f"  mean level rel. to 1990.5-2025.5 mean: model {m[0]:.2f} [{m[1]:.2f}, {m[2]:.2f}] mm   "
               f"NOAA {mt['lev_obs']*M_TO_MM:.2f} +/- {1.645*mt['lev_obs_se']*M_TO_MM:.2f} (90%)")
+        m = q(mt['lev2000_mod'] * M_TO_MM)
+        print(f"  mean level rel. to 1995-2005 mean:     model {m[0]:.2f} [{m[1]:.2f}, {m[2]:.2f}] mm   "
+              f"NOAA {mt['lev2000_obs']*M_TO_MM:.2f} +/- {1.645*mt['lev2000_obs_se']*M_TO_MM:.2f} (90%)")
         print(f"  reduced chi^2 = {mt['chi2n']:.2f};  90% predictive coverage = "
               f"{mt['cover']*100:.0f}% of points")
 
@@ -330,6 +351,9 @@ def main():
             gg.attrs['rate_obs_se_mm_yr'] = mt['rate_obs_se'] * M_TO_MM
             gg.attrs['level_obs_mm'] = mt['lev_obs'] * M_TO_MM
             gg.attrs['level_obs_se_mm'] = mt['lev_obs_se'] * M_TO_MM
+            gg.create_dataset('level2000_model_mm', data=mt['lev2000_mod'] * M_TO_MM)
+            gg.attrs['level2000_obs_mm'] = mt['lev2000_obs'] * M_TO_MM
+            gg.attrs['level2000_obs_se_mm'] = mt['lev2000_obs_se'] * M_TO_MM
             gg.attrs['chi2n_withheld'] = mt['chi2n']
             gg.attrs['coverage90_withheld'] = mt['cover']
             gg.create_dataset('model_median_mm', data=np.median(H, 1) * M_TO_MM)
@@ -339,33 +363,97 @@ def main():
         g.create_dataset('noaa_700_ref_mm', data=out['holdout'][2]['y'] * M_TO_MM)
         g.create_dataset('sigma_700_total_mm', data=sig700 * M_TO_MM)
 
-    # ── Figure ──
+    plot_figure(h5_out, fig_out)
+
+
+def plot_figure(h5_path=H5_OUT, fig_out=OUT_FIG):
+    """Supplement figure from the stored results (no refit).
+
+    (a) NOAA 0-700 m with the full-record and holdout fits, model and data
+    each referenced to their 1995-2005 mean (the paper's 2000 baseline, as in
+    the production fit figure); (b) the same relative to the full-record
+    median. Bands are 90% credible intervals of the model (no observation
+    noise), recomputed from the stored posteriors; error bars are 90%
+    intervals of the total point error.
+    """
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    y = out['holdout'][2]['y'] * M_TO_MM
-    fig, ax = plt.subplots(figsize=(9, 5))
-    ax.axvspan(noaa_year[0] - 0.5, HOLDOUT_SPLIT - 0.5, color='0.92', zorder=0,
-               label='withheld from holdout fit')
-    for lab, col in [('full', 'C0'), ('holdout', 'C3')]:
-        H = out[lab][0] * M_TO_MM
-        ax.fill_between(noaa_year, np.percentile(H, 5, 1), np.percentile(H, 95, 1),
-                        color=col, alpha=0.25, lw=0)
-        ax.plot(noaa_year, np.median(H, 1), color=col, lw=2,
-                label={'full': 'fit to 1955-2025 (production)',
-                       'holdout': 'fit to 1990-2025 only'}[lab])
-    ax.errorbar(noaa_year, y, yerr=1.645 * sig700 * M_TO_MM, fmt='o', ms=3, color='k',
-                alpha=0.6, label='NOAA 0-700 m (x1.14), 90%')
-    ax.set_xlabel('Year')
-    ax.set_ylabel('Thermosteric sea level (mm), rel. to 1990.5-2025.5 mean')
-    ax.set_title('Two-layer thermosteric model: 0-700 m early-record holdout')
-    ax.legend(fontsize=9, loc='upper left')
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    fig_out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(fig_out, dpi=200)
-    print(f'\nFigure: {fig_out}')
+    sys.path.insert(0, str(ROOT / 'notebooks'))
+    sys.path.insert(0, str(ROOT / 'notebooks' / 'arete_mpl'))
+    import arete_mpl
+    from component_plotting import COMP_COLORS
+    arete_mpl.use('poster')
+    INK, FULL_C, HOLD_C = '#333333', COMP_COLORS['Thermosteric'], '#036C9A'
+
+    with h5py.File(h5_path, 'r') as f:
+        g = f['ocean_early_holdout']
+        yrs, y, sy = g['noaa_year'][:], g['noaa_700_ref_mm'][:], g['sigma_700_total_mm'][:]
+        flats = {k: g[k]['posterior_flat'][:] for k in ('full', 'holdout')}
+    y = y - y[_bl].mean()
+    fit = {}
+    for k, fl in flats.items():
+        H, _ = predict(fl, np.random.default_rng(SEEDS['tests']), ref=_bl)
+        H = H * M_TO_MM
+        fit[k] = (np.median(H, 1), np.percentile(H, 5, 1), np.percentile(H, 95, 1))
+    ref = fit['full'][0]
+    labels = {'full': 'Fit to 1955–2025', 'holdout': 'Fit to 1990–2025 only'}
+    colors = {'full': FULL_C, 'holdout': HOLD_C}
+
+    with plt.rc_context({'font.size': 9, 'axes.linewidth': 0.6, 'axes.labelsize': 9,
+                         'xtick.labelsize': 8.5, 'ytick.labelsize': 8.5}):
+        fig, ax = plt.subplots(2, 1, figsize=(6.5, 4.8), sharex=True,
+                               gridspec_kw={'height_ratios': [2.4, 1], 'hspace': 0.08})
+        for a, off in ((ax[0], 0.0), (ax[1], ref)):
+            a.axvspan(yrs[0] - 1.5, HOLDOUT_SPLIT - 0.5, color='0.93', lw=0, zorder=0,
+                      label='Withheld from the 1990–2025 fit' if a is ax[0] else None)
+            for k in ('full', 'holdout'):
+                med, lo, hi = fit[k]
+                a.fill_between(yrs, lo - off, hi - off, color=colors[k], alpha=0.18, lw=0, zorder=2)
+                if k == 'holdout':
+                    # dashed where the fit extrapolates into the withheld years
+                    wh = yrs < HOLDOUT_SPLIT
+                    i0 = int(np.argmax(~wh))
+                    a.plot(yrs[:i0 + 1], (med - off)[:i0 + 1], color=colors[k], lw=1.6,
+                           ls='--', zorder=5)
+                    a.plot(yrs[i0:], (med - off)[i0:], color=colors[k], lw=1.6, zorder=5,
+                           label=labels[k] if a is ax[0] else None)
+                else:
+                    a.plot(yrs, med - off, color=colors[k], lw=1.6, zorder=5,
+                           label=labels[k] if a is ax[0] else None)
+            a.errorbar(yrs, y - off, yerr=Z_90 * sy, fmt='o', ms=2.6, mfc='white', mew=0.7,
+                       color=INK, ecolor=INK, elinewidth=0.6, capsize=0, alpha=0.85, lw=0,
+                       zorder=6, label='NOAA 0–700 m' if a is ax[0] else None)
+            a.grid(True, alpha=0.18, lw=0.5)
+            a.set_axisbelow(True)
+            for sp in ('top', 'right'):
+                a.spines[sp].set_visible(False)
+        ax[1].axhline(0, color=FULL_C, ls='--', lw=0.9, zorder=4)
+        ax[0].set_xlim(yrs[0] - 1.5, yrs[-1] + 1.5)
+        ax[0].set_ylabel('Thermosteric sea level (mm)')
+        ax[1].set_ylabel('Relative to full\ntime-series fit (mm)')
+        ax[1].set_xlabel('Year')
+        ax[0].legend(frameon=False, fontsize=7.2, loc='lower right', handlelength=1.6)
+        for a, lab in ((ax[0], '(a)'), (ax[1], '(b)')):
+            a.text(0.02, 0.95 if a is ax[0] else 0.93, lab, transform=a.transAxes,
+                   va='top', fontweight='bold')
+        fig_out = Path(fig_out)
+        fig_out.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(fig_out, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+    print(f'Figure: {fig_out}')
 
 
 if __name__ == '__main__':
-    main()
+    if '--from-posterior' in sys.argv:
+        # recompute metrics, HDF5 output and figure from the stored posteriors
+        with h5py.File(Path(os.environ.get('OCEAN_HOLDOUT_H5', H5_OUT)), 'r') as f:
+            g = f['ocean_early_holdout']
+            full, hold = ({'label': k, 'flat': g[k]['posterior_flat'][:]}
+                          for k in ('full', 'holdout'))
+        report_and_save(full, hold)
+    elif '--plot-only' in sys.argv:
+        plot_figure(Path(os.environ.get('OCEAN_HOLDOUT_H5', H5_OUT)),
+                    Path(os.environ.get('OCEAN_HOLDOUT_FIG', OUT_FIG)))
+    else:
+        main()
