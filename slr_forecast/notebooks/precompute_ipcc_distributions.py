@@ -15,8 +15,10 @@ data/processed/ipcc_distributions.h5
     │     samples  (N_SAMPLES, n_years) in mm
     └── attrs: n_samples, seed, baseline_year, rebase_mm_total
 
-Only the "total" quantiles are shifted to BASELINE_YEAR (+10.7 mm); the
-component quantiles stay on the AR6 reference (zero at the 2005 node).
+Only the "total" quantiles are shifted to BASELINE_YEAR, by the shared
+offset component_analysis.ar6_baseline_offset_m (13.3 mm in the 2026-10-18
+run; stored as attrs['rebase_mm_total']); the component quantiles stay on
+the AR6 reference (zero at the 2005 node).
 Each member of samples/ follows one quantile path across all years.
 
 Usage
@@ -24,8 +26,9 @@ Usage
     python precompute_ipcc_distributions.py [--n-samples N] [--seed 777]
 
 The default --n-samples is slr_forecast.config.N_SAMPLES, the ensemble size
-of every component, so run_pipeline.sh (step `ipccdist`, before `forecast`)
-regenerates this file at the size the forecast expects.
+of every component, so run_pipeline.sh (step `ipccdist`) regenerates this
+file at the size its readers expect. Both component_summation (TWS) and
+component_forecast read it, so the step must run before `summation`.
 """
 
 import argparse

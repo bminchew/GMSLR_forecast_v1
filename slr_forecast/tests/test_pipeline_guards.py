@@ -3,6 +3,9 @@
 - branch_row_index (scripts/build_slow_wais_p90.py) at any branch size
 - check_derived / stamp_derived (component_io) provenance of derived groups
 - fit_bayesian_level_annual_correlated reports convergence diagnostics
+- low-severity sweep guards: check_convergence tail ESS, component_io root
+  attributes and skipped-metadata warnings, _anchor_covariance split,
+  save_s1_quadratic skips identical rewrites
 """
 
 import importlib.util
@@ -125,3 +128,133 @@ def test_imbie_annual_sigma_reproduces_cumulative(region):
     k = np.argmax(~full) if not full.all() else len(full)
     assert k > 10
     assert np.allclose(pred[:k], end_sig[:k], rtol=1e-3)
+
+
+_PROCESSED = os.path.join(ROOT, 'data', 'processed', 'slr_processed_data.h5')
+
+
+@pytest.mark.skipif(not os.path.exists(_PROCESSED), reason='slr_processed_data.h5 not built')
+class TestProcessedDataCurrent:
+    """slr_processed_data.h5 is built outside run_pipeline.sh, so stale tables can outlive
+    reader fixes (MD-4, MD-24). Regenerate with scripts/refresh_processed_keys.py."""
+
+    def test_berkeley_sigma_is_95pct_halfwidth_over_1p96(self):
+        import pandas as pd
+        for key in ('raw/df_berkeley', 'harmonized/df_berkeley_h'):
+            df = pd.read_hdf(_PROCESSED, key)
+            ratio = (df['temperature_unc'] / df['temperature_sigma']).dropna()
+            np.testing.assert_allclose(ratio, 1.96, rtol=1e-9, err_msg=key)
+
+    def test_no_negative_sigma_columns(self):
+        import pandas as pd
+        bad = []
+        with pd.HDFStore(_PROCESSED, mode='r') as store:
+            for key in store.keys():
+                df = store[key]
+                if not isinstance(df, pd.DataFrame):
+                    continue
+                for c in df.columns:
+                    if str(c).endswith('_sigma') and (pd.to_numeric(df[c], errors='coerce') < 0).any():
+                        bad.append(f'{key}:{c}')
+        assert not bad, f'negative sigma columns: {bad}'
+
+    def test_ipcc_observed_sigma_is_halfrange_over_0p9542(self):
+        import pandas as pd
+        for key in ('raw/df_ipcc_observed_gmsl', 'harmonized/df_ipcc_observed_gmsl_h'):
+            df = pd.read_hdf(_PROCESSED, key)
+            half = (df['gmsl_upper'] - df['gmsl_lower']) / 2
+            np.testing.assert_allclose(half / df['gmsl_sigma'], 0.9542, rtol=1e-9, err_msg=key)
+
+
+# ---------------------------------------------------------------------------
+# Low-severity sweep (MD-11, MD-12, MD-13, MD-19, IN-23)
+# ---------------------------------------------------------------------------
+
+
+def test_check_convergence_requires_tail_ess(monkeypatch):
+    """MD-11: `converged` checks tail ESS as well as R-hat and bulk ESS."""
+    import arviz as az
+    import bayesian_models
+    from bayesian_models import check_convergence
+    rng = np.random.default_rng(0)
+    good = az.from_dict({'x': rng.normal(size=(8, 2000))})
+    conv = check_convergence(good, quiet=True)
+    assert conv['converged'] and min(conv['ess_tail'].values()) >= 100
+    # Same chains with a tail ESS below 100 (bulk ESS and R-hat unchanged)
+    real_ess = az.ess
+
+    def fake_ess(trace, method='bulk', **kw):
+        out = real_ess(trace, method=method, **kw)
+        return out * 1e-3 if method == 'tail' else out
+    monkeypatch.setattr(bayesian_models.az, 'ess', fake_ess)
+    conv = check_convergence(good, quiet=True)
+    assert min(conv['ess_bulk'].values()) >= 100
+    assert min(conv['ess_tail'].values()) < 100
+    assert not conv['converged']
+
+
+class TestComponentIO:
+
+    def test_root_baseline_refreshed_and_no_root_sample_count(self, tmp_path):
+        """MD-12: a file created under an old baseline gets the current
+        baseline_year on the next save, and the stale root n_samples
+        attribute is dropped."""
+        from component_io import _require_file, BASELINE_YEAR
+        p = tmp_path / 'c.h5'
+        with h5py.File(p, 'w') as f:
+            f.attrs['baseline_year'] = 2005.0
+            f.attrs['n_samples'] = 2000
+            f.create_dataset('proj_years', data=np.arange(3.0))
+        _require_file(p)
+        with h5py.File(p, 'r') as f:
+            assert f.attrs['baseline_year'] == BASELINE_YEAR
+            assert 'n_samples' not in f.attrs
+
+    def test_unsaveable_metadata_warns(self, tmp_path):
+        """MD-13: metadata that cannot be stored is reported, not dropped
+        silently; arrays with ndim > 2 in a projection dict likewise."""
+        from component_io import _write_scalar_attrs, _save_projection_ssp
+        with h5py.File(tmp_path / 'm.h5', 'w') as f:
+            g = f.create_group('x')
+            with pytest.warns(UserWarning, match='bad'):
+                _write_scalar_attrs(g, {'ok': 1.0, 's': 'a', 'bad': None})
+            assert g.attrs['ok'] == 1.0 and g.attrs['s'] == 'a'
+            assert 'bad' not in g.attrs
+            prg = f.create_group('projections')
+            with pytest.warns(UserWarning, match='cube'):
+                _save_projection_ssp(prg, 'SSP2-4.5', {
+                    'median': np.zeros(3), 'cube': np.zeros((2, 2, 2))})
+            assert 'cube' not in prg['SSP2-4.5']
+
+
+def test_anchor_covariance_splits_on_baseline_year():
+    """MD-19: with end-of-year labels and the zero-sigma 2000.0 row dropped,
+    1999.0 and 2001.0 tie in argmin; 1999 must still be on the pre side."""
+    from component_levelspace_robust_se import _anchor_covariance
+    years = np.array([1997.0, 1998.0, 1999.0, 2001.0, 2002.0, 2003.0])
+    sig = np.array([3.0, 2.0, 1.0, 1.0, 2.0, 3.0])
+    S, _ = _anchor_covariance(years, sig, 2000.0)
+    assert S[2, 3] == 0.0 and S[3, 2] == 0.0      # opposite sides
+    assert S[1, 2] == 1.0                          # 1998, 1999 share 1999's history
+    assert S[3, 4] == 1.0                          # 2001, 2002 share 2001's history
+    assert np.linalg.eigvalsh(S).min() > -1e-12
+
+
+def test_s1_quadratic_identical_refit_does_not_rewrite(tmp_path):
+    """IN-23: an identical refit leaves the tracked JSON (and its
+    fitted_at stamp) untouched; a changed fit rewrites it."""
+    import json
+    import component_projections as cp
+    saved = cp._S1_QUADRATIC
+    try:
+        mean = np.array([1.2e-5, 2.5e-4, 0.0])
+        cov = np.diag([1e-12, 1e-10, 0.0])
+        p = tmp_path / 's1.json'
+        cp.save_s1_quadratic(mean, cov, path=p, provenance='test')
+        stamp = json.loads(p.read_text())['fitted_at']
+        cp.save_s1_quadratic(mean, cov, path=p, provenance='test')
+        assert json.loads(p.read_text())['fitted_at'] == stamp
+        cp.save_s1_quadratic(mean * 1.01, cov, path=p, provenance='test')
+        assert json.loads(p.read_text())['mean'][0] == pytest.approx(1.212e-5)
+    finally:
+        cp._S1_QUADRATIC = saved

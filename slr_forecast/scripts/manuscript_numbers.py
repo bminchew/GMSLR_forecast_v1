@@ -115,6 +115,22 @@ def main():
             out.setdefault('slow_pct_above_ar6', {})[s] = pct
             print(f'      slow median {pct:.1f}% above the AR6 mc median; slow 95th '
                   f'{"inside" if sl[2] < mc[2] / M_TO_MM else "outside"} the AR6 mc range')
+            fpct = 100 * (fa[0] / (mc[1] / M_TO_MM) - 1)
+            out.setdefault('fast_pct_above_ar6', {})[s] = fpct
+            print(f'      fast median {fpct:.1f}% above the AR6 mc median')
+
+    # ── Fast-WAIS forecast relative to 2000 (Results: first paragraph) ──
+    print('\nFast-WAIS forecast at 2100 (m, rel. 2000):')
+    for s in LABEL:
+        v = q(fast[s])
+        out.setdefault('fast_rel2000_m', {})[s] = v
+        print(f'  {LABEL[s]}: {fmt(v)}')
+    fr = out['fast_rel2000_m']
+    width = fr['SSP2-4.5'][2] - fr['SSP2-4.5'][1]
+    spread = fr['SSP3-7.0'][0] - fr['SSP1-2.6'][0]
+    out['fast_width_vs_median_spread'] = {'width_m': width, 'spread_m': spread}
+    print(f'  2.7 C 90% width {width:.2f} m = {width / spread:.1f}x the 1.8-3.6 C '
+          f'median spread of {spread:.2f} m')
 
     # ── Upper tail of the full (fast) forecast ──
     print('\nFull forecast, 95th percentile minus median at 2100 (m, rel. 2000):')
@@ -254,6 +270,15 @@ def main():
             v = q(hf['glacier/posteriors/T_eq0_posterior'][:])
             out['glacier_T_eq0_C'] = v
             print(f'  T_gl,eq = {fmt(v)} C (rel. 1995-2005)')
+        # Rate coefficients of the linear Antarctic fits; columns (a, b, c), a = 0 (AN-20)
+        for c, s in [('apeninsula', 'p'), ('eais', 'e')]:
+            k = f'{c}/posteriors/posterior_samples'
+            if k in hf:
+                ps = hf[k][:]
+                vb, vc = q(ps[:, 1]), q(ps[:, 2])
+                out[f'{c}_b_mm_yr_C'] = [x * M_TO_MM for x in vb]
+                out[f'{c}_c_mm_yr'] = [x * M_TO_MM for x in vc]
+                print(f'  b_{s} = {fmt(vb, M_TO_MM, 3)} mm/yr/C | c_{s} = {fmt(vc, M_TO_MM, 3)} mm/yr')
 
     # ── Antarctic Peninsula + EAIS (Results) ──
     print('\nAntarctic Peninsula + EAIS at 2100 (mm, rel. 2000):')
@@ -282,9 +307,12 @@ def main():
               f'slow {sh["slow"][0]:.1f} | {sh["slow"][1]:.1f}')
 
     # ── S2 95th percentile against the AR6 Antarctic range (WAIS subsection) ──
+    # Each S2 member on its own 1995-2014 mean (the AR6 baseline), as for
+    # the components above (SF-13)
     s2 = w2k[w_idx == 1] * M_TO_MM
+    s2 = s2 - s2[:, (w2k_y >= 1995) & (w2k_y <= 2014)].mean(axis=1, keepdims=True)
     s2_95 = np.percentile(s2, 95, axis=0)
-    print('\nS2 95th percentile vs AR6 AIS medium-confidence 95th (mm):')
+    print('\nS2 95th percentile vs AR6 AIS medium-confidence 95th (mm, both on the AR6 baseline):')
     for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP5-8.5']:
         d = read_ipcc_component_nc(CONF_BASE, 'medium_confidence', CODE[s], 'AIS')
         e = ipcc_extract(d)

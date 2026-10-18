@@ -180,22 +180,9 @@ def main():
 
         print(f'\nWrote blended_slow90 and wais_slow90 to {H5}')
 
-        # Numbers needed for the Fig. 4b caption: per-component variance shares
-        print('\nVariance shares at 2100 (per-component, as the pies compute them):')
-        comps = ['ocean', 'glacier', 'greenland']
-        for ssp in SSPS[:3]:
-            v = {c: float(np.var(hf[f'{c}/projections/{ssp}/samples'][:, 150]))
-                 for c in comps}
-            v_fast = float(np.var(hf['wais_2k/full_samples'][:, iw]))
-            v_slow90 = float(np.var(wais_mix[:, iw]))
-            v_s1 = float(np.var(w_s1[:, iw]))
-            for label, vw in (('fast', v_fast), ('slow p(S1)=0.9', v_slow90),
-                              ('slow p(S1)=1.0', v_s1)):
-                tot = sum(v.values()) + vw
-                print(f'  {ssp} {label:15s}: WAIS {100 * vw / tot:5.1f}%, '
-                      f'non-WAIS {100 * sum(v.values()) / tot:5.1f}%')
-            print()
-
+        # Component shares quoted in the text come from variance_shares.py
+        # (variance) and manuscript_numbers.py (90% interval widths, the basis
+        # of the Fig. 4b pies); none are computed here (SF-18).
 
 if __name__ == '__main__':
     main()

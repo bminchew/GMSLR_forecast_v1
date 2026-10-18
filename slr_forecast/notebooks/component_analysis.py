@@ -791,7 +791,12 @@ def fit_discharge_delay_model(
         fit_results : dict — per-delta fit details
         H_mean_cal, int_T_mean_cal, t_mean_cal : float — demeaning constants
         r_obs_dyn, sigma_r_obs, t_end : float — end-of-record rate
-        xcorr_lags, xcorr_r, peak_lag, peak_r : ndarray/float — cross-corr
+        xcorr_lags, xcorr_r, peak_lag, peak_r : ndarray/float — lagged
+            correlation of the discharge RATE with the ocean-temperature
+            RATE (rate vs rate; a diagnostic only). The fitted model relates
+            the discharge rate to the lagged ocean-temperature LEVEL, so
+            peak_lag is not the model's delta. Key names kept for the
+            notebook and tests.
         bic_weights : ndarray — normalised BIC weights
         DELTA_CANDIDATES : ndarray
     """
@@ -814,7 +819,8 @@ def fit_discharge_delay_model(
     sigma_r_obs = np.sqrt(cov_rate[1, 1])
     t_end = dyn_years[-1]
 
-    # ── Cross-correlation: ocean T rate vs discharge rate ──
+    # ── Cross-correlation diagnostic: ocean T RATE vs discharge RATE ──
+    # (rate vs rate; the fit below uses the lagged ocean T level, GR-21)
     dT_ocean = np.diff(T_ocean_ann) / np.diff(T_ocean_years)
     t_dT = 0.5 * (T_ocean_years[:-1] + T_ocean_years[1:])
     dH_dyn = np.diff(H_dyn) / np.diff(dyn_years)

@@ -140,9 +140,12 @@ class TestProjection:
         assert np.allclose(on[:, years <= 2000], base[:, years <= 2000])
         assert np.all(on[:, -1] > base[:, -1])
 
-    def test_feedback_eps_truncated_at_zero(self):
+    def test_feedback_eps_negative_draws_set_to_zero(self):
+        # censored, not truncated: the negative draws become a point mass at
+        # zero, P(N(0.08, 0.05) < 0) = 5.5%, and the median stays at 0.08
         eps = S.draw_feedback_eps(20000, np.random.default_rng(6))
         assert eps.min() == 0.0
+        assert (eps == 0).mean() == pytest.approx(0.0548, abs=0.005)
         assert np.median(eps) == pytest.approx(0.08, abs=0.005)
 
     def test_centred_mean_shortens_window_at_ends(self):

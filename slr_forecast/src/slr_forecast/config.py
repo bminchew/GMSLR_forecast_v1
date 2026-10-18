@@ -23,9 +23,11 @@ by the IMBIE structural break (~2010) when WAIS mass loss accelerated.
 Distinct from BASELINE_YEAR to allow independent adjustment."""
 
 BASELINE_WINDOW: tuple[int, int] = (1995, 2005)
-"""Averaging window (inclusive start, inclusive end) used when rebasing
-anomaly series to BASELINE_YEAR.  Centered on 2000 but extended to 2005
-to include the transition to the Argo era."""
+"""Averaging window (inclusive start, inclusive end: 11 annual values)
+used when rebasing anomaly series to BASELINE_YEAR; centered on 2000.
+Imported by component_ocean; the other components and readers write the
+same 1995-2005 window as literals (e.g. ``reference_period=(1995, 2006)``
+with an exclusive end)."""
 
 # ---------------------------------------------------------------------------
 # Monte Carlo / sampling

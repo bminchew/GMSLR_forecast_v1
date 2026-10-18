@@ -1,9 +1,11 @@
 """Diagnostic: does the glacier rate model hold over 1962-2023?
 
 The glacier component (component_glacier.ipynb) is dH/dt = b T + c, fitted
-to GlaMBIE 2000-2023. Driven back to 1900 it gives almost no loss, against
-about 70 mm in Frederikse et al. (2020), whose glacier term before 1961 is a
-model reconstruction (Marzeion et al. 2015). Here the model is tested
+to GlaMBIE 2000-2023 with c = -b T_eq0 (1850 balance prior). Driven back to
+1900 it gives less loss than the about 70 mm of Frederikse et al. (2020),
+whose glacier term before 1961 is a model reconstruction (Marzeion et al.
+2015); the production values, read from component_results.h5, are printed
+in step 5. Here the model is tested
 against observations that reach further back: Zemp et al. (2019), global
 glacier mass change for hydrological years 1962-2016 from glaciological and
 geodetic data (Zenodo, doi:10.5281/zenodo.1492141; all 19 RGI regions, as
@@ -18,11 +20,15 @@ Steps
   4. Fit the combined record (Zemp 1962-1999, GlaMBIE 2000-2023).
   5. Cumulative hindcast relative to 2000 for each fit, against Frederikse.
 
-Fits are generalised least squares in rate space with no prior on b.
+Fits are generalised least squares in rate space with no prior on b and
+c free, so the GlaMBIE fit here is not the production fit (which has the b
+prior, the balance prior and a fitted sigma_extra in level space).
 Zemp's geodetic uncertainty (sig_Geod) is constant over long periods and is
 treated as fully correlated across years; its other components, and the
-GlaMBIE errors, as independent; Zemp's 95% intervals are converted to
-1 sigma (slr_data_readers.read_zemp2019_global). T is Berkeley Earth annual GMST relative to
+GlaMBIE errors, as independent; Zemp's and GlaMBIE's 95% intervals are
+converted to 1 sigma (slr_data_readers.read_zemp2019_global), and the
+GlaMBIE errors carry the production sigma_gl,extra in quadrature (posterior
+median from component_results.h5). T is Berkeley Earth annual GMST relative to
 1995-2005; for Zemp's hydrological years (October to September, labelled by
 the end year) T is 0.25 T(Y-1) + 0.75 T(Y). Intervals are 90%, inflated by
 sqrt(chi2/dof) where that exceeds 1. Nothing here feeds the pipeline.
@@ -47,7 +53,51 @@ OUT_FIG = ROOT / 'figures/diagnostics/glacier_zemp_diagnostic.png'
 GT_PER_MM = 362.5
 Z90 = 1.645
 FRED = {1900: -72.7, 1920: -55.2, 1950: -26.3}   # Frederikse glaciers, mm rel. 2000 (summation table)
-PROD = {1900: -4.2, 1920: -9.1, 1950: -9.5}      # production glacier hindcast
+H5 = ROOT / 'data/processed/slr_processed_data.h5'
+RESULTS_H5 = ROOT / 'data/processed/component_results.h5'
+
+
+def sigma_gl_extra_mm():
+    """Posterior median of the production sigma_gl,extra (mm/yr)."""
+    import h5py
+    with h5py.File(RESULTS_H5, 'r') as hf:
+        return float(np.median(hf['glacier/posteriors/sigma_extra_posterior'][:])) * 1000.0
+
+
+def production_hindcast_mm(years=(1900, 1920, 1950)):
+    """Production hindcasts relative to 2000 (mm), rebuilt from
+    component_results.h5 as in component_summation (1900-2025 hindcast cell,
+    same seeds and ensemble size): the calibrated glacier model re-run from its
+    posterior on observed GMST, the uncharted-glacier term (Parkes & Marzeion
+    2018), and Greenland (greenland/hindcast_gmst_1900; the SSPs are
+    identical before 2015). Returns {year: (calibrated, glacier incl.
+    uncharted, Greenland)} medians."""
+    import h5py
+    from slr_projections import project_component_level_ensemble
+    from component_projections import uncharted_glacier_hindcast
+    from slr_forecast.config import BASELINE_YEAR, N_SAMPLES
+    with h5py.File(RESULTS_H5, 'r') as hf:
+        post = hf['glacier/posteriors/posterior_samples'][:]
+        H0 = hf['glacier/posteriors/H0_posterior'][:]
+        order = int(hf['glacier'].attrs['model_order'])
+        g = hf['greenland/hindcast_gmst_1900']
+        gr_years, gr_med = g['years'][:], g['SSP2-4.5/median'][:]
+    be = pd.read_hdf(H5, 'harmonized/df_berkeley_h')
+    t = (be.index.year + (be.index.month - 0.5) / 12.0).values
+    m = t >= 1850
+    hy = np.arange(1900, 2026, dtype=float)
+    gl = project_component_level_ensemble(
+        posterior_samples=post, H0_samples=H0,
+        temperature_monthly=be['temperature'].values[m], time_monthly=t[m],
+        projection_times=hy, baseline_year=BASELINE_YEAR,
+        n_samples=N_SAMPLES, order=order, seed=42 + 1)          # summation SEED + 1
+    unch = uncharted_glacier_hindcast(hy, gl['samples'].shape[0],
+                                      baseline_year=BASELINE_YEAR, seed=42 + 7)
+    cal = np.median(gl['samples'], axis=0) * 1000.0
+    tot = np.median(gl['samples'] + unch, axis=0) * 1000.0
+    gr = (gr_med - np.interp(BASELINE_YEAR, gr_years, gr_med)) * 1000.0
+    return {y: (float(np.interp(y, hy, cal)), float(np.interp(y, hy, tot)),
+                float(np.interp(y, gr_years, gr))) for y in years}
 
 
 def load():
@@ -61,7 +111,9 @@ def load():
 
     g = pd.read_csv(GLAMBIE)
     g = pd.DataFrame({'rate': -g['combined_gt'].values / GT_PER_MM,
-                      'sig_ind': g['combined_gt_errors'].values / 1.96 / GT_PER_MM,   # 95% half-widths -> 1 sigma
+                      # 95% half-widths -> 1 sigma, plus the production sigma_gl,extra
+                      'sig_ind': np.hypot(g['combined_gt_errors'].values / 1.96 / GT_PER_MM,
+                                          sigma_gl_extra_mm()),
                       'sig_cor': 0.0,
                       'T': T.reindex(g['start_dates'].astype(int)).values},
                      index=g['start_dates'].astype(int).values)
@@ -89,8 +141,10 @@ def show(lab, beta, V, chi2, n):
 
 
 def hindcast(beta, T, years=(1900, 1920, 1950)):
+    """Level at the start of each year relative to the start of 2000 (mm),
+    the convention of the production hindcast: calendar years y to 1999."""
     rate = beta[0] * T + beta[1]
-    return {y: -rate.loc[y + 1:2000].sum() for y in years}
+    return {y: -rate.loc[y:1999].sum() for y in years}
 
 
 def main():
@@ -100,7 +154,7 @@ def main():
 
     print('\nFits of dH/dt = b T + c (b in mm/yr/K, c in mm/yr at T = 0, i.e. 1995-2005; 90%):')
     fits = {}
-    for lab, d in (('GlaMBIE 2000-2023 (as production)', g),
+    for lab, d in (('GlaMBIE 2000-2023', g),
                    ('Zemp 1962-2016', z),
                    ('Zemp 1962-1989', z.loc[:1989]),
                    ('Zemp 1990-2016', z.loc[1990:]),
@@ -109,7 +163,7 @@ def main():
         show(lab, *fits[lab], len(d))
 
     # 1. Out of sample: GlaMBIE fit predicting Zemp 1962-1999
-    b, V, _ = fits['GlaMBIE 2000-2023 (as production)']
+    b, V, _ = fits['GlaMBIE 2000-2023']
     zo = z.loc[:1999]
     pred = b[0] * zo['T'] + b[1]
     X = np.column_stack([zo['T'].values, np.ones(len(zo))])
@@ -147,28 +201,32 @@ def main():
     # 5. Hindcasts
     print('\n5. Cumulative glacier contribution relative to 2000 (mm):')
     print('   fit                                  1900    1920    1950')
-    for lab in ('GlaMBIE 2000-2023 (as production)', 'Zemp 1962-2016', 'Zemp 1962-1989',
+    for lab in ('GlaMBIE 2000-2023', 'Zemp 1962-2016', 'Zemp 1962-1989',
                 'Zemp 1962-1999 + GlaMBIE 2000-2023'):
         h = hindcast(fits[lab][0], T)
         print(f'   {lab:34s} {h[1900]:6.1f}  {h[1920]:6.1f}  {h[1950]:6.1f}')
-    print(f'   {"production (level space, prior)":34s} {PROD[1900]:6.1f}  {PROD[1920]:6.1f}  {PROD[1950]:6.1f}')
+    prod = production_hindcast_mm()
+    print(f'   {"production, calibrated model":34s} {prod[1900][0]:6.1f}  {prod[1920][0]:6.1f}  {prod[1950][0]:6.1f}')
+    print(f'   {"production, incl. uncharted":34s} {prod[1900][1]:6.1f}  {prod[1920][1]:6.1f}  {prod[1950][1]:6.1f}')
     print(f'   {"Frederikse (excl. RGI 5 and 19)":34s} {FRED[1900]:6.1f}  {FRED[1920]:6.1f}  {FRED[1950]:6.1f}')
     print('   Rate implied at +2 K (mm/yr): ' + ', '.join(
         f'{lab.split(" (")[0]} {fits[lab][0][0] * 2 + fits[lab][0][1]:.2f}'
-        for lab in ('GlaMBIE 2000-2023 (as production)', 'Zemp 1962-2016', 'Zemp 1962-1999 + GlaMBIE 2000-2023')))
+        for lab in ('GlaMBIE 2000-2023', 'Zemp 1962-2016', 'Zemp 1962-1999 + GlaMBIE 2000-2023')))
 
     # ── Figure ──
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     ax = axes[0]
-    ax.errorbar(z.index, z['rate'], yerr=Z90 * np.hypot(z['sig_ind'], z['sig_cor']), fmt='o', ms=3,
+    # Middle of each record's year: Zemp hydrological year Y at Y + 0.25,
+    # GlaMBIE calendar year at Y + 0.5; bars are 90%
+    ax.errorbar(z.index + 0.25, z['rate'], yerr=Z90 * np.hypot(z['sig_ind'], z['sig_cor']), fmt='o', ms=3,
                 color='#0072B2', alpha=0.6, lw=0.6, label='Zemp et al. (2019)')
     ax.errorbar(g.index + 0.5, g['rate'], yerr=Z90 * g['sig_ind'], fmt='s', ms=3, color='#E69F00',
                 alpha=0.7, lw=0.6, label='GlaMBIE')
     yrs = np.arange(1900, 2024)
-    for lab, col in (('GlaMBIE 2000-2023 (as production)', 'k'), ('Zemp 1962-1989', '#56B4E9'),
+    for lab, col in (('GlaMBIE 2000-2023', 'k'), ('Zemp 1962-1989', '#56B4E9'),
                      ('Zemp 1990-2016', '#009E73')):
         bb = fits[lab][0]
-        ax.plot(yrs, bb[0] * T.reindex(yrs).values + bb[1], color=col, lw=1.6, label=f'fit: {lab}')
+        ax.plot(yrs + 0.5, bb[0] * T.reindex(yrs).values + bb[1], color=col, lw=1.6, label=f'fit: {lab}')
     ax.axhline(0, color='0.5', lw=0.5)
     ax.set_xlim(1900, 2024); ax.set_ylabel('Glacier contribution (mm/yr SLE)')
     ax.set_title('(a) Annual rates and fitted b T + c', fontsize=10)
@@ -178,7 +236,7 @@ def main():
     ax.scatter(z['T'], z['rate'], s=12, color='#0072B2', alpha=0.7, label='Zemp et al. (2019)')
     ax.scatter(g['T'], g['rate'], s=12, color='#E69F00', alpha=0.8, label='GlaMBIE')
     tt = np.linspace(-0.6, 0.8, 50)
-    for lab, col in (('GlaMBIE 2000-2023 (as production)', 'k'), ('Zemp 1962-1989', '#56B4E9'),
+    for lab, col in (('GlaMBIE 2000-2023', 'k'), ('Zemp 1962-1989', '#56B4E9'),
                      ('Zemp 1990-2016', '#009E73')):
         bb = fits[lab][0]
         ax.plot(tt, bb[0] * tt + bb[1], color=col, lw=1.6)

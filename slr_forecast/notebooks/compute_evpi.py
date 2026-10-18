@@ -50,12 +50,15 @@ SSP = 'SSP2-4.5'
 # etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
 ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
 # S1 weight of the stored `blended` ensemble (fast-WAIS mixture). Used only
-# where results are compared with `blended`; see the module docstring.
+# where results are compared with `blended`; see the module docstring. The
+# realized S1 fraction of that draw differs slightly (0.0975 in the
+# 2026-10-18 run; scripts/variance_shares.py prints it; SF-12, open).
 P_S1_BLENDED = 0.10
-# Defense heights searched. The upper end must exceed every optimum; the
-# S2 optimum at 2100 is about 3.1 m (SSP2-4.5), and _check_interior
-# enforces that every optimum stays inside the grid.
-D_GRID = np.arange(0.3, 8.0, 0.05)
+# Defense heights searched. The grid starts at zero (no defense), a physical
+# bound: early target years have optima of about 0.2 m (2040, SSP2-4.5).
+# The upper end must exceed every optimum; the S2 optimum at 2100 is about
+# 3.1 m (SSP2-4.5). _check_interior enforces both.
+D_GRID = np.arange(0.0, 8.0, 0.05)
 DR = 0.03                  # discount rate
 HORIZON = 75               # planning horizon (years)
 
@@ -74,11 +77,16 @@ def _expected_cost_voi(samples, design_m):
 
 
 def _check_interior(costs, label):
-    """Fail if the cost minimum sits on the upper edge of D_GRID, which
-    would mean the grid cap, not the cost curve, set the optimum."""
-    if np.argmin(costs) == len(D_GRID) - 1:
+    """Fail if the cost minimum sits on an edge of D_GRID that is not a
+    physical bound, which would mean the grid, not the cost curve, set the
+    optimum. A minimum at zero defense is a valid corner solution."""
+    i = np.argmin(costs)
+    if i == len(D_GRID) - 1:
         raise RuntimeError(f'{label}: optimal defense height hits the '
                            f'D_GRID cap ({D_GRID[-1]:.2f} m); widen D_GRID.')
+    if i == 0 and D_GRID[0] > 0:
+        raise RuntimeError(f'{label}: optimal defense height hits the '
+                           f'D_GRID floor ({D_GRID[0]:.2f} m); start D_GRID at 0.')
 
 
 def _evpi_annual(full_s, stable_s, unstable_mask):

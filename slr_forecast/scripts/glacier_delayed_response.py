@@ -44,7 +44,8 @@ likelihood p(y | tau) is analytic. Tau priors: lognormal with 90% range
 2021: 10-400 yr, large ice masses at the long end), and log-uniform.
 
 Reported: likelihood profile in tau; posterior of tau and the b-tau trade-
-off; the early/late stationarity check refitted with the delayed model;
+off; the early/late stationarity check refitted with the delayed model and
+with a quadratic dependence on GMST;
 the 1900-1950 hindcast under two assumptions about the 1850 imbalance
 (kappa free, or glaciers in balance with 1850-1879); and glacier sea-level
 rise 2000-2100 on the AR6 median GMST paths, per tau, with Rounce et al.
@@ -68,6 +69,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'notebooks'))
 from slr_data_readers import read_zemp2019_global
+from ar6_gmst import ar6_to_berkeley_offset
 
 H5 = ROOT / 'data/processed/slr_processed_data.h5'
 ZEMP = ROOT / 'data/raw/glaciers/zemp2019/Zemp_etal_results_global.csv'
@@ -90,28 +92,38 @@ PRIOR_MEAN = np.array([0.61, 0.0])           # b (mm/yr/K), kappa (mm/yr)
 PRIOR_SD = np.array([2.0, 5.0])
 N_DRAW = 4000
 SSPS = {'SSP1-2.6': 'SSP1_2_6', 'SSP2-4.5': 'SSP2_4_5', 'SSP3-7.0': 'SSP3_7_0', 'SSP5-8.5': 'SSP5_8_5'}
-PROD_2100 = {'SSP1-2.6': 122, 'SSP2-4.5': 149, 'SSP3-7.0': 175, 'SSP5-8.5': 199}   # production medians
+
+
+def production_2100_mm():
+    """Production glacier medians at 2100 (mm rel. 2000), from component_results.h5."""
+    import h5py
+    out = {}
+    with h5py.File(RESULTS_H5, 'r') as hf:
+        for ssp in SSPS:
+            g = hf[f'glacier/projections/{ssp}']
+            out[ssp] = float(np.interp(2100.0, g['projection_times'][:], g['median'][:])) * 1000.0
+    return out
 
 
 def temperatures():
     """Annual GMST rel. 1995-2005: observed (Berkeley) through the last full
-    year, then each SSP's AR6 median, rebased as in component_greenland,
-    held flat after 2099. Returns {ssp: pd.Series 1850-2100}, observed series."""
+    year, then each SSP's AR6 median on the Berkeley basis (the offset shared
+    by every component, ar6_gmst.ar6_to_berkeley_offset), held flat after
+    2099. Returns {ssp: pd.Series 1850-2100}, observed series."""
     be = pd.read_hdf(H5, 'harmonized/df_berkeley_h')
     obs = be['temperature'].groupby(be.index.year).agg(['mean', 'count'])
     obs = obs.loc[obs['count'] == 12, 'mean']
-    hist = pd.read_hdf(H5, 'projections/temp/Historical')
-    tt = be.index.year + (be.index.month - 0.5) / 12.0
-    # CMIP6 -> Berkeley Earth offset over 1995-2005, as in component_greenland
-    off = (hist.loc[(hist['decimal_year'] >= 1995) & (hist['decimal_year'] <= 2005), 'temperature'].mean()
-           - be['temperature'].values[(tt >= 1995) & (tt < 2006)].mean())
+    # AR6 -> Berkeley Earth offset shared with the component notebooks (OC-8).
+    # Before 2026-10-18 this script matched AR6 Historical to Berkeley over
+    # 1995-2005 instead.
+    off = ar6_to_berkeley_offset(str(H5))
     base = obs.loc[1995:2005].mean()
     obs = obs - base
     out = {}
     years = np.arange(T0, 2101)
     for ssp, key in SSPS.items():
         d = pd.read_hdf(H5, f'projections/temp/{key}')
-        s = (d.groupby(np.floor(d['decimal_year']).astype(int))['temperature'].mean() - off - base)
+        s = d.groupby(np.floor(d['decimal_year']).astype(int))['temperature'].mean() - off
         T = pd.Series(np.nan, index=years)
         T.loc[obs.index.min():obs.index.max()] = obs.reindex(np.arange(obs.index.min(), obs.index.max() + 1)).values
         fut = years > obs.index.max()
@@ -182,7 +194,9 @@ def q(v, w=None):
     v = np.asarray(v)
     if w is None:
         return np.percentile(v, [50, 5, 95])
-    o = np.argsort(v); c = np.cumsum(w[o]); c /= c[-1]
+    # weighted CDF at the midpoint of each point's weight, so that the
+    # quantiles agree with sample percentiles of draws made with these weights
+    o = np.argsort(v); c = np.cumsum(w[o]) - 0.5 * w[o]; c /= np.sum(w)
     return np.interp([0.5, 0.05, 0.95], c, v[o])
 
 
@@ -243,6 +257,46 @@ def main():
         print(f'  tau {ftau(tau):>6s}: early b {bs[0][0]:5.2f} ± {bs[0][1]:.2f}, late b {bs[1][0]:5.2f} ± {bs[1][1]:.2f}'
               f'  ({dz:+.1f} sigma)')
 
+    # ── Stationarity under a quadratic dependence on GMST (GL-10) ──
+    # rate = a T^2 + b T + c. As with tau above, a is fixed and (b, c) are
+    # refitted to each Zemp window with the same priors; b is the slope at
+    # T = 0, so the value of a at which the two b agree is the curvature a
+    # single quadratic would need. The quadratic fitted to all of Zemp
+    # 1962-2016 gives a's own estimate, and the chi-square of the linear,
+    # quadratic and window-split linear fits to that record (one covariance,
+    # generalised least squares, no prior) shows how much of the early/late
+    # difference each model takes up.
+    print('\n=== Stationarity under rate = a T^2 + b T + c: Zemp 1962-1989 vs 1990-2016 ===')
+    Tz = design(T, np.inf, z.index.values, np.array([], dtype=int))[:, 0]     # hydrological-year T
+    Cza = np.diag(z['sigma_ind'].values ** 2) + np.outer(z['sigma_cor'].values, z['sigma_cor'].values)
+    Czi = np.linalg.inv(Cza)
+
+    def gls_z(X):
+        V = np.linalg.inv(X.T @ Czi @ X)
+        m = V @ X.T @ Czi @ z['rate'].values
+        r = z['rate'].values - X @ m
+        return m, V, float(r @ Czi @ r)
+
+    one = np.ones(len(z)); early = (z.index.values <= 1989).astype(float)
+    m_q, V_q, chi_q = gls_z(np.column_stack([Tz ** 2, Tz, one]))
+    chi_l = gls_z(np.column_stack([Tz, one]))[2]
+    chi_s = gls_z(np.column_stack([Tz * early, Tz * (1 - early), early, 1 - early]))[2]
+    print(f'  quadratic fitted to 1962-2016: a = {m_q[0]:.2f} ± {np.sqrt(V_q[0, 0]):.2f} mm/yr/K^2 (1 sigma)')
+    print(f'  chi2 on {len(z)} rates: linear {chi_l:.1f} (2 parameters), quadratic {chi_q:.1f} (3), '
+          f'linear with separate (b, c) before and after 1990 {chi_s:.1f} (4)')
+    for a_fix in sorted({0.0, 0.5, 1.0, 1.5, 2.0, round(float(m_q[0]), 2)}):
+        bs = []
+        for a_, b_ in ((1962, 1989), (1990, 2016)):
+            k = (z.index.values >= a_) & (z.index.values <= b_)
+            zz = z.loc[a_:b_]
+            X = np.column_stack([Tz[k], np.ones(k.sum())])
+            Cz = np.diag(zz['sigma_ind'].values ** 2) + np.outer(zz['sigma_cor'].values, zz['sigma_cor'].values)
+            m, V, _ = posterior(X, zz['rate'].values - a_fix * Tz[k] ** 2, Cz)
+            bs.append((m[0], np.sqrt(V[0, 0])))
+        dz = (bs[1][0] - bs[0][0]) / np.hypot(bs[0][1], bs[1][1])
+        print(f'  a {a_fix:4.2f}: early b {bs[0][0]:5.2f} ± {bs[0][1]:.2f}, late b {bs[1][0]:5.2f} ± {bs[1][1]:.2f}'
+              f'  ({dz:+.1f} sigma)')
+
     # ── Draws from the full posterior (variant a, lognormal prior) ──
     def draws(variant, kind, tau_fixed=None):
         fits, logml, *_ = res[variant]
@@ -291,10 +345,17 @@ def main():
     # ── Projections ──
     print('\n=== Glacier sea-level rise 2000-2100 on AR6 median GMST paths (mm; data a) ===')
     print('  model                          ' + '  '.join(f'{s:>18s}' for s in SSPS))
-    rows = [('linear (as production)', lin_tau, lin_bk)]
-    tq = np.percentile(np.where(np.isinf(tau_a), 1e5, tau_a), [5, 50, 95])
-    for lab, tf in ((f'delayed, tau {tq[0]:.0f} (5th pct)', tq[0]), (f'delayed, tau {tq[1]:.0f} (median)', tq[1]),
-                    (f'delayed, tau {tq[2]:.0f} (95th pct)', tq[2])):
+    # 'linear' is b T + kappa fitted here (kappa free, b untruncated, no
+    # sigma_extra on Zemp, Zemp 1962-1999 in the calibration): the tau -> inf
+    # limit of this script's model, not the production fit (GL-12). The
+    # production medians are printed below the table.
+    rows = [('linear (tau -> inf, this fit)', lin_tau, lin_bk)]
+    # tau quantiles from the same weighted CDF as the tau-posterior print above
+    _lw = res['a'][1] + tau_prior('lognormal 20-200')
+    _w = np.exp(_lw - _lw.max()); _w /= _w.sum()
+    tq50, tq5, tq95 = q(np.where(np.isinf(TAUS), 1e5, TAUS), _w)
+    for lab, tf in ((f'delayed, tau {tq5:.0f} (5th pct)', tq5), (f'delayed, tau {tq50:.0f} (median)', tq50),
+                    (f'delayed, tau {tq95:.0f} (95th pct)', tq95)):
         rows.append((lab,) + draws('a', None, tau_fixed=tf))
     rows.append(('delayed, tau marginalised', tau_a, bk_a))
     rows.append(('delayed, log-uniform tau prior',) + draws('a', 'log-uniform'))
@@ -307,7 +368,8 @@ def main():
             proj[(lab, ssp)] = Rs
             line += f'  {np.median(c):5.0f} [{np.percentile(c, 5):4.0f}, {np.percentile(c, 95):4.0f}]'
         print(line)
-    print('  production (level-space fit, volume cap): ' + ', '.join(f'{s} {v}' for s, v in PROD_2100.items()))
+    print('  production (component_glacier, from component_results.h5): '
+          + ', '.join(f'{s} {v:.0f}' for s, v in production_2100_mm().items()))
     print('  Rounce et al. (2023), 2015-2100, ±95%: SSP1-2.6 98±38, SSP5-8.5 166±83 mm; '
           'end-of-century rate 0.70±0.45 (+1.5 °C) to 2.23±1.08 mm/yr (+4 °C)')
     print('\n  Rate in 2100 (mm/yr), median:')
@@ -328,20 +390,23 @@ def main():
     ax = axes[1]
     y, C, zy, gy, nz = res['a'][2:]
     zz = read_zemp2019_global(str(ZEMP)).loc[1962:1999] * 1000
-    ax.errorbar(zy, y[:nz], yerr=np.hypot(zz['sigma_ind'], zz['sigma_cor']), fmt='o', ms=3, lw=0.5,
-                color='#0072B2', alpha=0.6, label='Zemp et al. (2019)')
+    # Plotted at the middle of each record's year: Zemp hydrological year Y
+    # (October Y-1 to September Y) at Y + 0.25, GlaMBIE calendar year at Y + 0.5.
+    # Bars are 1 sigma (Zemp's independent and geodetic terms in quadrature).
+    ax.errorbar(zy + 0.25, y[:nz], yerr=np.hypot(zz['sigma_ind'], zz['sigma_cor']), fmt='o', ms=3, lw=0.5,
+                color='#0072B2', alpha=0.6, label='Zemp et al. (2019), 1-sigma bars')
     ax.plot(gy + 0.5, y[nz:], 's', ms=3, color='#E69F00', label='GlaMBIE')
     yrs = np.arange(1900, 2024)
-    for Rm, col, lab in ((Rl, 'k', 'linear'), (R, '#CC79A7', 'delayed (kappa free)'),
+    for Rm, col, lab in ((Rl, 'k', 'linear (tau -> inf, this fit)'), (R, '#CC79A7', 'delayed (kappa free)'),
                          (Rb, '#009E73', 'delayed (balance 1850-1879)')):
-        ax.plot(yrs, Rm[yrs].median(axis=0), color=col, lw=1.6, label=lab)
+        ax.plot(yrs + 0.5, Rm[yrs].median(axis=0), color=col, lw=1.6, label=lab)   # calendar-year rates
     ax.set_xlim(1900, 2024); ax.set_ylabel('mm/yr SLE')
     ax.set_title('(b) Rates, data (a), lognormal tau prior', fontsize=10); ax.legend(fontsize=8); ax.grid(alpha=0.2)
 
     ax = axes[2]
     yrs = np.arange(2000, 2101)
     for ssp, col in (('SSP1-2.6', '#1b9e77'), ('SSP5-8.5', '#d95f02')):
-        for lab, ls in (('linear (as production)', '-'), ('delayed, tau marginalised', '--')):
+        for lab, ls in (('linear (tau -> inf, this fit)', '-'), ('delayed, tau marginalised', '--')):
             Rs = proj[(lab, ssp)]
             ax.plot(yrs, Rs[yrs].median(axis=0), color=col, ls=ls, lw=1.6, label=f'{ssp}, {lab}')
     ax.set_ylabel('mm/yr SLE'); ax.set_title('(c) Projected rates (median)', fontsize=10)

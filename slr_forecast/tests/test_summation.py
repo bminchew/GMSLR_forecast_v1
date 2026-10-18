@@ -18,8 +18,10 @@ from component_io import (
     PROJ_SSPS, PROJ_YEARS, N_SAMPLES,
 )
 from component_analysis import compute_variance_fractions
-from component_projections import read_ipcc_component_nc, ipcc_extract
-from slr_forecast.config import Z_90
+from component_projections import (
+    read_ipcc_component_nc, ipcc_extract, load_ipcc_tws_projection,
+)
+from slr_forecast.config import BASELINE_YEAR
 
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -41,7 +43,6 @@ from slr_forecast import M_TO_MM
 # PROJ_SSPS is append-only (SSP1-1.9 is last), so order by 2100 forcing
 # (W/m^2, the number after the dash) for monotonicity checks.
 SSPS_BY_FORCING = sorted(PROJ_SSPS, key=lambda s: float(s.split('-')[-1]))
-BASELINE_YEAR = 2005.0
 
 # Components that should be summed. EAIS was previously excluded (IMBIE
 # record too short/noisy to constrain a reliable trend); re-included
@@ -64,12 +65,6 @@ class TestComponentInventory:
         comps = list_components()
         for comp in ALL_HDF5_COMPONENTS:
             assert comp in comps, f"Missing component: {comp}"
-
-    def test_eais_present_and_summed(self):
-        """EAIS should be in HDF5 and included in the summed total."""
-        comps = list_components()
-        assert 'eais' in comps
-        assert 'eais' in SUMMED_COMPONENTS
 
 
 # =========================================================================
@@ -102,15 +97,20 @@ class TestSampleSummation:
                 f"{comp} shape = {shape}")
 
     def test_sum_at_baseline_near_zero(self, comp_samples):
-        """Component sum should be near zero at baseline year."""
+        """Component sum should be near zero at BASELINE_YEAR (2000).
+
+        The stored sum is 0.4 mm at 2000 (ocean, rebased at 1999.5) and
+        about 12.6 mm at 2005, so a 2 mm bound would catch a 2005 rebase.
+        """
         idx = np.argmin(np.abs(PROJ_YEARS - BASELINE_YEAR))
+        assert PROJ_YEARS[idx] == BASELINE_YEAR
         for ssp in PROJ_SSPS:
             total = np.zeros(N_SAMPLES)
             for comp in SUMMED_COMPONENTS:
                 total += comp_samples[comp][ssp]['samples'][:, idx]
             med_mm = np.median(total) * M_TO_MM
-            assert abs(med_mm) < 20, (
-                f"{ssp} total at baseline = {med_mm:.1f} mm, expected ~0")
+            assert abs(med_mm) < 2.0, (
+                f"{ssp} total at {BASELINE_YEAR:.0f} = {med_mm:.1f} mm, expected ~0")
 
     def test_sum_positive_at_2100(self, comp_samples):
         """Total SLR should be positive at 2100 for all SSPs."""
@@ -270,42 +270,49 @@ class TestIPCCTWSLoading:
 
 
 # =========================================================================
-# Synthetic TWS MC samples
+# Projected TWS ensemble (production loader)
 # =========================================================================
 
-@pytest.mark.skipif(not HAS_IPCC, reason="IPCC AR6 data not found")
-class TestTWSSyntheticSamples:
-    """Verify synthetic MC samples from IPCC TWS quantiles."""
+@pytest.mark.skipif(not (HAS_IPCC and HAS_IPCC_DIST),
+                    reason="Need IPCC AR6 data and ipcc_distributions.h5")
+class TestTWSProjection:
+    """load_ipcc_tws_projection, the TWS ensemble summed by
+    component_summation and component_forecast."""
 
-    def test_synthetic_samples_shape(self):
+    @pytest.fixture(scope="class")
+    def tws(self):
+        return load_ipcc_tws_projection('SSP2-4.5', PROJ_YEARS,
+                                        n_samples=N_SAMPLES,
+                                        h5_path=IPCC_DIST_PATH)
+
+    def test_shape(self, tws):
+        assert tws['samples'].shape == (N_SAMPLES, len(PROJ_YEARS))
+
+    def test_median_matches_ar6(self, tws):
+        """2100 median within 5 mm of the AR6 TWS median (both on the AR6
+        reference; TWS is not shifted to our baseline)."""
         data = read_ipcc_component_nc(
             CONF_BASE, 'medium_confidence', 'ssp245', 'landwaterstorage')
-        if data is None:
-            pytest.skip("TWS data not available")
-        ex = ipcc_extract(data, quantiles_target=(0.05, 0.17, 0.5, 0.83, 0.95))
-        # Generate synthetic samples (same logic as notebook)
-        rng = np.random.default_rng(777)
-        n = 2000
-        sigma_mm = np.maximum(
-            (ex['q95'] - ex['q05']) / (2 * Z_90), 0.1)
-        samples = rng.normal(ex['q50'], sigma_mm, size=(n, len(ex['years'])))
-        assert samples.shape == (n, len(ex['years']))
+        ex = ipcc_extract(data)
+        q50 = ex['q50'][np.argmin(np.abs(ex['years'] - 2100))]
+        med = np.median(tws['samples'][:, np.argmin(np.abs(PROJ_YEARS - 2100))])
+        assert abs(med * M_TO_MM - q50) < 5, (
+            f"TWS 2100 median {med * M_TO_MM:.1f} mm vs AR6 {q50:.1f} mm")
 
-    def test_synthetic_median_matches_ipcc(self):
-        data = read_ipcc_component_nc(
-            CONF_BASE, 'medium_confidence', 'ssp245', 'landwaterstorage')
-        if data is None:
-            pytest.skip("TWS data not available")
-        ex = ipcc_extract(data, quantiles_target=(0.05, 0.17, 0.5, 0.83, 0.95))
-        rng = np.random.default_rng(777)
-        sigma_mm = np.maximum(
-            (ex['q95'] - ex['q05']) / (2 * Z_90), 0.1)
-        samples = rng.normal(ex['q50'], sigma_mm, size=(2000, len(ex['years'])))
-        idx = np.argmin(np.abs(ex['years'] - 2100))
-        mc_median = np.median(samples[:, idx])
-        ipcc_median = ex['q50'][idx]
-        assert abs(mc_median - ipcc_median) < 5, (
-            f"MC median = {mc_median:.1f}, IPCC = {ipcc_median:.1f}")
+    def test_zero_through_2005(self, tws):
+        """AR6 components are zero at their 2005 node, and the TWS total-only
+        offset is not applied, so every member is zero through 2005."""
+        m = PROJ_YEARS <= 2005
+        assert np.allclose(tws['samples'][:, m], 0.0, atol=1e-9)
+
+    def test_one_quantile_per_member(self, tws):
+        """Each member holds one quantile for the whole century, so the
+        member ranking is the same at 2050 and 2100."""
+        i50 = np.argmin(np.abs(PROJ_YEARS - 2050))
+        i21 = np.argmin(np.abs(PROJ_YEARS - 2100))
+        r50 = np.argsort(np.argsort(tws['samples'][:, i50]))
+        r21 = np.argsort(np.argsort(tws['samples'][:, i21]))
+        assert np.array_equal(r50, r21)
 
 
 # =========================================================================
@@ -367,29 +374,44 @@ class TestBudgetClosure:
 # Consistency with forecast notebook
 # =========================================================================
 
-@pytest.mark.skipif(not HAS_H5, reason="component_results.h5 not found")
+@pytest.mark.skipif(not (HAS_H5 and HAS_IPCC_DIST),
+                    reason="Need component_results.h5 and ipcc_distributions.h5")
 class TestConsistencyWithForecast:
-    """Verify summation matches forecast notebook's component sum."""
+    """The stored blended forecast sums the same members as the summation."""
 
     def test_same_components_as_forecast(self):
-        """Summation notebook should use same components as forecast."""
-        # Forecast COMP_LABELS (component_forecast.ipynb cell 2): includes EAIS.
-        forecast_comps = {'ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais'}
-        # tws is added separately in both notebooks
-        summation_comps = set(SUMMED_COMPONENTS)
-        assert summation_comps == forecast_comps
+        """component_forecast records the components it summed."""
+        import h5py
+        with h5py.File(H5_PATH, 'r') as hf:
+            summed = [c.decode() if isinstance(c, bytes) else str(c)
+                      for c in hf['blended'].attrs['components_summed']]
+        assert set(summed) == set(SUMMED_COMPONENTS) | {'tws'}
 
-    def test_total_sum_reproducible(self):
-        """Two independent summations should give identical results."""
-        idx = np.argmin(np.abs(PROJ_YEARS - 2100))
+    def test_late_increments_match_component_sum(self):
+        """Once the blend weight is negligible (w < 1e-4 after 2080), each
+        member's 2080-2090 rise in the blended forecast equals the rise of
+        its component sum (wais_2k members and the shared TWS members).
+        Differences come only from the rate averaging in blend_rate_space."""
+        import h5py
         ssp = 'SSP2-4.5'
-
-        total1 = np.zeros(N_SAMPLES)
-        total2 = np.zeros(N_SAMPLES)
+        with h5py.File(H5_PATH, 'r') as hf:
+            w = hf['wais_2k/full_samples'][:]
+            w_yr = hf['wais_2k/years'][:]
+            fy = hf['blended/forecast_years'][:]
+            bl = hf[f'blended/{ssp}/samples'][:]
+        a, b = (np.argmin(np.abs(PROJ_YEARS - y)) for y in (2080, 2090))
+        fa, fb = (np.argmin(np.abs(fy - y)) for y in (2080, 2090))
+        wa, wb = (np.argmin(np.abs(w_yr - y)) for y in (2080, 2090))
+        rise = w[:, wb] - w[:, wa]
         for comp in SUMMED_COMPONENTS:
-            loaded = load_component(comp)
-            s = loaded['projections'][ssp]['samples'][:N_SAMPLES, idx]
-            total1 += s
-            total2 += s
-
-        assert np.allclose(total1, total2)
+            if comp == 'wais':
+                continue
+            s = load_component(comp)['projections'][ssp]['samples']
+            rise = rise + s[:, b] - s[:, a]
+        tws = load_ipcc_tws_projection(ssp, PROJ_YEARS, n_samples=N_SAMPLES,
+                                       h5_path=IPCC_DIST_PATH)['samples']
+        rise = rise + tws[:, b] - tws[:, a]
+        d_mm = np.abs((bl[:, fb] - bl[:, fa]) - rise) * M_TO_MM
+        assert np.median(d_mm) < 0.2, f"median |diff| = {np.median(d_mm):.3f} mm"
+        assert np.percentile(d_mm, 95) < 1.0, (
+            f"95th pct |diff| = {np.percentile(d_mm, 95):.3f} mm")

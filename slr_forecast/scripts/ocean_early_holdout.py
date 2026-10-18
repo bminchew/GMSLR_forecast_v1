@@ -1,9 +1,10 @@
 """Diagnostic: early-record holdout for the two-layer thermosteric model.
 
 The production fit (component_ocean.ipynb, cell 5) calibrates the Geoffroy
-et al. (2013) two-layer model on NOAA 0-700 m (1955.5-2025.5) and NOAA
-0-2000 m (2005.5-2025.5) jointly. Here the 0-700 m record before 1990.5 is
-withheld: the model is refitted on 0-700 m 1990.5-2025.5 plus the full
+et al. (2013) two-layer model on NOAA 0-700 m (1955.5-2024.5) and NOAA
+0-2000 m (2005.5-2024.5) jointly; points after the end of the GMST forcing
+(2024.5) are dropped. Here the 0-700 m record before 1990.5 is
+withheld: the model is refitted on 0-700 m 1990.5-2024.5 plus the full
 0-2000 m record, and predicts the withheld 1955.5-1989.5 values from
 observed Berkeley Earth GMST. Same split as the Greenland discharge early
 holdout (component_greenland.ipynb, HOLDOUT_SPLIT = 1990).
@@ -17,11 +18,13 @@ structural error, demeaning and MCMC settings are copied from the
 production cell (no linear drift term since 2026-10-16; the first run of
 this script, with the drift term, found it traded off against b_u). Both the production (full-record) fit and the holdout fit
 are run here with identical code, so the parameter comparison is like for
-like.
+like. As in production, the 5% structural term is independent per point
+(not a correlated scale error), and both layers start in equilibrium with
+the 1850 GMST anomaly.
 
 Because each record is demeaned over its own fit window, the comparison
 in the withheld window uses the fit's own offset: model and data are both
-referenced to their means over the 1990.5-2025.5 fit years.
+referenced to their means over the 1990.5-2024.5 fit years.
 
 Reported:
   - posterior parameters, full vs holdout
@@ -224,7 +227,7 @@ def run_fit(label):
 
 def predict(flat, rng, ref=None):
     """Upper-layer model at every 0-700 m year, referenced to the mean over
-    `ref` (default: the 1990.5-2025.5 fit years, the reference of the
+    `ref` (default: the 1990.5-2024.5 fit years, the reference of the
     withheld-window metrics)."""
     draws = flat[rng.choice(flat.shape[0], N_DRAW, replace=False)]
     a, b_u = draws[:, 0], draws[:, 1]
@@ -323,7 +326,7 @@ def report_and_save(full, hold):
         print(f"  rate      model {m[0]:.3f} [{m[1]:.3f}, {m[2]:.3f}] mm/yr   "
               f"NOAA {mt['rate_obs']*M_TO_MM:.3f} +/- {1.645*mt['rate_obs_se']*M_TO_MM:.3f} (90%)")
         m = q(mt['lev_mod'] * M_TO_MM)
-        print(f"  mean level rel. to 1990.5-2025.5 mean: model {m[0]:.2f} [{m[1]:.2f}, {m[2]:.2f}] mm   "
+        print(f"  mean level rel. to 1990.5-2024.5 mean: model {m[0]:.2f} [{m[1]:.2f}, {m[2]:.2f}] mm   "
               f"NOAA {mt['lev_obs']*M_TO_MM:.2f} +/- {1.645*mt['lev_obs_se']*M_TO_MM:.2f} (90%)")
         m = q(mt['lev2000_mod'] * M_TO_MM)
         print(f"  mean level rel. to 1995-2005 mean:     model {m[0]:.2f} [{m[1]:.2f}, {m[2]:.2f}] mm   "
@@ -404,7 +407,7 @@ def plot_figure(h5_path=H5_OUT, fig_out=OUT_FIG):
         H = H * M_TO_MM
         fit[k] = (np.median(H, 1), np.percentile(H, 5, 1), np.percentile(H, 95, 1))
     ref = fit['full'][0]
-    labels = {'full': 'Fit to 1955–2025', 'holdout': 'Fit to 1990–2025 only'}
+    labels = {'full': 'Fit to 1955–2024', 'holdout': 'Fit to 1990–2024 only'}
     colors = {'full': FULL_C, 'holdout': HOLD_C}
 
     with plt.rc_context({'font.size': 9, 'axes.linewidth': 0.6, 'axes.labelsize': 9,
@@ -413,7 +416,7 @@ def plot_figure(h5_path=H5_OUT, fig_out=OUT_FIG):
                                gridspec_kw={'height_ratios': [2.4, 1], 'hspace': 0.08})
         for a, off in ((ax[0], 0.0), (ax[1], ref)):
             a.axvspan(yrs[0] - 1.5, HOLDOUT_SPLIT - 0.5, color='0.93', lw=0, zorder=0,
-                      label='Withheld from the 1990–2025 fit' if a is ax[0] else None)
+                      label='Withheld from the 1990–2024 fit' if a is ax[0] else None)
             for k in ('full', 'holdout'):
                 med, lo, hi = fit[k]
                 a.fill_between(yrs, lo - off, hi - off, color=colors[k], alpha=0.18, lw=0, zorder=2)

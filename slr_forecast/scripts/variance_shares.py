@@ -13,7 +13,9 @@ Groups:
   calibrated  thermosteric + glaciers + Greenland (the GMST-sensitive
               components with calibrated sensitivities)
   wais        WAIS mixture at the fast-WAIS weighting, p(S1) = 0.10
-              (wais_2k/full_samples, the samples summed in the forecast)
+              (wais_2k/full_samples, the samples summed in the forecast;
+              the realized S1 fraction of that draw is printed, 0.0975 in
+              the 2026-10-18 run, SF-12)
 
 A second table repeats the WAIS share as p(S1) varies. The WAIS variance at
 weight p is that of the two-branch mixture, from the S1 branch
@@ -50,6 +52,8 @@ def main():
         py = f['proj_years'][:]
         wy = f['wais_2k/years'][:]
         wais = at_year(wy, f['wais_2k/full_samples'][:])
+        print(f"Realized S1 fraction of wais_2k/full_samples: "
+              f"{np.mean(f['wais_2k/scenario_idx'][:] == 0):.4f}")
         for ssp, label in SSPS.items():
             comp = {c: at_year(py, f[f'{c}/projections/{ssp}/samples'][:])
                     for c in ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula']}

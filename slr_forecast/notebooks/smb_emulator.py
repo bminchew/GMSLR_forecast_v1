@@ -1,7 +1,7 @@
 """Greenland SMB statistical emulator of MAR v3.12 driven by several CMIP6 GCMs.
 
 Replaces the literature-sensitivity SMB model (GREENLAND_SMB in
-smb_projections.py) for Greenland.  Training data are the annual SMB of
+smb_projections.py, retired for Greenland) for Greenland.  Training data are the annual SMB of
 MARv3.12 forced by CMIP6 GCMs (PROTECT ensemble; also used by Boberg et al.
 2026), integrated over the contiguous ice sheet only (peripheral glaciers are
 in the glacier component), with each GCM's own global-mean temperature.
@@ -17,13 +17,17 @@ mean and x the GCM's GMST anomaly relative to 1995-2005, smoothed with an
 each AR(1) coefficient on a grid, a normal-inverse-gamma prior, and the grid
 mixed by marginal likelihood.
 
-In projections SMB = M0 + b1 x + b2 x^2 + eps + F, with x the GMST anomaly,
-M0 the observed 1995-2005 SMB, eps AR(1) weather noise with the member's
-posterior (sigma, rho), and F the SMB-elevation feedback.  The ensemble is an
-equal-weight mixture across GCMs: each Monte Carlo member uses one GCM and one
-posterior draw of (b1, b2, sigma, rho).  No scaling or tuning to the observed
-SMB is applied; the spread between regional climate models is not sampled
-(MAR only).
+In projections (component_greenland.ipynb) SMB = M0 + b1 x + b2 x^2 + noise
++ F, with x the GMST anomaly and F the SMB-elevation feedback.  In production
+M0 is each member's level M from the drift state (smb_state.fit_drift_state,
+fitted to Mouginot SMB) and the noise is that member's drift path delta(t)
+plus white weather noise with its fitted sd; project_smb_emulator also
+accepts a fixed observed anchor and the emulator's AR(1) noise (ar1_noise),
+the setup used by the supplementary hindcast and the leave-one-GCM-out
+scripts.  The ensemble is an equal-weight mixture across GCMs: each Monte
+Carlo member uses one GCM and one posterior draw of (b1, b2, sigma, rho).  The
+response to warming (b1, b2) is not scaled or tuned to the observed SMB; the
+spread between regional climate models is not sampled (MAR only).
 
 The MAR runs use a fixed ice-sheet topography, so they omit the
 SMB-elevation feedback.  F is taken from the fixed-topography sensitivity
@@ -39,7 +43,8 @@ where C(t) is the member's cumulative SMB anomaly (relative to M0) since
 FB_START_YEAR, A_ref = -742 Gt/yr and C_ref = -16,928 Gt is the MARMIROC5
 RCP8.5 cumulative anomaly over 2000-2080 (8.8 cm SLE over 2000-2100 with
 their ocean area of 361e6 km2, minus 20 yr at -742 Gt/yr).  eps_fb ~
-N(0.08, 0.05), truncated at zero.  C(t) excludes F itself (first order),
+N(0.08, 0.05), with negative draws set to zero (about 5% of members, a point
+mass at zero; not a truncated normal).  C(t) excludes F itself (first order),
 matching the experiment, in which the lowering came from fixed-topography
 SMB alone.
 
@@ -248,7 +253,8 @@ def ar1_noise(sigma, rho, n_times, rng):
 
 
 def draw_feedback_eps(n_samples, rng):
-    """Per-member SMB-elevation feedback fraction, N(0.08, 0.05) truncated at 0."""
+    """Per-member SMB-elevation feedback fraction: N(0.08, 0.05) draws with
+    negative values set to 0 (censored, about 5% of draws), not resampled."""
     return np.maximum(rng.normal(FB_EPS_MEAN, FB_EPS_SD, n_samples), 0.0)
 
 
@@ -271,17 +277,19 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
     emulator : dict from fit_smb_emulator
     T_proj : {ssp: ndarray} annual-mean GMST anomaly rel. 1995-2005 on time_proj
     time_proj : ndarray of years
-    M0 : float or (n_samples,) array, observed 1995-2005 SMB (Gt/yr,
-        mass-gain convention); an array gives one anchor per member
+    M0 : float or (n_samples,) array, SMB level at zero GMST anomaly (Gt/yr,
+        mass-gain convention): in production each member's drift-state level
+        M; a scalar gives one fixed anchor (e.g. the observed 1995-2005 mean)
     T_offsets : {ssp: (n_samples, n_times)} per-member warming-path offsets,
         zero over the observed record; added after smoothing
     baseline_year : rebase cumulative values to zero at this year
     smooth_through : last year of the observed GMST record.  T_proj is
         replaced by its 11-yr centred mean up to this year, matching the
         training driver; later years (smooth AR6 paths) are used as given.
-    noise : (n_samples, n_times) AR(1) weather noise in Gt/yr (from
-        ar1_noise with the emulator's 'sigma' and 'rho'), shared across SSPs;
-        None gives the forced response only
+    noise : (n_samples, n_times) noise in Gt/yr added to the rate, shared
+        across SSPs: in production the drift path delta plus white weather
+        noise; ar1_noise with the emulator's 'sigma' and 'rho' gives MAR-like
+        AR(1) weather noise.  None gives the forced response only
     feedback_eps : (n_samples,) SMB-elevation feedback fractions (from
         draw_feedback_eps); None omits the feedback
 
@@ -326,18 +334,28 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
 
 
 class EmulatorSummary:
-    """Attributes stored in component_results.h5 under smb_sensitivity."""
+    """Attributes stored in component_results.h5 under smb_sensitivity.
+
+    SMB_0 is the mean over members of the level M0 passed in (in production
+    the drift-state level M, not the observed 1995-2005 mean); SMB_0_sigma
+    is its spread.  M0_obs, if given, is stored as SMB_obs_1995_2005.
+    """
 
     def __init__(self, emulator, M0, M0_sigma=None, noise=False, feedback=False,
-                 drift=None):
+                 drift=None, M0_obs=None):
         gcms = list(emulator['fits'])
         self.reference = ('Statistical emulator of MARv3.12 driven by CMIP6 GCMs '
                           '(PROTECT ensemble): ' + ', '.join(gcms))
         self.temperature_frame = 'driving GCM GMST anomaly rel. 1995-2005, 11-yr mean'
         self.SMB_0 = float(np.mean(M0))
         self.extra_attrs = {'gcms': ','.join(gcms)}
+        self.extra_attrs['SMB_0_definition'] = (
+            'mean over members of the SMB level at zero GMST anomaly (Gt/yr, mass gain)'
+            + ('; drift-state level M' if drift is not None else ''))
         if M0_sigma is not None:
             self.extra_attrs['SMB_0_sigma'] = float(M0_sigma)
+        if M0_obs is not None:
+            self.extra_attrs['SMB_obs_1995_2005'] = float(M0_obs)
         self.extra_attrs['ar1_noise'] = int(bool(noise))
         if drift is not None:
             # drift state from smb_state.fit_drift_state
@@ -347,7 +365,7 @@ class EmulatorSummary:
                                                '1972-2018; white weather noise sd_e')
         if feedback:
             self.extra_attrs['elevation_feedback'] = (
-                f'Fettweis et al. 2013: eps ~ N({FB_EPS_MEAN}, {FB_EPS_SD}) trunc. 0, '
+                f'Fettweis et al. 2013: eps ~ N({FB_EPS_MEAN}, {FB_EPS_SD}), negative draws set to 0, '
                 f'A_ref {FB_A_REF:.0f} Gt/yr, C_ref {FB_C_REF:.0f} Gt, from {FB_START_YEAR:.0f}')
         for g, f in emulator['fits'].items():
             self.extra_attrs[f'{g}_b1_median'] = float(np.median(f['beta'][:, 1]))

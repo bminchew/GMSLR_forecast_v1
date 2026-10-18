@@ -1,8 +1,9 @@
 """Unit tests for glacier component notebook logic.
 
-Tests data processing, model fitting, projection mechanics, volume cap,
-unit consistency, BIC model selection, and I/O roundtrip for the glacier
-component of the SLR forecast.
+Tests data processing (including the 95% -> 1-sigma conversion of the
+GlaMBIE and Zemp readers), the production level-space fit (balance prior,
+sigma_extra, BIC from m2lnL and k_fit), projection mechanics, volume cap,
+unit consistency, and I/O roundtrip for the glacier component.
 """
 
 import os
@@ -17,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
 from component_projections import apply_glacier_volume_cap
 from slr_forecast import M_TO_MM
+from slr_forecast.config import BASELINE_YEAR
 from component_io import (
     save_glacier,
     load_component,
@@ -29,12 +31,15 @@ from component_analysis import apply_sigma_taper, compute_component_rates
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 GLAMBIE_PATH = os.path.join(RAW_DIR, 'glaciers', '0_global_glambie_consensus.csv')
+ZEMP_PATH = os.path.join(RAW_DIR, 'glaciers', 'zemp2019', 'Zemp_etal_results_global.csv')
+GT_PER_M_SLE = 362_500.0   # 362.5 Gt per mm SLE
 
 N = 200_000       # for statistical tests
 N_SMALL = 2000    # for shape/unit tests
 RNG_SEED = 2026
 
 HAS_GLAMBIE = os.path.exists(GLAMBIE_PATH)
+HAS_ZEMP = os.path.exists(ZEMP_PATH)
 
 
 # =========================================================================
@@ -85,6 +90,34 @@ class TestGlaMBIEReader:
         years = glambie['decimal_year'].values
         assert np.all(np.diff(years) > 0)
 
+    def test_sigma_is_one_sigma(self, glambie):
+        """GlaMBIE reports 95% half-widths in Gt/yr; the reader must return
+        1-sigma in m/yr SLE: |raw| / 1.96 / 362500."""
+        import pandas as pd
+        raw = pd.read_csv(GLAMBIE_PATH)
+        np.testing.assert_allclose(
+            glambie['mass_balance_sigma'].values,
+            raw['combined_gt_errors'].abs().values / 1.96 / GT_PER_M_SLE, rtol=1e-12)
+        np.testing.assert_allclose(
+            glambie['mass_balance'].values,
+            -raw['combined_gt'].values / GT_PER_M_SLE, rtol=1e-12)
+
+
+@pytest.mark.skipif(not HAS_ZEMP, reason="Zemp et al. (2019) data file not found")
+def test_zemp_reader_sigma_is_one_sigma():
+    """Zemp et al. (2019) uncertainties are 95% half-widths in Gt/yr; the
+    reader returns 1-sigma in m/yr SLE, with the geodetic term separate."""
+    import pandas as pd
+    from slr_data_readers import read_zemp2019_global
+    z = read_zemp2019_global(ZEMP_PATH)
+    raw = pd.read_csv(ZEMP_PATH, comment='#', skipinitialspace=True).set_index('Year')
+    np.testing.assert_allclose(z['sigma_cor'].values,
+                               raw['sig_Geod_Gt'].values / 1.96 / GT_PER_M_SLE, rtol=1e-12)
+    ind = np.sqrt(raw['sig_Glac_Gt'] ** 2 + raw['sig_Int_Gt'] ** 2
+                  + raw['sig_Area_Gt'] ** 2 + raw['sig_Crossed_Gt'] ** 2).values
+    np.testing.assert_allclose(z['sigma_ind'].values, ind / 1.96 / GT_PER_M_SLE, rtol=1e-12)
+    np.testing.assert_allclose(z['rate'].values, -raw['INT_Gt'].values / GT_PER_M_SLE, rtol=1e-12)
+
 
 # =========================================================================
 # Cumulative SLR computation
@@ -103,7 +136,7 @@ class TestGlacierCumulative:
         years = df['decimal_year'].values
         cumul = np.cumsum(rate)
         cumul_sigma = np.sqrt(np.cumsum(rate_sigma**2))
-        bl_idx = np.argmin(np.abs(years - 2005.0))
+        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
         rebase = cumul - cumul[bl_idx]
         # Rebased sigma: Var(Z - Z_bl) = |Var(Z) - Var(Z_bl)|
         sigma_rebased = np.sqrt(np.abs(cumul_sigma**2 - cumul_sigma[bl_idx]**2))
@@ -116,12 +149,13 @@ class TestGlacierCumulative:
         assert rebase[-1] > rebase[0]
 
     def test_cumulative_magnitude(self, glac_data):
-        """Cumulative at 2024 should be ~15-25 mm relative to 2005."""
+        """Cumulative 2001-2023 relative to the BASELINE_YEAR point should be
+        about 18 mm (GlaMBIE mean rate ~0.75 mm/yr)."""
         years, rebase, _, _, _ = glac_data
         latest = rebase[-1] * M_TO_MM
-        assert 10 < latest < 40, (
-            f"Cumulative at {years[-1]:.0f}: {latest:.1f} mm, "
-            f"expected 10-40 mm relative to 2005")
+        assert 14 < latest < 22, (
+            f"Cumulative at {years[-1]:.1f}: {latest:.1f} mm, "
+            f"expected 14-22 mm relative to {BASELINE_YEAR:.0f}")
 
     def test_cumulative_sigma_grows(self, glac_data):
         """Cumulative uncertainty should grow monotonically (sqrt of sum of squares)."""
@@ -129,22 +163,24 @@ class TestGlacierCumulative:
         assert np.all(np.diff(sigma) >= 0)
 
     def test_baseline_zero(self, glac_data):
-        """Rebased cumulative should be near zero at baseline year."""
+        """Rebased cumulative should be zero at the first point, the one
+        nearest BASELINE_YEAR (the notebook's anchor; GlaMBIE starts there)."""
         years, rebase, _, _, _ = glac_data
-        bl_idx = np.argmin(np.abs(years - 2005.0))
+        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
+        assert bl_idx == 0
         assert np.abs(rebase[bl_idx]) < 1e-12
 
     def test_rebased_sigma_zero_at_baseline(self, glac_data):
         """Rebased sigma should be exactly zero at the baseline year."""
         years, _, _, _, sigma_rebased = glac_data
-        bl_idx = np.argmin(np.abs(years - 2005.0))
+        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
         assert sigma_rebased[bl_idx] == pytest.approx(0.0, abs=1e-15)
 
     def test_rebased_sigma_post_baseline(self, glac_data):
         """For points after the baseline, rebased sigma should be less than
         the raw cumulative sigma (since baseline variance is subtracted)."""
         years, _, cumul_sigma, _, sigma_rebased = glac_data
-        bl_idx = np.argmin(np.abs(years - 2005.0))
+        bl_idx = np.argmin(np.abs(years - BASELINE_YEAR))
         post = slice(bl_idx + 1, None)
         assert np.all(sigma_rebased[post] <= cumul_sigma[post] + 1e-15)
 
@@ -231,40 +267,91 @@ class TestSigmaTaper:
 # BIC model selection
 # =========================================================================
 
-class TestBICModelSelection:
-    """Verify BIC computation logic used in the notebook."""
+@pytest.mark.filterwarnings("ignore")
+class TestLevelCorrelatedFit:
+    """The production fit (fit_bayesian_level_annual_correlated) with the
+    1850 balance prior, a fitted sigma_extra, and the BIC the notebook builds
+    from its m2lnL and k_fit. Short chains on synthetic records: these test
+    the bookkeeping, not convergence."""
 
-    def test_bic_formula(self):
-        """BIC = n*log(RSS/n) + k*log(n) where k is number of parameters."""
-        n = 23
-        rss = 0.5
-        k = 5
-        bic = n * np.log(rss / n) + k * np.log(n)
-        # Just verify formula produces finite results
-        assert np.isfinite(bic)
+    N_OBS = 24
+    SIG = 1.5e-4                     # m/yr, 1-sigma per annual rate
+    MCMC = dict(n_samples=600, n_walkers=24, n_burnin=400, thin=1, progress=False)
+    PRIORS = dict(prior_scale_b=2e-3, prior_b_mean=0.61e-3, prior_c_mean=3e-4,
+                  prior_c_sigma=1e-3, prior_H0_mean=0.0, prior_H0_sigma=2e-3,
+                  prior_sigma_extra_scale=2e-4, fit_sigma_extra=True)
 
-    def test_bic_prefers_simpler_model(self):
-        """When RSS is nearly identical, BIC should prefer the simpler model."""
-        n = 23
-        rss_lin = 1.0
-        rss_quad = 0.999  # barely better
-        bic_lin = n * np.log(rss_lin / n) + 4 * np.log(n)
-        bic_quad = n * np.log(rss_quad / n) + 5 * np.log(n)
-        delta_bic = bic_lin - bic_quad
-        # delta_bic should be negative (linear preferred)
-        assert delta_bic < 2, (
-            f"ΔBIC={delta_bic:.1f}, linear should be preferred when RSS nearly equal")
+    @staticmethod
+    def _record(rate):
+        H = np.cumsum(rate)
+        return H - H[0], 2000.5 + np.arange(len(rate))
 
-    def test_bic_prefers_better_fit(self):
-        """When RSS is substantially better, BIC should prefer the complex model."""
-        n = 23
-        rss_lin = 2.0
-        rss_quad = 0.5  # much better
-        bic_lin = n * np.log(rss_lin / n) + 4 * np.log(n)
-        bic_quad = n * np.log(rss_quad / n) + 5 * np.log(n)
-        delta_bic = bic_lin - bic_quad
-        assert delta_bic > 2, (
-            f"ΔBIC={delta_bic:.1f}, quadratic should be preferred with much better RSS")
+    def _fit_pair(self, T, rate, prior_scale_a, balance):
+        from bayesian_models import fit_bayesian_level_annual_correlated as fit
+        H, t = self._record(rate)
+        sig = np.full(len(rate), self.SIG)
+        kw = dict(self.PRIORS, prior_scale_a=prior_scale_a, **self.MCMC)
+        if balance is not None:
+            kw['balance_T_eq0'] = balance
+        lin = fit(H, rate, sig, T, t, order=1, seed=1, **kw)
+        quad = fit(H, rate, sig, T, t, order=2, seed=2, **kw)
+        n = len(rate)
+        bic_l = lin.m2lnL + lin.k_fit * np.log(n)
+        bic_q = quad.m2lnL + quad.k_fit * np.log(n)
+        return lin, quad, bic_l - bic_q
+
+    @pytest.fixture(scope="class")
+    def linear_truth(self):
+        """Linear rate b (T - T_eq0) with excess scatter, fitted with the
+        balance prior and the notebook's tight prior on a."""
+        rng = np.random.default_rng(1)
+        T = np.linspace(0.1, 0.9, self.N_OBS) + rng.normal(0, 0.05, self.N_OBS)
+        rate = 0.8e-3 * (T + 0.8) + rng.normal(0, np.hypot(self.SIG, 1.8e-4), self.N_OBS)
+        return self._fit_pair(T, rate, prior_scale_a=0.04e-3, balance=(-0.86, 0.15))
+
+    @pytest.fixture(scope="class")
+    def quadratic_truth(self):
+        """Strongly curved rate over a wide T range, wide prior on a, c free."""
+        rng = np.random.default_rng(3)
+        T = np.linspace(-0.5, 1.5, self.N_OBS)
+        rate = 0.5e-3 * T + 3e-3 * T ** 2 + 0.3e-3 + rng.normal(0, self.SIG, self.N_OBS)
+        return self._fit_pair(T, rate, prior_scale_a=10e-3, balance=None)
+
+    def test_parameter_count(self, linear_truth):
+        """k_fit counts b, T_eq0 (in c's place), H0 and sigma_extra, plus a
+        for the quadratic (MD-1)."""
+        lin, quad, _ = linear_truth
+        assert lin.k_fit == 4
+        assert quad.k_fit == 5
+        assert np.isfinite(lin.m2lnL) and np.isfinite(quad.m2lnL)
+
+    def test_balance_prior_ties_c_to_b(self, linear_truth):
+        """With balance_T_eq0, c = -b T_eq0 in every posterior draw (order 1)."""
+        lin, _, _ = linear_truth
+        b = lin.posterior_samples[:, 1]
+        c = lin.posterior_samples[:, 2]
+        T_eq0 = lin.design_info['T_eq0_samples']
+        np.testing.assert_allclose(c, -b * T_eq0, rtol=0, atol=1e-15)
+        assert np.all(lin.posterior_samples[:, 0] == 0.0)
+
+    def test_sigma_extra_fitted(self, linear_truth):
+        """sigma_extra is sampled (positive draws, not a constant)."""
+        lin, _, _ = linear_truth
+        se = lin.sigma_extra_posterior
+        assert np.all(se >= 0) and np.std(se) > 0
+        assert 0.3e-4 < np.median(se) < 6e-4
+
+    def test_bic_prefers_linear_for_linear_truth(self, linear_truth):
+        """With no curvature in the data the fits are nearly identical, so
+        Delta BIC (linear minus quadratic) is negative and close to -ln n."""
+        _, _, delta_bic = linear_truth
+        assert delta_bic < 0, f"Delta BIC = {delta_bic:.1f}, expected linear preferred"
+        assert abs(delta_bic + np.log(self.N_OBS)) < 2.0
+
+    def test_bic_prefers_quadratic_for_curved_truth(self, quadratic_truth):
+        """Strong curvature must give Delta BIC well above 2."""
+        _, _, delta_bic = quadratic_truth
+        assert delta_bic > 10, f"Delta BIC = {delta_bic:.1f}, expected quadratic preferred"
 
 
 # =========================================================================
@@ -279,13 +366,13 @@ class TestProjectionShapeAndUnits:
         """Create a synthetic glacier projection dict mimicking notebook output."""
         rng = np.random.default_rng(RNG_SEED)
         n_times = len(PROJ_YEARS)
-        # Synthetic: linear growth from 0 at 2005 to ~0.12 m at 2100
-        t_norm = (PROJ_YEARS - 2005) / (2100 - 2005)
+        # Synthetic: linear growth from 0 at BASELINE_YEAR to ~0.12 m at 2100
+        t_norm = (PROJ_YEARS - BASELINE_YEAR) / (2100 - BASELINE_YEAR)
         t_norm = np.clip(t_norm, 0, None)
         base = 0.12 * t_norm  # meters
 
         samples = base[np.newaxis, :] + rng.normal(0, 0.005, (N_SMALL, n_times))
-        samples = np.maximum(samples, 0)  # no negative SLR for glaciers post-2005
+        samples = np.maximum(samples, 0)  # no negative SLR for glaciers after the baseline
 
         proj = {
             'samples': samples,
@@ -377,7 +464,7 @@ class TestGlacierIO:
                 obs_sigma=obs_sigma,
                 proj_dict=mock_projections,
                 v_glacier_total_m=0.32,
-                extra_metadata={'r2': 0.992},
+                extra_metadata={'r2': 0.992, 'model_type': 'linear_level_correlated'},
                 h5_path=h5_path,
             )
 
@@ -411,7 +498,8 @@ class TestGlacierIO:
             )
 
             # Check metadata
-            assert loaded['metadata']['model_type'] == 'linear_dols'
+            # The notebook passes the production label through extra_metadata
+            assert loaded['metadata']['model_type'] == 'linear_level_correlated'
             assert float(loaded['metadata']['v_glacier_total_m']) == pytest.approx(0.32)
 
     def test_proj_years_stored(self, mock_result, mock_projections):
@@ -447,7 +535,7 @@ class TestSSPOrdering:
         """Synthetic projections with SSP-monotonic medians."""
         rng = np.random.default_rng(RNG_SEED)
         n_times = len(PROJ_YEARS)
-        t_norm = np.clip((PROJ_YEARS - 2005) / (2100 - 2005), 0, None)
+        t_norm = np.clip((PROJ_YEARS - BASELINE_YEAR) / (2100 - BASELINE_YEAR), 0, None)
         proj = {}
         # Higher SSP → more warming → higher glacier loss
         medians_2100_m = {

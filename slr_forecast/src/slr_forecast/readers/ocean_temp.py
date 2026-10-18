@@ -36,6 +36,13 @@ def read_en4_regional(
     Extracts monthly depth-averaged, area-weighted potential temperature
     for the specified lat/lon/depth box from yearly EN4 zip archives.
 
+    The depth average is an unweighted mean over the EN4 levels inside
+    ``depth_bounds`` (for 200-500 m, levels at about 207-447 m whose layer
+    thicknesses range from about 25 to 83 m), so the thinner upper levels
+    carry more weight than their share of the water column (MD-22 /
+    GR-16). A thickness-weighted mean (depth_bnds) would change the
+    Greenland discharge forcing; that change is pending an author decision.
+
     Default region: Greenland-peripheral waters (58–80°N, 75–5°W,
     200–500 m depth), capturing subsurface Atlantic Water in the
     Irminger Sea, Davis Strait, Baffin Bay, and NE Greenland shelf.
@@ -64,7 +71,8 @@ def read_en4_regional(
     -------
     pd.DataFrame
         Monthly DataFrame with columns:
-        - temperature : depth/area-weighted mean anomaly (degC)
+        - temperature : anomaly (degC) of the area-weighted (cos lat) mean
+          of the per-column level mean (levels equally weighted)
         - temperature_sigma : spatial standard deviation (degC)
         - decimal_year : fractional year
         - n_valid : number of valid ocean cells used
@@ -159,7 +167,9 @@ def read_en4_regional(
                     T_c = T_region - 273.15
                     valid = ~np.isnan(T_c)
 
-                # Depth-average first, then area-weighted spatial average
+                # Depth-average first (levels equally weighted, not by
+                # thickness; see the docstring), then area-weighted spatial
+                # average
                 T_depth_avg = np.nanmean(T_c, axis=0)  # (lat, lon)
 
                 cos_2d = grid_info["cos_wt"][:, np.newaxis]
@@ -276,7 +286,8 @@ def read_argo_rg_regional(
     -------
     pd.DataFrame
         Monthly DataFrame with columns:
-        - temperature : depth/area-weighted mean anomaly (degC)
+        - temperature : anomaly (degC) of the area-weighted (cos lat) mean
+          of the per-column level mean (levels equally weighted)
         - temperature_sigma : spatial standard deviation (degC)
         - decimal_year : fractional year
         - n_valid : number of valid ocean cells used
@@ -357,7 +368,8 @@ def read_argo_rg_regional(
         # Absolute T = climatology + anomaly (both NaN where invalid)
         T_abs = T_clim_region + T_anom_region
 
-        # Depth-average first, then area-weighted spatial mean
+        # Depth-average first (levels equally weighted, not by thickness),
+        # then area-weighted spatial mean
         T_depth_avg = np.nanmean(T_abs, axis=0)  # (lat, lon)
 
         cos_2d = cos_wt[:, np.newaxis]

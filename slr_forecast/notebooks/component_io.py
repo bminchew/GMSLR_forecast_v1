@@ -9,30 +9,38 @@ File layout (single HDF5 file, one group per component)::
 
     component_results.h5
     ├── proj_years                (201,) — shared time axis
-    ├── ocean/
-    │   ├── posteriors/           fitted model params
-    │   ├── observations/         calibration data
+    ├── ocean_posteriors/         two-layer posterior draws (top level, written
+    │                             by component_ocean before save_ocean_hybrid)
+    ├── ocean/                    two-layer thermosteric model (save_ocean_hybrid)
+    │   ├── observations/         full-depth calibration data
+    │   ├── fit_diagnostic/       written by component_ocean after the save
     │   └── projections/{ssp}/    MC samples + percentiles
     ├── glacier/
     │   ...
     ├── greenland/
     │   ├── posteriors/discharge/ discharge delay-model posteriors
-    │   ├── smb_sensitivity/      SMB model attributes (Greenland: MAR emulator)
+    │   ├── smb_sensitivity/      SMB model attributes (MAR emulator + drift state)
     │   ├── ocean_transfer/       surface→ocean T regression
     │   ├── observations/smb/     Mouginot SMB
     │   ├── observations/discharge/
     │   └── projections/{ssp}/    total, smb, discharge samples
-    ├── eais/
-    ├── apeninsula/
+    ├── eais/                     SMB (C_T) model, IMBIE-3 calibration
+    ├── apeninsula/               linear-in-T level model, IMBIE-3 annual increments
     └── wais/
         ├── a4_scenarios/         scenario mixture params
         ...
+
+Other top-level groups (blended*, wais_slow90, voi, hindcast_20c, ...) are
+written by component_forecast, component_summation and later scripts.
+The ``model_type`` strings of some groups predate the current models (see
+the save_* docstrings).
 
 All projection arrays are in meters relative to BASELINE_YEAR.
 """
 
 import json
 import os
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -63,16 +71,45 @@ _PCTILE_KEYS = ("median", "p5", "p17", "p83", "p95")
 # =========================================================================
 
 def _require_file(path):
-    """Open (or create) the HDF5 file and return the path."""
+    """Open (or create) the HDF5 file and return the path.
+
+    The root ``baseline_year`` attribute is refreshed on every save, so it
+    describes the current pipeline rather than the run that created the
+    file (MD-12). There is no root sample count: member counts differ by
+    group (N_SAMPLES for most components, more for WAIS and the slow-WAIS
+    mixture), so each group's count is the first dimension of its
+    ``samples`` arrays.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         with h5py.File(path, "w") as f:
             f.attrs["created"] = datetime.now(timezone.utc).isoformat()
-            f.attrs["baseline_year"] = BASELINE_YEAR
-            f.attrs["n_samples"] = N_SAMPLES
             f.create_dataset("proj_years", data=PROJ_YEARS)
+    with h5py.File(path, "a") as f:
+        f.attrs["baseline_year"] = BASELINE_YEAR
+        if "n_samples" in f.attrs:
+            del f.attrs["n_samples"]
     return path
+
+
+def _write_scalar_attrs(grp, meta):
+    """Write string and finite scalar metadata as group attributes.
+
+    Anything else (None, NaN, lists, arrays) cannot be stored this way and
+    is skipped with a warning naming the key, rather than dropped silently.
+    """
+    skipped = []
+    for k, v in meta.items():
+        if isinstance(v, str):
+            grp.attrs[k] = v
+        elif np.isscalar(v) and np.isfinite(v):
+            grp.attrs[k] = float(v)
+        else:
+            skipped.append(k)
+    if skipped:
+        warnings.warn(f"{grp.name}: metadata not saved (not a string or a "
+                      f"finite scalar): {skipped}")
 
 
 def _save_projection_ssp(grp, ssp, proj_dict):
@@ -106,6 +143,9 @@ def _save_projection_ssp(grp, ssp, proj_dict):
             val = np.asarray(proj_dict[key])
             if val.ndim <= 2:
                 sg.create_dataset(key, data=val)
+            else:
+                warnings.warn(f"{sg.name}: '{key}' not saved "
+                              f"(ndim {val.ndim} > 2)")
 
 
 def _load_projection_ssp(sg):
@@ -192,11 +232,7 @@ def save_dols_component(
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
 
         if extra_metadata:
-            for k, v in extra_metadata.items():
-                if isinstance(v, str):
-                    cg.attrs[k] = v
-                elif np.isscalar(v) and np.isfinite(v):
-                    cg.attrs[k] = float(v)
+            _write_scalar_attrs(cg, extra_metadata)
 
         # Posteriors
         pg = cg.create_group("posteriors")
@@ -321,8 +357,14 @@ def save_ocean_hybrid(
     """Save thermosteric (ocean) component from hybrid NOAA + IPCC approach.
 
     Unlike :func:`save_ocean`, this does not require a fitted result object
-    or posteriors.  The hindcast is observational (NOAA + literature depth
-    corrections) and projections come from IPCC AR6 oceandynamics.
+    or posteriors. The hindcast and the projections come from the two-layer
+    (Geoffroy) thermosteric model driven by Berkeley Earth GMST and the AR6
+    GMST paths; its posterior draws are cached by component_ocean in the
+    top-level ``ocean_posteriors`` group. The group is labelled
+    ``model_type = 'twolayer_noaa'`` unless ``extra_metadata`` overrides it.
+    No ``model_order`` is stored: the two-layer model has no rate-polynomial
+    order, and no reader uses an ocean value (the name predates the
+    two-layer model, when projections came from IPCC AR6 oceandynamics).
 
     Parameters
     ----------
@@ -341,16 +383,11 @@ def save_ocean_hybrid(
         if "ocean" in f:
             del f["ocean"]
         cg = f.create_group("ocean")
-        cg.attrs["model_type"] = "hybrid_noaa_ipcc"
-        cg.attrs["model_order"] = 0
+        cg.attrs["model_type"] = "twolayer_noaa"
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
 
         if extra_metadata:
-            for k, v in extra_metadata.items():
-                if isinstance(v, str):
-                    cg.attrs[k] = v
-                elif np.isscalar(v) and np.isfinite(v):
-                    cg.attrs[k] = float(v)
+            _write_scalar_attrs(cg, extra_metadata)
 
         _save_observations(cg, obs_years, obs_H, obs_sigma)
 
@@ -391,8 +428,14 @@ def save_glacier(
     extra_metadata=None,
     h5_path=None,
 ):
-    """Save glacier component (linear DOLS + volume cap)."""
-    meta = {"model_type": "linear_dols", "v_glacier_total_m": v_glacier_total_m}
+    """Save glacier component (linear-in-T level model + volume cap).
+
+    Default ``model_type`` 'linear_level_correlated' (the GlaMBIE fit with
+    fit_bayesian_level_annual_correlated); component_glacier also passes
+    its label through ``extra_metadata``.
+    """
+    meta = {"model_type": "linear_level_correlated",
+            "v_glacier_total_m": v_glacier_total_m}
     if hasattr(result_lin, "r2"):
         meta["r2"] = float(result_lin.r2)
     if extra_metadata:
@@ -423,7 +466,13 @@ def save_eais(
     extra_metadata=None,
     h5_path=None,
 ):
-    """Save East Antarctic Ice Sheet component (trend-only)."""
+    """Save East Antarctic Ice Sheet component.
+
+    The stored ``model_type`` 'trend_only' is a legacy label: the current
+    EAIS model is linear in T (SMB C_T model fitted to IMBIE-3). The label
+    is kept because tests/test_eais.py checks it; pass ``model_type`` in
+    ``extra_metadata`` to override it.
+    """
     meta = {"model_type": "trend_only"}
     if hasattr(result_lin, "r2"):
         meta["r2"] = float(result_lin.r2)
@@ -455,7 +504,14 @@ def save_apeninsula(
     extra_metadata=None,
     h5_path=None,
 ):
-    """Save Antarctic Peninsula component (linear DOLS)."""
+    """Save Antarctic Peninsula component.
+
+    The stored ``model_type`` 'linear_dols' is a legacy label: the current
+    model is the linear-in-T level fit to IMBIE-3 annual increments
+    (fit_bayesian_level_annual_correlated). The label is kept because
+    tests/test_apeninsula.py checks it; pass ``model_type`` in
+    ``extra_metadata`` to override it.
+    """
     meta = {"model_type": "linear_dols"}
     if hasattr(result_lin, "r2"):
         meta["r2"] = float(result_lin.r2)
@@ -492,15 +548,22 @@ def save_greenland(
     extra_metadata=None,
     h5_path=None,
 ):
-    """Save Greenland component (SMB from literature + discharge delay model).
+    """Save Greenland component (SMB emulator + drift state, discharge delay model).
+
+    ``model_type`` is 'smb_emulator_drift_plus_discharge_delay': SMB comes
+    from the MAR emulator with a drift state (``smb_sensitivity`` holds the
+    emulator summary) and discharge from the analytic increment fit. (It
+    was 'smb_literature_plus_discharge_delay' for the retired C_T model.)
 
     Parameters
     ----------
     result_discharge : SimpleNamespace
         Discharge delay-model fit result with gamma_posterior, r0_posterior,
         delta_posterior arrays.
-    smb_sensitivity : SMBSensitivity
-        Literature-derived SMB sensitivity parameters.
+    smb_sensitivity : object
+        SMB model summary (the MAR emulator summary in production; the
+        retired literature SMBSensitivity in older tests). Fields among
+        C_T, C_T_sigma, ... and ``extra_attrs`` are stored as attributes.
     ocean_transfer : dict
         Surface→ocean temperature transfer function from
         ``fit_ocean_transfer_function``.
@@ -524,14 +587,10 @@ def save_greenland(
         if "greenland" in f:
             del f["greenland"]
         cg = f.create_group("greenland")
-        cg.attrs["model_type"] = "smb_literature_plus_discharge_delay"
+        cg.attrs["model_type"] = "smb_emulator_drift_plus_discharge_delay"
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
         if extra_metadata:
-            for k, v in extra_metadata.items():
-                if isinstance(v, str):
-                    cg.attrs[k] = v
-                elif np.isscalar(v) and np.isfinite(v):
-                    cg.attrs[k] = float(v)
+            _write_scalar_attrs(cg, extra_metadata)
 
         # ── Discharge posteriors (delay model) ──
         dg = cg.create_group("posteriors/discharge")
@@ -599,9 +658,9 @@ def save_wais(
     a4_scenarios,
     obs_years, obs_H, obs_sigma,
     wais_proj,
-    rheology_factor_median=1.28,
-    rheology_factor_sigma=0.07,
-    rheology_mode='A',
+    rheology_factor_median=1.0,
+    rheology_factor_sigma=0.0,
+    rheology_mode='B',
     wais_onset_year=None,
     extra_metadata=None,
     h5_path=None,
@@ -619,9 +678,11 @@ def save_wais(
         ``{ssp: {'samples': ndarray, ...}}``.
         WAIS is SSP-independent; same samples used for all SSPs.
     rheology_factor_median, rheology_factor_sigma : float
-        A1 rheology correction parameters (n=3 → n=4).
+        Rheology correction parameters (n=3 → n=4). The correction is
+        deprecated; the defaults (1.0, 0.0) record that none is applied.
     rheology_mode : str
-        Which rheology correction mode was used ('A' or 'B').
+        Which rheology correction mode was used ('A' or 'B'); default 'B',
+        the production setting (no correction).
     wais_onset_year : float or None
         WAIS onset year for the power-law ramp.
     extra_metadata : dict or None
@@ -642,11 +703,7 @@ def save_wais(
         if wais_onset_year is not None:
             cg.attrs["wais_onset_year"] = float(wais_onset_year)
         if extra_metadata:
-            for k, v in extra_metadata.items():
-                if isinstance(v, str):
-                    cg.attrs[k] = v
-                elif np.isscalar(v) and np.isfinite(v):
-                    cg.attrs[k] = float(v)
+            _write_scalar_attrs(cg, extra_metadata)
 
         # ── A4 scenario parameters ──
         a4g = cg.create_group("a4_scenarios")
@@ -895,8 +952,8 @@ def list_components(h5_path=None):
     components = []
     with h5py.File(h5_path, "r") as f:
         print(f"File: {h5_path}")
-        print(f"  Baseline year: {f.attrs.get('baseline_year', '?')}")
-        print(f"  N samples: {f.attrs.get('n_samples', '?')}")
+        print(f"  Baseline year (stored): {f.attrs.get('baseline_year', '?')}"
+              f"  (config: {BASELINE_YEAR})")
         print(f"  Proj years: {f['proj_years'][0]:.0f}–{f['proj_years'][-1]:.0f}")
         print()
 
@@ -909,12 +966,15 @@ def list_components(h5_path=None):
             saved = cg.attrs.get("saved_at", "?")
             ssps = list(cg["projections"].keys()) if "projections" in cg else []
             has_samples = False
+            n_members = None
             if ssps and "samples" in cg[f"projections/{ssps[0]}"]:
                 has_samples = True
+                n_members = cg[f"projections/{ssps[0]}/samples"].shape[0]
             print(f"  {key}")
             print(f"    model: {model}")
             print(f"    SSPs: {', '.join(ssps)}")
-            print(f"    full samples: {has_samples}")
+            print(f"    full samples: {has_samples}"
+                  + (f" ({n_members} members)" if has_samples else ""))
             print(f"    saved: {saved}")
 
     return components

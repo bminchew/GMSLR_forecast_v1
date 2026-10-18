@@ -1,8 +1,10 @@
 """Unit tests for the ocean (thermosteric) component.
 
-Tests cover: NOAA thermosteric data reader, ODE solver, projection
-structure, HDF5 save/load roundtrip, IPCC comparison data, and
-physical plausibility of projections.
+Tests cover: the stored full-depth observations, the two-layer ODE solver,
+the stored fit (five-parameter posterior, x1.14 correction, fixed tau_d,
+below-2000 m rate), projection structure and baseline, save_ocean_hybrid
+side effects on sibling groups, IPCC AR6 oceandynamics input, and physical
+plausibility of the projections.
 """
 
 import sys
@@ -14,34 +16,36 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'notebooks'))
 
-from component_io import load_component, PROJ_YEARS
+import h5py
+
+from component_io import load_component, PROJ_YEARS, PROJ_SSPS as IO_PROJ_SSPS
 
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'component_results.h5')
-NOAA_700_PATH = os.path.join(
-    RAW_DIR, 'steric',
-    'noaa_thermosteric_SL_0-700-3month-20260206T160151Z-1-001.zip')
-NOAA_2000_PATH = os.path.join(
-    RAW_DIR, 'steric',
-    'noaa_thermosteric_SL_0-2000-3month-20260206T160256Z-1-001.zip')
+DATA_H5_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'slr_processed_data.h5')
 CONF_BASE = os.path.join(
     RAW_DIR, 'ipcc_ar6', 'slr', 'ar6', 'global', 'confidence_output_files')
 
-HAS_NOAA_700 = os.path.exists(NOAA_700_PATH)
-HAS_NOAA_2000 = os.path.exists(NOAA_2000_PATH)
 HAS_H5 = os.path.exists(H5_PATH)
+HAS_DATA_H5 = os.path.exists(DATA_H5_PATH)
 HAS_IPCC = os.path.exists(os.path.join(
     CONF_BASE, 'medium_confidence', 'ssp245'))
 
 from slr_forecast import M_TO_MM
-BASELINE_YEAR = 2005.0
-PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
+from slr_forecast.config import BASELINE_YEAR, BASELINE_WINDOW, N_SAMPLES
+# Ordered by warming (test_ssp_ordering relies on this order); must hold the
+# same scenarios as component_io.PROJ_SSPS (checked in test_ssp_list_matches_io).
+PROJ_SSPS = ['SSP1-1.9', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
+
+
+def test_ssp_list_matches_io():
+    assert set(PROJ_SSPS) == set(IO_PROJ_SSPS)
 
 
 # =========================================================================
-# NOAA thermosteric reader
+# Stored full-depth observations
 # =========================================================================
 
 @pytest.mark.skipif(not HAS_H5, reason="HDF5 data not found")
@@ -174,8 +178,14 @@ class TestOceanSaveLoad:
 
     def test_metadata_model_type(self, loaded):
         mt = loaded['metadata']['model_type']
-        assert mt in ('physical_1layer_joint', 'hybrid_noaa_ipcc', 'twolayer_noaa'), (
-            f"Unexpected model_type: {mt}")
+        assert mt == 'twolayer_noaa', f"Unexpected model_type: {mt}"
+
+    def test_metadata_fixed_constants(self, loaded):
+        """tau_d fixed at 150 yr; below-2000 m rate 0.117 mm/yr; Li x1.14."""
+        md = loaded['metadata']
+        assert md['tau_d_fixed_yr'] == pytest.approx(150.0)
+        assert md['rate_below_2000_mm_yr'] == pytest.approx(0.117)
+        assert '14%' in md['obs_bias_correction']
 
     def test_all_ssps_present(self, loaded):
         for ssp in PROJ_SSPS:
@@ -188,7 +198,7 @@ class TestOceanSaveLoad:
 
     def test_samples_shape(self, loaded):
         samples = loaded['projections']['SSP2-4.5']['samples']
-        assert samples.shape[0] == 2000
+        assert samples.shape[0] == N_SAMPLES
         assert samples.shape[1] == len(loaded['proj_years'])
 
     def test_percentile_ordering(self, loaded):
@@ -260,11 +270,35 @@ class TestOceanProjections:
                 f" vs {PROJ_SSPS[i+1]}={medians[i+1]*M_TO_MM:.0f}")
 
     def test_near_zero_at_baseline(self, loaded):
-        idx = np.argmin(np.abs(loaded['proj_years'] - BASELINE_YEAR))
+        """Median is ~0 at BASELINE_YEAR (2000) and over the 1995-2005 window.
+
+        The ocean median rises about 6.6 mm from 2000 to 2005, so a 1 mm bound
+        catches a rebase at the wrong year. (Rebasing at 1999.5 instead of
+        2000.0, OC-14, leaves 0.4 mm at 2000, inside this bound.)
+        """
+        years = loaded['proj_years']
+        idx = int(np.flatnonzero(years == BASELINE_YEAR)[0])
+        win = (years >= BASELINE_WINDOW[0]) & (years <= BASELINE_WINDOW[1])
         for ssp in PROJ_SSPS:
-            med_mm = loaded['projections'][ssp]['median'][idx] * M_TO_MM
-            assert abs(med_mm) < 15.0, (
-                f"{ssp} at baseline = {med_mm:.2f} mm, expected ~0")
+            med = loaded['projections'][ssp]['median']
+            assert abs(med[idx] * M_TO_MM) < 1.0, (
+                f"{ssp} at {BASELINE_YEAR} = {med[idx] * M_TO_MM:.2f} mm, expected ~0")
+            assert abs(med[win].mean() * M_TO_MM) < 1.0, (
+                f"{ssp} 1995-2005 mean = {med[win].mean() * M_TO_MM:.2f} mm, expected ~0")
+
+    def test_forcing_reaches_2100(self, loaded):
+        """The 2099-2100 increment is a full year's rise, not half of one.
+
+        AR6 GMST ends at 2099.5; the notebook holds it flat to the end of
+        PROJ_YEARS. Without that, the value at 2100 would be clamped to
+        2099.5 and the last increment would be about half the one before.
+        """
+        years = loaded['proj_years']
+        i = int(np.flatnonzero(years == 2100)[0])
+        for ssp in ('SSP3-7.0', 'SSP5-8.5'):
+            m = loaded['projections'][ssp]['median']
+            ratio = (m[i] - m[i - 1]) / (m[i - 1] - m[i - 2])
+            assert ratio > 0.75, f"{ssp}: 2099-2100 / 2098-2099 increment = {ratio:.2f}"
 
     def test_uncertainty_grows(self, loaded):
         """90% CI width should grow over time."""
@@ -277,7 +311,7 @@ class TestOceanProjections:
         assert width_2100 > width_2040
 
     def test_largest_component(self, loaded):
-        """Ocean should be the largest positive SLR component at 2100."""
+        """Ocean median under SSP2-4.5 at 2100 exceeds 80 mm (order of magnitude check)."""
         idx = np.argmin(np.abs(loaded['proj_years'] - 2100))
         ocean_med = loaded['projections']['SSP2-4.5']['median'][idx] * M_TO_MM
         # Thermosteric is typically 100-200 mm under SSP2-4.5
@@ -425,3 +459,80 @@ class TestOceanTransferFunction:
             T_surf, time, T_ocean, time, lag_years=0, annual=True)
         for key in ('alpha', 'beta', 'alpha_se', 'beta_se', 'r2', 'n'):
             assert key in result, f"Missing key '{key}'"
+
+
+# =========================================================================
+# Stored fit: posterior parameters and bias correction
+# =========================================================================
+
+@pytest.mark.skipif(not HAS_H5, reason="component_results.h5 not found")
+class TestOceanStoredFit:
+    """Checks on what component_ocean cell 5 writes for the two-layer fit."""
+
+    def test_posterior_has_five_parameters_no_drift(self):
+        """a, b_u, b_d, tau_u, sigma_extra; the drift term c was removed 2026-10-16."""
+        with h5py.File(H5_PATH, 'r') as f:
+            if 'ocean_posteriors' not in f:
+                pytest.skip("ocean_posteriors not in component_results.h5")
+            keys = set(f['ocean_posteriors'].keys())
+        expected = {f'{p}_posterior' for p in ('a', 'b_u', 'b_d', 'tau_u', 'sigma_extra')}
+        assert keys == expected, f"posterior keys {sorted(keys)}"
+
+    def test_posterior_physical_bounds(self):
+        """Sensitivities non-negative (the sampler's support); tau_u inside (0.1, 500) yr."""
+        with h5py.File(H5_PATH, 'r') as f:
+            if 'ocean_posteriors' not in f:
+                pytest.skip("ocean_posteriors not in component_results.h5")
+            g = f['ocean_posteriors']
+            for p in ('a', 'b_u', 'b_d', 'sigma_extra'):
+                assert np.all(g[f'{p}_posterior'][:] >= 0), p
+            tau = g['tau_u_posterior'][:]
+        assert tau.min() > 0.1 and tau.max() < 500
+
+    @pytest.mark.skipif(not HAS_DATA_H5, reason="slr_processed_data.h5 not found")
+    def test_noaa_700_scaled_by_1p14(self):
+        """Stored 0-700 m series = NOAA rebased to 1995-2005, times 1.14 (Li et al. 2022)."""
+        import pandas as pd
+        with h5py.File(H5_PATH, 'r') as f:
+            if 'ocean/fit_diagnostic' not in f:
+                pytest.skip("ocean/fit_diagnostic not in component_results.h5")
+            yrs = f['ocean/fit_diagnostic/noaa_year'][:]
+            stored = f['ocean/fit_diagnostic/noaa_700_corrected_mm'][:]
+        d = pd.read_hdf(DATA_H5_PATH, 'harmonized/df_noaa_tsl_0_700m')
+        y, v = d['decimal_year'].values, d['tsl_mm'].values
+        bl = (y >= BASELINE_WINDOW[0]) & (y < BASELINE_WINDOW[1] + 1)
+        raw = np.interp(yrs, y, v - v[bl].mean())
+        assert np.allclose(stored, 1.14 * raw, atol=1e-6)
+
+
+# =========================================================================
+# save_ocean_hybrid: group handling
+# =========================================================================
+
+class TestSaveOceanHybridGroups:
+    """save_ocean_hybrid replaces the 'ocean' group only; sibling groups survive."""
+
+    @staticmethod
+    def _proj():
+        n, t = 4, len(PROJ_YEARS)
+        s = np.tile(np.linspace(0, 0.1, t), (n, 1))
+        return {'SSP2-4.5': {'samples': s, 'median': s[0], 'p5': s[0], 'p17': s[0],
+                             'p83': s[0], 'p95': s[0]}}
+
+    def test_siblings_survive_and_ocean_replaced(self, tmp_path):
+        from component_io import save_ocean_hybrid
+        path = tmp_path / 'cr.h5'
+        save_ocean_hybrid(np.arange(3.0), np.zeros(3), np.ones(3), self._proj(),
+                          h5_path=path)
+        with h5py.File(path, 'a') as f:
+            assert 'proj_years' in f            # fresh file initialized (OC-19)
+            f.create_group('ocean_posteriors').create_dataset('a_posterior', data=[1.0])
+            f.create_group('ocean_early_holdout')
+            f['ocean'].create_group('stale_subgroup')
+        save_ocean_hybrid(np.arange(3.0), np.zeros(3), np.ones(3), self._proj(),
+                          extra_metadata={'model_type': 'twolayer_noaa'}, h5_path=path)
+        with h5py.File(path, 'r') as f:
+            assert f['ocean_posteriors/a_posterior'][0] == 1.0
+            assert 'ocean_early_holdout' in f
+            assert 'stale_subgroup' not in f['ocean']
+            assert f['ocean'].attrs['model_type'] == 'twolayer_noaa'

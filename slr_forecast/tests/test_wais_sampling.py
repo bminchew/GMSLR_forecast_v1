@@ -20,9 +20,6 @@ from component_projections import (
     A4_SCENARIOS,
     get_s1_quadratic,
     read_ipcc_component_nc, ipcc_extract,
-    RHEOLOGY_FACTOR_MEDIAN,
-    RHEOLOGY_FACTOR_SIGMA,
-    RHEOLOGY_SENSITIVITY,
     N_OBS_MEAN,
     N_OBS_SIGMA,
     N_REF,
@@ -56,6 +53,10 @@ HAS_IPCC_AIS = os.path.exists(os.path.join(
 
 N = 200_000  # large enough for percentile checks at ~1% tolerance
 RNG_SEED = 2026
+# Production rheology mode. The samplers in component_projections.py still
+# default to the deprecated Mode A (S2 x N(1.28, 0.07)), which no pipeline
+# caller uses, so every call here passes the mode explicitly (IN-5).
+MODE = 'B'
 
 
 # =========================================================================
@@ -112,66 +113,26 @@ class TestEndpointSampling:
 
     def test_returns_meters(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais_endpoint(N, rng)
-        # S1 lower bound is 25 mm = 0.025 m; median should be > 0.1 m
-        # If returned in mm, median would be > 100
+        samples = sample_a4_wais_endpoint(N, rng, rheology_mode=MODE)
+        # The mixture median is a few tenths of a meter; in mm it would be
+        # > 100
         med = np.median(samples)
         assert 0.05 < med < 5.0, (
             f"Median {med:.3f} suggests wrong units (expected meters)")
 
     def test_shape(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais_endpoint(1000, rng)
+        samples = sample_a4_wais_endpoint(1000, rng, rheology_mode=MODE)
         assert samples.shape == (1000,)
-
-    def test_rheology_increases_median(self):
-        """Rheology correction (factor ~1.28) should increase the median
-        relative to uncorrected samples.
-
-        There's no public no-rheology mode, so the uncorrected mixture is
-        replicated directly here (same scenario-assignment/sampling logic
-        as sample_a4_wais_endpoint, just without the `base *= rheo` step)
-        rather than compared against a hardcoded reference value -- a
-        hardcoded number drifts every time A4_SCENARIOS changes (e.g. the
-        low_mm anchor-percentile changes on 2026-09-17), whereas this
-        stays correct automatically."""
-        rng1 = np.random.default_rng(RNG_SEED)
-        corrected = sample_a4_wais_endpoint(N, rng1, rheology_mode='A')
-
-        rng2 = np.random.default_rng(RNG_SEED)
-        scenario_names = list(A4_SCENARIOS.keys())
-        probs = np.array([A4_SCENARIOS[s]['P'] for s in scenario_names])
-        scenario_idx = rng2.choice(len(scenario_names), size=N, p=probs)
-        child_rngs = rng2.spawn(len(scenario_names))
-        uncorrected_mm = np.zeros(N)
-        for i, sname in enumerate(scenario_names):
-            mask = scenario_idx == i
-            n_s = mask.sum()
-            if n_s == 0:
-                continue
-            crng = child_rngs[i]
-            if sname == 'S1_status_quo':
-                uncorrected_mm[mask] = _sample_s1_quadratic_mm(n_s, crng, [2100.0])[:, 0]
-                continue
-            s = A4_SCENARIOS[sname]
-            uncorrected_mm[mask] = _sample_log_skewnormal(
-                n_s, s['low_mm'], s['high_mm'], s['alpha'], crng)
-        uncorrected = uncorrected_mm / M_TO_MM
-
-        med_corrected = np.median(corrected)
-        med_uncorrected = np.median(uncorrected)
-        assert med_corrected > med_uncorrected, (
-            f"Corrected median {med_corrected:.3f} m should exceed "
-            f"uncorrected median {med_uncorrected:.3f} m")
 
     def test_scenario_weight_override(self):
         """Setting S1 weight to 1.0 should produce samples only from S1."""
         rng = np.random.default_rng(RNG_SEED)
         weights = {'S1_status_quo': 1.0, 'S2_fast_wais': 0.0}
         samples = sample_a4_wais_endpoint(
-            N, rng, scenario_overrides={'weights': weights})
-        # S1 range: 25-85 mm = 0.025-0.085 m, after rheology *1.28:
-        # ~0.032-0.109 m.  99th percentile should be well below 0.2 m.
+            N, rng, rheology_mode=MODE, scenario_overrides={'weights': weights})
+        # S1's 2100 90% interval is about [-0.01, 0.18] m, so its 99th
+        # percentile stays well below 0.25 m; S2 draws would exceed it.
         assert np.percentile(samples, 99) < 0.25, (
             "S1-only samples should stay below 0.25 m")
 
@@ -180,9 +141,10 @@ class TestEndpointSampling:
         (removing the positive skew that pushes mass toward the lower tail)."""
         rng1 = np.random.default_rng(RNG_SEED)
         rng2 = np.random.default_rng(RNG_SEED)
-        base = sample_a4_wais_endpoint(N, rng1)
+        base = sample_a4_wais_endpoint(N, rng1, rheology_mode=MODE)
         modified = sample_a4_wais_endpoint(
-            N, rng2, scenario_overrides={'S2_fast_wais': {'alpha': 0}})
+            N, rng2, rheology_mode=MODE,
+            scenario_overrides={'S2_fast_wais': {'alpha': 0}})
         # alpha=0 (symmetric log-normal) has a higher median than alpha=3
         assert np.median(modified) > np.median(base)
 
@@ -202,7 +164,8 @@ class TestEndpointSampling:
     @pytest.mark.parametrize('mode', ['A', 'B'])
     def test_endpoint_never_exceeds_wais_cap(self, mode):
         """No endpoint draw exceeds the marine-based WAIS volume, in either
-        rheology mode (Mode A multiplies by a factor >= 1 after sampling)."""
+        rheology mode (Mode A multiplies by a factor >= 1 after sampling).
+        The 'A' case can go when Mode A is removed from the module."""
         x = sample_a4_wais_endpoint(
             100_000, np.random.default_rng(RNG_SEED), rheology_mode=mode,
             scenario_overrides={'weights': {'S1_status_quo': 0.0,
@@ -222,7 +185,7 @@ class TestTrajectories:
         rng = np.random.default_rng(RNG_SEED)
         years = np.arange(1990, 2110, dtype=float)
         samples_m, params = sample_a4_wais_trajectories(
-            500, rng, years,
+            500, rng, years, rheology_mode=MODE,
             anchor_year=2020.0,
             anchor_value_mm=5.0,
             anchor_sigma_mm=0.7,
@@ -335,8 +298,8 @@ class TestTrajectories:
         sign_changes = np.sum(np.diff(np.sign(d2), axis=1) != 0, axis=1)
         # A smooth power-law should have 0 sign changes
         frac_smooth = np.mean(sign_changes == 0)
-        # S2 samples near the low_mm/high_mm bounds (h_remaining small,
-        # e.g. from S2's 84-1000 mm range) have correspondingly small
+        # S2 samples near the low_mm bound (h_remaining small) have
+        # correspondingly small
         # curvature there too, which pushes some fraction of samples below
         # floating-point noise. Threshold history: 0.85 -> 0.80 when S2's
         # high_mm dropped 1300->1000 (smaller mixture p95, see
@@ -373,8 +336,8 @@ class TestTrajectories:
         rate should instead be small and comparable to the quadratic's own
         rate there, not implied by beta alone. Regression check: the
         realized rate immediately after the anchor should be far smaller
-        than the *unblended* power-law rate a representative beta=1.84
-        would imply blowing up from the very small A4 low_mm bound."""
+        than the *unblended* power-law rate a representative beta (median
+        2) would imply blowing up from the small A4 low_mm bound."""
         samples_m, params, years = trajectory_result
         scenario_names = list(A4_SCENARIOS.keys())
         s2_idx = scenario_names.index('S2_fast_wais')
@@ -384,7 +347,7 @@ class TestTrajectories:
         dt = years[idx_next] - years[idx_anchor]
         rate_mm_per_yr = ((samples_m[s2_mask, idx_next]
                             - samples_m[s2_mask, idx_anchor]) * 1000.0 / dt)
-        # A pure power-law ramp from the S2 low bound (130 mm) to the
+        # A pure power-law ramp from the S2 low bound (the S1 median) to the
         # median h2100 with beta~1.8-2.3 would give a near-anchor rate at
         # least several mm/yr for most samples once beta is not >>1; the
         # blended, data-anchored rate should sit close to zero given
@@ -404,7 +367,7 @@ class TestLegacySampler:
 
     def test_returns_meters(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais(1000, rng, year=2100)
+        samples = sample_a4_wais(1000, rng, year=2100, rheology_mode=MODE)
         med = np.median(samples)
         assert 0.05 < med < 5.0, f"Median {med:.3f} suggests wrong units"
 
@@ -412,52 +375,12 @@ class TestLegacySampler:
         """Before anchor year, should return N(obs_value, obs_sigma)."""
         rng = np.random.default_rng(RNG_SEED)
         samples = sample_a4_wais(
-            10000, rng, year=2015,
+            10000, rng, year=2015, rheology_mode=MODE,
             anchor_year=2020, anchor_value_mm=5.0, anchor_sigma_mm=0.7,
             obs_value_mm=3.0, obs_sigma_mm=0.5,
         )
         # Mean should be near obs_value_mm / 1000 = 0.003 m
         assert np.mean(samples) == pytest.approx(0.003, abs=0.0005)
-
-
-# =========================================================================
-# Rheology correction properties
-# =========================================================================
-
-class TestRheologyCorrection:
-    """Verify rheology correction is always >= 1 and has correct magnitude."""
-
-    def test_rheology_factor_always_geq_1(self):
-        """No sample should have rheology factor < 1."""
-        rng = np.random.default_rng(RNG_SEED)
-        # Draw raw S2 samples without rheology, using S2_fast_wais's actual
-        # current (low_mm, high_mm, alpha) rather than a hardcoded stand-in:
-        # the previous hardcoded (160, 1000, alpha=4) reference distribution
-        # predates the 2026-09-17 IMBIE-3 refit (which lowered low_mm from
-        # 130 to 94 mm, pinned to S1's tighter posterior -- see
-        # A4_SCENARIOS/S1_QUADRATIC_MEAN in component_projections.py) and no
-        # longer describes the same distribution sample_a4_wais_endpoint
-        # actually draws from, so the two were no longer a valid raw/
-        # corrected pair.
-        s2 = A4_SCENARIOS['S2_fast_wais']
-        raw = _sample_log_skewnormal(N, s2['low_mm'], s2['high_mm'], s2['alpha'], rng)
-        rng2 = np.random.default_rng(RNG_SEED)
-        # Draw with rheology via endpoint
-        weights = {'S1_status_quo': 0.0, 'S2_fast_wais': 1.0}
-        corrected = sample_a4_wais_endpoint(
-            N, rng2, scenario_overrides={'weights': weights})
-        # Corrected (in m) should be >= raw/1000 (uncorrected in m) for
-        # all samples -- but since they use different RNG streams, we check
-        # statistically: corrected median should exceed raw median
-        assert np.median(corrected) > np.median(raw / M_TO_MM)
-
-    def test_rheology_median_magnitude(self):
-        """Median rheology boost should be approximately RHEOLOGY_FACTOR_MEDIAN."""
-        rng = np.random.default_rng(RNG_SEED)
-        rheo = rng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA, N)
-        rheo = np.maximum(rheo, 1.0)
-        # Truncation at 1.0 slightly raises the median above 1.28
-        assert np.median(rheo) == pytest.approx(RHEOLOGY_FACTOR_MEDIAN, rel=0.02)
 
 
 # =========================================================================
@@ -930,88 +853,23 @@ class TestIPCCUnitConversion:
 # =========================================================================
 
 class TestSensitivityAnalysisLogic:
-    """Test the weight perturbation and range override logic used in the
-    notebook's sensitivity cells."""
-
-    def test_tornado_weights_sum_to_one(self):
-        """After perturbing one scenario weight by +0.05, the redistributed
-        weights should sum to 1."""
-        perturbation = 0.05
-        scenarios = list(A4_SCENARIOS.keys())
-        for sname in scenarios:
-            orig_p = A4_SCENARIOS[sname]['P']
-            new_p = min(orig_p + perturbation, 0.95)
-            remaining = 1.0 - new_p
-            orig_remaining = 1.0 - orig_p
-
-            weights_mod = {}
-            for s2 in scenarios:
-                if s2 == sname:
-                    weights_mod[s2] = new_p
-                else:
-                    weights_mod[s2] = A4_SCENARIOS[s2]['P'] * remaining / orig_remaining
-
-            total = sum(weights_mod.values())
-            assert total == pytest.approx(1.0, abs=1e-10), (
-                f"Perturbing {sname} +{perturbation}: weights sum = {total}")
-
-    def test_tornado_negative_perturbation(self):
-        """Perturbing by -0.05 should also sum to 1 and keep weights positive."""
-        perturbation = 0.05
-        scenarios = list(A4_SCENARIOS.keys())
-        for sname in scenarios:
-            orig_p = A4_SCENARIOS[sname]['P']
-            new_p = max(orig_p - perturbation, 0.01)
-            remaining = 1.0 - new_p
-            orig_remaining = 1.0 - orig_p
-
-            weights_mod = {}
-            for s2 in scenarios:
-                if s2 == sname:
-                    weights_mod[s2] = new_p
-                else:
-                    weights_mod[s2] = A4_SCENARIOS[s2]['P'] * remaining / orig_remaining
-
-            total = sum(weights_mod.values())
-            assert total == pytest.approx(1.0, abs=1e-10)
-            assert all(w > 0 for w in weights_mod.values()), (
-                f"Negative weight after perturbing {sname} by -{perturbation}")
-
-    def test_range_override_scales_bounds(self):
-        """±20% range override should correctly scale low_mm and high_mm.
-        Only S2_fast_wais uses low_mm/high_mm -- S1_status_quo's spread
-        comes from S1_QUADRATIC_COV and does not accept this override."""
-        s2 = A4_SCENARIOS['S2_fast_wais']
-        for factor in [0.8, 1.0, 1.2]:
-            override = {'low_mm': s2['low_mm'] * factor,
-                        'high_mm': s2['high_mm'] * factor}
-            assert override['low_mm'] == pytest.approx(s2['low_mm'] * factor)
-            assert override['high_mm'] == pytest.approx(s2['high_mm'] * factor)
+    """Test the range override used in the notebook's sensitivity cells
+    (the tornado-weight and bound-scaling checks that never called the
+    sampler were removed, IN-9)."""
 
     def test_range_override_affects_median(self):
         """Scaling S2_fast_wais's bounds up by 20% should increase the
         mixture median endpoint."""
         rng1 = np.random.default_rng(77)
         rng2 = np.random.default_rng(77)
-        base = sample_a4_wais_endpoint(50000, rng1)
+        base = sample_a4_wais_endpoint(50000, rng1, rheology_mode=MODE)
         s2 = A4_SCENARIOS['S2_fast_wais']
         overrides = {'S2_fast_wais': {'low_mm': s2['low_mm'] * 1.2,
                                        'high_mm': s2['high_mm'] * 1.2}}
         scaled = sample_a4_wais_endpoint(
-            50000, rng2, scenario_overrides=overrides)
+            50000, rng2, rheology_mode=MODE, scenario_overrides=overrides)
         assert np.median(scaled) > np.median(base), (
             "Scaling S2 bounds up 20% should increase median")
-
-    def test_rheology_sensitivity_direction(self):
-        """Higher Glen's exponent n should produce higher rheology correction."""
-        for n_exp in [3.5, 4.0, 4.5]:
-            rheo_med = 1 + RHEOLOGY_SENSITIVITY * (n_exp - N_REF)
-            assert rheo_med >= 1.0, f"n={n_exp}: rheology factor {rheo_med} < 1"
-        # Higher n → higher correction
-        r_35 = 1 + RHEOLOGY_SENSITIVITY * (3.5 - N_REF)
-        r_45 = 1 + RHEOLOGY_SENSITIVITY * (4.5 - N_REF)
-        assert r_45 > r_35
-
 
 # =========================================================================
 # Physical cap on WAIS (3.3 m SLE), added 2026-09-29
@@ -1045,7 +903,7 @@ class TestWaisCap:
         the cap, and some S2 paths reach it by 2150."""
         years = np.arange(1990, 2151, dtype=float)
         samples_m, params = sample_a4_wais_trajectories(
-            5000, np.random.default_rng(RNG_SEED), years,
+            5000, np.random.default_rng(RNG_SEED), years, rheology_mode=MODE,
             anchor_year=2020.0, anchor_value_mm=5.0, anchor_sigma_mm=0.7)
         assert samples_m.max() * M_TO_MM <= WAIS_MAX_SLE_MM + 1e-9
         assert params['h2100_mm'].max() <= WAIS_MAX_SLE_MM

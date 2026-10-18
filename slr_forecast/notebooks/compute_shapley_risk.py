@@ -2,7 +2,12 @@
 Compute fractional risk attribution and save to component_results.h5.
 
 Risk = E[D(S)] where D is the Jevrejeva (2018) damage function.
-Each component's attributed risk = (mean SLR_comp / mean SLR_total) × E[D(total)].
+Each component's attributed risk = (mean SLR_comp / mean SLR_total) × E[D(total)],
+where SLR_total is the blended forecast. The six components do not include
+terrestrial water storage, and the blended total differs from the component
+sum by the rate-space blend, so the attributed risks do not sum to
+E[D(total)] (97 to 101% of it in the 2026-10-18 run); the remainder is
+printed as "Not attributed".
 
 Usage:
     python compute_shapley_risk.py
@@ -70,7 +75,8 @@ def main():
                 total_risk[yr] = np.mean(damage_vec(samples))
                 total_mean_slr[yr] = np.mean(samples)
 
-        # Fractional attribution: mean is additive, so fractions sum to 1
+        # Fractional attribution. The fractions do not sum to 1: TWS is not
+        # attributed, and the blended total is not the component sum.
         risk_comp = {}
         for comp in COMPONENTS:
             risk_comp[comp] = {}
@@ -87,6 +93,9 @@ def main():
         print(f'{"Total":>12s}', ''.join(f'{total_risk[yr]:>8.0f}' for yr in HORIZONS))
         frac_sum = {yr: sum(risk_comp[c][yr] for c in COMPONENTS) for yr in HORIZONS}
         print(f'{"Frac sum":>12s}', ''.join(f'{frac_sum[yr]:>8.0f}' for yr in HORIZONS))
+        print(f'{"Not attrib.":>12s}',
+              ''.join(f'{total_risk[yr] - frac_sum[yr]:>8.0f}' for yr in HORIZONS),
+              '  (TWS and the blend adjustment)')
         print()
         for comp in COMPONENTS:
             lab = COMP_LABELS[comp]
@@ -103,7 +112,9 @@ def main():
         g.attrs['ssps'] = ','.join(SSPS)
         g.attrs['warming_labels'] = ','.join(WARMING_LABELS[s] for s in SSPS)
         g.attrs['damage_function'] = 'Jevrejeva2018'
-        g.attrs['method'] = 'Fractional attribution: (mean SLR_comp / mean SLR_total) × E[D(total)]'
+        g.attrs['method'] = ('Fractional attribution: (mean SLR_comp / mean SLR_total) × E[D(total)], '
+                             'SLR_total the blended forecast; TWS and the blend adjustment are '
+                             'not attributed, so the values do not sum to E[D(total)]')
         g.create_dataset('horizons', data=np.array(HORIZONS))
         g.create_dataset('components', data=np.array(COMPONENTS, dtype='S'))
         g.create_dataset('ssps', data=np.array(SSPS, dtype='S'))

@@ -83,6 +83,19 @@ def main():
 
     runs.sort(key=lambda r: (SCENS.index(r['scen']), S.GCMS.index(r['gcm'])))
 
+    # The 2100 values here and in supp_greenland_smb_lomo.png are separate
+    # Monte Carlo computations of the same prediction (that figure draws the
+    # 2015-2100 total directly; this one simulates each year), so they agree
+    # up to sampling noise.  Print the largest difference.
+    lomo = P.lomo(emu, mar, temp, np.random.default_rng(5))
+    diffs = []
+    for r in runs:
+        row = lomo[(lomo.gcm == r['gcm']) & (lomo.scen == r['scen'])].iloc[0]
+        diffs.append(max(abs(r['med'][-1] - row.pred), abs(r['lo'][-1] - row.lo),
+                         abs(r['hi'][-1] - row.hi)))
+    print(f'2100 emulator median and 90% bounds vs supp_greenland_smb_lomo: largest '
+          f'difference {max(diffs):.1f} mm over {len(runs)} runs (sampling noise)')
+
     # RACMO (and MAR) forced by the CESM2 branch run, SSP5-8.5
     g = pd.read_csv(GLAUDE, index_col=0)
     yrs = np.arange(2015, 2100)

@@ -8,8 +8,12 @@ a weighted statistic of those two branches. No resampling and no re-blending:
 both branches are already rate-space blended forecasts.
 
 Covers the quantities that appear in the main text at lines 387 (exceedance
-probabilities), 391 (variance and interval shares), 403 (interval widths), and
-418 (the 5% exceedance design threshold and the impacts that follow from it).
+probabilities), 403 (interval widths), and 418 (the 5% exceedance design
+threshold and the impacts that follow from it). The variance and interval
+shares in the text come from variance_shares.py and manuscript_numbers.py.
+The "S2-branch var" column printed here is the share of the mixture variance
+carried by the S2 branch and its offset from S1, a check on a different basis
+that the text does not quote (SF-18).
 
 Run from the repository root:  python scripts/slow_wais_p90_numbers.py
 """
@@ -79,10 +83,10 @@ def main():
             print(f'{p:7.1f}  {LABEL[s]:<10}{pr[0]:8.1f}{pr[1]:9.1f}{pr[2]:8.1f}')
         print()
 
-    # ---- lines 391 and 403: intervals, widths, variance and interval shares -
+    # ---- line 403: intervals and widths; S2-branch variance share (check) --
     print('=== Interval and variance structure at 2100 (rel. 2000) ===')
     print(f'{"p(S1)":>7}  {"scenario":<10}{"median cm":>11}{"90% CI cm":>20}'
-          f'{"width cm":>10}{"S2 var share":>14}{"S1 width share":>16}')
+          f'{"width cm":>10}{"S2-branch var":>14}{"S1 width share":>16}')
     for p in P_CASES:
         for s in SSPS:
             v, w = branches(s, p)

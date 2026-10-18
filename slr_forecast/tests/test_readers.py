@@ -177,6 +177,53 @@ class TestGlaMBIESignConvention:
         )
 
 
+    def test_global_sigma_is_95pct_over_1p96(self):
+        """GlaMBIE errors are 95% half-widths; both readers must convert
+        them to 1-sigma by dividing by 1.96 (IN-10 regression)."""
+        import sys
+        from slr_forecast.config import PROJECT_ROOT
+        from slr_forecast.readers import read_glambie_global
+        sys.path.insert(0, str(PROJECT_ROOT / "notebooks"))
+        from slr_data_readers import read_glambie_global as nb_read
+        path = GLACIERS / "0_global_glambie_consensus.csv"
+        raw = pd.read_csv(path)
+        expected_gt = np.abs(raw["combined_gt_errors"].values) / 1.96
+        df_pkg = read_glambie_global(str(path))
+        df_nb = nb_read(str(path), convert_to_sle=False)
+        np.testing.assert_allclose(df_nb["mass_balance_sigma"].values,
+                                   expected_gt, rtol=1e-12)
+        np.testing.assert_allclose(df_pkg["mass_balance_sigma"].values,
+                                   expected_gt / 362.5 / 1000.0, rtol=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# IPCC AR6 observed GMSL: sigma from the 17-83% range
+# ---------------------------------------------------------------------------
+
+class TestIPCCObservedSigma:
+    """The 17-83% half-range of a normal distribution is 0.9542 sigma, so
+    gmsl_sigma must be (upper - lower) / (2 * 0.9542) (MD-15)."""
+
+    PATH = RAW_DATA_DIR / "gmslr" / "ipccar6_global_sea_level_observed.csv"
+
+    def _check(self, df):
+        from scipy.stats import norm
+        half = (df["gmsl_upper"] - df["gmsl_lower"]).values / 2
+        np.testing.assert_allclose(df["gmsl_sigma"].values * norm.ppf(0.83),
+                                   half, rtol=1e-4)
+
+    def test_package_reader(self):
+        from slr_forecast.readers import read_ipcc_ar6_observed_gmsl
+        self._check(read_ipcc_ar6_observed_gmsl(str(self.PATH)))
+
+    def test_notebook_reader(self):
+        import sys
+        from slr_forecast.config import PROJECT_ROOT
+        sys.path.insert(0, str(PROJECT_ROOT / "notebooks"))
+        from slr_data_readers import read_ipcc_ar6_observed_gmsl
+        self._check(read_ipcc_ar6_observed_gmsl(str(self.PATH)))
+
+
 # ---------------------------------------------------------------------------
 # Impact functions: basic sanity
 # ---------------------------------------------------------------------------

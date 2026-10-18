@@ -6,8 +6,11 @@ State:                  delta_t = phi delta_{t-1} + eta_t,  phi = exp(-1/tau)
 M is a constant level with a diffuse prior, delta a stationary AR(1) state
 with sd sigma_d, and Var(eps_t) = sigma_e^2 + s_t^2 (weather plus the
 reported observation error s_t).  Option 2 adds a constant c multiplying a
-regressor H_t (c x).  Used by scripts/smb_state_space_diagnostic.py and the
-delay-fit figure in component_greenland.ipynb.
+regressor H_t (c x).  Used by component_greenland.ipynb (fit_drift_state
+supplies each member's level M and drift path for the projections and the
+delay-fit figure) and by scripts/smb_state_space_diagnostic.py.  Off the
+record each member's delta is a stochastic AR(1) path; only its mean relaxes
+toward zero.
 """
 
 import numpy as np

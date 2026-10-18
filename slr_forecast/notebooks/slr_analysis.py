@@ -806,7 +806,10 @@ def compute_kinematics(
     error_cov : np.ndarray, optional
         (n, n) covariance of the measurement errors in *value*. Default
         None keeps the original standard errors (diagonal WLS, scaled by
-        the weighted residual variance). When given, the point estimates
+        the weighted residual variance). Those treat the kernel-times-
+        inverse-variance weights as inverse variances and ignore serial
+        correlation, so they are nominal (MD-29); use them for
+        diagnostics only. When given, the point estimates
         are unchanged and the standard errors come from the sandwich
         A X'W C W X A, with A = (X'WX)^-1 and W the combined weights on
         the local window. Use this for cumulative records, whose errors

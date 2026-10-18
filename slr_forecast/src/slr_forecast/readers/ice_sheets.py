@@ -325,7 +325,8 @@ def read_mouginot2019_greenland(filepath: str) -> pd.DataFrame:
         "decimal_year": "yr",
     })
     df.attrs["dataset"] = "mouginot2019_greenland"
-    df.attrs["region"] = "Greenland Ice Sheet (excl. peripheral glaciers)"
+    df.attrs["region"] = ("Greenland Ice Sheet; SMB includes seven peripheral ice-cap units, "
+                          "peripheral discharge not counted")
     df.attrs["reference"] = "Mouginot et al. (2019)"
     df.attrs["doi"] = "10.1073/pnas.1904242116"
     df.attrs["method"] = "input-output (RACMO SMB + satellite discharge)"

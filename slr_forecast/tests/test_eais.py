@@ -5,7 +5,7 @@ SMB projection logic, HDF5 save/load roundtrip, and ISMIP6
 region mapping.
 
 Data source: IMBIE-3 (Otosaka et al. 2026), 1979-2023 (45 annual
-points, mid-year centers 1979.5-2023.5) -- supersedes the IMBIE v2021
+points, end-of-year labels 1980-2024) -- supersedes the IMBIE v2021
 record (1992-2020, 29 points) previously used here.
 """
 
@@ -35,8 +35,9 @@ HAS_H5 = os.path.exists(H5_PATH)
 HAS_ISMIP6 = os.path.exists(ISMIP6_BASE)
 
 from slr_forecast import M_TO_MM
-BASELINE_YEAR = 2005.0
-PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
+from slr_forecast.config import BASELINE_YEAR, N_SAMPLES
+# Ordered by warming, so the SSP-ordering test can step through it
+PROJ_SSPS = ['SSP1-1.9', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 
 
 # =========================================================================
@@ -68,15 +69,15 @@ class TestIMBIEEAISReader:
 
     def test_time_range(self, eais_data):
         """IMBIE-3 spans 1979-2023 (vs. 1992-2020 for the superseded
-        IMBIE v2021 record); annualize_imbie() assigns mid-year points."""
+        IMBIE v2021 record); annualize_imbie() labels each year at its end."""
         years = eais_data[1]
         assert years[0] >= 1979 and years[0] <= 1981
         assert years[-1] >= 2022
 
     def test_n_years(self, eais_data):
-        """IMBIE-3 EAIS record: 45 annual points (1979-2023, mid-year
-        centers 1979.5-2023.5), vs. 29 for the superseded IMBIE v2021
-        record (1992-2020)."""
+        """IMBIE-3 EAIS record: 45 annual points (1979-2023, end-of-year
+        labels 1980-2024), vs. 29 for the superseded IMBIE v2021 record
+        (1992-2020)."""
         years = eais_data[1]
         assert len(years) == 45
 
@@ -225,13 +226,16 @@ class TestEAISSaveLoad:
         return load_component('eais')
 
     def test_metadata_model_type(self, loaded):
-        assert loaded['metadata']['model_type'] == 'trend_only'
+        # component_eais/apeninsula now pass 'linear_level_correlated' (IN-11);
+        # 'trend_only' is the legacy label stored before that change. Drop it
+        # from the set after the next pipeline run.
+        assert loaded['metadata']['model_type'] in ('linear_level_correlated', 'trend_only')
 
     def test_metadata_chi2_dof(self, loaded):
         """The paper reports reduced chi-square for this fit, against the
-        fitted correlated covariance (AR(1) annual increments). Level-space
-        R² is stored but not checked: with persistent increments the
-        posterior-mean curve need not track the cumulative points."""
+        correlated covariance of the cumulative record (independent annual
+        increments, no sigma_extra). Level-space R² is stored but not
+        checked: it is inflated on a cumulative record."""
         chi2 = loaded['metadata']['chi2_dof']
         assert 0.5 < chi2 < 1.5, f"chi2/dof = {chi2:.3f}, expected ~1"
 
@@ -252,7 +256,7 @@ class TestEAISSaveLoad:
 
     def test_samples_shape(self, loaded):
         samples = loaded['projections']['SSP2-4.5']['samples']
-        assert samples.shape[0] == 2000
+        assert samples.shape[0] == N_SAMPLES
         assert samples.shape[1] == len(loaded['proj_years'])
 
     def test_percentile_ordering(self, loaded):

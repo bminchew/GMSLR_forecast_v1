@@ -2,8 +2,9 @@
 
 Tests cover: solve_state_ode, build_state_level_design_vectors,
 forward model H = a*I2 + b*I1 + c*I0 + d*IS + H0, fit_satellite_era_quadratic,
-calibrate_exponential_prior, project_gmsl_state_ensemble, sensitivity
-calculations, _rate_accel_prior_logp, and _state_level_log_prior bounds.
+calibrate_exponential_prior, project_gmsl_state_ensemble, the state
+spin-up and baseline checks, _rate_accel_prior_logp, and
+_state_level_log_prior bounds.
 """
 
 import sys
@@ -545,47 +546,93 @@ class TestProjectGmslStateEnsemble:
 # 7. Sensitivity calculations
 # =========================================================================
 
-class TestSensitivity:
-    """Tests for rate-temperature sensitivity at equilibrium."""
+class TestStateSpinupAndBaseline:
+    """State-variable spin-up (IN-18), rate-prior temperature (IN-17) and
+    the projection baseline range check (MD-23 / IN-3). These replace three
+    tests that checked literal arithmetic without calling production code
+    (IN-9)."""
 
-    def test_equilibrium_sensitivity(self):
-        """At equilibrium (S=T), dRate/dT = 2*a*T + b."""
-        a = 0.001    # m/yr/C^2
-        b = 0.003    # m/yr/C
-        T = 1.0      # C
+    def test_spinup_state_matches_concatenated_solve(self, ramp_temperature):
+        from bayesian_models import _spinup_state
+        T, time = ramp_temperature
+        k = 120
+        S0 = _spinup_state(T[:k], time[:k], T[k], time[k], 25.0)
+        S_full = solve_state_ode(T[:k + 1], time[:k + 1], 25.0)
+        assert S0 == pytest.approx(S_full[-1], rel=1e-12)
+        # The spun-up state lags a rising temperature
+        assert S0 < T[k]
+        assert _spinup_state(None, None, T[k], time[k], 25.0) is None
 
-        # rate = a*T^2 + b*T + c + d*(S-T)
-        # At equilibrium S=T, so dRate/dT = 2*a*T + b
-        sensitivity = 2.0 * a * T + b
-        expected = 0.005  # 2*0.001*1 + 0.003
-        np.testing.assert_allclose(sensitivity, expected, atol=1e-12)
+    def test_equilibrium_spinup_leaves_logprob_unchanged(self, prior_scales_default):
+        """Spinning up from a constant T equal to the first calibration
+        value starts S in equilibrium, as the default does."""
+        n = 240
+        time = np.linspace(2000.0, 2020.0, n)
+        T = np.full(n, 0.5)
+        obs_times = np.linspace(2001.0, 2019.0, 19)
+        dv = build_state_level_design_vectors(T, time, obs_times, tau=20.0)
+        H_obs = 0.003 * dv['I1_obs'] + 0.002 * dv['I0_obs']
+        args = dict(T_monthly=T, time_monthly=time, obs_idx=dv['obs_idx'],
+                    I2_obs=dv['I2_obs'], I1_obs=dv['I1_obs'],
+                    I0_obs=dv['I0_obs'], H_obs=H_obs,
+                    sigma_obs_fixed=np.full(19, 0.001),
+                    prior_scales=prior_scales_default, H0_prior_mean=0.0)
+        theta = np.array([0.001, 0.003, 0.002, 0.0005,
+                          np.log(20.0), np.log(0.001), 0.0])
+        lp0 = _state_level_log_prob(theta, **args)
+        t_spin = np.linspace(1950.0, 1999.9, 600)
+        lp1 = _state_level_log_prob(theta, **args, T_spinup=np.full(600, 0.5),
+                                    time_spinup=t_spin)
+        assert lp1 == pytest.approx(lp0, rel=1e-12)
+        # A colder spin-up history changes S(t), hence the likelihood
+        lp2 = _state_level_log_prob(theta, **args, T_spinup=np.full(600, -0.5),
+                                    time_spinup=t_spin)
+        assert lp2 != pytest.approx(lp0, rel=1e-9)
 
-    def test_record_averaged_sensitivity(self):
-        """Record-averaged sensitivity = a*(T1+T2) + b for linear T."""
-        a = 0.001
-        b = 0.003
-        T1, T2 = 0.5, 1.5
+    def test_rate_prior_T_end_default_is_monthly_value(self, prior_scales_default,
+                                                       satellite_era_prior):
+        n = 240
+        time = np.linspace(2000.0, 2020.0, n)
+        T = 0.3 + 0.02 * (time - 2000.0)
+        obs_times = np.linspace(2001.0, 2019.0, 19)
+        dv = build_state_level_design_vectors(T, time, obs_times, tau=20.0)
+        args = dict(T_monthly=T, time_monthly=time, obs_idx=dv['obs_idx'],
+                    I2_obs=dv['I2_obs'], I1_obs=dv['I1_obs'],
+                    I0_obs=dv['I0_obs'], H_obs=0.003 * dv['I1_obs'],
+                    sigma_obs_fixed=np.full(19, 0.001),
+                    prior_scales=prior_scales_default, H0_prior_mean=0.0,
+                    rate_prior=satellite_era_prior, idx_eval=200,
+                    dTdt_end=0.02)
+        theta = np.array([0.001, 0.003, 0.002, 0.0005,
+                          np.log(20.0), np.log(0.001), 0.0])
+        lp_default = _state_level_log_prob(theta, **args)
+        lp_same = _state_level_log_prob(theta, **args, T_end=T[200])
+        lp_other = _state_level_log_prob(theta, **args, T_end=T[200] + 0.2)
+        assert lp_same == pytest.approx(lp_default, rel=1e-12)
+        assert lp_other != pytest.approx(lp_default, rel=1e-9)
 
-        # Average of dRate/dT over [T1, T2]:
-        # (1/(T2-T1)) * integral_{T1}^{T2} (2*a*T + b) dT
-        #   = (1/(T2-T1)) * [a*T^2 + b*T]_{T1}^{T2}
-        #   = a*(T1+T2) + b
-        avg_sensitivity = a * (T1 + T2) + b
-        expected = 0.001 * 2.0 + 0.003
-        np.testing.assert_allclose(avg_sensitivity, expected, atol=1e-12)
+    def test_projection_raises_when_baseline_off_grid(self):
+        """A scenario grid starting in 2015 cannot be zeroed at 2000."""
+        proj_time = np.arange(2015.0, 2100.0)
+        df = pd.DataFrame({'temperature': np.ones(len(proj_time)),
+                           'decimal_year': proj_time})
+        with pytest.raises(ValueError, match='outside the projection grid'):
+            project_gmsl_state_ensemble(
+                coefficients=np.array([0.001, 0.003, 0.002, 0.0001]),
+                coefficients_cov=np.eye(4) * 1e-20,
+                tau_samples=np.full(10, 30.0),
+                temperature_projections={'x': df},
+                historical_temperature=np.ones(600),
+                historical_time=np.linspace(1950.0, 2014.9, 600),
+                baseline_year=2000.0, n_samples=5, seed=0)
 
-    def test_sensitivity_units(self):
-        """Sensitivity should be in m/yr/C."""
-        a = 0.001    # m/yr/C^2
-        b = 0.003    # m/yr/C
-        T = 1.0
-
-        # dRate/dT has units: d(m/yr)/d(C) = m/yr/C
-        sensitivity = 2.0 * a * T + b
-        # Convert to mm/yr/C for comparison
-        sensitivity_mm = sensitivity * M_TO_MM
-        assert 1.0 < sensitivity_mm < 20.0, (
-            f"Sensitivity {sensitivity_mm} mm/yr/C outside plausible range")
+    def test_baseline_half_step_tie_is_allowed(self):
+        from slr_projections import _baseline_index
+        t = np.arange(1990.5, 2030.5, 1.0)
+        assert t[_baseline_index(t, 2000.0)] == 1999.5
+        assert _baseline_index(np.arange(2000.0, 2101.0), 2000.0) == 0
+        with pytest.raises(ValueError):
+            _baseline_index(np.arange(2015.0, 2101.0), 2000.0)
 
 
 # =========================================================================

@@ -2,6 +2,13 @@
 Correlation-aware standard errors for cumulative (integrated) component
 records.
 
+Status (2026-10): legacy. The production glacier, Peninsula, EAIS and WAIS
+fits use ``bayesian_models.fit_bayesian_level_annual_correlated``, whose
+likelihood is already correlation-aware, so nothing here runs in the
+pipeline. The functions are called only from the inactive
+``FIT_SPACE = 'level'`` branches of the component notebooks. The text below
+describes the problem they were written for.
+
 ``robust_level_intervals`` / ``robust_curve_band`` cover the level-space
 Bayesian model (``bayesian_models.fit_bayesian_level``), used to calibrate
 glaciers, Antarctic Peninsula, and EAIS. They do NOT refit anything: they
@@ -95,9 +102,14 @@ def _anchor_covariance(years, sigma_obs, baseline_year):
     if np.any(sigma_obs <= 0):
         raise ValueError('drop zero/negative-sigma rows before calling '
                           '_anchor_covariance (deterministic anchor point)')
+    years = np.asarray(years, dtype=float)
     n = len(years)
     anchor = int(np.argmin(np.abs(years - baseline_year)))
-    pre = np.arange(n) < anchor
+    # Split on the baseline itself, not on the argmin index: once the
+    # zero-sigma baseline row is dropped from end-of-year labels, 1999.0 and
+    # 2001.0 tie, argmin returns 1999.0, and an index split would group 1999
+    # with the post-baseline points (MD-19).
+    pre = years < baseline_year
     Sigma = np.zeros((n, n))
     for i in range(n):
         for j in range(n):
@@ -124,6 +136,12 @@ def _psd_sqrt_diag(cov):
     silently propagate NaN from sqrt of a negative diagonal entry.
     """
     eigval, eigvec = np.linalg.eigh(cov)
+    scale = np.max(np.abs(eigval)) if eigval.size else 0.0
+    if eigval.size and eigval.min() < -1e-8 * scale:
+        # Beyond round-off: the covariance itself is wrong (e.g. a broken
+        # anchor split), so do not hide it by clipping
+        raise ValueError(f"covariance has a materially negative eigenvalue "
+                         f"({eigval.min():.3e}; largest {scale:.3e})")
     eigval_clipped = np.clip(eigval, 0.0, None)
     cov_psd = (eigvec * eigval_clipped) @ eigvec.T
     return np.sqrt(np.diag(cov_psd)), cov_psd

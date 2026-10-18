@@ -26,13 +26,8 @@ from component_io import (
 )
 from slr_forecast import M_TO_MM
 from slr_forecast.config import Z_90
-from smb_projections import (
-    SMBSensitivity,
-    GREENLAND_SMB,
-    GT_TO_M_SLE,
-    project_smb_ensemble,
-    project_smb_at_warming_levels,
-)
+from slr_forecast.config import GT_TO_M_SLE
+from smb_emulator import EmulatorSummary
 
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -40,7 +35,6 @@ RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
 IMBIE_GR_GT = os.path.join(RAW_DIR, 'ice_sheets', 'Gt', 'imbie_greenland_2021_Gt.csv')
 MOUGINOT_PATH = os.path.join(RAW_DIR, 'ice_sheets', 'greenland', 'mouginot2019_data.xlsx')
 
-N = 200_000      # large enough for statistical tests
 N_SMALL = 2000   # for shape/unit tests
 RNG_SEED = 2026
 
@@ -278,182 +272,6 @@ class TestAnnualizeIMBIE:
 
 
 # =========================================================================
-# SMBSensitivity and constants
-# =========================================================================
-
-class TestSMBSensitivity:
-    """Verify GREENLAND_SMB parameters are physically consistent."""
-
-    def test_C_T_negative(self):
-        """C_T should be negative: warming causes mass loss."""
-        assert GREENLAND_SMB.C_T < 0
-
-    def test_C_T2_negative(self):
-        """C_T2 should be negative: ablation zone expansion accelerates loss."""
-        assert GREENLAND_SMB.C_T2 < 0
-
-    def test_sigma_positive(self):
-        assert GREENLAND_SMB.C_T_sigma > 0
-        assert GREENLAND_SMB.C_T2_sigma > 0
-
-    def test_temperature_frame_gmst(self):
-        """Greenland SMB sensitivity should be in GMST frame."""
-        assert GREENLAND_SMB.temperature_frame == 'GMST'
-
-    def test_AA_factor_unity(self):
-        """AA factor should be 1.0 when sensitivity is already in GMST frame."""
-        assert GREENLAND_SMB.AA_factor == 1.0
-
-    def test_gt_to_m_sle_constant(self):
-        """GT_TO_M_SLE = 1 / 362500."""
-        expected = 1.0 / 362500.0
-        assert GT_TO_M_SLE == pytest.approx(expected, rel=1e-10)
-
-    def test_reference_nonempty(self):
-        assert len(GREENLAND_SMB.reference) > 0
-
-
-# =========================================================================
-# project_smb_ensemble
-# =========================================================================
-
-class TestProjectSMBEnsemble:
-    """Test SMB projection function returns correct units and shapes."""
-
-    @pytest.fixture
-    def smb_projection(self):
-        """Project SMB under a simple linear warming scenario."""
-        time_proj = np.arange(1950, 2151, dtype=float)
-        # Linear warming: 0 at 2005, +3 at 2100
-        T = (time_proj - 2005.0) / (2100.0 - 2005.0) * 3.0
-        T_proj = {'SSP2-4.5': T}
-        result = project_smb_ensemble(
-            sensitivity=GREENLAND_SMB,
-            T_proj=T_proj,
-            time_proj=time_proj,
-            T_baseline=0.0,
-            n_samples=N_SMALL,
-            seed=RNG_SEED,
-            baseline_year=2005.0,
-        )
-        return result, time_proj
-
-    def test_returns_meters(self, smb_projection):
-        """SMB projection should return meters, not mm or Gt."""
-        result, time_proj = smb_projection
-        samples = result['SSP2-4.5']['samples']
-        idx_2100 = np.argmin(np.abs(time_proj - 2100.0))
-        med_2100 = np.median(samples[:, idx_2100])
-        # Greenland SMB at +3C should contribute ~0.02-0.15 m SLE
-        assert 0.005 < med_2100 < 0.5, (
-            f"Median SMB SLR at 2100 = {med_2100:.4f} m, "
-            f"expected 0.005-0.5 m range")
-
-    def test_shape(self, smb_projection):
-        result, time_proj = smb_projection
-        samples = result['SSP2-4.5']['samples']
-        assert samples.shape == (N_SMALL, len(time_proj))
-
-    def test_slr_increases_with_warming(self, smb_projection):
-        """With warming, cumulative SMB SLR should increase over time.
-        Note: with SMB_0 > 0 (baseline accumulation), the cumulative may
-        be negative at 2050 (accumulation dominates early) but positive
-        by 2100 (warming-driven melt wins)."""
-        result, time_proj = smb_projection
-        med = result['SSP2-4.5']['median']
-        idx_2050 = np.argmin(np.abs(time_proj - 2050.0))
-        idx_2100 = np.argmin(np.abs(time_proj - 2100.0))
-        assert med[idx_2100] > 0, "Median SMB SLR at 2100 should be positive"
-        assert med[idx_2100] > med[idx_2050], "SLR should increase 2050 to 2100"
-
-    def test_zero_at_baseline(self, smb_projection):
-        """Projection should be zero at baseline year."""
-        result, time_proj = smb_projection
-        idx_bl = np.argmin(np.abs(time_proj - 2005.0))
-        med = result['SSP2-4.5']['median']
-        assert abs(med[idx_bl]) < 1e-10
-
-    def test_percentile_keys(self, smb_projection):
-        result, _ = smb_projection
-        ssp_data = result['SSP2-4.5']
-        for key in ('median', 'p5', 'p17', 'p83', 'p95', 'samples'):
-            assert key in ssp_data, f"Missing key: {key}"
-
-    def test_percentile_ordering(self, smb_projection):
-        """p5 < p17 < median < p83 < p95 at 2100."""
-        result, time_proj = smb_projection
-        ssp = result['SSP2-4.5']
-        idx = np.argmin(np.abs(time_proj - 2100.0))
-        assert ssp['p5'][idx] <= ssp['p17'][idx]
-        assert ssp['p17'][idx] <= ssp['median'][idx]
-        assert ssp['median'][idx] <= ssp['p83'][idx]
-        assert ssp['p83'][idx] <= ssp['p95'][idx]
-
-    def test_higher_warming_more_slr(self):
-        """Higher temperature should produce more SLR."""
-        time_proj = np.arange(1950, 2151, dtype=float)
-        T_low = (time_proj - 2005.0) / 95.0 * 1.5
-        T_high = (time_proj - 2005.0) / 95.0 * 4.0
-        T_proj = {'low': T_low, 'high': T_high}
-        result = project_smb_ensemble(
-            sensitivity=GREENLAND_SMB,
-            T_proj=T_proj,
-            time_proj=time_proj,
-            n_samples=N_SMALL,
-            seed=RNG_SEED,
-            baseline_year=2005.0,
-        )
-        idx = np.argmin(np.abs(time_proj - 2100.0))
-        med_low = np.median(result['low']['samples'][:, idx])
-        med_high = np.median(result['high']['samples'][:, idx])
-        assert med_high > med_low, (
-            f"Higher warming ({med_high:.4f} m) should produce more SLR "
-            f"than lower warming ({med_low:.4f} m)")
-
-
-# =========================================================================
-# project_smb_at_warming_levels
-# =========================================================================
-
-class TestSMBWarmingLevels:
-    """Test SMB sensitivity at specific warming levels."""
-
-    def test_rate_increases_with_warming(self):
-        warming = np.array([1.0, 2.0, 3.0, 4.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # Rates should become more negative (more mass loss) with warming
-        # In SLR convention (slr_rate_median is positive for mass loss)
-        slr_rates = result['slr_rate_median']
-        for i in range(len(warming) - 1):
-            assert slr_rates[i + 1] > slr_rates[i], (
-                f"SLR rate at {warming[i+1]:.1f}C ({slr_rates[i+1]:.2f} mm/yr) "
-                f"should exceed rate at {warming[i]:.1f}C ({slr_rates[i]:.2f} mm/yr)")
-
-    def test_nonlinear_response(self):
-        """With C_T2 != 0, sensitivity should be nonlinear."""
-        warming = np.array([1.0, 4.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        rate_1 = result['rate_median'][0]
-        rate_4 = result['rate_median'][1]
-        # If linear: rate_4 / rate_1 = 4.0
-        # With quadratic: ratio should differ from 4.0
-        ratio = rate_4 / rate_1
-        assert abs(ratio - 4.0) > 0.1, (
-            f"Rate ratio = {ratio:.2f}, expected != 4.0 due to quadratic term")
-
-    def test_statistical_percentiles(self):
-        """p5 < median < p95 at each warming level."""
-        warming = np.array([2.0, 4.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        for j in range(len(warming)):
-            assert result['rate_p5'][j] < result['rate_median'][j]
-            assert result['rate_median'][j] < result['rate_p95'][j]
-
-
-# =========================================================================
 # apply_sigma_taper
 # =========================================================================
 
@@ -530,12 +348,6 @@ class TestUnitConsistency:
         expected = 1.0 / 362.5
         assert mm_per_gt == pytest.approx(expected, rel=1e-10)
 
-    def test_smb_projection_units_consistent(self):
-        """C_T in Gt/yr/C times GT_TO_M_SLE should give m/yr/C."""
-        c_t_m = GREENLAND_SMB.C_T * GT_TO_M_SLE
-        # -200 Gt/yr/C * (1/362500) m/Gt = -5.5e-4 m/yr/C
-        assert c_t_m == pytest.approx(-300.0 / 362500.0, rel=1e-10)
-
 
 # =========================================================================
 # I/O roundtrip
@@ -568,7 +380,19 @@ class TestGreenlandIO:
             r2_dyn=0.85,
         )
 
-        smb_sens = GREENLAND_SMB
+        # SMB model attributes as the notebook saves them: an EmulatorSummary
+        # of the MAR emulator with the drift state (synthetic coefficients)
+        gcms = ['GCM-A', 'GCM-B']
+        fits = {g: {'beta': rng.normal([0.0, -60.0 - 20 * k, -40.0], 5.0, (n_post, 3)),
+                    'segments': ['history', 'ssp585']}
+                for k, g in enumerate(gcms)}
+        M_draws = rng.normal(390.0, 60.0, n_post)
+        drift = {'tau': rng.lognormal(np.log(12.0), 0.3, n_post),
+                 'sd_d': rng.uniform(60.0, 180.0, n_post),
+                 'sd_e': rng.uniform(10.0, 80.0, n_post)}
+        smb_sens = EmulatorSummary({'fits': fits}, M_draws, np.std(M_draws),
+                                   noise=False, feedback=True, drift=drift,
+                                   M0_obs=374.0)
 
         ocean_transfer = {
             'alpha': 0.15, 'beta': -0.05,
@@ -673,18 +497,26 @@ class TestGreenlandIO:
             loaded['posteriors']['discharge']['gamma_posterior'],
             greenland_data['result_discharge'].gamma_posterior, decimal=10)
 
-        # Check SMB sensitivity
+        # Check SMB model attributes (EmulatorSummary)
         assert 'smb_sensitivity' in loaded
-        assert loaded['smb_sensitivity']['C_T'] == pytest.approx(
-            GREENLAND_SMB.C_T, rel=1e-10)
+        smb_attrs = loaded['smb_sensitivity']
+        es = greenland_data['smb_sensitivity']
+        assert smb_attrs['SMB_0'] == pytest.approx(es.SMB_0, rel=1e-12)
+        assert smb_attrs['SMB_obs_1995_2005'] == pytest.approx(374.0)
+        assert smb_attrs['gcms'] == 'GCM-A,GCM-B'
+        assert smb_attrs['drift_tau_median'] == pytest.approx(
+            es.extra_attrs['drift_tau_median'], rel=1e-12)
+        assert smb_attrs['GCM-B_b1_median'] == pytest.approx(
+            es.extra_attrs['GCM-B_b1_median'], rel=1e-12)
+        assert 'C_T' not in smb_attrs          # the retired literature model
 
         # Check ocean transfer
         assert 'ocean_transfer' in loaded
         assert loaded['ocean_transfer']['alpha'] == pytest.approx(
             greenland_data['ocean_transfer']['alpha'], rel=1e-10)
 
-        # Check metadata
-        assert loaded['metadata']['model_type'] == 'smb_literature_plus_discharge_delay'
+        # Check metadata (the label is set in component_io.save_greenland)
+        assert 'discharge_delay' in loaded['metadata']['model_type']
 
     def test_proj_years_preserved(self, greenland_data, tmp_path):
         """proj_years should match the standard grid."""
@@ -695,19 +527,17 @@ class TestGreenlandIO:
 
 
 # =========================================================================
-# SMB ensemble statistical properties (large N)
-# =========================================================================
-
-# =========================================================================
 # Discharge delay model fitting
 # =========================================================================
 
 class TestDischargeDelayModelWLS:
-    """Test fit_discharge_delay_model from component_analysis.py.
+    """Legacy level estimator of fit_discharge_delay_model (sigma_rate=None).
 
-    The function fits: H_dm = gamma * int_T_dm + r0 * t_dm
-    by demeaned WLS with BIC-weighted mixing across candidate deltas.
-    These tests verify the math using synthetic data with known ground truth.
+    Fits H_dm = gamma * int_T_dm + r0 * t_dm by demeaned WLS with diagonal
+    weights and the end-of-record rate row, BIC-weighted across candidate
+    deltas.  Production has used the increment estimator (sigma_rate given,
+    TestDischargeDelayModelIncrements) since 2026-10-17; the level estimator
+    remains callable, so these tests keep its arithmetic checked.
     """
 
     @pytest.fixture
@@ -861,6 +691,24 @@ class TestDischargeDelayModelWLS:
         assert fitted_result.peak_r > 0  # should find some positive correlation
 
 
+def _synthetic_increment_record(seed=7, scatter=1.5):
+    """Synthetic discharge record built like the Mouginot one: annual rates
+    gamma*T(t - delta) + r0 plus independent noise (scatter x the reported
+    error), cumulated and rebased with bayesian_models._cumulate."""
+    from bayesian_models import _cumulate
+    rng = np.random.default_rng(seed)
+    T_years = np.arange(1960, 2025, dtype=float) + 0.5
+    T_ann = 0.02 * (T_years - 1990) + 0.3 * np.sin(2 * np.pi * (T_years - 1960) / 13)
+    gamma, r0, delta = 0.0004, 0.0012, 6.0
+    yrs = np.arange(1972, 2019, dtype=float) + 0.5
+    sig_rate = np.full(len(yrs), 0.00003)
+    rate = (gamma * np.interp(yrs - delta, T_years, T_ann) + r0
+            + rng.normal(0, scatter * sig_rate))
+    H, sig_H = _cumulate(rate, sig_rate, yrs, (1995, 2005))
+    return dict(yrs=yrs, H=H, sig_H=sig_H, sig_rate=sig_rate, T_years=T_years,
+                T_ann=T_ann, gamma=gamma, r0=r0, delta=delta)
+
+
 class TestDischargeDelayModelIncrements:
     """Production estimator: fit_discharge_delay_model with sigma_rate.
 
@@ -871,18 +719,7 @@ class TestDischargeDelayModelIncrements:
 
     @pytest.fixture
     def synth(self):
-        from bayesian_models import _cumulate
-        rng = np.random.default_rng(7)
-        T_years = np.arange(1960, 2025, dtype=float) + 0.5
-        T_ann = 0.02 * (T_years - 1990) + 0.3 * np.sin(2 * np.pi * (T_years - 1960) / 13)
-        gamma, r0, delta = 0.0004, 0.0012, 6.0
-        yrs = np.arange(1972, 2019, dtype=float) + 0.5
-        sig_rate = np.full(len(yrs), 0.00003)
-        rate = (gamma * np.interp(yrs - delta, T_years, T_ann) + r0
-                + rng.normal(0, 1.5 * sig_rate))          # scatter 1.5x reported
-        H, sig_H = _cumulate(rate, sig_rate, yrs, (1995, 2005))
-        return dict(yrs=yrs, H=H, sig_H=sig_H, sig_rate=sig_rate, T_years=T_years,
-                    T_ann=T_ann, gamma=gamma, r0=r0, delta=delta)
+        return _synthetic_increment_record()
 
     @pytest.fixture
     def fit(self, synth):
@@ -995,113 +832,69 @@ class TestExtendWithArc:
 
 
 class TestBICWeightedMixture:
-    """Test BIC-weighted posterior mixing across candidate deltas."""
+    """BIC-weighted posterior mixing across candidate deltas, checked on the
+    output of fit_discharge_delay_model (production increment estimator)."""
 
-    def test_weights_sum_to_one(self):
-        """BIC weights should sum to 1."""
-        bics = np.array([100.0, 102.0, 105.0, 110.0, 115.0])
-        bic_min = bics.min()
-        weights = np.exp(-0.5 * (bics - bic_min))
-        weights /= weights.sum()
-        assert weights.sum() == pytest.approx(1.0, abs=1e-12)
+    @pytest.fixture(scope='class')
+    def fit(self):
+        # noisy record (scatter 3x reported): the weight splits about 1:2
+        # between delta = 5 and 6, so two deltas carry many draws
+        d = _synthetic_increment_record(seed=13, scatter=3.0)
+        return fit_discharge_delay_model(
+            d['yrs'], d['H'], d['sig_H'], d['T_ann'], d['T_years'],
+            delta_candidates=[4, 5, 6, 7, 8], n_samples=N_SMALL, seed=3,
+            sigma_rate=d['sig_rate'])
 
-    def test_best_model_gets_most_weight(self):
-        """The model with lowest BIC should get the highest weight."""
-        bics = np.array([100.0, 102.0, 105.0, 110.0, 115.0])
-        bic_min = bics.min()
-        weights = np.exp(-0.5 * (bics - bic_min))
-        weights /= weights.sum()
-        assert np.argmax(weights) == np.argmin(bics)
+    def test_weights_are_the_bic_formula(self, fit):
+        bics = np.array([fit.fit_results[d]['bic'] for d in fit.DELTA_CANDIDATES])
+        w = np.exp(-0.5 * (bics - bics.min()))
+        np.testing.assert_allclose(fit.bic_weights, w / w.sum(), rtol=1e-12)
+        assert fit.bic_weights.sum() == pytest.approx(1.0, abs=1e-12)
+        assert fit.DELTA_CANDIDATES[np.argmax(fit.bic_weights)] == fit.delta_best
 
-    def test_equal_bics_equal_weights(self):
-        """Equal BICs should produce equal weights."""
-        bics = np.array([100.0, 100.0, 100.0])
-        bic_min = bics.min()
-        weights = np.exp(-0.5 * (bics - bic_min))
-        weights /= weights.sum()
-        np.testing.assert_allclose(weights, 1.0 / 3.0, atol=1e-12)
+    def test_delta_draws_follow_weights(self, fit):
+        """Each delta gets round(N w) draws, the remainder going to the best."""
+        counts = np.array([(fit.delta_posterior == d).sum() for d in fit.DELTA_CANDIDATES])
+        assert counts.sum() == N_SMALL
+        expected = np.round(N_SMALL * fit.bic_weights).astype(int)
+        expected[np.argmax(fit.bic_weights)] += N_SMALL - expected.sum()
+        np.testing.assert_array_equal(counts, expected)
 
-    def test_sample_allocation(self):
-        """N_SAMPLES should be allocated proportional to BIC weights."""
-        N_SAMPLES = 2000
-        bics = np.array([100.0, 102.0, 108.0])
-        bic_min = bics.min()
-        weights = np.exp(-0.5 * (bics - bic_min))
-        weights /= weights.sum()
-
-        n_per = np.round(N_SAMPLES * weights).astype(int)
-        n_per[np.argmax(weights)] += N_SAMPLES - n_per.sum()
-
-        assert n_per.sum() == N_SAMPLES
-        # Best model should get the most samples
-        assert n_per[0] > n_per[1] > n_per[2]
-
-    def test_posterior_mixture_draws(self):
-        """Drawing from MVN for each delta should produce the right
-        number of samples with correct marginal properties."""
-        rng = np.random.default_rng(42)
-        N_SAMPLES = 2000
-
-        # Two fake deltas with known covariances
-        means = [np.array([0.0004, 0.0002]), np.array([0.0003, 0.0001])]
-        covs = [np.eye(2) * 1e-8, np.eye(2) * 2e-8]
-        weights = np.array([0.7, 0.3])
-
-        n_per = np.round(N_SAMPLES * weights).astype(int)
-        n_per[0] += N_SAMPLES - n_per.sum()
-
-        gamma_post = np.empty(N_SAMPLES)
-        r0_post = np.empty(N_SAMPLES)
-        idx = 0
-        for i, n_d in enumerate(n_per):
-            draws = rng.multivariate_normal(means[i], covs[i], size=n_d)
-            gamma_post[idx:idx + n_d] = draws[:, 0]
-            r0_post[idx:idx + n_d] = draws[:, 1]
-            idx += n_d
-
-        assert len(gamma_post) == N_SAMPLES
-        # Overall mean should be weighted average of component means
-        expected_gamma = weights[0] * means[0][0] + weights[1] * means[1][0]
-        assert np.mean(gamma_post) == pytest.approx(expected_gamma, abs=1e-5)
+    def test_draws_come_from_each_delta_fit(self, fit):
+        """Within each delta the draws follow that delta's (gamma, r0) normal."""
+        checked = 0
+        for d in fit.DELTA_CANDIDATES:
+            sel = fit.delta_posterior == d
+            if sel.sum() < 200:
+                continue
+            checked += 1
+            fr = fit.fit_results[d]
+            se = np.sqrt(np.diag(fr['cov']))
+            n = sel.sum()
+            assert abs(fit.gamma_posterior[sel].mean() - fr['gamma']) < 5 * se[0] / np.sqrt(n)
+            assert abs(fit.r0_posterior[sel].mean() - fr['r0']) < 5 * se[1] / np.sqrt(n)
+            assert fit.gamma_posterior[sel].std() == pytest.approx(se[0], rel=0.15)
+        assert checked >= 2
 
 
 class TestCrossCorrelation:
-    """Test the cross-correlation computation for delay selection."""
+    """The cross-correlation diagnostic of fit_discharge_delay_model
+    (discharge rate vs ocean-T rate; not the model relation)."""
 
-    def test_perfect_correlation_at_true_lag(self):
-        """Cross-correlation should peak at the true lag for a
-        perfectly shifted signal."""
+    def test_peak_at_true_lag(self):
+        """If the cumulative discharge follows T_ocean(t - lag), the
+        discharge rate follows the ocean-T rate at that lag."""
         rng = np.random.default_rng(42)
         true_lag = 5
-        t = np.arange(1960, 2020, dtype=float) + 0.5
-
-        # Ocean temperature: smooth signal
-        T_ocean = 0.02 * (t - 1990) + 0.3 * np.sin(2 * np.pi * t / 15)
-        dT_ocean = np.diff(T_ocean) / np.diff(t)
-        t_dT = 0.5 * (t[:-1] + t[1:])
-
-        # Discharge rate = ocean T rate shifted by true_lag + noise
-        dH_dyn = np.interp(t_dT, t_dT + true_lag, dT_ocean,
-                           left=np.nan, right=np.nan)
-        valid_gen = np.isfinite(dH_dyn)
-        dH_dyn[~valid_gen] = 0
-        dH_dyn += rng.normal(0, 0.001, len(dH_dyn))
-        t_dH = t_dT
-
-        # Cross-correlate
-        max_lag = 12
-        xcorr_lags = np.arange(0, max_lag + 1)
-        xcorr_r = np.zeros(len(xcorr_lags))
-        for k, lag in enumerate(xcorr_lags):
-            dT_shifted = np.interp(t_dH, t_dT + lag, dT_ocean,
-                                   left=np.nan, right=np.nan)
-            valid = np.isfinite(dT_shifted)
-            if valid.sum() > 3:
-                xcorr_r[k] = np.corrcoef(dH_dyn[valid], dT_shifted[valid])[0, 1]
-
-        peak_lag = xcorr_lags[np.nanargmax(xcorr_r)]
-        assert peak_lag == true_lag, (
-            f"Peak lag = {peak_lag}, expected {true_lag}")
+        T_years = np.arange(1960, 2020, dtype=float) + 0.5
+        T_ann = 0.02 * (T_years - 1990) + 0.3 * np.sin(2 * np.pi * T_years / 15)
+        yrs = np.arange(1972, 2019, dtype=float) + 0.5
+        H = 0.01 * np.interp(yrs - true_lag, T_years, T_ann) + rng.normal(0, 1e-6, len(yrs))
+        sig = np.full(len(yrs), 1e-4)
+        res = fit_discharge_delay_model(yrs, H, sig, T_ann, T_years,
+                                        delta_candidates=[4, 5, 6], n_samples=100, seed=0)
+        assert res.peak_lag == true_lag
+        assert res.peak_r > 0.95
 
     def test_lag_direction(self):
         """Verify that lag > 0 means ocean T LEADS discharge:
@@ -1162,42 +955,36 @@ class TestOceanTransferFunction:
         assert result['beta_se'] > 0
 
 
-class TestSMBEnsembleStatistics:
-    """Statistical tests on SMB ensemble with large sample size."""
+class TestProjectDischargeForcingHold:
+    """project_greenland_discharge holds the last annual ocean temperature
+    flat after the forcing ends (GR-4), so the discharge rate stays at
+    gamma * T_last + r0 instead of dropping to r0."""
 
-    def test_median_C_T_recovered(self):
-        """Median rate at +1C should approximate C_T + C_T2 + SMB_0."""
-        warming = np.array([1.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # At +1C: rate = C_T * 1 + C_T2 * 1 + SMB_0
-        #       = -300 + (-50) + 380 = +30 Gt/yr
-        expected = GREENLAND_SMB.C_T + GREENLAND_SMB.C_T2 + GREENLAND_SMB.SMB_0
-        assert result['rate_median'][0] == pytest.approx(expected, rel=0.02)
-
-    def test_uncertainty_propagation(self):
-        """Spread should reflect C_T_sigma and C_T2_sigma."""
-        warming = np.array([1.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        spread = result['rate_p95'][0] - result['rate_p5'][0]
-        # At 1C: std = sqrt(80^2 + 30^2) ~ 85 Gt/yr
-        # 5-95 range ~ 3.3 * 85 ~ 280 Gt/yr
-        expected_std = np.sqrt(GREENLAND_SMB.C_T_sigma**2
-                               + GREENLAND_SMB.C_T2_sigma**2)
-        expected_range = 2 * Z_90 * expected_std  # 5-95 range
-        assert spread == pytest.approx(expected_range, rel=0.05)
-
-    def test_quadratic_dominates_at_high_warming(self):
-        """At +4C, quadratic term contribution should be substantial."""
-        warming = np.array([4.0])
-        result = project_smb_at_warming_levels(
-            GREENLAND_SMB, warming, n_samples=N, seed=RNG_SEED)
-        # Linear: C_T * 4 = -1200 Gt/yr
-        # Quadratic: C_T2 * 16 = -800 Gt/yr
-        # Baseline: SMB_0 = +380 Gt/yr
-        # Total: -1620 Gt/yr
-        expected = (GREENLAND_SMB.C_T * 4
-                    + GREENLAND_SMB.C_T2 * 16
-                    + GREENLAND_SMB.SMB_0)
-        assert result['rate_median'][0] == pytest.approx(expected, rel=0.02)
+    def test_rate_after_forcing_ends(self):
+        from types import SimpleNamespace
+        from greenland_discharge import project_greenland_discharge
+        months = lambda y0, y1: np.arange(y0 * 12, y1 * 12) / 12.0 + 1 / 24
+        t_obs = months(1990, 2001)                      # observed GMST, 1990-2000
+        t_full = np.concatenate([t_obs, months(2001, 2100)])   # forcing ends Dec 2099
+        T_full = np.where(t_full > 2001, 0.02 * (t_full - 2001), 0.0)
+        ssp = 'SSPX'
+        proj_years = np.arange(1990, 2131, dtype=float)
+        gamma, r0, delta = 0.0004, 0.0012, 5.0
+        rd = SimpleNamespace(gamma_posterior=np.array([gamma]), r0_posterior=np.array([r0]),
+                             delta_posterior=np.array([delta]), int_T_mean_cal=0.0,
+                             t_mean_cal=2000.0, H_mean_cal=0.0)
+        noise_years = np.arange(2000, 2131)
+        out = project_greenland_discharge(
+            [ssp], proj_years, {ssp: T_full}, {ssp: t_full},
+            {ssp: np.zeros((1, len(t_full)))}, np.zeros(len(t_obs)), t_obs,
+            np.zeros(len(t_obs)), t_obs, rd,
+            alpha_draws=np.array([1.0]), beta_draws=np.array([0.0]), AA_draws=np.array([1.0]),
+            oc_noise=np.zeros((1, len(noise_years))), oc_noise_years=noise_years,
+            oc_noise_pre=np.zeros((1, 1)), oc_noise_pre_years=np.array([1989]),
+            baseline_year=2000.0, sample_warming_paths=False)[ssp][0]
+        T_last = T_full[np.floor(t_full) == 2099].mean()          # last annual value
+        rate = np.diff(out)
+        after = proj_years[1:] >= 2099.5 + delta + 1               # delayed forcing past its end
+        assert after.sum() > 10
+        np.testing.assert_allclose(rate[after], gamma * T_last + r0, rtol=1e-10)
+        assert np.all(rate[after] > r0 + 0.5 * gamma * T_last)

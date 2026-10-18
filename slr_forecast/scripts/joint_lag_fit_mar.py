@@ -19,7 +19,13 @@ the coefficients and noise, analytic marginal likelihood for each (rho, tau)
 combination.  tau values are integrated over a uniform grid prior, so models
 with more tau parameters pay for them in the evidence.
 
-Usage:  python scripts/joint_lag_fit_mar.py [--gcm CESM2]
+Supplement (SMB emulator section): "We tested adding a lag ... for CESM2 and
+MPI-ESM1-2-HR, the two GCMs with all three scenarios. It did not improve the
+fits."  With no argument the script fits both of those GCMs; for each, the
+"vs (a)" column compares the log evidence of each model with the shared-tau
+lag model (a), and model (0) is the no-lag emulator.
+
+Usage:  python scripts/joint_lag_fit_mar.py [--gcm CESM2 | --gcm all]
 """
 
 import argparse
@@ -77,10 +83,19 @@ def point_fit(X, y, starts, rho):
     return np.linalg.lstsq(Xs, ys, rcond=None)[0]
 
 
+LAG_TEST_GCMS = ('CESM2', 'MPI-ESM1-2-HR')       # the GCMs with all three scenarios
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--gcm', default='CESM2')
+    ap.add_argument('--gcm', default='all')
     args = ap.parse_args()
+    for gcm in (LAG_TEST_GCMS if args.gcm == 'all' else (args.gcm,)):
+        run(argparse.Namespace(gcm=gcm))
+        print()
+
+
+def run(args):
     gdir = {'CESM2': 'CESM2-CMIP6', 'MPI-ESM1-2-HR': 'MPI-ESM1-2-HR',
             'NorESM2-MM': 'NorESM2', 'UKESM1-0-LL': 'UKESM1-0-LL-CMIP6'}[args.gcm]
     mar = pd.read_csv(T.MAR).drop_duplicates(['run', 'year'])

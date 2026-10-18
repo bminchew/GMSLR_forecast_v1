@@ -31,8 +31,9 @@ HAS_H5 = os.path.exists(H5_PATH)
 HAS_ISMIP6 = os.path.exists(ISMIP6_BASE)
 
 from slr_forecast import M_TO_MM
-BASELINE_YEAR = 2005.0
-PROJ_SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
+from slr_forecast.config import BASELINE_YEAR, N_SAMPLES
+# Ordered by warming, so the SSP-ordering test can step through it
+PROJ_SSPS = ['SSP1-1.9', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5']
 
 
 # =========================================================================
@@ -45,7 +46,7 @@ class TestIMBIEPeninsulaReader:
 
     Replaces the retired IMBIE v2021 (1992-2020, 29 pts) reader test --
     component_apeninsula.ipynb now calibrates against IMBIE-3
-    (~1979.5-2023.5, 45 pts); see notebooks/slr_data_readers.py
+    (1979-2023, 45 pts, end-of-year labels 1980-2024); see notebooks/slr_data_readers.py
     read_imbie3() docstring for the sign-flip/unit-conversion details.
     """
 
@@ -70,7 +71,7 @@ class TestIMBIEPeninsulaReader:
         assert max_abs > 1e-6, f"Max |cum| = {max_abs:.2e}, too small for meters"
 
     def test_time_range(self, pen_data):
-        """IMBIE-3 Peninsula should span ~1979.5-2023.5."""
+        """IMBIE-3 Peninsula spans 1979-2023 (end-of-year labels 1980-2024)."""
         years = pen_data[1]
         assert years[0] >= 1978 and years[0] <= 1981
         assert years[-1] >= 2022
@@ -114,13 +115,16 @@ class TestAPeninsulaSaveLoad:
         return load_component('apeninsula')
 
     def test_metadata_model_type(self, loaded):
-        assert loaded['metadata']['model_type'] == 'linear_dols'
+        # component_eais/apeninsula now pass 'linear_level_correlated' (IN-11);
+        # 'linear_dols' is the legacy label stored before that change. Drop it
+        # from the set after the next pipeline run.
+        assert loaded['metadata']['model_type'] in ('linear_level_correlated', 'linear_dols')
 
     def test_metadata_chi2_dof(self, loaded):
-        # Reduced chi-square against the fitted correlated covariance (AR(1)
-        # annual increments). Level-space R² is not a fit metric here: with
-        # persistent increments the posterior-mean curve need not track the
-        # cumulative points.
+        # Reduced chi-square against the correlated covariance of the
+        # cumulative record (independent annual increments plus the fitted
+        # sigma_p,extra). Level-space R² is not a fit metric here: it is
+        # inflated on a cumulative record.
         chi2 = loaded['metadata']['chi2_dof']
         assert 0.5 < chi2 < 1.5, f"chi2/dof = {chi2:.3f}, expected ~1"
 
@@ -135,7 +139,7 @@ class TestAPeninsulaSaveLoad:
 
     def test_samples_shape(self, loaded):
         samples = loaded['projections']['SSP2-4.5']['samples']
-        assert samples.shape[0] == 2000
+        assert samples.shape[0] == N_SAMPLES
         assert samples.shape[1] == len(loaded['proj_years'])
 
     def test_percentile_ordering(self, loaded):
@@ -162,7 +166,7 @@ class TestAPeninsulaSaveLoad:
     def test_posterior_shape(self, loaded):
         ps = loaded['posteriors']['posterior_samples']
         assert ps.ndim == 2
-        assert ps.shape[1] == 3  # a, b, c
+        assert ps.shape[1] == 3  # a (zero for the linear model), b, c
 
 
 # =========================================================================
@@ -188,9 +192,9 @@ class TestAPeninsulaProjections:
         """Peninsula at 2100 should be between 5 and 20 mm for all SSPs.
 
         The level-space fit to IMBIE-3 with the full cumulative covariance
-        (BIC-selected linear model) gives a posterior median sensitivity
-        b_p = 0.044 mm/yr/°C, and the 2100 medians span 8.9-11.6 mm across
-        SSP1-2.6 to SSP3-7.0, the values quoted in the main text.
+        (linear model, a_p = 0) gives a posterior median sensitivity
+        b_p = 0.044 mm/yr/°C; the 2100 medians of the current run are
+        8-13 mm from SSP1-1.9 to SSP5-8.5 (component_apeninsula cell 12).
         """
         idx = np.argmin(np.abs(loaded['proj_years'] - 2100))
         for ssp in PROJ_SSPS:

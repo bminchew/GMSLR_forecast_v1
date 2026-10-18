@@ -231,37 +231,12 @@ class TestSigmoidWeight:
 # =========================================================================
 
 class TestBlendRateSpace:
-    """Verify blend_rate_space with synthetic data."""
+    """Verify the production blend_rate_space with synthetic data."""
 
     @staticmethod
     def _make_blend_func():
-        """Import blend_rate_space from notebook code (inline definition)."""
-        def blend_rate_space(proj_years, comp_samples, sq_rate_samples,
-                             sq_level_samples_rb, sq_time,
-                             t_origin, h_origin, t_center, tau_blend):
-            n_samples = comp_samples.shape[0]
-            fmask = proj_years >= t_origin
-            f_years = proj_years[fmask]
-            n_t = len(f_years)
-            w_t = 1.0 - expit((f_years - t_center) / tau_blend)
-            dt_proj = np.diff(proj_years)
-            comp_rate_all = np.diff(comp_samples, axis=1) / dt_proj[None, :]
-            comp_rate_full = np.zeros_like(comp_samples)
-            comp_rate_full[:, 1:-1] = 0.5 * (comp_rate_all[:, :-1] + comp_rate_all[:, 1:])
-            comp_rate_full[:, 0] = comp_rate_all[:, 0]
-            comp_rate_full[:, -1] = comp_rate_all[:, -1]
-            comp_rate_f = comp_rate_full[:, fmask]
-            sq_rate_f = np.zeros((n_samples, n_t))
-            for k in range(n_samples):
-                sq_rate_f[k] = np.interp(f_years, sq_time, sq_rate_samples[k])
-            blended_rate = w_t[None, :] * sq_rate_f + (1.0 - w_t[None, :]) * comp_rate_f
-            dt_f = np.diff(f_years)
-            forecast_samples = np.zeros((n_samples, n_t))
-            forecast_samples[:, 0] = h_origin
-            for j in range(1, n_t):
-                forecast_samples[:, j] = (forecast_samples[:, j - 1]
-                    + 0.5 * (blended_rate[:, j - 1] + blended_rate[:, j]) * dt_f[j - 1])
-            return forecast_samples, f_years, w_t
+        """The function component_forecast.ipynb calls."""
+        from component_projections import blend_rate_space
         return blend_rate_space
 
     def test_output_shape(self):
@@ -322,6 +297,38 @@ class TestBlendRateSpace:
         # After 1 year: H ≈ 0 + 4.3mm = 0.0043m
         assert f_samp[0, 1] > 0.003, (
             f"H at t+1 = {f_samp[0,1]*M_TO_MM:.2f} mm, expected > 3 mm")
+
+    def test_off_grid_origin_partial_step(self):
+        """An origin between grid years is integrated to the first grid
+        year, not assigned to it (the forecast would otherwise lag)."""
+        blend = self._make_blend_func()
+        proj_years = np.arange(2000, 2101, dtype=float)
+        n = 4
+        comp = np.zeros((n, 101))                 # zero component rate
+        sq_time = proj_years.copy()
+        sq_rate = np.full((n, 101), 0.005)        # constant 5 mm/yr
+        sq_level = np.cumsum(sq_rate, axis=1)
+        t_origin, h0, t_c, tau = 2025.3, 0.07, 2035.0, 5.0
+        f_samp, f_years, _ = blend(proj_years, comp, sq_rate, sq_level,
+                                   sq_time, t_origin, h0, t_c, tau)
+        assert f_years[0] == 2026.0
+        w_o = 1.0 - expit((t_origin - t_c) / tau)
+        w_1 = 1.0 - expit((f_years[0] - t_c) / tau)
+        expected = h0 + 0.5 * (w_o + w_1) * 0.005 * (f_years[0] - t_origin)
+        assert np.allclose(f_samp[:, 0], expected, rtol=0, atol=1e-12)
+        assert np.all(f_samp[:, 0] > h0)
+
+    def test_per_sample_origin(self):
+        """An array h_origin gives each sample its own starting level."""
+        blend = self._make_blend_func()
+        proj_years = np.arange(2000, 2101, dtype=float)
+        n = 3
+        comp = np.zeros((n, 101))
+        sq_rate = np.zeros((n, 101))
+        h0 = np.array([0.06, 0.07, 0.08])
+        f_samp, _, _ = blend(proj_years, comp, sq_rate, np.zeros((n, 101)),
+                             proj_years, 2025.0, h0, 2035.0, 5.0)
+        assert np.allclose(f_samp, h0[:, None])
 
 
 # =========================================================================
@@ -481,6 +488,29 @@ class TestTWSLoading:
             med = np.median(samples[:, idx])
             assert 5 < med < 100, f"TWS median = {med:.0f}, expected 5-100 mm"
 
+    def test_offset_on_total_only(self):
+        """The AR6-baseline offset is applied to the total only: TWS stays
+        zero at the 2005 node, and the total is shifted by rebase_mm_total
+        (the shared component_analysis.ar6_baseline_offset_m)."""
+        import h5py
+        from component_analysis import ar6_baseline_offset_m
+        with h5py.File(IPCC_DIST_PATH, 'r') as f:
+            off = float(f.attrs['rebase_mm_total'])
+            g = f['samples/landwaterstorage/SSP2-4.5']
+            y, tws = g['years'][:], g['samples'][:]
+            p = f['params/total/SSP2-4.5']
+            q_total = p['q50'][:]   # stored quantiles, after the offset
+            y_total = p['years'][:]
+        assert off == pytest.approx(
+            ar6_baseline_offset_m(OBS_H5_PATH) * M_TO_MM, abs=1e-6)
+        assert np.allclose(tws[:, y == 2005], 0.0)
+        if HAS_IPCC:
+            ex = ipcc_extract(read_ipcc_component_nc(
+                CONF_BASE, 'medium_confidence', 'ssp245', 'total'))
+            i = np.argmin(np.abs(y_total - 2100))
+            j = np.argmin(np.abs(ex['years'] - 2100))
+            assert q_total[i] - ex['q50'][j] == pytest.approx(off, abs=0.5)
+
     def test_tws_positive(self):
         """TWS should be positive at 2100 (groundwater depletion → SLR)."""
         import h5py
@@ -524,19 +554,22 @@ class TestIPCCTotalComparison:
         assert ex['q50'][idx] > 0
 
     def test_our_forecast_exceeds_ipcc(self):
-        """Our 2100 median should exceed IPCC median (we include
-        rheology correction and deep uncertainty for WAIS)."""
+        """Our 2100 median should exceed the AR6 median, both on the AR6
+        1995-2014 baseline (the fast-WAIS mixture adds a WAIS tail that
+        AR6 medium confidence does not include)."""
         data = read_ipcc_component_nc(
             CONF_BASE, 'medium_confidence', 'ssp245', 'total')
         if data is None or not HAS_HEADLINE:
             pytest.skip("Need both IPCC and headline data")
         ex = ipcc_extract(data)
         idx = np.argmin(np.abs(ex['years'] - 2100))
-        ipcc_med_mm = ex['q50'][idx]  # mm
+        ipcc_med_mm = ex['q50'][idx]  # mm, rel. 1995-2014
 
         with open(HEADLINE_PATH) as f:
             h = json.load(f)
-        our_med_mm = h['scenarios']['SSP2-4.5']['2100']['median_mm_rel_baseline']
+        ic = h['ipcc_comparison']['SSP2-4.5']
+        our_med_mm = ic['our_median_cm_ar6_baseline'] * 10
+        assert ic['ipcc_median_cm'] == pytest.approx(ipcc_med_mm / 10, abs=0.06)
         assert our_med_mm > ipcc_med_mm, (
             f"Our median ({our_med_mm:.0f} mm) should exceed "
             f"IPCC ({ipcc_med_mm:.0f} mm)")
@@ -565,7 +598,7 @@ class TestForecastPlausibility:
     def test_within_to_across_ratio(self, headline):
         """Within-scenario should be 3-10x larger than across-scenario spread."""
         ratio = headline.get('ratio_within_to_across', 0)
-        assert 2 < ratio < 15, f"Ratio = {ratio}, expected 3-10"
+        assert 2 < ratio < 15, f"Ratio = {ratio}, expected 2-15"
 
     def test_2100_median_above_500mm(self, headline):
         """All SSPs should have median > 500 mm at 2100."""

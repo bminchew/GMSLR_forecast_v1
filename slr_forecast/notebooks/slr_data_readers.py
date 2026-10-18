@@ -177,10 +177,9 @@ def _is_delta_column(col_name: str) -> bool:
     converting temperature they should use the scale factor only (no
     additive offset).
     """
-    _delta_tokens = ('sigma', 'unc', '_se', '_sd', 'lower', 'upper',
-                     '_p05', '_p10', '_p17', '_p25', '_p75', '_p83',
-                     '_p90', '_p95', 'gmsl_05', 'gmsl_17', 'gmsl_83',
-                     'gmsl_95')
+    # Bounds and quantiles (lower, upper, _p05, gmsl_05, ...) are absolute values, not deltas:
+    # they take the additive offset like the central value.
+    _delta_tokens = ('sigma', 'unc', '_se', '_sd')
     cl = col_name.lower()
     return any(tok in cl for tok in _delta_tokens)
 
@@ -606,7 +605,9 @@ def read_nasa_gmsl(filepath: str, convert_to_meters: bool = True) -> pd.DataFram
         
         Columns:
         - gmsl: Sea level with GIA correction
-        - gmsl_sigma: Standard deviation
+        - gmsl_sigma: File column 10, the standard deviation of the along-track sea-surface-height
+          variations in each cycle (about 90 mm). It is a spatial spread, not the measurement
+          error of the global mean; use the Ablain et al. (2019) covariance for that.
         - gmsl_smoothed: 60-day smoothed, seasonal removed
         - gmsl_nogia: Sea level without GIA
         - decimal_year: Original timestamp
@@ -952,8 +953,8 @@ def read_dangendorf2024_fields(
         - gmsl_sigma: GMSL standard error (pre-computed ``GMSLHRSE``)
         - sterodynamic_sigma: Sterodynamic standard error (``GMSSLHRSE``)
         - barystatic_sigma: Barystatic standard error (``GBSLHRSE``)
-        - gia_sigma: GIA standard error (``GGIAHRwmSE * t``, linear in time,
-          normalized to zero at endpoint)
+        - gia_sigma: GIA standard error (``|GGIAHRwmSE * t|``, linear in time,
+          normalized to zero at endpoint; absolute value taken)
         - decimal_year: Original time values
 
     Note
@@ -1041,7 +1042,8 @@ def read_dangendorf2024_fields(
         GGIAHRwmSE = f_se['GGIAHRwmSE'][:].flatten()[0]
         GGIAHRSE_full = GGIAHRwmSE * tt
         GGIAHRSE_full = GGIAHRSE_full - GGIAHRSE_full[-1]
-        GGIAHRSE = GGIAHRSE_full[s]
+        # The normalization leaves the SE negative before the endpoint; an SE is a magnitude
+        GGIAHRSE = np.abs(GGIAHRSE_full[s])
 
     finally:
         f_kssl.close()
@@ -1214,7 +1216,12 @@ def read_horwath2022(filepath: str, convert_to_meters: bool = True) -> pd.DataFr
     df['time'] = pd.to_datetime([decimal_year_to_datetime(y) for y in df['decimal_year']])
     df = df.set_index('time')
     df.index.name = 'time'
-    
+
+    # The file gives the deep-steric uncertainty (col 7) equal to the signed value (a 100% error);
+    # an uncertainty is a magnitude
+    sigma_cols = [c for c in df.columns if c.endswith('_sigma')]
+    df[sigma_cols] = np.abs(df[sigma_cols])
+
     # Convert mm to meters if requested
     if convert_to_meters:
         value_cols = [c for c in df.columns if c != 'decimal_year']
@@ -1262,8 +1269,9 @@ def read_ipcc_ar6_observed_gmsl(filepath: str, convert_to_meters: bool = True) -
     Note
     ----
     The 17%–83% range corresponds to the IPCC "likely" range (66% CI).
-    gmsl_sigma is approximated as half this range, which is roughly 1-sigma
-    for a normal distribution.
+    gmsl_sigma is half this range divided by 0.9542 (the 83rd percentile of
+    a standard normal), the 1-sigma of a normal distribution with these
+    17th and 83rd percentiles.
         
     Reference
     ---------
@@ -1294,9 +1302,10 @@ def read_ipcc_ar6_observed_gmsl(filepath: str, convert_to_meters: bool = True) -
     df = df.set_index('time')
     df.index.name = 'time'
     
-    # Calculate approximate 1-sigma uncertainty
-    # 17%-83% is ~1 sigma on each side for normal distribution
-    df['gmsl_sigma'] = (df['gmsl_upper'] - df['gmsl_lower']) / 2
+    # 1-sigma from the 17%-83% range: for a normal distribution the 83rd
+    # percentile lies 0.9542 sigma above the median (norm.ppf(0.83)), so the
+    # half-range is 0.9542 sigma, not 1 sigma (MD-15)
+    df['gmsl_sigma'] = (df['gmsl_upper'] - df['gmsl_lower']) / (2 * 0.9542)
     
     # Add decimal year for convenience
     df['decimal_year'] = df['year'].astype(float) + 0.5
@@ -2717,6 +2726,8 @@ def read_imbie3(filepath: str, convert_to_meters: bool = True) -> pd.DataFrame:
     })
 
     df['time'] = pd.to_datetime(df['time'])
+    # Mid-month stamp. The cumulative columns are end-of-month values; callers that need annual
+    # levels take the December row and label it Y + 1.0 (see imbie_annual_rates).
     df['decimal_year'] = df['time'].dt.year + (df['time'].dt.month - 0.5) / 12.0
     df = df.set_index('time')
 
@@ -3154,10 +3165,12 @@ def read_ipcc_ar6_component(
 
     df = pd.DataFrame({
         'p5': _get_q(0.05),
-        'p17': _get_q(0.17),
+        'p17': _get_q(0.167),   # AR6 likely range is 16.7-83.3%
         'median': _get_q(0.50),
-        'p83': _get_q(0.83),
+        'p83': _get_q(0.833),
         'p95': _get_q(0.95),
+        # mean/std are taken over the stored quantile levels, which are unevenly spaced, so they
+        # are not the mean and SD of the distribution (std is inflated); prefer the quantiles
         'mean': np.nanmean(slc, axis=0),
         'std': np.nanstd(slc, axis=0),
     }, index=years)

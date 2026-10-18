@@ -62,6 +62,30 @@ def datetime_to_decimal_year(dt):
     return year + (dt - start).total_seconds() / (end - start).total_seconds()
 
 
+def _baseline_index(time_years, baseline_year):
+    """Index of the grid point used as the baseline, with a range check.
+
+    The projections are pinned to zero at the grid point nearest
+    ``baseline_year``. If ``baseline_year`` lies off the grid (e.g. a grid
+    that starts in 2015 with baseline 2000), argmin would silently pin the
+    series at the grid edge, so raise when the nearest point is more than
+    half a grid step away (MD-23). A half-step tie (e.g. 1999.5 vs 2000.5
+    for 2000.0) passes and resolves to the earlier point.
+    """
+    time_years = np.asarray(time_years, dtype=float)
+    idx = int(np.argmin(np.abs(time_years - baseline_year)))
+    step = (float(np.max(np.diff(time_years))) if len(time_years) > 1
+            else 0.0)
+    if abs(time_years[idx] - baseline_year) > 0.5 * step + 1e-6:
+        raise ValueError(
+            f"baseline_year {baseline_year} is outside the projection grid "
+            f"[{time_years[0]:.2f}, {time_years[-1]:.2f}]; the nearest point "
+            f"is {time_years[idx]:.2f}. Extend the grid to cover the "
+            f"baseline (e.g. splice observed temperature before the "
+            f"scenario start).")
+    return idx
+
+
 def project_gmsl_from_temperature(
     coefficients: np.ndarray,
     temperature_projection: pd.DataFrame,
@@ -182,7 +206,7 @@ def project_gmsl_from_temperature(
 
     # Integrate to get cumulative GMSL using trapezoidal rule
     # Find baseline index
-    baseline_idx = np.argmin(np.abs(time_years - baseline_year))
+    baseline_idx = _baseline_index(time_years, baseline_year)
 
     # Time steps in years
     dt = np.diff(time_years)
@@ -365,7 +389,7 @@ def project_gmsl_ensemble(
             ])
 
         dt = np.diff(time_years)
-        baseline_idx = np.argmin(np.abs(time_years - baseline_year))
+        baseline_idx = _baseline_index(time_years, baseline_year)
 
         # Align SAOD if provided
         saod_vals = np.zeros(len(T))  # default: no volcanic forcing
@@ -543,7 +567,7 @@ def project_gmsl_state_ensemble(
         n_proj = len(T_proj)
 
         dt_proj = np.diff(time_proj)
-        baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
+        baseline_idx = _baseline_index(time_proj, baseline_year)
 
         # Ensemble arrays (projection portion only)
         rate_ensemble = np.zeros((n_samples, n_proj))
@@ -663,6 +687,11 @@ def project_gmsl_tau_sensitivity(
 
     all_results = {}
     summary_rows = []
+    # project_gmsl_state_ensemble resamples posterior_samples with
+    # replacement; one fixed seed for every tau makes that resampling the
+    # same for all tau values, so the tau comparison uses common draws
+    # (MD-25: it was unseeded, a different subsample per tau)
+    inner_seed = int(rng.integers(2**32))
 
     for tau_val in tau_values:
         # Create constant τ array
@@ -679,7 +708,7 @@ def project_gmsl_tau_sensitivity(
             baseline_gmsl=baseline_gmsl,
             n_samples=n_samples,
             temp_col=temp_col,
-            seed=None,  # use pre-sampled coefficients
+            seed=inner_seed,  # same resampling of coeff_samp for every tau
             posterior_samples=coeff_samp,
         )
         all_results[tau_val] = result
@@ -721,6 +750,10 @@ def project_thermosteric_ensemble(
     seed: Optional[int] = None,
 ) -> dict:
     """Project thermosteric sea level using the physically-motivated model.
+
+    Legacy (MD-25): no pipeline caller (component_ocean imports it but
+    builds its projections inline). It keeps the retired drift term
+    c·(t − t₀) and a 2005 default baseline; do not use for new work.
 
     For each MC sample, solves the two-layer cascade ODE on the combined
     historical + projection temperature trajectory, then evaluates:
@@ -791,7 +824,7 @@ def project_thermosteric_ensemble(
         t0 = time_hist_trim[0] if len(time_hist_trim) > 0 else time_proj[0]
 
         # Find baseline index in projection
-        baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
+        baseline_idx = _baseline_index(time_proj, baseline_year)
 
         steric_ens = np.zeros((len(idx), n_proj))
 
@@ -867,6 +900,12 @@ def project_greenland_ensemble(
     seed: Optional[int] = None,
 ) -> dict:
     """Project Greenland SLR using the physics-informed two-component model.
+
+    Legacy (GR-30 / MD-25): no pipeline caller. It projects the retired
+    GMST-driven SMB + discharge-ODE model with a drift term c·(t − t₀) and a
+    2005 default baseline. component_greenland uses the MAR emulator with a
+    drift state for SMB and the analytic increment fit for discharge,
+    driven by Greenland regional temperature.
 
     For each MC sample, builds a combined historical + projection
     temperature timeline, computes:
@@ -950,7 +989,7 @@ def project_greenland_ensemble(
         I0_proj = I0_full[n_hist:]
 
         # Baseline index in projection
-        baseline_idx = np.argmin(np.abs(time_proj - baseline_year))
+        baseline_idx = _baseline_index(time_proj, baseline_year)
 
         green_ens = np.zeros((len(idx), n_proj))
         smb_ens = np.zeros((len(idx), n_proj))
@@ -1167,7 +1206,7 @@ def project_component_level_ensemble(
              + H0_draws[:, None])
 
     # Rebase to baseline year
-    bl_idx = np.argmin(np.abs(projection_times - baseline_year))
+    bl_idx = _baseline_index(projection_times, baseline_year)
     H_ens -= H_ens[:, bl_idx:bl_idx+1]
 
     return {

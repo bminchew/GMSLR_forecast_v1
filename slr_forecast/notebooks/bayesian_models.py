@@ -288,8 +288,15 @@ def check_convergence(trace, quiet=False):
         'rhat' : dict of {var_name: max R-hat across dimensions}
         'ess_bulk' : dict of {var_name: min bulk ESS}
         'ess_tail' : dict of {var_name: min tail ESS}
-        'converged' : bool — True if all R-hat < 1.05 and all ESS > 100
+        'converged' : bool — True if all R-hat <= 1.05 and all bulk and
+            tail ESS >= 100
         'warnings' : list of str
+
+    Notes
+    -----
+    For emcee fits, pass every walker as a chain. Walkers of an ensemble
+    sampler are not independent chains, so R-hat is only indicative; the
+    emcee integrated autocorrelation time is the primary check.
     """
     if not hasattr(trace, 'posterior') or len(trace.posterior.data_vars) == 0:
         return {'rhat': {}, 'ess_bulk': {}, 'ess_tail': {},
@@ -319,8 +326,9 @@ def check_convergence(trace, quiet=False):
         if et < 100:
             warn.append(f"  {var}: tail ESS = {et:.0f} < 100 — tail estimates unreliable")
 
-    converged = all(v <= 1.05 for v in rhat.values()) and \
-                all(v >= 100 for v in ess_bulk.values())
+    converged = (all(v <= 1.05 for v in rhat.values())
+                 and all(v >= 100 for v in ess_bulk.values())
+                 and all(v >= 100 for v in ess_tail.values()))
 
     if not quiet:
         print("  Convergence diagnostics:")
@@ -580,7 +588,7 @@ def fit_bayesian_dols(sea_level, temperature, gmsl_sigma=None, saod=None,
     # Build arviz InferenceData
     # Use get_chain(flat=False) to preserve walker structure for proper diagnostics
     chain_samples = sampler.get_chain(flat=False)  # (n_steps, n_walkers, ndim)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
 
     # Physical samples: unscale each walker independently
     phys_reshaped = np.zeros((n_chains_arviz, chain_samples.shape[0], n_phys))
@@ -895,7 +903,7 @@ def fit_bayesian_dlm(sea_level, temperature, gmsl_sigma=None, saod=None,
 
     # Build arviz trace for Q — preserve walker structure
     chain_samples_dlm = sampler.get_chain(flat=False)  # (n_steps, n_walkers, ndim)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     Q_chain = np.exp(chain_samples_dlm[:, :n_chains_arviz, :n_phys])  # (n_steps, n_chains, n_phys)
     Q_reshaped = Q_chain.transpose(1, 0, 2)  # (n_chains, n_steps, n_phys)
     phys_names = dm['col_names'][:n_phys]
@@ -1161,7 +1169,7 @@ def fit_hierarchical_dols(datasets, temperature, order=2, n_lags=2,
 
     # Build arviz trace — preserve walker structure
     chain_samples_hier = sampler.get_chain(flat=False)  # (n_steps, n_walkers, ndim)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     mu_chain = chain_samples_hier[:, :n_chains_arviz, :n_phys]  # (n_steps, n_chains, n_phys)
     mu_reshaped = mu_chain.transpose(1, 0, 2)  # (n_chains, n_steps, n_phys)
     sigma_chain = np.exp(chain_samples_hier[:, :n_chains_arviz, n_phys:2*n_phys])
@@ -1568,7 +1576,7 @@ def fit_bayesian_rate_model(
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin,
                                    flat=False)
     # shape: (n_steps, n_walkers, ndim)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     var_dict = {}
     for k, name in enumerate(param_names):
         # (n_chains, n_steps)
@@ -1952,10 +1960,20 @@ def build_level_design_vectors(
         I1[i + 1] = I1[i] + 0.5 * (T[i] + T[i + 1]) * dt[i]
     I0 = t - t[0]
 
-    # Match observation times to nearest monthly index
+    # Match observation times to nearest monthly index. A time outside the
+    # monthly grid would silently take the end value (MD-28), so warn when
+    # any time snaps by more than one grid step. A time midway between two
+    # months (e.g. an end-of-year label Y.0) resolves to the earlier month.
     obs_idx = np.array([
         np.argmin(np.abs(t - t_obs)) for t_obs in obs_times
     ])
+    _snap = np.abs(t[obs_idx] - np.asarray(obs_times, dtype=float))
+    if len(dt) and np.any(_snap > np.max(dt) + 1e-9):
+        warnings.warn(
+            f"build_level_design_vectors: {int(np.sum(_snap > np.max(dt) + 1e-9))} "
+            f"observation time(s) lie outside the monthly grid "
+            f"[{t[0]:.3f}, {t[-1]:.3f}] (max snap {np.max(_snap):.3f} yr); "
+            f"they take the end values. Extend the temperature record.")
 
     return {
         'I2_obs': I2[obs_idx],
@@ -2330,12 +2348,14 @@ def fit_satellite_era_quadratic(
         XtX_c_inv = np.linalg.inv(X_c.T @ X_c)
         cov_beta_meas = (XtX_c_inv @ (X_c.T @ C_meas @ X_c) @ XtX_c_inv)[:3, :3]
 
-        # Scale if fitting window extends beyond covariance span.
-        # Anisotropic scaling: for h = c0 + c1*t + c2*t², the uncertainty
-        # on c1 (trend) scales as ~1/T and on c2 (acceleration) as ~1/T².
-        # c0 (intercept at t=0) is insensitive to span extension.
-        # Element-wise: S_ij = r^((p_i + p_j)/2) where r = T_cov/T_fit
-        # and p = [0, 1, 2] are the T-dependence exponents for each param.
+        # Scale if the fitting window extends beyond the covariance span.
+        # The covariance is multiplied element-wise by
+        # S_ij = r^((p_i + p_j)/2), with r = T_cov/T_fit < 1 and
+        # p = [0, 1, 2] for (c0, c1, c2). The VARIANCE of c1 therefore
+        # scales as r and that of c2 as r^2, i.e. the standard errors scale
+        # as T^(-1/2) (c1) and T^(-1) (c2); c0 is unscaled. (An earlier
+        # comment described SE ~ 1/T and 1/T^2, which would need exponents
+        # p_i + p_j. Which law applies is an open decision, MD-17.)
         t_cov_span = t_c[-1] - t_c[0]
         t_fit_span = t_fit[-1] - t_fit[0]
         if t_fit_span > t_cov_span * 1.05:
@@ -2359,9 +2379,11 @@ def fit_satellite_era_quadratic(
         ra_cov_gia = np.zeros((2, 2))
         ra_cov_gia[0, 0] = sigma_gia**2
 
-        # Total: sum independent sources
+        # Total: sum independent sources. GIA is a constant rate error, so
+        # it enters the trend c1 (rate = c1 + 2 c2 dt) in both covariances
+        # (MD-18 / SF-16). sigma_inflate applies to rate_accel_cov only.
         cov_params = cov_beta_meas + cov_beta_serial
-        # (GIA only enters the rate-accel covariance, not param cov)
+        cov_params[1, 1] += sigma_gia**2
         rate_accel_cov = sigma_inflate**2 * (
             ra_cov_meas + ra_cov_serial + ra_cov_gia)
 
@@ -2693,7 +2715,11 @@ def fit_bayesian_level(
         if mask_window.sum() >= 12:
             t_w = time_monthly[mask_window]
             T_w = temperature_monthly[mask_window]
-            dTdt_end_val = np.polyfit(t_w, T_w, 1)[0]
+            _fit = np.polyfit(t_w, T_w, 1)
+            dTdt_end_val = _fit[0]
+            # T_end from the same fit (IN-17): a single month's T can sit
+            # ~0.1 °C off the local trend
+            T_end_val = float(np.polyval(_fit, rate_prior.eval_time))
         else:
             # Narrow fallback (should not happen with full record)
             warnings.warn(
@@ -2804,14 +2830,12 @@ def fit_bayesian_level(
     resid = H_obs - H_model_mean
     r2 = 1.0 - np.sum(resid**2) / np.sum((H_obs - H_obs.mean())**2)
 
-    # Observation times
-    obs_times = I0_obs + I0_obs[0]  # not the best — caller should provide
-    # Actually I0_obs = t - t[0], so t = I0_obs + t_start. We don't have
-    # t_start here, so store I0_obs as-is and let caller track times.
+    # Observation times: I0_obs = t - t[0], and t_start is not known here,
+    # so the result stores I0_obs and the caller adds t_start.
 
     # Build arviz InferenceData
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     param_names = ['dalpha_dT', 'alpha0', 'trend', 'log_sigma_extra', 'H0']
     var_dict = {}
     for k, name in enumerate(param_names):
@@ -2882,7 +2906,7 @@ def fit_bayesian_level(
 #    annual resolution -- dt = 1 yr per step, no monthly grid needed),
 #    so H0 means "the level immediately before the first annual
 #    increment" and a small, honestly-stated prior on it is actually
-#    appropriate (corr(b, H0) drops to ~0.4, and b becomes insensitive
+#    appropriate (corr(b, H0) drops to about +0.1, and b becomes insensitive
 #    to prior_H0_sigma across at least 0.5-20 mm).
 #
 # 2. Independent-per-point likelihood on a cumulative record.
@@ -2907,14 +2931,15 @@ def fit_bayesian_level(
 # the two differ by ~6 months of phase (mid-year-to-mid-year vs.
 # calendar-year averaging) and that alone shifts b by several percent.
 #
-# Requires the fit window's FIRST point to be the record's baseline/
-# anchor year (true for GlaMBIE glaciers: BASELINE_YEAR=2000.0 and the
-# first GlaMBIE point is 2000.5). The forward-only (one-directional)
-# covariance construction below is only valid for that anchor=0 case;
-# it does NOT generalise to an interior anchor without rebuilding the
-# covariance bidirectionally (see component_greenland_robust_se.py's
-# general form) -- do not reuse this function for a component whose
-# fit window does not start at its own baseline year.
+# Requires the record's cumulative error to start at the fit window's
+# FIRST point: the levels are the running sum of the fitted annual
+# increments (true for GlaMBIE from 2000 and for the IMBIE-3 annual
+# increments from 1979). This is the record's own anchor, not the
+# projection baseline: H0 absorbs the level, and projections are rebased
+# afterwards. The forward-only (one-directional) covariance construction
+# below is only valid for that anchor=0 case; it does NOT generalise to a
+# record anchored in its interior without rebuilding the covariance
+# bidirectionally (see component_greenland_robust_se.py's general form).
 #
 # A model-inadequacy term (sigma_extra), if fit, must be added to the
 # native per-year rate variance BEFORE cumulation (v[i] += sigma_extra^2
@@ -2922,9 +2947,9 @@ def fit_bayesian_level(
 # at each point -- the latter would reintroduce an uncorrelated-noise
 # assumption on top of a correlated record. Because this requires
 # rebuilding the Cholesky factorization every MCMC step, fit_sigma_extra
-# defaults to False, matching the choice already validated for the
-# rate-space fit (chi2/dof = 1.02 with no sigma_extra -- no excess
-# scatter to measure).
+# defaults to False. The production glacier and IMBIE-3 fits pass
+# fit_sigma_extra=True: against the reported errors alone their chi2/dof
+# is well above 1 (glacier about 4).
 # ====================================================================
 
 @dataclass
@@ -2970,10 +2995,10 @@ def _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
     ``prior_scales``, so priors read the same regardless of n_phys.
 
     ``prior_b_mean`` defaults to 0 (the original zero-centred HalfNormal,
-    ``b >= 0`` enforced below regardless of the mean). Passing a nonzero
+    ``b >= 0`` enforced below unless ``symmetric_b``). Passing a nonzero
     mean (e.g. a published literature estimate) turns this into a
-    Normal(mean, scale_b) truncated at b >= 0 -- still a physically
-    motivated non-negativity bound, not a symmetric two-sided prior.
+    Normal(mean, scale_b) truncated at b >= 0, or an untruncated
+    Normal(mean, scale_b) when ``symmetric_b`` is True.
     """
     if n_phys == 3:
         a, b, c = phys
@@ -3138,7 +3163,7 @@ def fit_bayesian_level_annual_correlated(
     prior_b_mean : float
         Normal prior mean for b (m/yr/degC), default 0.0 (the original
         zero-centred HalfNormal shrinkage-to-zero prior; b >= 0 is
-        enforced as a hard bound regardless of this value). Passing a
+        enforced as a hard bound unless ``symmetric_b``). Passing a
         nonzero value (e.g. a published estimate) centres the prior
         there instead -- if doing so, do not also cite that same source
         as independent corroboration that the posterior falls "inside"
@@ -3163,8 +3188,8 @@ def fit_bayesian_level_annual_correlated(
         still holds [a, b, c]; the T_eq0 draws are in
         ``design_info['T_eq0_samples']``.
     fit_sigma_extra : bool
-        Default False, matching the validated rate-space choice (no
-        excess scatter beyond the reported GlaMBIE sigmas). If True,
+        Default False (reported errors only). The production glacier and
+        IMBIE-3 fits pass True. If True,
         the covariance is rebuilt (new Cholesky) every MCMC step --
         negligible cost at n ~ 20-30 but does slow sampling somewhat.
     fit_ar1 : bool
@@ -3219,7 +3244,8 @@ def fit_bayesian_level_annual_correlated(
         a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
                        if symmetric_a else
                        f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
-        b_prior_str = (f"b~N(0,{prior_scale_b*1e3:.2f} mm/yr/°C)"
+        # The sampled b prior is centred at prior_b_mean in every case (AN-12)
+        b_prior_str = (f"b~N({prior_b_mean*1e3:.2f},{prior_scale_b*1e3:.2f} mm/yr/°C)"
                        if symmetric_b else
                        f"b~N({prior_b_mean*1e3:.2f},{prior_scale_b*1e3:.1f} mm/yr/°C) truncated b>=0"
                        if prior_b_mean != 0 else
@@ -3785,7 +3811,7 @@ def fit_bayesian_rate_linear(
 
     # ---- arviz trace ----
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     param_names = (['dalpha_dT'] if n_phys == 3 else []) + ['alpha0', 'trend']
     if fit_sigma_extra:
         param_names = param_names + ['log_sigma_extra']
@@ -3877,7 +3903,7 @@ class BayesianStateLevelResult:
     state_variable_mean: np.ndarray     # S(t) at posterior-mean τ (n_monthly,)
     r2: float                            # R² against observed GMSL
     residuals: np.ndarray                # posterior-mean residuals (m)
-    time: np.ndarray                     # observation times (decimal year)
+    time: np.ndarray                     # obs times relative to time_monthly[0] (yr)
     H_obs: np.ndarray                    # observed GMSL (m)
     H_model_mean: np.ndarray             # posterior-mean predicted GMSL (m)
     sigma_obs: np.ndarray                # σ_obs(t) excl σ_extra (m)
@@ -3900,8 +3926,9 @@ def solve_state_ode(
 
         S(t+dt) = T_avg + (S(t) - T_avg) · exp(-dt/τ)
 
-    This is exact for linear interpolation of T between grid points
-    and avoids numerical ODE solver overhead.
+    This is exact when T is constant over each interval. For T varying
+    linearly between grid points it is a close approximation (the error
+    is small for dt << τ), and it avoids numerical ODE solver overhead.
 
     Parameters
     ----------
@@ -3946,6 +3973,7 @@ def build_state_level_design_vectors(
     time_monthly: np.ndarray,
     obs_times: np.ndarray,
     tau: float,
+    S0: Optional[float] = None,
 ) -> dict:
     """Build design vectors for the rate-and-state level-space model.
 
@@ -3966,6 +3994,8 @@ def build_state_level_design_vectors(
         Annual observation times (decimal year).
     tau : float
         Relaxation time in years for the state variable ODE.
+    S0 : float or None
+        Initial state at ``time_monthly[0]`` (see ``solve_state_ode``).
 
     Returns
     -------
@@ -3983,7 +4013,7 @@ def build_state_level_design_vectors(
     n = len(T)
 
     # Solve state ODE
-    S = solve_state_ode(T, t, tau)
+    S = solve_state_ode(T, t, tau, S0=S0)
 
     # Disequilibrium: S - T
     diseq = S - T
@@ -4083,6 +4113,18 @@ def _state_level_log_prior(theta, prior_scales, H0_prior_mean):
     return lp
 
 
+def _spinup_state(T_spinup, time_spinup, T_first, time_first, tau):
+    """State S at ``time_first`` after spinning up from the start of
+    ``T_spinup`` (in equilibrium there), or None when no spin-up record is
+    given. The projections (slr_projections.project_gmsl_state_ensemble)
+    spin S up from the start of the historical record the same way."""
+    if T_spinup is None or len(T_spinup) == 0:
+        return None
+    S = solve_state_ode(np.append(T_spinup, T_first),
+                        np.append(time_spinup, time_first), tau)
+    return S[-1]
+
+
 def _state_level_log_prob(
     theta,
     T_monthly, time_monthly, obs_idx,
@@ -4090,7 +4132,8 @@ def _state_level_log_prob(
     H_obs, sigma_obs_fixed,
     prior_scales, H0_prior_mean,
     rate_prior=None, idx_eval=None, dTdt_end=0.0,
-    rate_prior_cov_inv=None,
+    rate_prior_cov_inv=None, T_end=None,
+    T_spinup=None, time_spinup=None,
 ):
     """Log-posterior for the rate-and-state level-space model.
 
@@ -4128,6 +4171,14 @@ def _state_level_log_prob(
     rate_prior_cov_inv : (2, 2) array or None
         Pre-computed inverse of ``rate_prior.rate_accel_cov``.
         Avoids redundant matrix inversion at every MCMC step.
+    T_end : float or None
+        Temperature at the rate-prior epoch. None uses the single monthly
+        value ``T_monthly[idx_eval]``; ``fit_bayesian_state_level`` passes
+        the value of the same ±5-yr linear fit that gives ``dTdt_end``.
+    T_spinup, time_spinup : arrays or None
+        Monthly temperature before ``time_monthly[0]``, used to spin up S
+        (see ``_spinup_state``). None starts S in equilibrium at
+        ``time_monthly[0]``.
     """
     # Prior
     lp = _state_level_log_prior(theta, prior_scales, H0_prior_mean)
@@ -4139,7 +4190,8 @@ def _state_level_log_prob(
     sigma_extra = np.exp(log_sigma_extra)
 
     # Solve state ODE on monthly grid (cost: O(n_monthly))
-    S = solve_state_ode(T_monthly, time_monthly, tau)
+    S0 = _spinup_state(T_spinup, time_spinup, T_monthly[0], time_monthly[0], tau)
+    S = solve_state_ode(T_monthly, time_monthly, tau, S0=S0)
     diseq = S - T_monthly
 
     # Compute I_S = ∫(S - T) dτ on monthly grid, then extract at obs times
@@ -4164,7 +4216,8 @@ def _state_level_log_prob(
 
     # Satellite-era rate/accel prior
     if rate_prior is not None and idx_eval is not None:
-        T_end = T_monthly[idx_eval]
+        if T_end is None:
+            T_end = T_monthly[idx_eval]
         S_end = S[idx_eval]
         # rate(t) = a·T² + b·T + c + d·(S − T)
         rate_model = a * T_end**2 + b * T_end + c + d * (S_end - T_end)
@@ -4209,6 +4262,8 @@ def fit_bayesian_state_level(
     init_from_level: Optional['BayesianLevelResult'] = None,
     init_order: int = 2,
     rate_prior: Optional['SatelliteEraQuadraticResult'] = None,
+    T_spinup: Optional[np.ndarray] = None,
+    time_spinup: Optional[np.ndarray] = None,
 ) -> BayesianStateLevelResult:
     """Bayesian rate-and-state level-space calibration.
 
@@ -4255,7 +4310,14 @@ def fit_bayesian_state_level(
         and lets the MCMC decide whether a, d, or both are needed.
     rate_prior : SatelliteEraQuadraticResult or None
         If provided, adds a bivariate Gaussian penalty on the
-        model-implied (rate, accel) at end of record.
+        model-implied (rate, accel) at end of record. The model rate is
+        evaluated at the temperature and trend of a ±5-yr linear fit to
+        T around ``rate_prior.eval_time`` (not a single monthly value).
+    T_spinup, time_spinup : arrays or None
+        Monthly temperature before ``time_monthly[0]`` (e.g. Berkeley Earth
+        from 1850). When given, S(t) is spun up from the start of this
+        record for every τ, as in ``project_gmsl_state_ensemble``; when
+        None, S starts in equilibrium with ``T_monthly[0]``.
 
     Returns
     -------
@@ -4302,6 +4364,7 @@ def fit_bayesian_state_level(
     # record.
     idx_eval_rp = None
     dTdt_end_rp = 0.0
+    T_end_rp = None
     if rate_prior is not None:
         idx_eval_rp = int(np.argmin(
             np.abs(time_monthly - rate_prior.eval_time)))
@@ -4309,9 +4372,12 @@ def fit_bayesian_state_level(
         dt_window = 5.0
         mask_w = ((time_monthly >= rate_prior.eval_time - dt_window) &
                   (time_monthly <= rate_prior.eval_time + dt_window))
+        # T and dT/dt at eval_time both come from this fit (IN-17): a
+        # single month's T can sit ~0.1 °C off the local trend.
         if mask_w.sum() >= 12:
-            dTdt_end_rp = np.polyfit(
-                time_monthly[mask_w], T_monthly[mask_w], 1)[0]
+            _fit = np.polyfit(time_monthly[mask_w], T_monthly[mask_w], 1)
+            dTdt_end_rp = _fit[0]
+            T_end_rp = float(np.polyval(_fit, rate_prior.eval_time))
         else:
             warnings.warn(
                 f"Only {mask_w.sum()} months in ±{dt_window} yr "
@@ -4321,15 +4387,18 @@ def fit_bayesian_state_level(
                 (time_monthly >= rate_prior.eval_time - 2.0) &
                 (time_monthly <= rate_prior.eval_time + 2.0))
             if mask_narrow.sum() >= 3:
-                dTdt_end_rp = np.polyfit(
-                    time_monthly[mask_narrow],
-                    T_monthly[mask_narrow], 1)[0]
+                _fit = np.polyfit(time_monthly[mask_narrow],
+                                  T_monthly[mask_narrow], 1)
+                dTdt_end_rp = _fit[0]
+                T_end_rp = float(np.polyval(_fit, rate_prior.eval_time))
         if progress:
+            _T_end_print = (T_monthly[idx_eval_rp] if T_end_rp is None
+                            else T_end_rp)
             print(f"  Rate prior: rate={rate_prior.rate*1e3:.2f} "
                   f"± {rate_prior.rate_se*1e3:.2f} mm/yr, "
                   f"accel={rate_prior.accel*1e6:.2f} "
                   f"± {rate_prior.accel_se*1e6:.2f} μm/yr², "
-                  f"T_end={T_monthly[idx_eval_rp]:.3f} °C, "
+                  f"T_end={_T_end_print:.3f} °C (±5-yr fit), "
                   f"dT/dt={dTdt_end_rp*1e3:.2f} m°C/yr")
 
     tau_init = np.exp(prior_log_tau_mean)
@@ -4371,6 +4440,8 @@ def fit_bayesian_state_level(
             T_monthly, time_monthly,
             time_monthly[obs_idx],
             tau_init,
+            S0=_spinup_state(T_spinup, time_spinup, T_monthly[0],
+                             time_monthly[0], tau_init),
         )
         X = np.column_stack([
             dv['I2_obs'], dv['I1_obs'], dv['I0_obs'],
@@ -4464,7 +4535,10 @@ def fit_bayesian_state_level(
         kwargs={'rate_prior': rate_prior,
                 'idx_eval': idx_eval_rp,
                 'dTdt_end': dTdt_end_rp,
-                'rate_prior_cov_inv': _rp_cov_inv},
+                'rate_prior_cov_inv': _rp_cov_inv,
+                'T_end': T_end_rp,
+                'T_spinup': T_spinup,
+                'time_spinup': time_spinup},
     )
     # Seed emcee's proposal stream too (see fit_bayesian_rate_linear).
     if seed is not None:
@@ -4488,13 +4562,16 @@ def fit_bayesian_state_level(
 
     # State variable at posterior-mean τ
     tau_mean = tau_samples.mean()
-    S_mean = solve_state_ode(T_monthly, time_monthly, tau_mean)
+    S0_mean = _spinup_state(T_spinup, time_spinup, T_monthly[0],
+                            time_monthly[0], tau_mean)
+    S_mean = solve_state_ode(T_monthly, time_monthly, tau_mean, S0=S0_mean)
 
     # Posterior-mean prediction
     dv_mean = build_state_level_design_vectors(
         T_monthly, time_monthly,
         time_monthly[obs_idx],
         tau_mean,
+        S0=S0_mean,
     )
     H_model_mean = (phys_mean[0] * dv_mean['I2_obs']
                     + phys_mean[1] * dv_mean['I1_obs']
@@ -4506,7 +4583,7 @@ def fit_bayesian_state_level(
 
     # Build arviz InferenceData
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin, flat=False)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     param_names = ['dalpha_dT', 'alpha0', 'trend', 'd_diseq',
                    'log_tau', 'log_sigma_extra', 'H0']
     var_dict = {}
@@ -4515,6 +4592,13 @@ def fit_bayesian_state_level(
 
     trace = az.from_dict(var_dict)
     conv = check_convergence(trace, quiet=(not progress))
+    # emcee integrated autocorrelation time over all walkers; emcee's
+    # guidance is a post-burn-in chain of at least ~50 tau
+    autocorr = np.asarray(sampler.get_autocorr_time(discard=n_burnin, quiet=True),
+                          float)
+    conv['autocorr_time'] = dict(zip(param_names, autocorr.tolist()))
+    conv['autocorr_ok'] = bool(n_samples >= 50 * np.max(autocorr)
+                               and n_burnin >= 5 * np.max(autocorr))
 
     diag = {
         'acceptance_fraction': sampler.acceptance_fraction.mean(),
@@ -4526,6 +4610,10 @@ def fit_bayesian_state_level(
     }
 
     if progress:
+        print(f"  Max autocorrelation time {np.max(autocorr):.1f} steps "
+              f"(chain {n_samples}, burn-in {n_burnin})"
+              + ('' if conv['autocorr_ok'] else
+                 '  ** shorter than 50 tau chain / 5 tau burn-in **'))
         print(f"\n  Posterior mean: a={phys_mean[0]*1e3:.3f}, "
               f"b={phys_mean[1]*1e3:.3f}, c={phys_mean[2]*1e3:.3f}, "
               f"d={phys_mean[3]*1e3:.3f} mm/yr")
@@ -4550,7 +4638,7 @@ def fit_bayesian_state_level(
         state_variable_mean=S_mean,
         r2=r2,
         residuals=resid,
-        time=I0_obs,
+        time=I0_obs,    # relative time (I0); caller adds time_monthly[0]
         H_obs=H_obs,
         H_model_mean=H_model_mean,
         sigma_obs=sigma_obs,
@@ -4600,8 +4688,9 @@ def solve_twolayer_ode(
         dS_u/dt = (T(t) − S_u) / τ_u
         dS_d/dt = (S_u  − S_d) / τ_d
 
-    Solved analytically with the exponential integrator, treating the
-    forcing as piecewise-linear over each time step.
+    Solved with the exponential integrator, holding the forcing of each
+    layer constant over a step at the mean of its endpoint values (exact
+    for piecewise-constant forcing; close to exact for dt << τ).
 
     Parameters
     ----------
@@ -4994,6 +5083,12 @@ def fit_bayesian_thermosteric(
     -------
     BayesianThermostericResult
     """
+    warnings.warn(
+        "fit_bayesian_thermosteric is deprecated and has no pipeline "
+        "callers: the production ocean model is the two-layer fit in "
+        "component_ocean (solve_twolayer_ode); this one keeps the retired "
+        "drift term c.",
+        DeprecationWarning, stacklevel=2)
     if prior_log_tau_u_mean is None:
         prior_log_tau_u_mean = np.log(8.0)
     if prior_log_tau_d_mean is None:
@@ -5289,7 +5384,7 @@ def fit_bayesian_thermosteric(
 
     # ── arviz trace ──
     n_post = len(flat)
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
     var_dict = {}
     for k, name in enumerate(param_names):
@@ -5626,6 +5721,8 @@ def _greenland_log_prob(
             # For acceleration, need dT/dt — approximate from budget
             # rate_accel. Use the bivariate penalty on rate only
             # (accel requires dT/dt which we store in the budget).
+            # Legacy: this scores the model acceleration as 0, not a
+            # model-implied value (fit_bayesian_greenland has no callers)
             lp_ra = _rate_accel_prior_logp(
                 rate_model_b, 0.0, budget.rate_accel)
             if not np.isfinite(lp_ra):
@@ -5770,6 +5867,11 @@ def fit_bayesian_greenland(
     -------
     BayesianGreenlandResult
     """
+    warnings.warn(
+        "fit_bayesian_greenland is deprecated and has no pipeline callers: "
+        "Greenland SMB uses the MAR emulator plus drift state and discharge"
+        " the analytic increment fit (component_greenland).",
+        DeprecationWarning, stacklevel=2)
     if prior_log_tau_mean is None:
         prior_log_tau_mean = np.log(20.0)
 
@@ -6069,7 +6171,7 @@ def fit_bayesian_greenland(
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else 0.0
 
     # ── arviz trace ──
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
     var_dict = {}
     for k, name in enumerate(param_names):
@@ -6285,7 +6387,10 @@ def _greenland_joint_log_prob(
         # τ ~ LogNormal(μ, σ)
         mu_lt = prior_scales[4]
         sig_lt = prior_scales[5]
-        lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+        # log_tau is the sampled variable, so a LogNormal prior on tau is a
+        # Normal on log_tau with no Jacobian term (the former '- log_tau'
+        # lowered the prior median of tau by exp(-sig_lt^2))
+        lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2
 
     # D₀ ~ Normal(0, σ)
     sig_D0 = prior_scales[6]
@@ -6446,6 +6551,11 @@ def fit_bayesian_greenland_joint(
         Temperature trend (°C/yr) at the budget evaluation time.
         Used to compute model acceleration.
     """
+    warnings.warn(
+        "fit_bayesian_greenland_joint is deprecated and has no pipeline "
+        "callers: Greenland SMB uses the MAR emulator plus drift state and "
+        "discharge the analytic increment fit (component_greenland).",
+        DeprecationWarning, stacklevel=2)
     use_ocean = T_ocean_monthly is not None
     if prior_log_tau_mean is None:
         prior_log_tau_mean = np.log(20.0)
@@ -6759,7 +6869,7 @@ def fit_bayesian_greenland_joint(
         r2_total = np.nan
 
     # ── Convergence diagnostics ──
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
     var_dict = {}
     for k, name in enumerate(param_names):
@@ -6853,10 +6963,14 @@ def _cumulate(rate, sigma, times, bl_window):
     dt = np.diff(times, prepend=times[0] - 1)
     cum = np.cumsum(rate * dt)
 
-    # Rebase level: subtract value at baseline midpoint
+    # Rebase level: subtract value at baseline midpoint. With mid-year
+    # labels the midpoint of (1995, 2005) falls between 1999.5 and 2000.5;
+    # the tie goes to the earlier point (1999.5), stated explicitly here
+    # rather than left to argmin (GR-19). Zeroing at 2000.0 instead would
+    # need interpolation and would change the stored Greenland observations.
     if bl_mask.sum() > 0:
-        bl_mid_idx = np.argmin(np.abs(
-            times - np.mean(bl_window)))
+        _d = np.abs(times - np.mean(bl_window))
+        bl_mid_idx = int(np.flatnonzero(_d <= _d.min() + 1e-9)[0])
         cum = cum - cum[bl_mid_idx]
 
         # Bidirectional uncertainty: cumulate outward from baseline midpoint
@@ -7063,7 +7177,10 @@ def prepare_mouginot_components(
 
     Returns
     -------
-    dict with same keys as prepare_greenland_components.
+    dict with same keys as prepare_greenland_components. The arrays are
+    restricted to ``start_year``-``end_year``, but ``'df'`` is the full,
+    unmasked input DataFrame (GR-30); index it with the returned times, not
+    by position.
     """
     mou = mouginot_df.copy()
     years = mou['decimal_year'].values.astype(float)
@@ -7238,7 +7355,9 @@ def _greenland_discharge_log_prob(
 
     mu_lt = prior_scales[2]
     sig_lt = prior_scales[3]
-    lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2 - log_tau
+    # Normal on the sampled log_tau; no Jacobian term (see
+    # _greenland_joint_log_prob)
+    lp += -0.5 * ((log_tau - mu_lt) / sig_lt) ** 2
 
     sig_D0 = prior_scales[4]
     lp += -0.5 * (D0 / sig_D0) ** 2
@@ -7318,6 +7437,11 @@ def fit_bayesian_greenland_discharge(
     T_ocean_monthly, time_ocean_monthly : (n,)
         Monthly subsurface ocean temperature (°C).
     """
+    warnings.warn(
+        "fit_bayesian_greenland_discharge is deprecated and has no pipeline"
+        " callers: the Greenland discharge posterior is the analytic "
+        "increment fit in component_greenland.",
+        DeprecationWarning, stacklevel=2)
     if prior_log_tau_mean is None:
         prior_log_tau_mean = np.log(10.0)
 
@@ -7500,7 +7624,7 @@ def fit_bayesian_greenland_discharge(
         r2_total = np.nan
 
     # ── Convergence diagnostics ──
-    n_chains_arviz = min(4, n_walkers)
+    n_chains_arviz = n_walkers          # every walker, so R-hat and ESS see all of them
     chain_full = sampler.get_chain(discard=n_burnin, thin=thin)
     var_dict = {}
     for k, name in enumerate(param_names):

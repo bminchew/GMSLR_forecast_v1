@@ -13,8 +13,12 @@ positive for sea-level rise, with a the quadratic and b the linear term,
 
 so b_gris = -b1 / 362.5 and a_gris = -b2 / 362.5 for the module's mass-gain
 coefficients (b1, b2) in Gt/yr.  T (dT in the module) is the GMST anomaly relative to
-1995-2005 (11-yr centred mean).  The member draws (seed 600) and the anchor
-draws (seed 602) are those of component_greenland.ipynb.
+1995-2005 (11-yr centred mean).  The member draws (seed 600) are those of
+component_greenland.ipynb.  The hindcast figure uses a fixed anchor, the
+observed 1995-2005 mean with sd M0_SIGMA (draws seed 602), as before the drift
+state was adopted; the production projections instead take each member's
+level and drift path from smb_state.fit_drift_state, which this figure leaves
+out (as its caption says).
 
 Usage:  python scripts/plot_supp_greenland_smb_emulator.py
 """
@@ -40,7 +44,7 @@ FIG = ROOT / 'figures'
 H5 = ROOT / 'data/processed/slr_processed_data.h5'
 GT = 362.5                                    # Gt per mm SLE
 from slr_forecast.config import N_SAMPLES as N   # members, as in the notebook
-M0_SIGMA = 57.0                               # Gt/yr, as in the notebook
+M0_SIGMA = 57.0                               # Gt/yr, sd of the fixed anchor (hindcast only)
 SCEN_LABEL = {'ssp126': 'SSP1-2.6', 'SSP1-2.6': 'SSP1-2.6', 'ssp245': 'SSP2-4.5',
               'ssp585': 'SSP5-8.5'}
 SEG_COLOR = {'history': '0.55', 'ssp126': SSP_COLORS['SSP1-2.6'],
@@ -289,7 +293,7 @@ def fig_hindcast(emu, rng):
     ax.plot(years, np.median(to_slr(forced), 0), color='#2E8B57', lw=1.2,
             label='Emulator forced response, median')
     ax.plot(mou_smb.index, to_slr(mou_smb.values), 'o', color='k', ms=3,
-            label=r'Mouginot et al. (2019), sets $c_{\mathrm{gris}}$')
+            label='Mouginot et al. (2019), sets the anchor')
     ax.plot(mank.index, to_slr(mank.values), 's', mfc='white', mec='0.25', mew=0.8, ms=3.5,
             label='Mankoff et al. (2021), withheld')
     ax.set_xlim(1970, years[-1] + 1)

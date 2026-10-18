@@ -2,9 +2,11 @@
 
 The MAR multi-GCM emulator (smb_emulator.py), driven by observed GMST, does
 not reproduce the multidecadal drift in observed SMB (Mouginot et al. 2019:
-about +80 Gt/yr above the emulator in 1972-85, about -107 Gt/yr below it in
-2010-18). This script treats that drift as a latent state and asks what the
-data say about it. Nothing here feeds the pipeline.
+about +81 Gt/yr above the median emulator in 1972-85 and about -106 Gt/yr
+below it in 2010-18, relative to 1995-2005; printed in step 1 as "Residual
+about the median emulator"). This script treats that drift as a latent state
+and asks what the data say about it. It runs as pipeline step smbstate, but
+nothing it computes feeds the projections (it writes one diagnostic figure).
 
 Model, for emulator member k (GCM and posterior draw of b1, b2), in Gt/yr:
 
@@ -35,8 +37,9 @@ Steps
          -(82 (M_k - M0_k) + sum_{2019}^{2100} delta_t) / 362.5  mm,
      split below into its permanent (M) and decaying (delta) parts.
   4. Out of sample: fit on 1972-2004 (GMST smoothed through 2004 only),
-     forecast 2005-2018, next to the production approach (constant M0 with
-     sd 57 and the MAR AR(1) weather noise).
+     forecast 2005-2018, next to the fixed-anchor approach used before the
+     drift state (constant M0 = the 1995-2004 mean, the years available to
+     the holdout fit, with sd 57 and the MAR AR(1) weather noise).
   5. Data checks: Mankoff et al. (2021) three-RCM mean SMB, 1986-2023 (it
      includes RACMO, so it is only a partial check), and the GRACE-minus-
      discharge implied SMB, 2003-2018 (biennial; the two rows per year, one
@@ -47,7 +50,7 @@ Steps
      (Otosaka et al. 2026, SMB anomaly; its SMB partition also comes from
      RCMs), neither used in the fit. Each is put on Mouginot's level by its
      mean offset over 2010-2018 (and, as a check, over the full overlap).
-     Compared with the production approach (M0 +/- 57 and MAR AR(1) noise).
+     Compared with the fixed-anchor approach (M0 +/- 57 and MAR AR(1) noise).
   8. Sensitivity of the production setup (component_greenland.ipynb, which
      uses smb_state.fit_drift_state with TAU_PRIOR, seed 610) to
      the tau prior: refit with the wide prior and shift the saved production
@@ -64,7 +67,8 @@ Steps
 Simplifications: hyperparameters are pooled on the median-emulator residual
 and reused for every member; the elevation feedback is left out of f_k
 (near zero before 2018) and its interaction with the state is ignored in
-step 3; the weather noise is unchanged from production.
+step 3; the weather noise in steps 4 and 7 is the member's sigma_e for the
+state model and the MAR AR(1) noise for the fixed anchor.
 
 Usage:  python scripts/smb_state_space_diagnostic.py
 """
@@ -84,7 +88,7 @@ from slr_forecast.readers.ice_sheets import read_mouginot2019_greenland
 from bayesian_models import prepare_mouginot_components
 from smb_state import TAU, SD_E, TAU_PRIOR, log_prior, kalman, grid_posterior, fit_drift_state
 
-N = 2000
+from slr_forecast.config import N_SAMPLES as N   # members, as in component_greenland
 GT_PER_MM = 362.5
 SPLICE, END = 2018, 2100
 M0_SIGMA = 57.0
@@ -137,7 +141,8 @@ def main():
         xs = S.smooth_observed(g.reindex(yy).values, yy, through)
         return pd.Series(xs, index=yy).reindex(years).values
 
-    # ── Emulator members, as in production (seeds 600, 602) ──
+    # ── Emulator members as in production (seed 600); fixed-anchor draws
+    # (seed 602) for the comparison with the approach before the drift state ──
     emu = S.fit_smb_emulator(N, seed=600)
     b1, b2 = emu['b1'], emu['b2']
     M0_draws = np.random.default_rng(602).normal(M0, M0_SIGMA, N)
@@ -195,7 +200,7 @@ def main():
     print(f'  delta_18 {fmt(a[:, 1])} Gt/yr (filtered means); drawn {fmt(d18)}; '
           f'filtered sd median {np.median(np.sqrt(P[:, 1, 1])):.0f}')
     print(f'  corr(M, delta_18) median {np.median(corr):.2f}; '
-          f'M + delta_18 {fmt(M_k + d18)} Gt/yr; production M0 {fmt(M0_draws)} Gt/yr')
+          f'M + delta_18 {fmt(M_k + d18)} Gt/yr; fixed-anchor M0 {fmt(M0_draws)} Gt/yr')
 
     # ── 3. Effect at 2100 ──
     n_f = END - SPLICE
@@ -242,10 +247,11 @@ def main():
     cum = lambda s: s.sum(axis=-1) / GT_PER_MM            # mm of mass gain over 2005-2018
     print(f'\nOut of sample 2005-2018 (fit on 1972-{HO}): tau {fmt(gph["tau"], gph["w"], ".1f")} yr, '
           f'sigma_d {fmt(gph["sd_d"], gph["w"])}, sigma_e {fmt(gph["sd_e"], gph["w"])} Gt/yr')
-    print(f'  mean SMB: observed {obs_fc.mean():.0f}; state {fmt(st.mean(1))}; production {fmt(pr.mean(1))} Gt/yr')
+    print(f'  mean SMB: observed {obs_fc.mean():.0f}; state {fmt(st.mean(1))}; '
+          f'fixed anchor (1995-{HO}) {fmt(pr.mean(1))} Gt/yr')
     print(f'  cumulative SMB 2005-2018 (mm SLE of mass gain): observed {cum(obs_fc):.1f}; '
-          f'state {fmt(cum(st), f=".1f")}; production {fmt(cum(pr), f=".1f")}')
-    for lab, s in (('state', st), ('production', pr)):
+          f'state {fmt(cum(st), f=".1f")}; fixed anchor {fmt(cum(pr), f=".1f")}')
+    for lab, s in (('state', st), ('fixed anchor', pr)):
         lo, hi = np.percentile(s, [5, 95], axis=0)
         print(f'  annual coverage of 90% band, {lab}: {np.mean((obs_fc >= lo) & (obs_fc <= hi)):.0%}; '
               f'percentile of observed cumulative {np.mean(cum(s) < cum(obs_fc)):.0%}')
@@ -302,7 +308,7 @@ def main():
         e = np.sort(ens); n_ = len(e)
         return np.mean(np.abs(e - y)) - np.sum((2 * np.arange(1, n_ + 1) - n_ - 1) * e) / n_ ** 2
     print('\nForecast 2019-2023 from the 2018 state (5-yr mean SMB, Gt/yr):')
-    print(f'  state model {fmt(st_f.mean(1))}; production {fmt(pr_f.mean(1))}; '
+    print(f'  state model {fmt(st_f.mean(1))}; fixed anchor {fmt(pr_f.mean(1))}; '
           f'emulator forced response (median) {np.median((M0_draws[:, None] + ff).mean(1)):.0f}')
     for lab, ser in (('Mankoff 3-RCM', pd.Series(mk['SMB'].values, index=yk)), ('IMBIE-3', im)):
         for win in ((2010, 2018), (1986, 2018)):
@@ -311,7 +317,7 @@ def main():
             off = (ser.loc[yy] - mou_s.loc[yy]).mean()
             obs5 = ser.loc[2019:2023].mean() - off
             row = f'  {lab:13s} aligned {win[0]}-{win[1]} (offset {off:+4.0f}): observed {obs5:4.0f};'
-            for nm, ens in (('state', st_f.mean(1)), ('production', pr_f.mean(1))):
+            for nm, ens in (('state', st_f.mean(1)), ('fixed anchor', pr_f.mean(1))):
                 row += (f'  {nm} pct {np.mean(ens < obs5):4.0%}, |median err| '
                         f'{abs(np.median(ens) - obs5):3.0f}, CRPS {crps(ens, obs5):3.0f}')
             print(row)
@@ -335,8 +341,25 @@ def main():
     with h5py.File(ROOT / 'data/processed/component_results.h5', 'r') as h:
         for ssp in SSPS:
             s_ = h[f'greenland/projections_smb/{ssp}/samples'][:, END - 1950] * 1000.0
+            if len(s_) != N:
+                raise ValueError(f'{len(s_)} stored members vs N = {N}; rerun component_greenland')
             prod[ssp], new[ssp] = s_, s_ + shift
             print(f'  {ssp} SMB at 2100: production {fmt(s_)} -> wide {fmt(s_ + shift)} mm')
+
+    # 2100 SMB with and without the drift state (Supplement: "widens its 90%
+    # interval").  The production members (seed 610, as in the notebook) are
+    # moved to the fixed anchor by removing their level and drift after the
+    # 2018 splice: + (82 (M - M0_k) + sum_{2019}^{2100} delta) / 362.5 mm,
+    # with M0_k ~ N(M0, 57).  Weather noise and feedback are left as in
+    # production (simplifications above).
+    pf = fits['production']
+    to_fixed = (after.sum() * (pf['M'] - M0_draws) + pf['delta'][:, after].sum(axis=1)) / GT_PER_MM
+    print('\n2100 SMB contribution (mm SLE), drift state (production) vs fixed anchor:')
+    for ssp in SSPS:
+        s_, f_ = prod[ssp], prod[ssp] + to_fixed
+        w_s, w_f = np.ptp(np.percentile(s_, [5, 95])), np.ptp(np.percentile(f_, [5, 95]))
+        print(f'  {ssp}: median {np.median(s_):.1f} vs {np.median(f_):.1f}; 90% width '
+              f'{w_s:.1f} vs {w_f:.1f} (drift state {w_s - w_f:+.1f})')
 
     # ── 9. Comparison of tau priors ──
     gw = grid_posterior(r_med, sig_m, 'wide')
@@ -398,7 +421,7 @@ def main():
     ax.legend(fontsize=8); ax.grid(alpha=0.2)
 
     ax = axes[0, 1]
-    for lab, s, col in (('state model', st, '#CC79A7'), ('production (M0 +/- 57)', pr, '0.4')):
+    for lab, s, col in (('state model', st, '#CC79A7'), ('fixed anchor (M0 +/- 57)', pr, '0.4')):
         c_ = np.cumsum(s, axis=1) / GT_PER_MM
         lo, md_, hi = np.percentile(c_, [5, 50, 95], axis=0)
         ax.plot(fc_yrs, md_, color=col, lw=2, label=lab)
