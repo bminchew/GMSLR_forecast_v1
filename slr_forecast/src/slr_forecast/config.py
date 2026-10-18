@@ -30,6 +30,19 @@ same 1995-2005 window as literals (e.g. ``reference_period=(1995, 2006)``
 with an exclusive end)."""
 
 # ---------------------------------------------------------------------------
+# Thermosteric equation of state
+# ---------------------------------------------------------------------------
+KAPPA_EOS: float = 0.24689
+"""Equation-of-state coefficient (1/m) tying the thermosteric quadratic
+coefficient to the linear one in the two-layer model: a_u = KAPPA_EOS * b_u**2
+(a_u in m/C^2, b_u in m/C).  KAPPA_EOS = 1/2 int alpha' g^2 dz / (int alpha_0 g dz)^2
+over 0-700 m, with TEOS-10 alpha and d(alpha)/d(CT) from the EN4.2.2 1995-2005
+mean temperature and salinity and a uniform profile shape g.  Printed by
+scripts/thermosteric_eos_coefficient.py.  a_u is not fitted (decision D5,
+2026-10-18): the NOAA records after 1990 leave a free a_u unconstrained.
+Imported by component_ocean.ipynb and scripts/ocean_early_holdout.py."""
+
+# ---------------------------------------------------------------------------
 # Monte Carlo / sampling
 # ---------------------------------------------------------------------------
 N_SAMPLES: int = 2000

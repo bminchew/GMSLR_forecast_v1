@@ -59,7 +59,7 @@ import emcee
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
-from slr_forecast.config import SEEDS, Z_90
+from slr_forecast.config import SEEDS, Z_90, KAPPA_EOS
 
 H5_DATA = ROOT / 'data/processed/slr_processed_data.h5'
 H5_OUT = ROOT / 'data/processed/component_results.h5'
@@ -158,8 +158,9 @@ class LogProb:
         self.y2000_dm = noaa_2000_corr - noaa_2000_corr.mean()
 
     def __call__(self, theta):
-        a, b_u, b_d, log_tau_u, log_sigma_extra = theta
-        if a < 0 or b_u < 0 or b_d < 0:
+        b_u, b_d, log_tau_u, log_sigma_extra = theta
+        a = KAPPA_EOS * b_u**2          # fixed by the equation of state (D5)
+        if b_u < 0 or b_d < 0:
             return -np.inf
         tau_u = np.exp(log_tau_u)
         if tau_u < 0.1 or tau_u > 500:
@@ -195,7 +196,7 @@ def initial_theta(mask700):
     X = np.column_stack([s**2, s, Sd[idx2000]])
     b2000 = np.linalg.lstsq(X - X.mean(0), noaa_2000_corr - noaa_2000_corr.mean(),
                             rcond=None)[0]
-    return np.array([max(b700[0], 1e-6), max(b700[1], 1e-6), max(b2000[2], 1e-6),
+    return np.array([max(b700[1], 1e-6), max(b2000[2], 1e-6),
                      np.log(8.0), np.log(0.001)])
 
 
@@ -204,16 +205,19 @@ def run_fit(label):
     logp = LogProb(mask)
     theta0 = initial_theta(mask)
     rng = np.random.default_rng(42)
-    pos0 = theta0 + 1e-4 * rng.standard_normal((N_WALKERS, 5))
-    pos0[:, :3] = np.abs(pos0[:, :3])
+    pos0 = theta0 + 1e-4 * rng.standard_normal((N_WALKERS, 4))
+    pos0[:, :2] = np.abs(pos0[:, :2])
     np.random.seed(SEEDS['bayesian'])
     t0 = time.time()
-    sampler = emcee.EnsembleSampler(N_WALKERS, 5, logp)
+    sampler = emcee.EnsembleSampler(N_WALKERS, 4, logp)
     state = sampler.run_mcmc(pos0, N_BURNIN)
     sampler.reset()
     sampler.run_mcmc(state, N_PRODUCTION)
     chain = sampler.get_chain()
     flat = sampler.get_chain(flat=True)
+    # Derived a as column 0, so flat[:, 0..4] = (a, b_u, b_d, log_tau_u,
+    # log_sigma_extra) as before D5.
+    flat = np.column_stack([KAPPA_EOS * flat[:, 0]**2, flat])
     tau_int = sampler.get_autocorr_time(quiet=True)
     n, m, _ = chain.shape
     W = chain.var(axis=0, ddof=1).mean(axis=0)
