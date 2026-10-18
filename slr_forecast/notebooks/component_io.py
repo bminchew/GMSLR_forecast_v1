@@ -366,6 +366,23 @@ def save_ocean_hybrid(
 # Glacier
 # =========================================================================
 
+def _fit_extra_posteriors(result):
+    """Nuisance posteriors of a fit_bayesian_level_annual_correlated result
+    that the manuscript quotes (sigma_extra, T_eq0), so they can be read back
+    and printed from the HDF5 (GL-2)."""
+    out = {}
+    sx = getattr(result, "sigma_extra_posterior", None)
+    if sx is not None and np.any(np.asarray(sx) != 0):
+        out["sigma_extra_posterior"] = np.asarray(sx)
+    info = getattr(result, "design_info", None) or {}
+    if info.get("T_eq0_samples") is not None:
+        out["T_eq0_posterior"] = np.asarray(info["T_eq0_samples"])
+    phi = getattr(result, "phi_posterior", None)
+    if phi is not None:
+        out["phi_posterior"] = np.asarray(phi)
+    return out or None
+
+
 def save_glacier(
     result_lin,
     obs_years, obs_H, obs_sigma,
@@ -389,6 +406,7 @@ def save_glacier(
         obs_sigma=obs_sigma,
         proj_dict=proj_dict,
         model_order=1,
+        extra_posteriors=_fit_extra_posteriors(result_lin),
         extra_metadata=meta,
         h5_path=h5_path,
     )
@@ -420,6 +438,7 @@ def save_eais(
         obs_sigma=obs_sigma,
         proj_dict=proj_dict,
         model_order=1,
+        extra_posteriors=_fit_extra_posteriors(result_lin),
         extra_metadata=meta,
         h5_path=h5_path,
     )
@@ -451,6 +470,7 @@ def save_apeninsula(
         obs_sigma=obs_sigma,
         proj_dict=proj_dict,
         model_order=1,
+        extra_posteriors=_fit_extra_posteriors(result_lin),
         extra_metadata=meta,
         h5_path=h5_path,
     )

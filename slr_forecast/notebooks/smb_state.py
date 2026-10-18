@@ -15,7 +15,9 @@ import numpy as np
 P_M = 2000.0**2                     # diffuse prior variance on M, (Gt/yr)^2
 TAU = np.geomspace(3.0, 150.0, 32)
 SD_D = np.linspace(0.0, 240.0, 41)
-SD_E = np.linspace(20.0, 250.0, 47)
+# sigma_eps grid starts at 0: the posterior mass rises toward the low end,
+# and a grid starting at 20 Gt/yr truncated its lower tail (GR-6)
+SD_E = np.linspace(0.0, 250.0, 51)
 
 
 # ── Priors on the grid ──

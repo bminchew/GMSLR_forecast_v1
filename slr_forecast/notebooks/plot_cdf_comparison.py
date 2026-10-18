@@ -55,7 +55,8 @@ TARGET_YEARS = [2050, 2100]
 # Rebase offset: IPCC is relative to 1995-2014 mean (~2005);
 # skew-normal fits in ipcc_distributions.h5 were rebased to 2000
 # using _GMSL_2000_TO_2005_MM = 10.7 mm (see precompute_ipcc_distributions.py).
-_IPCC_REBASE_MM = 10.7
+from component_analysis import ar6_baseline_offset_m
+_IPCC_REBASE_MM = ar6_baseline_offset_m(str(PROCESSED_DATA_DIR / "slr_processed_data.h5")) * 1000.0
 
 
 def load_raw_ipcc_quantiles(ssp_code):

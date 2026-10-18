@@ -59,19 +59,20 @@ try:
 except ImportError:
     M_TO_MM = 1000.0
 
-# IPCC AR6 projections are relative to the 1995-2014 mean (~2005).
-# If BASELINE_YEAR != 2005, we shift the *total* quantiles by the observed
-# GMSL difference (mm) between 2000 and 2005.
-# NASA altimetry: ~10.7 mm rise from 2000 to 2005.
+# IPCC AR6 projections are relative to the 1995-2014 mean. The *total*
+# quantiles are shifted to our baseline by the shared offset
+# (component_analysis.ar6_baseline_offset_m: NASA altimetry 1995-2014 mean
+# minus its value at the sample that defines our zero; SF-2; was a fixed
+# 10.7 mm before 2026-10-17).
 # That offset is the total's own rebase and is applied to "total" only.
 # Adding it to every component (as before 2026-10-14) put each component,
 # including TWS, ~10.7 mm too high. The AR6 component files are zero at
 # their 2005 node and carry no per-component 2000-2005 change, so the
 # components stay on the AR6 reference; for TWS this matches the
 # hindcast, which holds TWS at zero before 2003.
-_IPCC_NATIVE_BASELINE = 2005.0
-_GMSL_2000_TO_2005_MM = 10.7  # NASA satellite altimetry
-_IPCC_REBASE_MM = _GMSL_2000_TO_2005_MM if BASELINE_YEAR < _IPCC_NATIVE_BASELINE else 0.0
+from component_analysis import ar6_baseline_offset_m
+_IPCC_REBASE_MM = ar6_baseline_offset_m(
+    str(PROCESSED_DIR / "slr_processed_data.h5"), BASELINE_YEAR) * M_TO_MM
 _IPCC_REBASE_COMPONENTS = {"total"}
 
 SSP_TO_CODE = {

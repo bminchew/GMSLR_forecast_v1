@@ -31,6 +31,7 @@ ENTRIES=(
     "smbstate:scripts/smb_state_space_diagnostic.py:0"
     "eais:component_eais.ipynb:1200"
     "peninsula:component_apeninsula.ipynb:1200"
+    "pencurv:scripts/peninsula_curvature_check.py:0"
     "wais:component_wais.ipynb:1200"
     "ratestate:bayesian_ratestate.ipynb:5400"
     "summation:component_summation.ipynb:1200"

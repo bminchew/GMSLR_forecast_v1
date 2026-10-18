@@ -23,7 +23,8 @@ H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 
 HORIZONS = [2050, 2075, 2100, 2150]
 SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']
-WARMING_LABELS = {'SSP1-2.6': '2°C', 'SSP2-4.5': '3°C', 'SSP3-7.0': '4°C'}
+from slr_forecast.config import WARMING_C
+WARMING_LABELS = {s: f'{WARMING_C[s]} °C' for s in ('SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0')}
 COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
 COMP_LABELS = {
     'ocean': 'Thermosteric', 'glacier': 'Glaciers',

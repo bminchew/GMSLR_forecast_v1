@@ -61,7 +61,7 @@ def load():
 
     g = pd.read_csv(GLAMBIE)
     g = pd.DataFrame({'rate': -g['combined_gt'].values / GT_PER_MM,
-                      'sig_ind': g['combined_gt_errors'].values / GT_PER_MM,
+                      'sig_ind': g['combined_gt_errors'].values / 1.96 / GT_PER_MM,   # 95% half-widths -> 1 sigma
                       'sig_cor': 0.0,
                       'T': T.reindex(g['start_dates'].astype(int)).values},
                      index=g['start_dates'].astype(int).values)

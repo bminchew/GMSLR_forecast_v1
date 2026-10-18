@@ -67,10 +67,9 @@ def ar6(ssp, comp, conf='medium_confidence', year=2100):
 def main():
     out = {}
 
-    # ── AR6 baseline offset (as component_forecast.ipynb) ──
-    fred = pd.read_hdf(H5_OBS, 'raw/df_frederikse')
-    ft, fv = fred['year'].values, fred['gmsl'].values
-    off = float(np.mean(fv[(ft >= 1995) & (ft <= 2014)]) - np.interp(BASELINE_YEAR, ft, fv))
+    # ── AR6 baseline offset (shared with component_forecast; SF-2) ──
+    from component_analysis import ar6_baseline_offset_m
+    off = ar6_baseline_offset_m(H5_OBS, BASELINE_YEAR)
     out['ar6_baseline_offset_m'] = off
     print(f'AR6 baseline (1995-2014 mean) minus 2000: {off * M_TO_MM:.1f} mm')
 
@@ -228,6 +227,33 @@ def main():
         lev, d = np.median(S[:, i15]), np.median(S[:, j21] - S[:, i15])
         out.setdefault('glacier_2015', {})[s] = dict(level_2015_mm=lev, change_2015_2100_mm=d)
         print(f'  {LABEL[s]}: 2015 level {lev:.1f}, 2015-2100 median {d:.0f}')
+
+    # ── Thermosteric fit: RMS residual and observed rise per record (Methods) ──
+    with h5py.File(H5, 'r') as hf:
+        g = hf['ocean/fit_diagnostic']
+        Ty = g['T_annual_years'][:]
+        print('\nThermosteric fit (mm): RMS residual | observed rise, first to last year')
+        for lab, yk, ok, mk in [('0-700 m', 'noaa_year', 'noaa_700_corrected_mm', 'H_upper_fit_mm'),
+                                ('0-2000 m', 'noaa_deep_year', 'noaa_2000_corrected_mm', 'H_total_fit_mm')]:
+            y, o, m = g[yk][:], g[ok][:], g[mk][:]
+            r = o - m[[int(np.argmin(np.abs(Ty - v))) for v in y]]
+            out[f'thermo_fit_{lab}'] = dict(rms_mm=float(np.sqrt(np.mean(r ** 2))),
+                                            rise_mm=float(o[-1] - o[0]))
+            print(f'  {lab} ({y[0]:.1f}-{y[-1]:.1f}): RMS {np.sqrt(np.mean(r ** 2)):.3f} | rise {o[-1] - o[0]:.1f}')
+
+    # ── Fitted nuisance parameters quoted in Methods (GL-2) ──
+    print('\nFitted error and balance terms (median [5th, 95th]):')
+    with h5py.File(H5, 'r') as hf:
+        for c, lab in [('glacier', 'sigma_gl,extra'), ('apeninsula', 'sigma_p,extra')]:
+            k = f'{c}/posteriors/sigma_extra_posterior'
+            if k in hf:
+                v = q(hf[k][:])
+                out[f'{c}_sigma_extra_mm_yr'] = [x * M_TO_MM for x in v]
+                print(f'  {lab} = {fmt(v, M_TO_MM)} mm/yr')
+        if 'glacier/posteriors/T_eq0_posterior' in hf:
+            v = q(hf['glacier/posteriors/T_eq0_posterior'][:])
+            out['glacier_T_eq0_C'] = v
+            print(f'  T_gl,eq = {fmt(v)} C (rel. 1995-2005)')
 
     # ── Antarctic Peninsula + EAIS (Results) ──
     print('\nAntarctic Peninsula + EAIS at 2100 (mm, rel. 2000):')

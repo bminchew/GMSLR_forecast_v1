@@ -82,6 +82,7 @@ T_annual = np.array([temp_monthly[yr_int == y].mean() for y in unique_yrs])
 T_annual_years = unique_yrs + 0.5
 
 d700 = pd.read_hdf(H5_DATA, 'harmonized/df_noaa_tsl_0_700m')
+d700 = d700[d700['decimal_year'].values <= T_annual_years[-1]]    # forcing coverage, as production (OC-2)
 noaa_year = d700['decimal_year'].values
 _mm = d700['tsl_mm'].values
 _bl = (noaa_year >= 1995.0) & (noaa_year <= 2006.0)
@@ -89,6 +90,7 @@ noaa_tsl_m = (_mm - _mm[_bl].mean()) / M_TO_MM
 noaa_tsl_se_m = d700['tsl_se_mm'].values / M_TO_MM
 
 d2000 = pd.read_hdf(H5_DATA, 'harmonized/df_noaa_tsl_0_2000m')
+d2000 = d2000[d2000['decimal_year'].values <= T_annual_years[-1]]
 noaa_deep_year = d2000['decimal_year'].values
 noaa_deep_m = (d2000['tsl_mm'].values - d2000['tsl_mm'].values[0]) / M_TO_MM
 noaa_deep_se_m = d2000['tsl_se_mm'].values / M_TO_MM
@@ -341,7 +343,12 @@ def report_and_save(full, hold):
         g.attrs['holdout_split'] = HOLDOUT_SPLIT
         for r in (full, hold):
             gg = g.create_group(r['label'])
-            thin = r['flat'][::max(1, r['flat'].shape[0] // 20000)]
+            # Random rows, not a fixed stride: the flat chain is step-major
+            # (row = step * n_walkers + walker), so a stride that is a
+            # multiple of the walker count keeps only a few walkers (OC-3)
+            _rng_thin = np.random.default_rng(4242)
+            _n_keep = min(20000, r['flat'].shape[0])
+            thin = r['flat'][np.sort(_rng_thin.choice(r['flat'].shape[0], _n_keep, replace=False))]
             gg.create_dataset('posterior_flat', data=thin, compression='gzip')
             gg.attrs['params'] = 'a, b_u, b_d (m units), log_tau_u, log_sigma_extra'
             H, sx, mt = out[r['label']]

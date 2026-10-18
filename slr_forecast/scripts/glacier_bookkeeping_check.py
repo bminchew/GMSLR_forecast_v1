@@ -35,7 +35,7 @@ def read(name):
     d = pd.read_csv(GL / f'{name}.csv')
     yr = d['start_dates'].astype(int).values
     rate = -d['combined_gt'].values / GT_PER_MM                 # mm/yr SLE, + = SLR
-    err = d['combined_gt_errors'].values / GT_PER_MM
+    err = d['combined_gt_errors'].values / 1.96 / GT_PER_MM     # 95% half-widths -> 1 sigma
     return pd.DataFrame({'rate': rate, 'err': err}, index=yr)
 
 

@@ -101,3 +101,27 @@ def test_level_fitter_reports_convergence():
         assert k in d
     assert np.isfinite(d['autocorr_time_max']) and d['autocorr_time_max'] > 0
     assert res.trace.posterior.sizes['chain'] == 16
+
+
+@pytest.mark.parametrize('region', ['east_antarctica', 'antarctic_peninsula', 'west_antarctica'])
+def test_imbie_annual_sigma_reproduces_cumulative(region):
+    """AN-3: the annual 1-sigma from imbie_annual_rates (RMS of the monthly
+    sigmas), accumulated over independent years, reproduces IMBIE-3's own
+    cumulative sigma at each year end."""
+    from slr_data_readers import read_imbie3
+    from component_analysis import imbie_annual_rates
+    path = os.path.join(ROOT, 'data', 'raw', 'ice_sheets', 'imbie2026',
+                        f'imbie3_{region}_mm_partitioned.csv')
+    if not os.path.exists(path):
+        pytest.skip('IMBIE-3 data not available')
+    df = read_imbie3(path, convert_to_meters=True)
+    yrs, _, sig = imbie_annual_rates(df)
+    t = df['decimal_year'].values
+    cum_sig = df['cumulative_mass_balance_sigma'].values
+    full = np.array([np.sum(np.floor(t) == y) == 12 for y in yrs])
+    end_sig = np.array([cum_sig[np.floor(t) == y][-1] for y in yrs])
+    pred = np.sqrt(np.cumsum(sig ** 2))
+    # compare over the leading run of complete years (record starts in January)
+    k = np.argmax(~full) if not full.all() else len(full)
+    assert k > 10
+    assert np.allclose(pred[:k], end_sig[:k], rtol=1e-3)

@@ -27,8 +27,13 @@ Data (rates, mm/yr SLE, all 19 RGI regions):
   (b) Zemp et al. (2019) 1962-2016 + GlaMBIE 2000-2023
 Zemp's geodetic error is fully correlated across years, so it also absorbs
 a constant offset between the datasets (in (b) it absorbs the +0.18 mm/yr
-overlap difference; the price is using 2000-2016 twice). Zemp's 95%
-intervals are converted to 1 sigma (slr_data_readers.read_zemp2019_global).
+overlap difference; the price is using 2000-2016 twice). Zemp's and
+GlaMBIE's 95% intervals are converted to 1 sigma, and the GlaMBIE block
+carries the production model-inadequacy term sigma_gl,extra (posterior
+median read from component_results.h5, written by component_glacier), as in
+the production glacier fit, so the two models are compared under the same
+error model. Before 2026-10-17 the GlaMBIE errors entered unconverted and
+without sigma_extra (GL-1).
 Hydrological-year regressors use 0.25 X(Y-1) + 0.75 X(Y).
 
 Inference: for each tau on a grid (3 to 3000 yr, plus the linear limit),
@@ -70,6 +75,15 @@ GLAMBIE = (ROOT / 'data/raw/glaciers/glambie/GlaMBIE_Data_DOI_10.5904_wgms-glamb
            'glambie_results_20240716/calendar_years/0_global.csv')
 OUT_FIG = ROOT / 'figures/diagnostics/glacier_delayed_response.png'
 GT_PER_MM = 362.5
+Z_95 = 1.96
+RESULTS_H5 = ROOT / 'data/processed/component_results.h5'
+
+
+def sigma_gl_extra_mm():
+    """Posterior median of the production sigma_gl,extra (mm/yr)."""
+    import h5py
+    with h5py.File(RESULTS_H5, 'r') as hf:
+        return float(np.median(hf['glacier/posteriors/sigma_extra_posterior'][:])) * 1000.0
 T0 = 1850
 TAUS = np.r_[np.geomspace(3.0, 3000.0, 60), np.inf]
 PRIOR_MEAN = np.array([0.61, 0.0])           # b (mm/yr/K), kappa (mm/yr)
@@ -135,7 +149,8 @@ def data(variant):
     nz = len(z)
     C = np.zeros((len(y), len(y)))
     C[:nz, :nz] = np.diag(z['sigma_ind'].values ** 2) + np.outer(z['sigma_cor'].values, z['sigma_cor'].values)
-    C[nz:, nz:] = np.diag((g['combined_gt_errors'].values / GT_PER_MM) ** 2)
+    C[nz:, nz:] = np.diag((g['combined_gt_errors'].values / Z_95 / GT_PER_MM) ** 2
+                          + sigma_gl_extra_mm() ** 2)
     return y, C, z.index.values, gy, nz
 
 

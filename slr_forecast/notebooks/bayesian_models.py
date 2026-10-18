@@ -2161,6 +2161,7 @@ def fit_satellite_era_quadratic(
     sigma_inflate: float = 1.0,
     meas_cov_path: Optional[str] = None,
     sigma_gia: float = 0.15e-3,
+    remove_seasonal: bool = True,
 ) -> SatelliteEraQuadraticResult:
     """Quadratic fit to a GMSL record with rigorous uncertainty.
 
@@ -2227,6 +2228,13 @@ def fit_satellite_era_quadratic(
         Default 0.15e-3 (= 0.15 mm/yr), from Caron et al. (2018).
         Only used when ``meas_cov_path`` is provided.  GIA does not
         contribute to acceleration uncertainty.
+    remove_seasonal : bool
+        Fit annual and semi-annual harmonics together with the quadratic
+        (as nuisance terms), as Nerem et al. (2022) and Hamlington et al.
+        (2024) do by removing the seasonal cycle first. Without them the
+        residual lag-1 correlation, and with it the serial-correlation
+        covariance, is dominated by the deterministic annual cycle (SF-4).
+        Only the three quadratic coefficients are returned.
 
     Returns
     -------
@@ -2259,8 +2267,14 @@ def fit_satellite_era_quadratic(
     # Centre time on t_start for numerical stability
     dt = t_fit - t_start
 
-    # Design matrix: [1, dt, dt²]
-    X = np.column_stack([np.ones_like(dt), dt, dt**2])
+    # Design matrix: [1, dt, dt²] (+ annual and semi-annual harmonics)
+    def _design(tt, d):
+        cols = [np.ones_like(d), d, d**2]
+        if remove_seasonal:
+            for k in (1, 2):
+                cols += [np.sin(2 * np.pi * k * tt), np.cos(2 * np.pi * k * tt)]
+        return np.column_stack(cols)
+    X = _design(t_fit, dt)
 
     # --- Point estimates: always OLS when meas_cov_path is given ---
     if meas_cov_path is not None or sigma is None:
@@ -2274,7 +2288,7 @@ def fit_satellite_era_quadratic(
         fit_result = model.fit()
         fit_method = 'WLS'
 
-    c0, c1, c2 = fit_result.params
+    c0, c1, c2 = fit_result.params[:3]
     r2 = fit_result.rsquared
 
     # Rate and acceleration at eval_time
@@ -2312,9 +2326,9 @@ def fit_satellite_era_quadratic(
         idx_cov = np.where(mask_cov)[0]
         C_meas = C_meas_full[np.ix_(idx_cov, idx_cov)]
         dt_c = t_c - t_start
-        X_c = np.column_stack([np.ones(len(dt_c)), dt_c, dt_c**2])
+        X_c = _design(t_c, dt_c)
         XtX_c_inv = np.linalg.inv(X_c.T @ X_c)
-        cov_beta_meas = XtX_c_inv @ (X_c.T @ C_meas @ X_c) @ XtX_c_inv
+        cov_beta_meas = (XtX_c_inv @ (X_c.T @ C_meas @ X_c) @ XtX_c_inv)[:3, :3]
 
         # Scale if fitting window extends beyond covariance span.
         # Anisotropic scaling: for h = c0 + c1*t + c2*t², the uncertainty
@@ -2335,8 +2349,8 @@ def fit_satellite_era_quadratic(
         # (2) Serial correlation (Maul & Martin 1993)
         resid = h_fit - X @ fit_result.params
         rho = np.corrcoef(resid[:-1], resid[1:])[0, 1]
-        sigma2_resid = np.sum(resid**2) / (len(t_fit) - 3)
-        XtX_inv = np.linalg.inv(X.T @ X)
+        sigma2_resid = np.sum(resid**2) / (len(t_fit) - X.shape[1])
+        XtX_inv = np.linalg.inv(X.T @ X)[:3, :3]
         inflate = (1.0 + rho) / (1.0 - rho)
         cov_beta_serial = inflate * sigma2_resid * XtX_inv
         ra_cov_serial = J @ cov_beta_serial @ J.T
@@ -2358,13 +2372,13 @@ def fit_satellite_era_quadratic(
         maxlags = int(np.ceil(np.sqrt(len(t_fit))))
         fit_result_hac = model.fit(
             cov_type='HAC', cov_kwds={'maxlags': maxlags})
-        cov_params = np.array(fit_result_hac.cov_params())
+        cov_params = np.array(fit_result_hac.cov_params())[:3, :3]
         rate_accel_cov = sigma_inflate**2 * (J @ cov_params @ J.T)
         fit_method = 'OLS_HAC'
 
     else:
         # WLS
-        cov_params = np.array(fit_result.cov_params())
+        cov_params = np.array(fit_result.cov_params())[:3, :3]
         rate_accel_cov = sigma_inflate**2 * (J @ cov_params @ J.T)
 
     rate_se = np.sqrt(rate_accel_cov[0, 0])
@@ -2918,6 +2932,11 @@ class BayesianLevelCorrelatedResult(BayesianLevelResult):
     """BayesianLevelResult plus the diagnostics specific to this fitter."""
     chi2_dof: float = float('nan')
     phi_posterior: Optional[np.ndarray] = None   # AR(1) coefficient draws (fit_ar1)
+    # Full Gaussian -2 ln L at the posterior mean (chi2 + ln|Sigma| + n ln 2 pi)
+    # and the number of fitted parameters (rate coefficients, H0, sigma_extra
+    # and phi when fitted), so BIC = m2lnL + k_fit ln n (MD-1)
+    m2lnL: float = float('nan')
+    k_fit: int = 0
 
 
 def _level_correlated_cov(sigma_rate_obs, dt, sigma_extra=0.0, phi=0.0):
@@ -3333,9 +3352,16 @@ def fit_bayesian_level_annual_correlated(
             sigma_rate_obs, dt, sigma_extra_samples.mean(),
             phi_samples.mean() if fit_ar1 else 0.0)
         Sigma_inv_mean = np.linalg.inv(Sigma_mean)
+        log_det_mean = float(np.linalg.slogdet(Sigma_mean)[1])
     else:
         Sigma_inv_mean = Sigma_inv0
-    chi2_dof = float((resid @ Sigma_inv_mean @ resid) / (n - n_phys - 1))
+        log_det_mean = float(log_det_Sigma0)
+    # Degrees of freedom count every fitted parameter: the rate
+    # coefficients, H0, and sigma_extra and phi when fitted (GL-4)
+    k_fit = n_phys + 1 + int(fit_sigma_extra) + int(fit_ar1)
+    chi2 = float(resid @ Sigma_inv_mean @ resid)
+    chi2_dof = chi2 / (n - k_fit)
+    m2lnL = chi2 + log_det_mean + n * np.log(2 * np.pi)
 
     if progress:
         print(f"  Posterior mean: b={phys_mean[1]*1e3:.4f}, "
@@ -3409,6 +3435,8 @@ def fit_bayesian_level_annual_correlated(
                      'fit_ar1': fit_ar1, 'phi_bounds': phi_bounds},
         chi2_dof=chi2_dof,
         phi_posterior=phi_samples,
+        m2lnL=m2lnL,
+        k_fit=k_fit,
     )
 
 

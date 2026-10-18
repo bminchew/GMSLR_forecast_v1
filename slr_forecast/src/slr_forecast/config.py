@@ -149,3 +149,16 @@ HAMLINGTON_ACCEL_UNC: float = 0.06
 
 HAMLINGTON_T_REF: float = 2008.5
 """Reference time (midpoint of 1993–2024 record)."""
+
+# ---------------------------------------------------------------------------
+# Scenario labels
+# ---------------------------------------------------------------------------
+WARMING_C: dict[str, float] = {
+    "SSP1-1.9": 1.4,
+    "SSP1-2.6": 1.8,
+    "SSP2-4.5": 2.7,
+    "SSP3-7.0": 3.6,
+    "SSP5-8.5": 4.4,
+}
+"""AR6 central estimate of 2081-2100 warming above 1850-1900 for each SSP
+(Lee et al. 2021, Table 4.5), used to label scenarios in text and figures."""

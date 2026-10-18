@@ -59,6 +59,29 @@ def preindustrial_to_baseline_m(h5_path, baseline_year=BASELINE_YEAR):
     return parts['observed_1900'] + PREIND_TO_1900_M, parts
 
 
+AR6_BASELINE_WINDOW = (1995.0, 2015.0)   # AR6 projections are relative to 1995-2014
+
+
+def ar6_baseline_offset_m(h5_path, baseline_year=BASELINE_YEAR):
+    """GMSL difference between the AR6 baseline and our zero (m).
+
+    AR6 sea-level projections are relative to the 1995-2014 mean. Our
+    forecast is zero at the NASA altimetry sample nearest *baseline_year*
+    (``harmonized/df_nasa_gmsl_h``, ``gmsl_smoothed``; component_forecast
+    rebases on that sample). The offset is the mean of the same series over
+    [1995, 2015) minus its value at that sample, so it is consistent with
+    the forecast's zero by construction. Subtract it from our values to put
+    them on the AR6 baseline; add it to AR6 values to put them on ours.
+    One shared definition for every comparison with AR6 (SF-2).
+    """
+    d = pd.read_hdf(h5_path, 'harmonized/df_nasa_gmsl_h')
+    t = d['decimal_year'].values
+    h = d['gmsl_smoothed'].values
+    lo, hi = AR6_BASELINE_WINDOW
+    i0 = int(np.argmin(np.abs(t - baseline_year)))
+    return float(np.mean(h[(t >= lo) & (t < hi)]) - h[i0])
+
+
 def annualize_imbie(df, baseline_year=BASELINE_YEAR):
     """Resample monthly IMBIE to annual, rebase to *baseline_year*.
 
@@ -133,13 +156,18 @@ def imbie_annual_rates(df):
     ``df`` is a monthly IMBIE-3 frame from ``read_imbie3``.  Year Y's
     rate is the mean of its monthly rates, so rate * 1 yr is the increment
     of the cumulative record over year Y, whose end-of-year level
-    ``annualize_imbie`` labels Y + 1.0.
+    ``annualize_imbie`` labels Y + 1.0.  IMBIE-3's monthly increments are
+    independent with variance sigma_m^2 / 12, so the annual increment has
+    1-sigma sqrt(mean(sigma_m^2)) (the RMS, not the mean or the December
+    value); this reproduces IMBIE-3's cumulative sigma.  Used for WAIS,
+    EAIS and the Peninsula alike (AN-3).
     """
     t = df['decimal_year'].values
     yi = np.floor(t).astype(int)
     years = np.unique(yi)
     rate = np.array([df['mass_balance_rate'].values[yi == y].mean() for y in years])
-    sigma = np.array([df['mass_balance_rate_sigma'].values[yi == y].mean() for y in years])
+    sigma = np.array([np.sqrt(np.mean(df['mass_balance_rate_sigma'].values[yi == y] ** 2))
+                      for y in years])
     return years, rate, sigma
 
 
