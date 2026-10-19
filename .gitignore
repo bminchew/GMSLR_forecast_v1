@@ -78,3 +78,6 @@ slr_forecast/manuscripts/WRITING_STYLE.md
 
 # Donor slide figure script, kept out of the repository
 slr_forecast/scripts/donor_slide_figures.py
+
+# Mock referee reports and response planning, kept out of the repository
+slr_forecast/manuscripts/00_ddpi_slrforecast2026/v1/referee_reports/
