@@ -181,9 +181,11 @@ class TestOceanSaveLoad:
         assert mt == 'twolayer_noaa', f"Unexpected model_type: {mt}"
 
     def test_metadata_fixed_constants(self, loaded):
-        """tau_d fixed at 150 yr; below-2000 m rate 0.117 mm/yr; Li x1.14."""
+        """tau_d sampled from the CMIP5 C_0/gamma prior (median 133 yr, flat
+        likelihood, so the posterior median stays near it); below-2000 m rate
+        0.117 mm/yr; Li x1.14."""
         md = loaded['metadata']
-        assert md['tau_d_fixed_yr'] == pytest.approx(150.0)
+        assert 100.0 < md['tau_d_median_yr'] < 175.0
         assert md['rate_below_2000_mm_yr'] == pytest.approx(0.117)
         assert '14%' in md['obs_bias_correction']
 

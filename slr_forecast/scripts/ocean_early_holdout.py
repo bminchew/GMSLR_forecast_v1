@@ -67,7 +67,9 @@ OUT_FIG = ROOT / 'figures/component_ocean_early_holdout.png'
 M_TO_MM = 1000.0
 
 HOLDOUT_SPLIT = 1990.5            # first fit year of 0-700 m in the holdout
-TAU_D_FIXED = 150.0               # yr, as production
+TAU_D_FIXED = 150.0               # yr. Production samples tau_d from a CMIP5 prior;
+                                  # held fixed here because the 0-700 m prediction
+                                  # does not depend on it and the likelihood is flat in it
 STRUCTURAL_FRAC = 0.14            # Li et al. (2022)
 RESIDUAL_STRUCTURAL = 0.05
 N_WALKERS, N_BURNIN, N_PRODUCTION = 64, 6000, 30000   # as production
