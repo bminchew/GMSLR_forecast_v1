@@ -117,6 +117,7 @@ ENTRY
     series
     title
     type
+    url
     volume
     year
   }
@@ -779,7 +780,12 @@ FUNCTION {format.book.pages}
 }
 FUNCTION {format.doi}
 { doi empty$
-    { "" }
+    % url printed only when there is no doi
+    { url empty$
+        { "" }
+        { "\url{" url * "}" * }
+      if$
+    }
     {
       "\doi{" doi * "}" *
     }
@@ -960,7 +966,7 @@ FUNCTION {n.separate}
 }
 FUNCTION {n.dashify}
 {
-  n.separate
+  % n.separate removed: it put thousands commas in article numbers (e2025EF007,836)
   't :=
   ""
     { t empty$ not }
@@ -1807,6 +1813,8 @@ FUNCTION {begin.bib}
   "\begin{thebibliography}{" number.label int.to.str$ * "}" *
   write$ newline$
   "\providecommand{\natexlab}[1]{#1}"
+  write$ newline$
+  "\providecommand{\url}[1]{\texttt{#1}}"
   write$ newline$
   "\expandafter\ifx\csname urlstyle\endcsname\relax"
   write$ newline$
