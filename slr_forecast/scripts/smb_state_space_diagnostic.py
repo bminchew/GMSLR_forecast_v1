@@ -40,11 +40,9 @@ Steps
      forecast 2005-2018, next to the fixed-anchor approach used before the
      drift state (constant M0 = the 1995-2004 mean, the years available to
      the holdout fit, with sd 57 and the MAR AR(1) weather noise).
-  5. Data checks: Mankoff et al. (2021) three-RCM mean SMB, 1986-2023 (it
-     includes RACMO, so it is only a partial check), and the GRACE-minus-
-     discharge implied SMB, 2003-2018 (biennial; the two rows per year, one
-     per discharge record, are averaged; 2020 is dropped as a partial year).
-     Each is compared with Mouginot on the same years.
+  5. Data check: Mankoff et al. (2021) three-RCM mean SMB, 1986-2023 (it
+     includes RACMO, so it is only a partial check), compared with Mouginot
+     on the same years.
   7. Forecast check after the record: from the filtered 2018 state, forecast
      2019-2023 SMB and compare with Mankoff (three-RCM mean) and IMBIE-3
      (Otosaka et al. 2026, SMB anomaly; its SMB partition also comes from
@@ -123,12 +121,6 @@ def main():
 
     mk = pd.read_csv(ROOT / 'data/raw/ice_sheets/greenland/mankoff/MB_SMB_D_BMB_ann.csv')
     mk = mk[(mk.time >= 1986) & (mk.time <= 2023)]
-    gd = pd.read_csv(ROOT / 'data/processed/greenland_implied_smb.csv')
-    gd['yr'] = np.floor(gd['year']).astype(int)
-    gd = gd[(gd.yr >= 2003) & (gd.yr <= 2018)].groupby('yr').agg(rate=('implied_smb_rate_slr', 'mean'),
-                                             sig=('implied_smb_rate_sigma_slr', 'mean'))
-    gd_smb = -gd['rate'] / S.GT_TO_M_SLE
-    gd_sig = gd['sig'] / S.GT_TO_M_SLE
 
     # ── Driver: observed GMST rel. 1995-2005, calendar-year mean, 11-yr centred ──
     be = pd.read_hdf(ROOT / 'data/processed/slr_processed_data.h5', 'harmonized/df_berkeley_h')
@@ -265,11 +257,8 @@ def main():
           f'sigma_d {fmt(gk["sd_d"], gk["w"])}, sigma_e {fmt(gk["sd_e"], gk["w"])} Gt/yr; '
           f'P(sigma_d < 20) = {gk["w"][gk["sd_d"] < 20].sum():.3f}; max log-lik with/without state '
           f'{gk["ll"].max():.1f} / {gk["ll"][gk["sd_d"] == 0].max():.1f}')
-    yg = gd.index.values
-    r_gd = gd_smb.values - np.median(f(x_on(yg, obs_end)), axis=0)
     mou_s = pd.Series(smb_m, index=yrs_m)
-    for lab, ser in (('Mankoff 3-RCM', pd.Series(mk['SMB'].values, index=yk)),
-                     ('GRACE - D', gd_smb)):
+    for lab, ser in (('Mankoff 3-RCM', pd.Series(mk['SMB'].values, index=yk)),):
         yy = ser.index.intersection(mou_s.index)
         dif = ser.loc[yy] - mou_s.loc[yy]
         per = lambda a_, b_: dif[(yy >= a_) & (yy <= b_)].mean()
@@ -411,7 +400,6 @@ def main():
     Mb = kalman(r_med, sig_m, np.exp(-1 / tbest['tau'][ib]), tbest['sd_d'][ib], tbest['sd_e'][ib])[1][0, 0]
     ax.plot(yrs_m, r_med - Mb, 'o', color='#E69F00', ms=4, label='Mouginot residual - M')
     ax.plot(yk, r_mk - Mb, 's', color='#0072B2', ms=3, alpha=0.6, label='Mankoff 3-RCM residual - M')
-    ax.plot(yg, r_gd - Mb, '^', color='#009E73', ms=5, alpha=0.8, label='GRACE - D residual - M')
     ax.plot(yrs_m, smn[0], 'k-', lw=2, label=r'smoothed $\delta$, 90% band (posterior-mode $\theta$ only)')
     ax.fill_between(yrs_m, smn[0] - 1.645 * ssd[0], smn[0] + 1.645 * ssd[0], color='k', alpha=0.15)
     ax.axhline(0, color='0.5', lw=0.5)

@@ -2355,7 +2355,9 @@ def fit_satellite_era_quadratic(
         # scales as r and that of c2 as r^2, i.e. the standard errors scale
         # as T^(-1/2) (c1) and T^(-1) (c2); c0 is unscaled. (An earlier
         # comment described SE ~ 1/T and 1/T^2, which would need exponents
-        # p_i + p_j. Which law applies is an open decision, MD-17.)
+        # p_i + p_j.) This law assumes the correlated altimetry errors grow
+        # like a random walk; white noise would shrink faster and a fixed
+        # instrumental drift would not shrink at all (no scaling).
         t_cov_span = t_c[-1] - t_c[0]
         t_fit_span = t_fit[-1] - t_fit[0]
         if t_fit_span > t_cov_span * 1.05:
@@ -4137,6 +4139,10 @@ def _state_level_log_prob(
 ):
     """Log-posterior for the rate-and-state level-space model.
 
+    The annual level errors are treated as independent (diagonal
+    likelihood on a cumulative record), so posterior intervals are too
+    narrow. Diagnostic only; no manuscript number uses this posterior.
+
     Since τ varies at each MCMC step, the state variable S(t) and
     its integral I_S must be recomputed each time.  The other design
     vectors (I₂, I₁, I₀) are independent of τ and passed as constants.
@@ -4266,6 +4272,9 @@ def fit_bayesian_state_level(
     time_spinup: Optional[np.ndarray] = None,
 ) -> BayesianStateLevelResult:
     """Bayesian rate-and-state level-space calibration.
+
+    Uses a diagonal likelihood on the cumulative level record (see
+    _state_level_log_prob), so intervals are too narrow. Diagnostic only.
 
     Extends the instantaneous Bayesian level-space model with a state
     variable S(t) that relaxes toward temperature with timescale τ:

@@ -332,7 +332,8 @@ def read_mouginot2019_greenland(filepath: str) -> pd.DataFrame:
     df.attrs["method"] = "input-output (RACMO SMB + satellite discharge)"
     df.attrs["note"] = (
         "SMB from RACMO2.3p2; discharge from satellite velocity + ice thickness. "
-        "Peripheral glaciers excluded. MB = SMB - D (no basal mass balance)."
+        "SMB includes seven peripheral ice-cap units; peripheral discharge not counted. "
+        "MB = SMB - D (no basal mass balance)."
     )
 
     # Guards

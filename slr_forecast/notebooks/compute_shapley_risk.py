@@ -5,9 +5,10 @@ Risk = E[D(S)] where D is the Jevrejeva (2018) damage function.
 Each component's attributed risk = (mean SLR_comp / mean SLR_total) × E[D(total)],
 where SLR_total is the blended forecast. The six components do not include
 terrestrial water storage, and the blended total differs from the component
-sum by the rate-space blend, so the attributed risks do not sum to
-E[D(total)] (97 to 101% of it in the 2026-10-18 run); the remainder is
-printed as "Not attributed".
+sum by the rate-space blend, so the attributed risks do not sum exactly
+to E[D(total)]; the remainder is printed as "Not attributed". The split is
+proportional to mean SLR, not a Shapley or Euler allocation, so it gives
+WAIS only its mean share of a convex damage.
 
 Usage:
     python compute_shapley_risk.py

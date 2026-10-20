@@ -49,10 +49,11 @@ from datetime import datetime
 from typing import Optional, Union
 
 try:
-    from slr_forecast.config import Z_90, Z_95
+    from slr_forecast.config import Z_90, Z_95, GT_TO_M_SLE
 except ImportError:
     Z_90 = 1.645
     Z_95 = 1.96
+    GT_TO_M_SLE = 1.0 / 362500.0
 
 
 # =============================================================================
@@ -2438,8 +2439,8 @@ def _read_imbie_gt(filepath: str, dataset_name: str, region_label: str,
     sigma_cols = [c for c in value_cols if 'sigma' in c]
     non_sigma_cols = [c for c in value_cols if 'sigma' not in c]
     if convert_to_sle:
-        df[non_sigma_cols] = -df[non_sigma_cols] / 362.5 / 1000.0  # Gt → m SLE, sign-flipped
-        df[sigma_cols] = np.abs(df[sigma_cols]) / 362.5 / 1000.0   # Gt → m SLE, always positive
+        df[non_sigma_cols] = -df[non_sigma_cols] * GT_TO_M_SLE  # Gt → m SLE, sign-flipped
+        df[sigma_cols] = np.abs(df[sigma_cols]) * GT_TO_M_SLE   # Gt → m SLE, always positive
         _len = 'm'
         _rate = 'm/yr'
     else:
@@ -2873,7 +2874,7 @@ def read_glambie_global(filepath: str, convert_to_sle: bool = True) -> pd.DataFr
     if convert_to_sle:
         # Gt → m SLE (÷ 362.5 ÷ 1000)
         for col in ['mass_balance', 'mass_balance_sigma']:
-            df[col] = df[col] / 362.5 / 1000.0
+            df[col] = df[col] * GT_TO_M_SLE
         _unit = 'm/yr'
     else:
         _unit = 'Gt/yr'
@@ -2943,7 +2944,7 @@ def read_zemp2019_global(filepath: str) -> pd.DataFrame:
     https://doi.org/10.1038/s41586-019-1071-0
     """
     df = pd.read_csv(filepath, comment='#', skipinitialspace=True).set_index('Year')
-    gt_to_m = 1.0 / 362500.0
+    gt_to_m = GT_TO_M_SLE
     z95 = 1.96                                  # 95% half-width -> 1 sigma
     out = pd.DataFrame({
         'rate': -df['INT_Gt'] * gt_to_m,
@@ -3009,7 +3010,7 @@ def read_glambie_regional(filepath: str, convert_to_sle: bool = True) -> pd.Data
 
     if convert_to_sle:
         for col in ['mass_balance', 'mass_balance_sigma']:
-            df[col] = df[col] / 362.5 / 1000.0
+            df[col] = df[col] * GT_TO_M_SLE
         _unit = 'm/yr'
     else:
         _unit = 'Gt/yr'
@@ -3379,7 +3380,7 @@ def read_grace_tws_global(filepath: str, convert_to_sle: bool = True) -> pd.Data
     if convert_to_sle:
         # Gt → m SLE: ÷ 362.5 ÷ 1000
         for col in ['tws_anomaly', 'tws_anomaly_sigma']:
-            df[col] = df[col] / 362.5 / 1000.0
+            df[col] = df[col] * GT_TO_M_SLE
         _unit = 'm'
     else:
         _unit = 'Gt'
