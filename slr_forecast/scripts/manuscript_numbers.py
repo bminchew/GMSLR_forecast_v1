@@ -359,6 +359,54 @@ def main():
     print(f'\nPeople below the annual flood level per cm of rise, 0-1 m secant '
           f'(Kulp & Strauss 2019 fit): {per_cm:.2f} million')
 
+    # ── Energetic consistency of the thermosteric projections (Supplement) ──
+    # Implied ocean heat uptake = thermosteric change / expansion efficiency
+    # of heat (EEH), on the AR6 window: mean(2081-2100) minus mean(1995-2014),
+    # each member's own means. Literature values, Fox-Kemper et al. (2021,
+    # AR6 WG1 Ch. 9, Section 9.2.2.1 and Table 9.1; Zotero ZIFW4T59):
+    #   EEH 0.113 +/- 0.013 m/YJ (mean +/- sd, two-layer emulator);
+    #   two-layer total OHC, median (17-83%), YJ;
+    #   CMIP6 0-2000 m OHC, median (17-83%), YJ.
+    # 0-2000 m EEH from Levitus et al. (2012, Zotero PCQMERBI, abstract and
+    # Section 3): thermosteric trend 0.54 mm/yr over a heat-content trend of
+    # 0.43e22 J/yr, 1955-2010. Both carry the same interpolation bias (Li et al.
+    # 2022), so the ratio applies to the x1.14-scaled record.
+    EEH, EEH_SD = 0.113, 0.013
+    EEH_2000 = 0.54e-3 / 0.43e22 * 1e24
+    AR6_OHC = {'SSP1-2.6': (1.18, 0.99, 1.42), 'SSP2-4.5': (1.56, 1.33, 1.86),
+               'SSP3-7.0': (1.90, 1.63, 2.21), 'SSP5-8.5': (2.23, 1.92, 2.64)}
+    CMIP6_OHC2000 = {'SSP1-2.6': (1.06, 0.80, 1.31), 'SSP2-4.5': (1.35, 1.08, 1.67),
+                     'SSP3-7.0': (1.62, 1.37, 1.91), 'SSP5-8.5': (1.89, 1.60, 2.29)}
+    from slr_forecast.config import SEEDS
+    rng = np.random.default_rng(SEEDS['projections'])
+    late = (cy >= 2081) & (cy <= 2100)
+    win = lambda X: (X[:, late].mean(axis=1) - X[:, ref_mask].mean(axis=1)) * M_TO_MM
+    print(f'\nImplied ocean heat uptake, mean 2081-2100 minus mean 1995-2014 '
+          f'(EEH {EEH} +/- {EEH_SD} m/YJ; 0-2000 m EEH {EEH_2000:.3f} m/YJ):')
+    print('  scenario: thermosteric (mm) | Q at 0.113 (YJ) | Q, EEH drawn (YJ) | '
+          'AR6 two-layer | ratio | EEH needed | 0-2000 m thermo (mm) | '
+          'Q 0-2000 (YJ) | CMIP6 0-2000 | ratio')
+    for s in LABEL:
+        dH = win(comp['ocean'][s])
+        d2 = win(oc_layers[s]['twolayer'])
+        e_draw = rng.normal(EEH, EEH_SD, dH.size)
+        Q, Qd, Q2 = dH / 1e3 / EEH, dH / 1e3 / e_draw, d2 / 1e3 / EEH_2000
+        a, c = AR6_OHC[s], CMIP6_OHC2000[s]
+        out.setdefault('energy_check', {})[s] = dict(
+            thermo_mm=q(dH), Q_YJ=q(Q), Q_drawn_YJ=q(Qd), ar6_two_layer_YJ=a,
+            ratio=float(np.median(Q) / a[0]), eeh_needed=float(np.median(dH) / 1e3 / a[0]),
+            thermo_0_2000_mm=q(d2), Q_0_2000_YJ=q(Q2), cmip6_0_2000_YJ=c,
+            ratio_0_2000=float(np.median(Q2) / c[0]))
+        print(f'  {LABEL[s]} ({s}): {fmt(q(dH), nd=0)} | {fmt(q(Q))} | {fmt(q(Qd))} | '
+              f'{a[0]:.2f} ({a[1]:.2f}-{a[2]:.2f}) | {np.median(Q) / a[0]:.2f} | '
+              f'{np.median(dH) / 1e3 / a[0]:.3f} | {fmt(q(d2), nd=0)} | {fmt(q(Q2))} | '
+              f'{c[0]:.2f} ({c[1]:.2f}-{c[2]:.2f}) | {np.median(Q2) / c[0]:.2f}')
+    e = out['energy_check']
+    print(f'  ratio 4.4 C / 1.8 C: ours {e["SSP5-8.5"]["Q_YJ"][0] / e["SSP1-2.6"]["Q_YJ"][0]:.2f}, '
+          f'AR6 two-layer {AR6_OHC["SSP5-8.5"][0] / AR6_OHC["SSP1-2.6"][0]:.2f}; '
+          f'3.6 C / 1.8 C: ours {e["SSP3-7.0"]["Q_YJ"][0] / e["SSP1-2.6"]["Q_YJ"][0]:.2f}, '
+          f'AR6 {AR6_OHC["SSP3-7.0"][0] / AR6_OHC["SSP1-2.6"][0]:.2f}')
+
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')
 

@@ -409,6 +409,37 @@ WAIS                      & IMBIE-3, 1979--2023 (45)  & 1.01 & Linear rate in ti
 \end{table}
 
 %% ================================================================
+\subsection{Energetic consistency of the thermosteric projections}
+\label{s:energy_check}
+
+The thermosteric model is driven by GMST and contains no explicit energy budget. We therefore check that its projections imply ocean heat uptake consistent with that of the scenarios that produce the warming. We convert the projected thermosteric rise of each ensemble member to cumulative ocean heat uptake by dividing it by the expansion efficiency of heat, the thermosteric rise per unit of heat added to the ocean \citep{Kuhlbrodt2012}. We use the AR6 value of $0.113 \pm 0.013$\,m\,YJ$^{-1}$ (mean and standard deviation; 1\,YJ $= 10^{24}$\,J), with which AR6 converts the ocean heat uptake of its two-layer emulator to thermosteric sea level \citep{Fox-Kemper2021}. We compare the change between the 1995--2014 and 2081--2100 means, the interval over which AR6 reports ocean heat content projections.
+
+At the AR6 expansion efficiency, the implied heat uptake is 1.00 to 1.04 times the median of the AR6 two-layer emulator in the four scenarios (Table~\ref{tab:energy_check}). Matching the AR6 medians exactly would require an expansion efficiency of 0.113 to 0.118\,m\,YJ$^{-1}$, within one standard deviation of the AR6 value. The heat uptake at 4.4~$^\circ$C is 1.82 times that at 1.8~$^\circ$C, compared with 1.89 for the AR6 emulator.
+
+The upper 2000\,m can be compared with CMIP6 directly. In the NOAA 0--2000\,m record over 1955--2010, thermosteric sea level rose by 0.126\,m per YJ of added heat \citep{Levitus2012}. With this value, the implied heat uptake in the upper 2000\,m is 0.96 to 1.02 times the CMIP6 median in the four scenarios (Table~\ref{tab:energy_check}). This comparison is less direct than the full-depth one. Seawater expands less per unit of heat where it is cold, and the model places a larger share of the 0--2000\,m rise below 700\,m than the NOAA record showed over 1955--2010, so the appropriate expansion efficiency for the projections may be lower than the observed value.
+
+\begin{table}[!htbp]
+\centering
+\caption{Ocean heat uptake implied by the thermosteric projections, as the change between the 1995--2014 and 2081--2100 means. Our values are medians with 90\% credible intervals in brackets. Implied heat uptake is the thermosteric rise divided by the expansion efficiency of heat, either fixed at the AR6 value of 0.113\,m\,YJ$^{-1}$ or drawn for each ensemble member from a normal distribution with mean 0.113 and standard deviation 0.013\,m\,YJ$^{-1}$. For 0--2000\,m the expansion efficiency is 0.126\,m\,YJ$^{-1}$, the ratio of thermosteric rise to heat content change in the NOAA 0--2000\,m record over 1955--2010 \citep{Levitus2012}. AR6 values are medians with 17--83\% ranges in parentheses, for the two-layer emulator (full depth) and for CMIP6 models (0--2000\,m) \citep[][Section 9.2.2.1 and Table 9.1]{Fox-Kemper2021}.}
+\label{tab:energy_check}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{4}{c}{Full depth} & \multicolumn{2}{c}{0--2000\,m} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}
+Scenario & Thermosteric & Heat, fixed & Heat, drawn & AR6 two-layer & Heat & CMIP6 \\
+ & (mm) & (YJ) & (YJ) & (YJ) & (YJ) & (YJ) \\
+\midrule
+1.8 $^\circ$C & 139 [112, 171] & 1.23 [0.99, 1.51] & 1.24 [0.93, 1.67] & 1.18 (0.99--1.42) & 1.02 [0.81, 1.28] & 1.06 (0.80--1.31) \\
+2.7 $^\circ$C & 180 [146, 219] & 1.59 [1.30, 1.94] & 1.59 [1.21, 2.12] & 1.56 (1.33--1.86) & 1.35 [1.09, 1.66] & 1.35 (1.08--1.67) \\
+3.6 $^\circ$C & 216 [177, 261] & 1.91 [1.57, 2.31] & 1.92 [1.46, 2.54] & 1.90 (1.63--2.21) & 1.64 [1.33, 2.00] & 1.62 (1.37--1.91) \\
+4.4 $^\circ$C & 252 [200, 310] & 2.23 [1.77, 2.75] & 2.24 [1.67, 3.00] & 2.23 (1.92--2.64) & 1.93 [1.53, 2.39] & 1.89 (1.60--2.29) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%% ================================================================
 \FloatBarrier
 \section{Exceedance Probability by Threshold and Scenario}
 \label{sec:exceedance_table}
