@@ -1533,3 +1533,37 @@ def plot_component_rates(components_rate, save_path=None):
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()
+
+
+def corner_contour_limits(fig, xlims, pad=0.06):
+    """Widen per-parameter axis limits so that every contour line drawn by
+    corner.corner lies inside the plot.
+
+    fig   : figure returned by corner.corner (ndim x ndim axes).
+    xlims : list of (lo, hi), one per parameter, the limits the caller would
+            otherwise use for that parameter's column and row.
+    pad   : fraction of the widened span added on each side that was widened.
+    Returns the new list of (lo, hi).  Limits are only ever widened.
+    """
+    from matplotlib.contour import ContourSet
+    ndim = len(xlims)
+    axes = np.array(fig.axes).reshape((ndim, ndim))
+    lo = np.array([l[0] for l in xlims], float)
+    hi = np.array([l[1] for l in xlims], float)
+    for i in range(ndim):
+        for j in range(i):
+            for cs in axes[i, j].collections:
+                if not isinstance(cs, ContourSet) or cs.filled:
+                    continue
+                for p in cs.get_paths():
+                    v = p.vertices
+                    if len(v) == 0:
+                        continue
+                    lo[j], hi[j] = min(lo[j], v[:, 0].min()), max(hi[j], v[:, 0].max())
+                    lo[i], hi[i] = min(lo[i], v[:, 1].min()), max(hi[i], v[:, 1].max())
+    out = []
+    for k in range(ndim):
+        span = hi[k] - lo[k]
+        out.append((lo[k] - pad * span if lo[k] < xlims[k][0] else xlims[k][0],
+                    hi[k] + pad * span if hi[k] > xlims[k][1] else xlims[k][1]))
+    return out

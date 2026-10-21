@@ -249,10 +249,14 @@ def main():
         g = hf['ocean/fit_diagnostic']
         Ty = g['T_annual_years'][:]
         print('\nThermosteric fit (mm): RMS residual | observed rise, first to last year')
+        # 700-2000 m (0-2000 m minus 0-700 m) is fitted after removing its mean,
+        # so model and data are compared about their means over the record
         for lab, yk, ok, mk in [('0-700 m', 'noaa_year', 'noaa_700_corrected_mm', 'H_upper_fit_mm'),
-                                ('0-2000 m', 'noaa_deep_year', 'noaa_2000_corrected_mm', 'H_total_fit_mm')]:
+                                ('700-2000 m', 'noaa_deep_year', 'noaa_700_2000_corrected_mm', 'H_mid_fit_mm')]:
             y, o, m = g[yk][:], g[ok][:], g[mk][:]
             r = o - m[[int(np.argmin(np.abs(Ty - v))) for v in y]]
+            if lab == '700-2000 m':
+                r = r - r.mean()
             out[f'thermo_fit_{lab}'] = dict(rms_mm=float(np.sqrt(np.mean(r ** 2))),
                                             rise_mm=float(o[-1] - o[0]))
             print(f'  {lab} ({y[0]:.1f}-{y[-1]:.1f}): RMS {np.sqrt(np.mean(r ** 2)):.3f} | rise {o[-1] - o[0]:.1f}')
@@ -406,6 +410,9 @@ def main():
           f'AR6 two-layer {AR6_OHC["SSP5-8.5"][0] / AR6_OHC["SSP1-2.6"][0]:.2f}; '
           f'3.6 C / 1.8 C: ours {e["SSP3-7.0"]["Q_YJ"][0] / e["SSP1-2.6"]["Q_YJ"][0]:.2f}, '
           f'AR6 {AR6_OHC["SSP3-7.0"][0] / AR6_OHC["SSP1-2.6"][0]:.2f}')
+    _ns = [(EEH - e[s]['eeh_needed']) / EEH_SD for s in e]
+    print(f'  EEH needed to match AR6 lies {min(_ns):.1f} to {max(_ns):.1f} standard deviations '
+          f'({EEH_SD} m/YJ) below {EEH} m/YJ')
 
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')

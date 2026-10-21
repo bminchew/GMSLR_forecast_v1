@@ -2,25 +2,30 @@
 
 The production fit (component_ocean.ipynb, cell 5) calibrates the Geoffroy
 et al. (2013) two-layer model on NOAA 0-700 m (1955.5-2024.5) and NOAA
-0-2000 m (2005.5-2024.5) jointly; points after the end of the GMST forcing
-(2024.5) are dropped. Here the 0-700 m record before 1990.5 is
-withheld: the model is refitted on 0-700 m 1990.5-2024.5 plus the full
-0-2000 m record, and predicts the withheld 1955.5-1989.5 values from
-observed Berkeley Earth GMST. Same split as the Greenland discharge early
-holdout (component_greenland.ipynb, HOLDOUT_SPLIT = 1990).
+700-2000 m (0-2000 m minus 0-700 m, 2005.5-2024.5) jointly; points after the
+end of the GMST forcing (2024.5) are dropped. Here the 0-700 m record before
+1990.5 is withheld: the model is refitted on 0-700 m 1990.5-2024.5 plus the
+full 700-2000 m record, and predicts the withheld 1955.5-1989.5 values from
+observed Berkeley Earth GMST and the volcanic forcing. Same split as the
+Greenland discharge early holdout (component_greenland.ipynb,
+HOLDOUT_SPLIT = 1990).
 
-The upper layer S_u is driven by GMST alone, and the deep layer by S_u, so
-the 0-700 m prediction depends only on (a, b_u, tau_u). The 0-2000 m
-record starts in 2005, so keeping all of it does not leak withheld data.
+The upper layer S_u is driven by GMST and the volcanic term, and the deep
+layer by S_u, so the 0-700 m prediction depends only on (a, b_u, tau_u, m_v).
+The 700-2000 m record starts in 2005, so keeping all of it does not leak
+withheld data.
 
-Likelihood, priors, Li et al. (2022) x1.14 correction, 5% residual
+Likelihood (separate sigma_extra per record, AR(1) with one shared rho),
+priors, volcanic term, Li et al. (2022) x1.14 correction, 5% residual
 structural error, demeaning and MCMC settings are copied from the
 production cell (no linear drift term since 2026-10-16; the first run of
-this script, with the drift term, found it traded off against b_u). Both the production (full-record) fit and the holdout fit
-are run here with identical code, so the parameter comparison is like for
-like. As in production, the 5% structural term is independent per point
-(not a correlated scale error), and both layers start in equilibrium with
-the 1850 GMST anomaly.
+this script, with the drift term, found it traded off against b_u). Both the
+production (full-record) fit and the holdout fit are run here with identical
+code, so the parameter comparison is like for like. As in production, the 5%
+structural term is independent per point (not a correlated scale error), and
+both layers start in equilibrium with the 1850 GMST anomaly. In the holdout
+fit the AR(1) lags are the year differences, so the gap left by the withheld
+years is accounted for.
 
 Because each record is demeaned over its own fit window, the comparison
 in the withheld window uses the fit's own offset: model and data are both
@@ -59,7 +64,10 @@ import emcee
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
-from slr_forecast.config import SEEDS, Z_90, KAPPA_EOS
+from slr_forecast.config import (SEEDS, Z_90, KAPPA_EOS, VOLC_ERF_CSV,
+                                 THERMO_VOLC_KV, THERMO_VOLC_M_SD)
+from slr_forecast.readers.forcing import read_volcanic_erf
+from scipy.linalg import cho_factor, cho_solve
 
 H5_DATA = ROOT / 'data/processed/slr_processed_data.h5'
 H5_OUT = ROOT / 'data/processed/component_results.h5'
@@ -106,22 +114,42 @@ noaa_2000_corr = noaa_deep_m * (1.0 + STRUCTURAL_FRAC)
 sig700 = np.sqrt(noaa_tsl_se_m**2 + (RESIDUAL_STRUCTURAL * np.abs(noaa_700_corr))**2)
 sig2000 = np.sqrt(noaa_deep_se_m**2 + (RESIDUAL_STRUCTURAL * np.abs(noaa_2000_corr))**2)
 
+# 700-2000 m: 0-2000 m minus 0-700 m in the same years, as production
+_k700 = np.array([np.argmin(np.abs(noaa_year - y)) for y in noaa_deep_year])
+assert np.allclose(noaa_year[_k700], noaa_deep_year)
+noaa_mid_corr = noaa_2000_corr - noaa_700_corr[_k700]
+sig_mid = np.sqrt(noaa_deep_se_m**2 + noaa_tsl_se_m[_k700]**2
+                  + (RESIDUAL_STRUCTURAL * np.abs(noaa_mid_corr))**2)
+lag_mid = np.abs(np.subtract.outer(noaa_deep_year, noaa_deep_year))
+
 idx700_all = np.array([np.argmin(np.abs(T_annual_years - y)) for y in noaa_year])
 idx2000 = np.array([np.argmin(np.abs(T_annual_years - y)) for y in noaa_deep_year])
 
 dt_ann = np.diff(T_annual_years)
 T_avg_ann = 0.5 * (T_annual[:-1] + T_annual[1:])
 n_ann = len(T_annual)
+# Volcanic ERF, annual means at mid-year (production fit cell)
+Fv_annual = read_volcanic_erf(VOLC_ERF_CSV, T_annual_years)
+Fv_avg_ann = 0.5 * (Fv_annual[:-1] + Fv_annual[1:])
 
 
-def solve_layers(tau_u):
-    """Two-layer cascade, as the production log-prob. tau_u may be an array."""
+def _ll_ar1(r, sig, sx, rho, lag):
+    """Gaussian log-likelihood with covariance diag(sig^2) + sx^2 rho^lag."""
+    cf = cho_factor(np.diag(sig**2) + sx**2 * rho**lag, lower=True)
+    return -0.5 * (r @ cho_solve(cf, r) + 2 * np.sum(np.log(np.diag(cf[0]))))
+
+
+def solve_layers(tau_u, kv=0.0):
+    """Two-layer cascade, as the production log-prob. tau_u and the volcanic
+    coefficient kv = m_v THERMO_VOLC_KV / b_u may be arrays."""
     tau_u = np.atleast_1d(tau_u)
+    kv = np.broadcast_to(np.asarray(kv, float), tau_u.shape)
     Su = np.empty((n_ann, tau_u.size))
     Su[0] = T_annual[0]
     for i in range(n_ann - 1):
         decay = np.exp(-dt_ann[i] / tau_u)
-        Su[i + 1] = T_avg_ann[i] + (Su[i] - T_avg_ann[i]) * decay
+        target = T_avg_ann[i] + kv * tau_u * Fv_avg_ann[i]
+        Su[i + 1] = target + (Su[i] - target) * decay
     Sd = np.empty_like(Su)
     Sd[0] = T_annual[0]
     decay_d = np.exp(-dt_ann / TAU_D_FIXED)
@@ -131,14 +159,13 @@ def solve_layers(tau_u):
     return Su, Sd
 
 
-def solve_layers_scalar(tau_u):
+def solve_layers_scalar(tau_u, kv):
     """Scalar-tau_u copy of the production ODE loop (fast path for MCMC)."""
     Su = np.empty(n_ann)
     Su[0] = T_annual[0]
-    inv = 1.0 / tau_u
+    target = T_avg_ann + kv * tau_u * Fv_avg_ann
     for i in range(n_ann - 1):
-        decay = np.exp(-dt_ann[i] * inv)
-        Su[i + 1] = T_avg_ann[i] + (Su[i] - T_avg_ann[i]) * decay
+        Su[i + 1] = target[i] + (Su[i] - target[i]) * np.exp(-dt_ann[i] / tau_u)
     Sd = np.empty(n_ann)
     Sd[0] = T_annual[0]
     inv_d = 1.0 / TAU_D_FIXED
@@ -157,33 +184,32 @@ class LogProb:
         y = noaa_700_corr[mask700]
         self.y700_dm = y - y.mean()
         self.sig700 = sig700[mask700]
-        self.y2000_dm = noaa_2000_corr - noaa_2000_corr.mean()
+        self.lag700 = np.abs(np.subtract.outer(noaa_year[mask700], noaa_year[mask700]))
+        self.ymid_dm = noaa_mid_corr - noaa_mid_corr.mean()
 
     def __call__(self, theta):
-        b_u, b_d, log_tau_u, log_sigma_extra = theta
+        b_u, b_d, log_tau_u, log_sigma_extra, rho, log_sigma_extra_2, m_v = theta
         a = KAPPA_EOS * b_u**2          # fixed by the equation of state (D5)
-        if b_u < 0 or b_d < 0:
+        if b_u < 0 or b_d < 0 or m_v <= 0:
             return -np.inf
         tau_u = np.exp(log_tau_u)
         if tau_u < 0.1 or tau_u > 500:
             return -np.inf
-        sigma_extra = np.exp(log_sigma_extra)
-        Su, Sd = solve_layers_scalar(tau_u)
+        if not (-0.99 < rho < 0.99) or log_sigma_extra_2 > np.log(0.01):
+            return -np.inf
+        Su, Sd = solve_layers_scalar(tau_u, m_v * THERMO_VOLC_KV / b_u)
 
         s = Su[self.idx700]
         H = a * s**2 + b_u * s
-        r = self.y700_dm - (H - H.mean())
-        sg = np.sqrt(self.sig700**2 + sigma_extra**2)
-        ll700 = -0.5 * np.sum((r / sg)**2 + np.log(sg**2))
-
-        s = Su[idx2000]
-        H = a * s**2 + b_u * s + b_d * Sd[idx2000]
-        r = self.y2000_dm - (H - H.mean())
-        sg = np.sqrt(sig2000**2 + sigma_extra**2)
-        ll2000 = -0.5 * np.sum((r / sg)**2 + np.log(sg**2))
+        r700 = self.y700_dm - (H - H.mean())
+        H = b_d * Sd[idx2000]
+        rmid = self.ymid_dm - (H - H.mean())
 
         lp = -0.5 * ((log_tau_u - np.log(8)) / 0.5)**2
-        return ll700 + ll2000 + lp
+        lp += -0.5 * ((m_v - 1.0) / THERMO_VOLC_M_SD)**2
+        lp += log_sigma_extra_2          # flat in sigma_extra_2 (Jacobian)
+        return (_ll_ar1(r700, self.sig700, np.exp(log_sigma_extra), rho, self.lag700)
+                + _ll_ar1(rmid, sig_mid, np.exp(log_sigma_extra_2), rho, lag_mid) + lp)
 
 
 def initial_theta(mask700):
@@ -199,7 +225,7 @@ def initial_theta(mask700):
     b2000 = np.linalg.lstsq(X - X.mean(0), noaa_2000_corr - noaa_2000_corr.mean(),
                             rcond=None)[0]
     return np.array([max(b700[1], 1e-6), max(b2000[2], 1e-6),
-                     np.log(8.0), np.log(0.001)])
+                     np.log(8.0), np.log(0.001), 0.3, np.log(0.001), 1.0])
 
 
 def run_fit(label):
@@ -207,18 +233,19 @@ def run_fit(label):
     logp = LogProb(mask)
     theta0 = initial_theta(mask)
     rng = np.random.default_rng(42)
-    pos0 = theta0 + 1e-4 * rng.standard_normal((N_WALKERS, 4))
+    ndim = len(theta0)
+    pos0 = theta0 + 1e-4 * rng.standard_normal((N_WALKERS, ndim))
     pos0[:, :2] = np.abs(pos0[:, :2])
     np.random.seed(SEEDS['bayesian'])
     t0 = time.time()
-    sampler = emcee.EnsembleSampler(N_WALKERS, 4, logp)
+    sampler = emcee.EnsembleSampler(N_WALKERS, ndim, logp)
     state = sampler.run_mcmc(pos0, N_BURNIN)
     sampler.reset()
     sampler.run_mcmc(state, N_PRODUCTION)
     chain = sampler.get_chain()
     flat = sampler.get_chain(flat=True)
     # Derived a as column 0, so flat[:, 0..4] = (a, b_u, b_d, log_tau_u,
-    # log_sigma_extra) as before D5.
+    # log_sigma_extra) as before D5; then rho, log_sigma_extra_2, m_v.
     flat = np.column_stack([KAPPA_EOS * flat[:, 0]**2, flat])
     tau_int = sampler.get_autocorr_time(quiet=True)
     n, m, _ = chain.shape
@@ -238,7 +265,7 @@ def predict(flat, rng, ref=None):
     draws = flat[rng.choice(flat.shape[0], N_DRAW, replace=False)]
     a, b_u = draws[:, 0], draws[:, 1]
     tau_u, sig_x = np.exp(draws[:, 3]), np.exp(draws[:, 4])
-    Su, _ = solve_layers(tau_u)
+    Su, _ = solve_layers(tau_u, draws[:, 7] * THERMO_VOLC_KV / b_u)
     s = Su[idx700_all]                                   # (n_obs, N_DRAW)
     H = a * s**2 + b_u * s
     if ref is None:
@@ -306,8 +333,10 @@ def report_and_save(full, hold):
     """Parameter table, withheld-window metrics, HDF5 output and figure.
     Needs only each fit's label and flat posterior."""
     rng = np.random.default_rng(SEEDS['tests'])
-    names = ['a (mm/C^2)', 'b_u (mm/C)', 'b_d (mm/C)', 'tau_u (yr)', 'sigma_extra (mm)']
-    tf = [lambda v: v * M_TO_MM] * 3 + [np.exp, lambda v: np.exp(v) * M_TO_MM]
+    names = ['a (mm/C^2)', 'b_u (mm/C)', 'b_d (mm/C)', 'tau_u (yr)', 'sigma_extra (mm)',
+             'rho', 'sigma_extra_2 (mm)', 'm_v']
+    tf = ([lambda v: v * M_TO_MM] * 3 + [np.exp, lambda v: np.exp(v) * M_TO_MM]
+          + [lambda v: v, lambda v: np.exp(v) * M_TO_MM, lambda v: v])
     print(f"\n{'parameter':18s}{'full record':>30s}{'holdout (0-700 m from 1990.5)':>34s}")
     for i, (nm, f) in enumerate(zip(names, tf)):
         a, b = q(f(full['flat'][:, i])), q(f(hold['flat'][:, i]))
@@ -359,7 +388,8 @@ def report_and_save(full, hold):
             _n_keep = min(20000, r['flat'].shape[0])
             thin = r['flat'][np.sort(_rng_thin.choice(r['flat'].shape[0], _n_keep, replace=False))]
             gg.create_dataset('posterior_flat', data=thin, compression='gzip')
-            gg.attrs['params'] = 'a, b_u, b_d (m units), log_tau_u, log_sigma_extra'
+            gg.attrs['params'] = ('a, b_u, b_d (m units), log_tau_u, log_sigma_extra, rho, '
+                                  'log_sigma_extra_2, m_v')
             H, sx, mt = out[r['label']]
             gg.create_dataset('rate_model_mm_yr', data=mt['rate_mod'] * M_TO_MM)
             gg.create_dataset('level_model_mm', data=mt['lev_mod'] * M_TO_MM)

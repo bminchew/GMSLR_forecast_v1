@@ -93,6 +93,30 @@ H5_PATH: Path = H5_OBS_PATH
 FIG_DIR: Path = PROJECT_ROOT / "figures"
 
 # ---------------------------------------------------------------------------
+# Thermosteric volcanic term
+# ---------------------------------------------------------------------------
+VOLC_ERF_CSV: Path = RAW_DATA_DIR / "forcing/igcc2024/ERF_best_aggregates_1750-2024.csv"
+"""Annual effective radiative forcing, column 'volcanic' (W m-2): Indicators
+of Global Climate Change 2024 (Forster et al. 2025), data release v2025.06.11,
+doi:10.5281/zenodo.15639576; provenance in data/raw/forcing/README.md.  AR6
+convention: anomaly from the 500 BCE-1749 mean, mean over 1850-2024 near zero.
+Zero after the last year of the record, as in the AR6 SSP forcing."""
+
+THERMO_VOLC_KV: float = 0.71 * 5.10e14 * 3.156e7 * (0.41e-3 / (16.7 / (24.0 / 0.43) * 1e22))
+"""Volcanic term of the thermosteric upper layer, m of 0-700 m thermosteric
+sea level per (W m-2 yr): ocean fraction 0.71 x Earth area 5.10e14 m2 x
+3.156e7 s/yr x the NOAA 0-700 m expansion efficiency of Levitus et al. (2012),
+0.41 mm/yr over a heat-content trend of 16.7e22 J / (24.0e22 J / 0.43e22 J/yr)
+= 0.137 m/YJ.  The upper layer obeys dS_u/dt = (T - S_u)/tau_u + k_v F_v with
+k_v = m * THERMO_VOLC_KV / b_u (C/yr per W m-2); m is sampled."""
+
+THERMO_VOLC_M_SD: float = float((0.25 / 1.645) ** 2 + (0.013 / 0.113) ** 2) ** 0.5
+"""Standard deviation of the Gaussian prior on m, m ~ N(1, sd): volcanic ERF
+scale +/-25% (5-95%; AR6 WG1 Ch. 7, -20 +/- 5 W m-2 per unit stratospheric
+aerosol optical depth) combined in quadrature with the relative uncertainty of
+the AR6 expansion efficiency, 0.013/0.113 (used for the 0-700 m value)."""
+
+# ---------------------------------------------------------------------------
 # SSP definitions
 # ---------------------------------------------------------------------------
 SSPS: list[str] = [

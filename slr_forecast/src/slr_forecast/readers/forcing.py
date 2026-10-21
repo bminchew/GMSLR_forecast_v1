@@ -8,6 +8,7 @@ Datasets
 - Mauna Loa Observatory transmission / SAOD proxy (monthly, 1958–present)
 - NOAA ONI (Oceanic Nino Index, monthly, 1950–present)
 - NOAA MEI.v2 (Multivariate ENSO Index, monthly, 1979–present)
+- Volcanic effective radiative forcing, IGCC 2024 (annual, 1750–2024)
 """
 
 from __future__ import annotations
@@ -53,6 +54,32 @@ def read_noaa_thermosteric_yearly(filepath: str) -> pd.DataFrame:
     out.attrs['dataset'] = 'noaa_thermosteric_yearly'
     out.attrs['reference'] = 'Levitus et al. (2012)'
     out.attrs['doi'] = '10.1029/2012GL051106'
+    return out
+
+
+def read_volcanic_erf(filepath, years) -> np.ndarray:
+    """Volcanic effective radiative forcing (W m-2) at mid-year stamps.
+
+    Reads the 'volcanic' column of the Indicators of Global Climate Change
+    ERF aggregates file (rows at mid-year, 1750.5 onward) and returns its
+    values at ``years`` (e.g. 1850.5, 1851.5, ...).  Years after the last row
+    get zero, the AR6 SSP convention for future volcanic forcing; years before
+    the first row raise.
+
+    Reference
+    ---------
+    Forster et al. (2025), doi:10.5194/essd-17-2641-2025;
+    data doi:10.5281/zenodo.15639576
+    """
+    erf = pd.read_csv(filepath, index_col=0)['volcanic']
+    years = np.round(np.asarray(years, dtype=float), 1)
+    if years.min() < erf.index.min():
+        raise ValueError(f'volcanic ERF starts at {erf.index.min()}, requested {years.min()}')
+    out = erf.reindex(years).values
+    after = years > erf.index.max()
+    out[after] = 0.0
+    if np.isnan(out).any():
+        raise ValueError('volcanic ERF: requested years are not mid-year stamps of the file')
     return out
 
 
