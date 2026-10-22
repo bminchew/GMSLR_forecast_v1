@@ -176,7 +176,9 @@ def _esgf_query(index, q, timeout):
 
 
 def _covers(files, exp):
-    lo, hi = (YEARS[0], 2014) if exp == 'historical' else (2015, YEARS[1])
+    # SSP runs need 2015-2099: some archives end in December 2099
+    # (CAMS-CSM1-0), and the comparison window needs 15 of 2081-2100
+    lo, hi = (YEARS[0], 2014) if exp == 'historical' else (2015, YEARS[1] - 1)
     yrs = set()
     for f in files:
         yrs.update(range(f['y0'], f['y1'] + 1))
@@ -366,6 +368,32 @@ def box_means(T, g):
     return num_a / den_a, num_b / den_b, den_a
 
 
+ZERO_FRAC_MAX = 0.01   # exact zeros among valid box values in one chunk
+JUMP_MAX = 2.0         # degC, change of the chunk-mean level mean from the previous chunk
+
+
+def check_chunk(parts, g, model, year0, prev):
+    """Reject a chunk that looks like a bad server return, so read_file retries
+    it (then the next replica). Three screens: a share of exact zeros among
+    the valid box values (a zero-filled or partly filled return); a jump of
+    the chunk-mean level mean from the previous chunk of the same file
+    (HadGEM3-GC31-MM returned ~0.8 degC against ~4.7 degC for the first
+    24-month chunk of three files); and monthly box means identical to the
+    previous chunk's (HadGEM3-GC31-MM ssp585 once returned 2030-2031 again
+    for 2032-2033). prev is (chunk mean, monthly level means) or None."""
+    v = np.concatenate([p[np.isfinite(p) & (np.abs(p) < 1e10) & box[None, None]]
+                        for p, box in zip(parts, g['box'])])
+    if v.size and np.mean(v == 0.0) > ZERO_FRAC_MAX:
+        raise ValueError(f'{model} {year0}: {np.mean(v == 0.0):.1%} exact zeros in the box')
+    if prev is not None:
+        mb = box_means(parts, g)[1]
+        if abs(np.nanmean(mb) - prev[0]) > JUMP_MAX:
+            raise ValueError(f'{model} {year0}: chunk mean {np.nanmean(mb):.2f} degC '
+                             f'after {prev[0]:.2f} degC')
+        if len(mb) == len(prev[1]) and np.array_equal(mb, prev[1]):
+            raise ValueError(f'{model} {year0}: chunk repeats the previous chunk')
+
+
 def process_ds(ds, g_holder, model, grid, cat, step=24):
     """Monthly (year, month, volume-weighted, level-mean) box means of 1950-2100
     for one opened dataset (an OPeNDAP file or a Pangeo zarr store)."""
@@ -378,6 +406,7 @@ def process_ds(ds, g_holder, model, grid, cat, step=24):
     sel = np.where((yrs >= YEARS[0]) & (yrs <= YEARS[1]))[0]
     units = str(ds['thetao'].attrs.get('units', '')).strip()
     rows = []
+    prev = None
     for s0 in range(0, len(sel), step):
         ts = sel[s0:s0 + step]
         parts = []
@@ -390,7 +419,9 @@ def process_ds(ds, g_holder, model, grid, cat, step=24):
         med = np.nanmedian(parts[0])
         if units.upper().startswith('K') or med > 100:
             parts = [p - 273.15 for p in parts]
+        check_chunk(parts, g, model, yrs[ts[0]], prev)
         ma, mb, _ = box_means(parts, g)
+        prev = (np.nanmean(mb), mb)
         for t, a, b in zip(ts, ma, mb):
             rows.append((int(yrs[t]), int(mons[t]), a, b))
     return rows, units
@@ -480,11 +511,17 @@ def worker(model, member, grid, exp):
                 raise
     if not monthly:
         files = []
+        g_holder = {}    # the zarr store's grid, not one from a failed OPeNDAP file
         monthly = read_pangeo(cat, model, member, exp, grid, g_holder, log)
     m = pd.DataFrame(monthly, columns=['year', 'month', 'a', 'b'])
+    n_dup = int(m.duplicated(['year', 'month']).sum())
     m = m.drop_duplicates(['year', 'month']).sort_values(['year', 'month'])
-    cnt = m.groupby('year').month.count()
-    ann = m.groupby('year')[['a', 'b']].mean()[cnt == 12]
+    # Full years only: 12 months with finite values of both layer means
+    ok = np.isfinite(m['a']) & np.isfinite(m['b'])
+    cnt = m[ok].groupby('year').month.count().reindex(m.year.unique(), fill_value=0)
+    ann = m[ok].groupby('year')[['a', 'b']].mean().loc[sorted(cnt[cnt == 12].index)]
+    lo, hi = (YEARS[0], 2014) if exp == 'historical' else (2015, YEARS[1])
+    dropped = sorted(int(y) for y in set(range(lo, hi + 1)) - set(ann.index))
 
     gm_src = None
     gm = None
@@ -511,11 +548,15 @@ def worker(model, member, grid, exp):
                                                 for f in files],
                 read_log=log, esgf_errors=errors, gmst_source=gm_src, years=[int(ann.index.min()),
                                                         int(ann.index.max())],
+                years_missing=dropped, duplicate_month_stamps=n_dup,
                 **g_holder['g']['meta'])
     df.to_csv(FRAG / f'{tag}.csv', index=False, float_format='%.5f')
     (FRAG / f'{tag}.json').write_text(json.dumps(meta, indent=1, default=str))
     print(f'{tag}: {len(df)} years {meta["years"]}, {meta["n_box_columns"]} columns, '
           f'levels {meta["levels_m"]}, area: {meta["area"][:40]}', flush=True)
+    if dropped or n_dup:
+        print(f'{tag}: years missing or incomplete {dropped}; '
+              f'{n_dup} duplicate month stamps dropped', flush=True)
 
 
 # ---------------------------------------------------------------- driver

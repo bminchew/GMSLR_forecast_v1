@@ -197,6 +197,8 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
     ssp_mask = t_mon >= ssp_start
 
     # EN4 annual observations before the scenario branch (full years)
+    if np.any(np.unique(np.floor(time_ocean_monthly).astype(int), return_counts=True)[1] < 12):
+        raise ValueError('EN4 input must hold full calendar years (full_years_only)')
     hist_mask_oc = time_ocean_monthly < ssp_start
     oc_hist_t = time_ocean_monthly[hist_mask_oc]
     oc_hist_T = T_ocean_monthly[hist_mask_oc]
@@ -228,8 +230,9 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
     n_per_yr = np.bincount(yr_idx)
     is_en4 = np.isin(unique_yrs, en4_years)
     en4_vals = en4_ann[np.searchsorted(en4_years, unique_yrs[is_en4])]
-    fut = unique_yrs >= np.floor(ssp_start)
-    pre = ~fut & ~is_en4
+    # Residual noise never goes on an observed EN4 year
+    fut = (unique_yrs >= np.floor(ssp_start)) & ~is_en4
+    pre = (unique_yrs < np.floor(ssp_start)) & ~is_en4
 
     T_oc = np.zeros((n_samples, len(unique_yrs)))
     for i in range(n_samples):

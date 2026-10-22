@@ -11,7 +11,7 @@ transfer residual), from the transfer fit stored in component_results.h5
 project_greenland_discharge reproduce the stored discharge ensemble
 (greenland/projections_discharge) for every SSP.
 
-CMIP6: one member per model, 2081-2100 mean minus the model's own historical
+CMIP6: one member per model, window mean minus the model's own historical
 1995-2005 mean, in the same box and layer. Two layer means are reported:
 thetao_levmean_degC (the unweighted level mean of the production EN4 reader,
 so the definition matched to ours) and thetao_degC (volume-weighted). The
@@ -19,8 +19,16 @@ CMIP6 file is written by scripts/cmip6_greenland_thetao.py under the
 gitignored data/raw/ocean_temp/cmip6_greenland/; this script is not part of
 run_pipeline.sh because the pipeline does not download it.
 
-Baseline 1995-2005 (calendar years) and window 2081-2100 on both sides; our
-scenario forcing ends in 2099, so our window holds the years present.
+Baseline 1995-2005 (calendar years) on both sides. Our scenario forcing ends
+partway through 2099, so the window runs from 2081 to our last full year of
+forcing (2098), and the same years are used for CMIP6.
+
+The CMIP6 historical and SSP runs are separate files, and a few models step
+at the 2014/2015 junction. For each model and SSP the junction step is the
+2015-2019 mean minus the 2010-2014 mean, compared with the same difference
+of consecutive 5-year means over the historical record (z = departure from
+their mean in units of their SD). Models with |z| > JUNCTION_Z_MAX in any
+SSP are listed, and the CMIP6 summaries are printed with and without them.
 Intervals are 5th-95th percentiles (across members for ours, across models
 for CMIP6). The ratio is the window warming divided by the GMST warming over
 the same years and baseline.
@@ -64,6 +72,7 @@ PROJ_YEARS = np.arange(1900, 2151, dtype=float)
 STORED_FIRST_YEAR = 1950          # the stored projections start in 1950
 BL = (1995, 2005)
 WIN = (2081, 2100)
+JUNCTION_Z_MAX = 3.0
 
 
 def q(x):
@@ -124,8 +133,9 @@ def production_draws(transfer, temp_time_monthly):
     return tr, AA_draws, noise, noise_years, noise_pre, pre_years
 
 
-def cmip6_changes(var):
-    """Per-model 2081-2100 change from the model's 1995-2005 mean (as in d6's compare.py)."""
+def cmip6_changes(var, win):
+    """Per model: window-mean change from the model's own historical 1995-2005
+    mean, its ratio to the GMST change, and the junction step."""
     df = pd.read_csv(CMIP6_CSV).drop_duplicates(['source_id', 'member_id', 'experiment_id', 'year'])
     df = df[np.isfinite(df[var])]
     rows = []
@@ -135,14 +145,23 @@ def cmip6_changes(var):
             continue
         T0 = h.loc[BL[0]:BL[1], var].mean()
         G0 = h.loc[BL[0]:BL[1], 'gmst_K'].mean()
+        # Differences of consecutive 5-year means within the historical run
+        hv = h[var].reindex(range(h.index.min(), 2015))
+        d5 = np.array([hv.loc[y:y + 4].mean() - hv.loc[y - 5:y - 1].mean()
+                       for y in range(hv.index.min() + 5, 2011)])
+        d5 = d5[np.isfinite(d5)]
         for exp in d.experiment_id.unique():
             if exp == 'historical':
                 continue
-            w = d[d.experiment_id == exp].set_index('year').loc[WIN[0]:WIN[1]]
+            w = d[d.experiment_id == exp].set_index('year').loc[win[0]:win[1]]
             if len(w) < 15:
                 continue
             dT, dG = w[var].mean() - T0, w['gmst_K'].mean() - G0
-            rows.append(dict(source_id=m, experiment_id=exp, dT=dT, ratio=dT / dG))
+            s = d[d.experiment_id == exp].set_index('year')
+            step = s.loc[2015:2019, var].mean() - h.loc[2010:2014, var].mean()
+            z = (step - d5.mean()) / d5.std(ddof=1)
+            rows.append(dict(source_id=m, experiment_id=exp, dT=dT, ratio=dT / dG,
+                             step=step, z=z))
     return pd.DataFrame(rows)
 
 
@@ -180,32 +199,48 @@ def main():
     print(f'Check: rebuilt discharge matches the stored ensemble for {len(CHECK_SSPS)} SSPs '
           f'({N_SAMPLES} members)')
 
-    print(f'\nGreenland-box ocean warming at 200-500 m, {WIN[0]}-{WIN[1]} mean relative to '
+    # Window: WIN[0] to the last full calendar year of our forcing, both sides
+    last_full = min(max(y for y, n in zip(*np.unique(np.floor(inp['times'][s]).astype(int),
+                                                     return_counts=True)) if n == 12)
+                    for s in SSPS)
+    win = (WIN[0], min(WIN[1], last_full))
+    print(f'\nGreenland-box ocean warming at 200-500 m, {win[0]}-{win[1]} mean relative to '
           f'{BL[0]}-{BL[1]} (degC): median [5th, 95th]')
     print('  ratio = warming / GMST warming over the same years')
-    cm = {v: cmip6_changes(v) for v in ('thetao_levmean_degC', 'thetao_degC')}
+    cm = {v: cmip6_changes(v, win) for v in ('thetao_levmean_degC', 'thetao_degC')}
+    flagged = {v: sorted(c.source_id[np.abs(c.z) > JUNCTION_Z_MAX].unique()) for v, c in cm.items()}
+    print(f'  CMIP6 junction steps 2015-19 minus 2010-14 with |z| > {JUNCTION_Z_MAX:.0f}:')
+    for v, c in cm.items():
+        f = c[np.abs(c.z) > JUNCTION_Z_MAX].sort_values(['source_id', 'experiment_id'])
+        print(f'    {v}: ' + ('; '.join(f'{r.source_id} {r.experiment_id} {r.step:+.2f} degC '
+                                         f'(z {r.z:+.1f})' for r in f.itertuples()) or 'none'))
     for ssp, (key, exp) in SSPS.items():
         yrs, T = project_greenland_ocean_temperature(
             inp['temps'][ssp], inp['times'][ssp], inp['offs'][ssp], **common)
-        w, b = (yrs >= WIN[0]) & (yrs <= WIN[1]), (yrs >= BL[0]) & (yrs <= BL[1])
-        dT = T[:, w].mean(axis=1) - T[:, b].mean(axis=1)
-        # Member GMST on the same calendar years (cell 17 construction)
         t, G = inp['times'][ssp], inp['temps'][ssp][None, :] + inp['offs'][ssp]
         yr = np.floor(t).astype(int)
-        Gw = G[:, (yr >= WIN[0]) & (yr <= WIN[1])].mean(axis=1)
-        Gb = G[:, (yr >= BL[0]) & (yr <= BL[1])].mean(axis=1)
+        w = (yrs >= win[0]) & (yrs <= win[1])
+        b = (yrs >= BL[0]) & (yrs <= BL[1])
+        dT = T[:, w].mean(axis=1) - T[:, b].mean(axis=1)
+        # Member GMST on the same calendar years (cell 17 construction)
+        Gw = G[:, np.isin(yr, yrs[w])].mean(axis=1)
+        Gb = G[:, np.isin(yr, yrs[b])].mean(axis=1)
         ratio = dT / (Gw - Gb)
         print(f'  {ssp}:')
-        print(f'    ours ({yrs[w][0]}-{yrs[w][-1]}, {N_SAMPLES} members): {fmt(dT)} degC; '
+        print(f'    ours ({N_SAMPLES} members): {fmt(dT)} degC; '
               f'ratio {fmt(ratio)}')
         p5, p95 = np.percentile(dT, [5, 95])
         for v, lab in (('thetao_levmean_degC', 'level mean, as EN4'),
                        ('thetao_degC', 'volume-weighted')):
-            c = cm[v][cm[v].experiment_id == exp]
-            r = c.ratio.values[np.isfinite(c.ratio.values)]
-            print(f'    CMIP6 {lab} ({len(c)} models): {fmt(c.dT.values)} degC; '
-                  f'ratio {fmt(r)} ({len(r)} models); '
-                  f'below our 5th {np.mean(c.dT < p5):.2f}, above our 95th {np.mean(c.dT > p95):.2f}')
+            for excl in (False, True):
+                c = cm[v][cm[v].experiment_id == exp]
+                if excl:
+                    c = c[~c.source_id.isin(flagged[v])]
+                r = c.ratio.values[np.isfinite(c.ratio.values)]
+                print(f'    CMIP6 {lab}{", without junction steps" if excl else ""} '
+                      f'({len(c)} models): {fmt(c.dT.values)} degC; '
+                      f'ratio {fmt(r)} ({len(r)} models); '
+                      f'below our 5th {np.mean(c.dT < p5):.2f}, above our 95th {np.mean(c.dT > p95):.2f}')
 
 
 if __name__ == '__main__':

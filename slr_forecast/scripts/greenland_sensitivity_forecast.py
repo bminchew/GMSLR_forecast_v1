@@ -1,6 +1,6 @@
 """Greenland sensitivity tests carried into the forecast (main text, Discussion).
 
-component_greenland §6 (cell 26) reruns the production discharge model with
+The §6 sensitivity cell of component_greenland reruns the production discharge model with
 one input changed (AA at the ends of the observed window range; the EN4 layer
 shifted 100 m; the transfer-function tau grid extended to 1-40 yr) and saves each member's change in Greenland discharge to
 greenland/sensitivity. This script passes those changes through the
