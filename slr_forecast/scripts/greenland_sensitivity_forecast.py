@@ -2,7 +2,7 @@
 
 component_greenland §6 (cell 26) reruns the production discharge model with
 one input changed (AA at the ends of the observed window range; the EN4 layer
-shifted 100 m) and saves each member's change in Greenland discharge to
+shifted 100 m; the transfer-function tau grid extended to 1-40 yr) and saves each member's change in Greenland discharge to
 greenland/sensitivity. This script passes those changes through the
 production rate-space blend and reports the change at 2100 in the full
 forecast (p(S1) = 10%, `blended`) and in the slow-WAIS forecast
@@ -87,16 +87,19 @@ def main():
     maxmed, maxwid = 0.0, 0.0
     for name, dG in cases.items():
         print(f'  {name}:')
+        cmed, cwid = 0.0, 0.0
         for s in SSPS:
             dT, f, _ = blend_rate_space(g_years, dG[s], zeros, zeros, g_years,
                                         ba['t_origin'], 0.0, ba['t_center'], ba['tau_blend'])
             assert np.array_equal(f, fy)
             rows = [q(full[s][:, i_f] + dT[:, i_f]) - q(full[s][:, i_f]),
                     q(slow(s, dT)) - q(slow(s, 0.0))]
-            maxmed = max(maxmed, *[abs(r[0]) for r in rows])
-            maxwid = max(maxwid, *[abs(r[2] - r[1]) for r in rows])
+            cmed = max(cmed, *[abs(r[0]) for r in rows])
+            cwid = max(cwid, *[abs(r[2] - r[1]) for r in rows])
             print(f'    {LABEL[s]}: full {rows[0][0]:+5.1f} [{rows[0][1]:+5.1f}, {rows[0][2]:+5.1f}]   '
                   f'slow {rows[1][0]:+5.1f} [{rows[1][1]:+5.1f}, {rows[1][2]:+5.1f}]')
+        print(f'    largest change in a median: {cmed:.1f} mm; in a 90% width: {cwid:.1f} mm')
+        maxmed, maxwid = max(maxmed, cmed), max(maxwid, cwid)
     print(f'Largest change in a forecast median: {maxmed:.1f} mm; '
           f'in a 90% interval width: {maxwid:.1f} mm')
 

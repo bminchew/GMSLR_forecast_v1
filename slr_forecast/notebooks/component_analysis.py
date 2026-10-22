@@ -707,6 +707,164 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
     }
 
 
+def ema_filter(x, tau):
+    """Causal exponential moving average of an annual series.
+
+    E_k = E_{k-1} + w (x_k - E_{k-1}), w = 1 - exp(-1/tau), started at the
+    first value; the discrete form of dE/dt = (x - E)/tau with annual steps.
+    tau = 0 returns x unchanged.
+    """
+    x = np.asarray(x, dtype=float)
+    if tau <= 0:
+        return x.copy()
+    w = 1.0 - np.exp(-1.0 / tau)
+    E = np.empty_like(x)
+    E[0] = x[0]
+    for k in range(1, len(x)):
+        E[k] = E[k - 1] + w * (x[k] - E[k - 1])
+    return E
+
+
+def _gls_ar1(X, y):
+    """Exact-likelihood GLS with AR(1) errors; phi by profile maximisation.
+
+    Returns (loglik, coef, cov, phi, sigma_innov, resid), where resid are
+    the untransformed residuals y - X coef.
+    """
+    from scipy.optimize import minimize_scalar
+    n = len(y)
+
+    def solve(phi):
+        P = np.eye(n)
+        P[0, 0] = np.sqrt(1.0 - phi**2)
+        P[np.arange(1, n), np.arange(n - 1)] = -phi
+        Xs, ys = P @ X, P @ y
+        b, *_ = np.linalg.lstsq(Xs, ys, rcond=None)
+        r = ys - Xs @ b
+        s2 = r @ r / n
+        ll = (-0.5 * n * np.log(2 * np.pi * s2) - 0.5 * n
+              + 0.5 * np.log(1.0 - phi**2))
+        return ll, b, s2 * np.linalg.inv(Xs.T @ Xs), np.sqrt(s2)
+
+    opt = minimize_scalar(lambda p: -solve(p)[0], bounds=(-0.95, 0.99),
+                          method='bounded', options={'xatol': 1e-4})
+    phi = float(opt.x)
+    ll, b, cov, s = solve(phi)
+    return ll, b, cov, phi, s, y - X @ b
+
+
+def fit_ocean_lowpass_transfer(T_surface_monthly, time_surface,
+                               T_ocean_monthly, time_ocean,
+                               tau_grid=np.arange(1, 21)):
+    """Low-pass surface-to-ocean transfer: T_ocean = g·EMA_tau(T_surface) + c + eps.
+
+    The subsurface ocean integrates surface forcing and does not follow
+    single years, so a regression of annual ocean T on annual surface T is
+    attenuated by the surface interannual variability the ocean does not
+    respond to (regression dilution). Filtering the surface series with a
+    causal exponential moving average of timescale tau models that response;
+    the gain g is then the ratio of the slow (forced) changes.
+
+    For each tau on the grid, (g, c) are fitted by exact-likelihood GLS with
+    AR(1) residuals (phi profiled). Each grid value has the same number of
+    parameters, so with a uniform prior on the grid the posterior weight of
+    tau is proportional to its maximised likelihood (as BIC weights would
+    be). Within each tau, (g, c) are normal with the GLS covariance.
+
+    The surface series must be contiguous in calendar years from its start
+    (the filter runs over the whole record, so the state at the start of
+    the ocean record reflects earlier surface history).
+
+    Returns
+    -------
+    dict with keys:
+        'tau_grid', 'tau_weights', 'loglik'      : per tau
+        'g_by_tau', 'c_by_tau', 'cov_by_tau'     : GLS (g, c) and covariance
+        'phi_by_tau', 'sd_by_tau'                : residual AR(1) coefficient
+                                                    and marginal SD (°C)
+        'tau_best'                               : highest-weight tau
+        'alpha', 'beta', 'alpha_se', 'beta_se', 'corr', 'resid_ar1',
+        'residual_std', 'r2'                     : values at tau_best
+        'n', 'years', 'surf_years', 'surf_ann'   : data used
+        'lag_years'                              : 0 (no fixed lag)
+    """
+    def _annual_full(t, x):
+        t = np.asarray(t, float)
+        x = np.asarray(x, float)
+        ok = np.isfinite(x)
+        t, x = t[ok], x[ok]
+        yr = np.floor(t).astype(int)
+        uy, cnt = np.unique(yr, return_counts=True)
+        uy = uy[cnt >= 12]
+        return uy, np.array([x[yr == y].mean() for y in uy])
+
+    sy, Ts = _annual_full(time_surface, T_surface_monthly)
+    oy, To = _annual_full(time_ocean, T_ocean_monthly)
+    if np.any(np.diff(sy) != 1):
+        raise ValueError('surface series must be contiguous in years')
+    keep = (oy >= sy[0]) & (oy <= sy[-1])
+    oy, To = oy[keep], To[keep]
+    idx = oy - sy[0]
+
+    tau_grid = np.asarray(tau_grid, dtype=float)
+    out = {k: [] for k in ('loglik', 'g', 'c', 'cov', 'phi', 'sd', 'r2')}
+    for tau in tau_grid:
+        E = ema_filter(Ts, tau)[idx]
+        X = np.column_stack([E, np.ones_like(E)])
+        ll, b, cov, phi, s, resid = _gls_ar1(X, To)
+        out['loglik'].append(ll)
+        out['g'].append(b[0])
+        out['c'].append(b[1])
+        out['cov'].append(cov)
+        out['phi'].append(phi)
+        out['sd'].append(s / np.sqrt(1.0 - phi**2))
+        out['r2'].append(1.0 - np.var(resid) / np.var(To))
+    ll = np.array(out['loglik'])
+    w = np.exp(ll - ll.max())
+    w /= w.sum()
+    ib = int(np.argmax(w))
+    cov_b = out['cov'][ib]
+    return {
+        'tau_grid': tau_grid,
+        'tau_weights': w,
+        'loglik': ll,
+        'g_by_tau': np.array(out['g']),
+        'c_by_tau': np.array(out['c']),
+        'cov_by_tau': np.array(out['cov']),
+        'phi_by_tau': np.array(out['phi']),
+        'sd_by_tau': np.array(out['sd']),
+        'tau_best': float(tau_grid[ib]),
+        'alpha': float(out['g'][ib]),
+        'beta': float(out['c'][ib]),
+        'alpha_se': float(np.sqrt(cov_b[0, 0])),
+        'beta_se': float(np.sqrt(cov_b[1, 1])),
+        'corr': float(cov_b[0, 1] / np.sqrt(cov_b[0, 0] * cov_b[1, 1])),
+        'resid_ar1': float(out['phi'][ib]),
+        'residual_std': float(out['sd'][ib]),
+        'r2': float(out['r2'][ib]),
+        'n': int(len(To)),
+        'years': oy.astype(float) + 0.5,
+        'surf_years': sy.astype(float) + 0.5,
+        'surf_ann': Ts,
+        'lag_years': 0.0,
+    }
+
+
+def draw_lowpass_transfer(transfer, n_samples, rng):
+    """Posterior draws of the low-pass transfer: tau from the grid weights,
+    then (g, c) from that tau's GLS normal; phi and the marginal residual SD
+    are those of the drawn tau. Returns a dict of (n_samples,) arrays
+    'tau', 'g', 'c', 'phi', 'sd'."""
+    k = rng.choice(len(transfer['tau_grid']), size=n_samples,
+                   p=transfer['tau_weights'])
+    z = rng.standard_normal((n_samples, 2))
+    L = np.linalg.cholesky(transfer['cov_by_tau'])        # (n_tau, 2, 2)
+    gc = (np.column_stack([transfer['g_by_tau'][k], transfer['c_by_tau'][k]])
+          + np.einsum('nij,nj->ni', L[k], z))
+    return {'tau': transfer['tau_grid'][k], 'g': gc[:, 0], 'c': gc[:, 1],
+            'phi': transfer['phi_by_tau'][k], 'sd': transfer['sd_by_tau'][k]}
+
+
 # =========================================================================
 # Discharge delay model
 # =========================================================================

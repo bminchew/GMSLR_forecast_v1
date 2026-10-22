@@ -955,6 +955,63 @@ class TestOceanTransferFunction:
         assert result['beta_se'] > 0
 
 
+class TestOceanLowpassTransfer:
+    """Low-pass transfer T_ocean = g EMA_tau(T_surface) + c: the production
+    form, which is not attenuated by surface variability the ocean ignores."""
+
+    @staticmethod
+    def _synthetic(g, tau, c, seed):
+        from component_analysis import ema_filter
+        rng = np.random.default_rng(seed)
+        years = np.arange(1850, 2025)
+        # forced trend plus interannual noise 4x the ocean's, as observed
+        Ts = 0.004 * (years - 1850) + 0.02 * np.clip(years - 1980, 0, None)
+        Ts = Ts + rng.normal(0, 0.8, len(years))
+        To = g * ema_filter(Ts, tau) + c
+        eps = np.zeros(len(years))
+        for k in range(1, len(years)):
+            eps[k] = 0.5 * eps[k - 1] + 0.1 * rng.standard_normal()
+        To = To + eps
+        t_mon = np.repeat(years, 12) + (np.tile(np.arange(12), len(years)) + 0.5) / 12
+        oc = years >= 1970
+        t_oc = np.repeat(years[oc], 12) + (np.tile(np.arange(12), oc.sum()) + 0.5) / 12
+        return t_mon, np.repeat(Ts, 12), t_oc, np.repeat(To[oc], 12)
+
+    def test_ema_filter(self):
+        from component_analysis import ema_filter
+        x = np.r_[np.zeros(5), np.ones(50)]
+        np.testing.assert_array_equal(ema_filter(x, 0), x)
+        E = ema_filter(x, 4.0)
+        # step response 1 - exp(-k/tau) after the step
+        np.testing.assert_allclose(E[5:], 1 - np.exp(-(np.arange(50) + 1) / 4.0))
+
+    def test_recovers_gain_where_annual_ols_is_attenuated(self):
+        from component_analysis import (fit_ocean_lowpass_transfer,
+                                        fit_ocean_transfer_function)
+        g_hat, ols = [], []
+        for seed in range(8):
+            t_s, Ts, t_o, To = self._synthetic(0.3, 4.0, -0.05, seed)
+            tr = fit_ocean_lowpass_transfer(Ts, t_s, To, t_o)
+            g_hat.append(tr['alpha'])
+            ols.append(fit_ocean_transfer_function(Ts, t_s, To, t_o)['alpha'])
+            assert np.isclose(tr['tau_weights'].sum(), 1.0)
+        assert np.median(g_hat) == pytest.approx(0.3, abs=0.06)
+        assert np.median(ols) < 0.15            # the attenuated annual fit
+
+    def test_draws(self):
+        from component_analysis import (fit_ocean_lowpass_transfer,
+                                        draw_lowpass_transfer)
+        t_s, Ts, t_o, To = self._synthetic(0.3, 4.0, -0.05, 0)
+        tr = fit_ocean_lowpass_transfer(Ts, t_s, To, t_o, tau_grid=np.arange(1, 11))
+        d = draw_lowpass_transfer(tr, 5000, np.random.default_rng(1))
+        assert set(d) == {'tau', 'g', 'c', 'phi', 'sd'}
+        assert all(len(v) == 5000 for v in d.values())
+        assert set(np.unique(d['tau'])) <= set(tr['tau_grid'])
+        # tau frequencies follow the weights
+        freq = np.array([(d['tau'] == t).mean() for t in tr['tau_grid']])
+        np.testing.assert_allclose(freq, tr['tau_weights'], atol=0.03)
+
+
 class TestProjectDischargeForcingHold:
     """project_greenland_discharge holds the last annual ocean temperature
     flat after the forcing ends (GR-4), so the discharge rate stays at
