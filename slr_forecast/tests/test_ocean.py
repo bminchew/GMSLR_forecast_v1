@@ -471,13 +471,14 @@ class TestOceanTransferFunction:
 class TestOceanStoredFit:
     """Checks on what component_ocean cell 5 writes for the two-layer fit."""
 
-    def test_posterior_has_six_parameters_no_drift(self):
-        """a (derived), b_u, b_d, tau_u, sigma_extra, tau_d; the drift term c was removed 2026-10-16."""
+    def test_posterior_parameters_no_drift(self):
+        """a (derived), b_u, b_d, tau_u, sigma_extra, tau_d, rho, sigma_extra_2, m_v; the drift term c was removed 2026-10-16."""
         with h5py.File(H5_PATH, 'r') as f:
             if 'ocean_posteriors' not in f:
                 pytest.skip("ocean_posteriors not in component_results.h5")
             keys = set(f['ocean_posteriors'].keys())
-        expected = {f'{p}_posterior' for p in ('a', 'b_u', 'b_d', 'tau_u', 'sigma_extra', 'tau_d')}
+        expected = {f'{p}_posterior' for p in ('a', 'b_u', 'b_d', 'tau_u', 'sigma_extra', 'tau_d',
+                                                  'rho', 'sigma_extra_2', 'm_v')}
         assert keys == expected, f"posterior keys {sorted(keys)}"
 
     def test_posterior_physical_bounds(self):

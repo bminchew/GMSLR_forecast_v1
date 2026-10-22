@@ -33,6 +33,7 @@ H5 = ROOT / 'data' / 'processed' / 'component_results.h5'
 H5_OBS = ROOT / 'data' / 'processed' / 'slr_processed_data.h5'
 REF_JSON = ROOT / 'data' / 'processed' / 'forecast_reference_models.json'
 OUT_JSON = ROOT / 'data' / 'processed' / 'manuscript_numbers.json'
+TRS_JSON = ROOT / 'data' / 'processed' / 'thermosteric_record_sensitivity.json'
 CONF_BASE = str(ROOT / 'data' / 'raw' / 'ipcc_ar6' / 'slr' / 'ar6' / 'global'
                 / 'confidence_output_files')
 M_TO_MM = 1000.0
@@ -413,6 +414,48 @@ def main():
     _ns = [(EEH - e[s]['eeh_needed']) / EEH_SD for s in e]
     print(f'  EEH needed to match AR6 lies {min(_ns):.1f} to {max(_ns):.1f} standard deviations '
           f'({EEH_SD} m/YJ) below {EEH} m/YJ')
+
+    # ── Sensitivity to the thermosteric calibration record (Supplement) ──
+    # Refits on EN4 and IAP in place of NOAA, unscaled and x1.14
+    # (scripts/thermosteric_record_sensitivity.py). Trends are OLS with 90%
+    # intervals from an AR(1)-adjusted effective sample size.
+    trs = json.loads(TRS_JSON.read_text())
+    tr = trs['trends_mm_per_yr']
+    iv = lambda v: [v[0] - v[1], v[0] + v[1]]
+    print(f'\nThermosteric calibration-record sensitivity')
+    print(f'  IAP heat content to height (EN4 ratio, {trs["conv_window"][0]}-{trs["conv_window"][1]}): '
+          f'0-700 m {trs["mm_per_zj"]["700"]:.3f}, 0-2000 m {trs["mm_per_zj"]["2000"]:.3f} mm/ZJ')
+    print('  Trends (mm/yr, unscaled): NOAA | EN4 | IAP | EN4 - NOAA [90%] | IAP - NOAA [90%]')
+    for k in ('0-700m_1955-2012', '0-700m_2005-2024', '0-700m_2013-2024',
+              '0-2000m_2005-2024', '0-2000m_2013-2024'):
+        t = tr[k]
+        e, i = iv(t['en4_minus_noaa']), iv(t['iap_minus_noaa'])
+        print(f'    {k}: {t["noaa"][0]:.2f} | {t["en4"][0]:.2f} | {t["iap"][0]:.2f} | '
+              f'{t["en4_minus_noaa"][0]:+.2f} [{e[0]:.2f}, {e[1]:.2f}] | '
+              f'{t["iap_minus_noaa"][0]:+.2f} [{i[0]:.2f}, {i[1]:.2f}]')
+    fits, prod = trs['fits'], trs['production']['proj2100']
+    print('  2100 thermosteric rise rel. 2000 (mm), median [5th, 95th]:')
+    for s in POLICY:
+        print(f'    {LABEL[s]}: production {fmt(prod[s], nd=0)}; '
+              + '; '.join(f'{k} {fmt(f["proj2100"][s], nd=0)}' for k, f in fits.items()))
+    rec_diff = [fits[f'{r}_{x}']['proj2100'][s][0] - fits[f'noaa_{x}']['proj2100'][s][0]
+                for r in ('en4', 'iap') for x in ('x100', 'x114') for s in POLICY]
+    scl = [fits[f'{r}_x114']['proj2100'][s][0] - fits[f'{r}_x100']['proj2100'][s][0]
+           for r in ('noaa', 'en4', 'iap') for s in POLICY]
+    inside = all(prod[s][1] <= f['proj2100'][s][0] <= prod[s][2] for f in fits.values() for s in POLICY)
+    print(f'  EN4/IAP minus NOAA at equal scaling, 2100 medians: {min(rec_diff):+.0f} to {max(rec_diff):+.0f} mm')
+    print(f'  x1.14 minus x1.00, 2100 medians: {min(scl):.0f} to {max(scl):.0f} mm')
+    print(f'  every refit median inside the production 90% interval: {inside}')
+    print('  sigma_extra,u (mm) | rho, medians: '
+          + '; '.join(f'{k} {f["params"]["sigma_extra_mm"][0]:.2f} | {f["params"]["rho"][0]:.2f}'
+                      for k, f in fits.items()))
+    out['thermo_record_sensitivity'] = dict(
+        mm_per_zj=trs['mm_per_zj'], trends={k: tr[k] for k in tr},
+        proj2100={k: {s: f['proj2100'][s] for s in POLICY} for k, f in fits.items()},
+        record_diff_mm=[min(rec_diff), max(rec_diff)], scaling_effect_mm=[min(scl), max(scl)],
+        all_inside_production_90=inside,
+        sigma_extra_u_mm={k: f['params']['sigma_extra_mm'] for k, f in fits.items()},
+        rho={k: f['params']['rho'] for k, f in fits.items()})
 
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')
