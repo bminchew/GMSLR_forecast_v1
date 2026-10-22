@@ -744,7 +744,10 @@ def _gls_ar1(X, y):
         s2 = r @ r / n
         ll = (-0.5 * n * np.log(2 * np.pi * s2) - 0.5 * n
               + 0.5 * np.log(1.0 - phi**2))
-        return ll, b, s2 * np.linalg.inv(Xs.T @ Xs), np.sqrt(s2)
+        # Coefficient covariance on the unbiased scale r'r/(n - p); the
+        # likelihood keeps the ML scale r'r/n (phi is treated as known)
+        cov = (r @ r / (n - X.shape[1])) * np.linalg.inv(Xs.T @ Xs)
+        return ll, b, cov, np.sqrt(s2)
 
     opt = minimize_scalar(lambda p: -solve(p)[0], bounds=(-0.95, 0.99),
                           method='bounded', options={'xatol': 1e-4})

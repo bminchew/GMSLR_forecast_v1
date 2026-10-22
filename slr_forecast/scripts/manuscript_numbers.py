@@ -435,6 +435,12 @@ def main():
               f'{t["en4_minus_noaa"][0]:+.2f} [{e[0]:.2f}, {e[1]:.2f}] | '
               f'{t["iap_minus_noaa"][0]:+.2f} [{i[0]:.2f}, {i[1]:.2f}]')
     fits, prod = trs['fits'], trs['production']['proj2100']
+    # the JSON snapshots must come from the current component_results.h5
+    for s in POLICY:
+        h5_med = float(np.median(comp['ocean'][s][:, j21])) * M_TO_MM
+        assert abs(prod[s][0] - h5_med) < 0.05, (
+            f'thermosteric_record_sensitivity.json is stale ({s}: {prod[s][0]:.2f} vs h5 '
+            f'{h5_med:.2f} mm); rerun scripts/thermosteric_record_sensitivity.py all')
     print('  2100 thermosteric rise rel. 2000 (mm), median [5th, 95th]:')
     for s in POLICY:
         print(f'    {LABEL[s]}: production {fmt(prod[s], nd=0)}; '
@@ -461,9 +467,17 @@ def main():
     # ---- CMIP6 zostoga comparison (scripts/cmip6_zostoga.py analyze), supp Fig. S12c,d
     cz = json.loads(CZ_JSON.read_text())
     ct, cp = cz['trends_mm_per_yr'], cz['per_degree']
+    _ref = (cy >= 1995) & (cy <= 2014)
+    _o = comp['ocean']['SSP2-4.5'] * M_TO_MM
+    _h5 = float(np.median(_o[:, j21] - _o[:, _ref].mean(axis=1)))
+    _cz = cp['ar6_reference']['production_dH_2100_rel_1995_2014_mm'][0]
+    assert abs(_cz - _h5) < 0.05, (f'cmip6_zostoga_summary.json is stale ({_cz:.2f} vs h5 '
+                                   f'{_h5:.2f} mm); rerun scripts/cmip6_zostoga.py analyze')
     fq = lambda q, d=2: f'{q[0]:.{d}f} [{q[1]:.{d}f}, {q[2]:.{d}f}]'
     print('\nCMIP6 zostoga (median [5th, 95th] across models; production median [90% CI])')
-    print(f'  models analysed {cz["n_models"]}, with SSP2-4.5 to 2024 {len(cz["post2014_models"])}')
+    print(f'  models analysed {cz["n_models"]}, reaching 2024 under SSP2-4.5 {cz["n_reaching_2024"]}, '
+          f'used after 2014 {len(cz["post2014_models"])} (join-flagged: {", ".join(cz["join_flagged"])}); '
+          f'drift fits {cz["drift"]["mode_counts"]}')
     for w in ('1955-2012', '2005-2024', '2013-2024'):
         r = ct[w]
         line = (f'  {w} full-depth trend (mm/yr): CMIP6 {fq(r["cmip6"])} (n={r["n"]}), '
@@ -477,17 +491,18 @@ def main():
     print(f'  per degree 1955-74 -> 2005-24 (mm/C): CMIP6 {fq(wm["cmip6_mm_per_K"], 0)} (n={wm["n"]}), '
           f'this study {fq(wm["production_mm_per_K"], 0)}')
     print(f'  per degree 1995-2014 -> 2081-2100 SSP2-4.5 (mm/C): CMIP6 {fq(fu["cmip6_mm_per_K"], 0)} '
-          f'(n={fu["n"]}), this study {fq(fu["production_mm_per_K_at_median_dT"], 0)}, '
+          f'(n={fu["n"]}), this study {fq(fu["production_mm_per_K"], 0)} (own warming paths), '
           f'AR6 ratio of medians {a6["mm_per_K_ratio_of_medians"]:.0f}')
     out['cmip6_zostoga'] = dict(
-        n_models=cz['n_models'], n_ssp245=len(cz['post2014_models']),
+        n_models=cz['n_models'], n_reaching_2024=cz['n_reaching_2024'],
+        n_ssp245=len(cz['post2014_models']),
         trends={w: dict(cmip6=ct[w]['cmip6'], production_full=ct[w]['production_full'],
                         production_0_700=ct[w]['production_0_700'],
                         obs_full_depth_est=ct[w].get('obs_full_depth_est'))
                 for w in ('1955-2012', '2005-2024', '2013-2024')},
         mm_per_K_hist=dict(cmip6=wm['cmip6_mm_per_K'], production=wm['production_mm_per_K']),
         mm_per_K_ssp245=dict(cmip6=fu['cmip6_mm_per_K'],
-                             production=fu['production_mm_per_K_at_median_dT'],
+                             production=fu['production_mm_per_K'],
                              ar6_ratio_of_medians=a6['mm_per_K_ratio_of_medians']))
 
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))

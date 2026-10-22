@@ -18,10 +18,12 @@ withheld data.
 Likelihood (separate sigma_extra per record, AR(1) with one shared rho),
 priors, volcanic term, Li et al. (2022) x1.14 correction, 5% residual
 structural error, demeaning and MCMC settings are copied from the
-production cell (no linear drift term since 2026-10-16; the first run of
+production cell, except that tau_d is fixed at TAU_D_FIXED here while
+production samples it from the CMIP5 prior, so the full-record b_d, rho and
+sigma_extra_2 below are not the production posterior (no linear drift term since 2026-10-16; the first run of
 this script, with the drift term, found it traded off against b_u). Both the
 production (full-record) fit and the holdout fit are run here with identical
-code, so the parameter comparison is like for like. As in production, the 5%
+code, so the parameter comparison between them is like for like. As in production, the 5%
 structural term is independent per point (not a correlated scale error), and
 both layers start in equilibrium with the 1850 GMST anomaly. In the holdout
 fit the AR(1) lags are the year differences, so the gap left by the withheld

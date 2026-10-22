@@ -220,8 +220,14 @@ def cmd_series(args):
     ydir = out / 'years'
     ydir.mkdir(parents=True, exist_ok=True)
     arch = find_archives(args.zip_dirs)
+    def done(yr, names):
+        # resume only over complete years: npz from the same number of archive
+        # members, and the 0-700 m anomaly file written after it
+        f = ydir / f'{yr}.npz'
+        return (f.exists() and (ydir / f'ctanom_0_700_{yr}.npy').exists()
+                and int(np.load(f)['n_months']) == len(names))
     jobs = [(yr, str(p), names, str(ydir)) for yr, (p, names) in arch.items()
-            if yr >= args.first_year and not (ydir / f'{yr}.npz').exists()]
+            if yr >= args.first_year and not done(yr, names)]
     print(f'{len(jobs)} years to process: {[j[0] for j in jobs]}', flush=True)
     with ProcessPoolExecutor(args.workers, initializer=_init,
                              initargs=(str(out / 'en4_clim.npz'),)) as ex:
@@ -241,10 +247,11 @@ def cmd_annual(args):
     out = Path(args.out)
     bnds = np.load(out / 'en4_clim.npz')['depth_bnds']
     dz = {H: np.minimum(bnds[:, 1], H) - np.minimum(bnds[:, 0], H) for H in (700.0, 2000.0)}
-    rows = []
+    rows, partial = [], []
     for f in sorted((out / 'years').glob('[0-9][0-9][0-9][0-9].npz')):
         z = np.load(f)
         if int(z['n_months']) != 12:
+            partial.append((int(f.stem), int(z['n_months'])))
             continue
         r = {'year': int(f.stem), 'n_fill': int(z['n_fill'])}
         for ri, rn in enumerate(z['regions']):
@@ -257,6 +264,8 @@ def cmd_annual(args):
                                         .sum(1).mean() / 1e21)
         rows.append(r)
     pd.DataFrame(rows).set_index('year').to_csv(args.csv, float_format='%.6g')
+    if partial:
+        print(f'skipped incomplete years (year, months): {partial}')
     print(f'wrote {args.csv} ({len(rows)} years, {rows[0]["year"]}-{rows[-1]["year"]})')
 
 

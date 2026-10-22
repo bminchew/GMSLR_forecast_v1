@@ -53,14 +53,19 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import emcee  # noqa: E402
 from scipy.linalg import cho_factor, cho_solve  # noqa: E402
+from scipy.stats import t as student_t  # noqa: E402
 
 from slr_forecast.config import (BASELINE_YEAR, BASELINE_WINDOW, SEEDS, KAPPA_EOS,  # noqa: E402
+                                 GEOFFROY2013_C0, GEOFFROY2013_GAMMA,
                                  VOLC_ERF_CSV, THERMO_VOLC_KV, THERMO_VOLC_M_SD)
 from slr_forecast.readers.forcing import read_noaa_thermosteric_yearly, read_volcanic_erf  # noqa: E402
 from bayesian_models import solve_twolayer_ode  # noqa: E402
 
 H5_PATH = str(ROOT / 'data/processed/slr_processed_data.h5')
 H5_COMP = ROOT / 'data/processed/component_results.h5'
+AR6_CONF_BASE = str(ROOT / 'data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files')
+AR6_CODE = {'SSP1-2.6': 'ssp126', 'SSP2-4.5': 'ssp245', 'SSP3-7.0': 'ssp370',
+            'SSP5-8.5': 'ssp585'}
 RAW_DIR = ROOT / 'data/raw'
 EN4_CSV = ROOT / 'data/processed/en4_thermosteric_annual.csv'
 IAP_CSV = ROOT / 'data/processed/iap_v42_ohc_global_monthly.csv'
@@ -90,10 +95,7 @@ Fv_annual = read_volcanic_erf(VOLC_ERF_CSV, T_annual_years)
 Fv_avg_ann = 0.5 * (Fv_annual[:-1] + Fv_annual[1:])
 
 # CMIP5 tau_d prior (cell 5)
-_G13_C0 = np.array([53, 90, 71, 69, 99, 69, 127, 105, 126, 82, 317, 95, 145, 71, 64, 105.])
-_G13_GAMMA = np.array([0.67, 0.53, 0.59, 0.93, 0.50, 0.88, 0.76, 0.90, 1.16, 0.55,
-                       0.65, 0.59, 0.76, 0.72, 0.66, 0.88])
-_log_taud_cmip5 = np.log(_G13_C0 / _G13_GAMMA)
+_log_taud_cmip5 = np.log(np.array(GEOFFROY2013_C0) / np.array(GEOFFROY2013_GAMMA))
 TAU_D_LOG_MU = _log_taud_cmip5.mean()
 TAU_D_LOG_SIGMA = _log_taud_cmip5.std(ddof=1)
 TAU_D_INIT = float(np.exp(TAU_D_LOG_MU))
@@ -107,8 +109,10 @@ def _trend(t, y):
     r1 = np.corrcoef(r[:-1], r[1:])[0, 1]
     n = len(t)
     neff = max(3.0, n * (1 - r1) / (1 + r1))
-    se = np.sqrt(r @ r / (n - 2) / ((t - t.mean())**2).sum()) * np.sqrt(n / neff)
-    return float(c[1]), float(1.645 * se)
+    # Santer et al. (2008): residual variance and t quantile on neff - 2 dof
+    dof = neff - 2
+    se = np.sqrt(r @ r / dof / ((t - t.mean())**2).sum())
+    return float(c[1]), float(student_t.ppf(0.95, dof) * se)
 
 
 def load_en4():
@@ -379,7 +383,8 @@ def project(flat, D):
             else:
                 T_k[n_hist:n_hist + n_ssp_future] += _T_noise
             T_target_k = T_k + mc_m_v[k] * THERMO_VOLC_KV / mc_bu[k] * mc_tau_u[k] * Fv_proj
-            Su_k, Sd_k = solve_twolayer_ode(T_target_k, years_proj, mc_tau_u[k], mc_tau_d[k])
+            Su_k, Sd_k = solve_twolayer_ode(T_target_k, years_proj, mc_tau_u[k], mc_tau_d[k],
+                                            Su0=T_k[0], Sd0=T_k[0])
             H_upper_k = mc_a[k] * Su_k**2 + mc_bu[k] * Su_k
             H_total_k = H_upper_k + mc_bd[k] * Sd_k
             rate_deep_k = RATE_BELOW_2000 + rng_proj.normal(0, SIGMA_BELOW_2000)
@@ -445,7 +450,21 @@ def production():
         i21 = int(np.where(py == 2100)[0][0])
         proj = {s: q(f['ocean/projections'][s]['samples'][:, i21] * 1e3)
                 for s in f['ocean/projections']}
-    return dict(params=P, proj2100=proj)
+        # AR6 medium-confidence thermal expansion at 2100 (relative to 1995-2014), moved
+        # to 2000 by adding the median over our members of their own 1995-2014 mean
+        # relative to 2000 (the reference shift manuscript_numbers.py uses for the gap)
+        from component_projections import read_ipcc_component_nc, ipcc_extract
+        ref = (py >= 1995) & (py <= 2014)
+        ar6 = {}
+        for s, code in AR6_CODE.items():
+            e = ipcc_extract(read_ipcc_component_nc(AR6_CONF_BASE, 'medium_confidence', code,
+                                                    'oceandynamics'))
+            j = int(np.argmin(np.abs(e['years'] - 2100)))
+            off = float(np.median(f['ocean/projections'][s]['samples'][:, ref].mean(1))) * 1e3
+            ar6[s] = dict(rel2000_mm=[float(e[k][j]) + off for k in ('q50', 'q05', 'q95')],
+                          rel_1995_2014_mm=[float(e[k][j]) for k in ('q50', 'q05', 'q95')],
+                          offset_1995_2014_minus_2000_mm=off)
+    return dict(params=P, proj2100=proj, ar6_2100=ar6)
 
 
 def record_series():
@@ -520,8 +539,9 @@ def cmd_all(a):
     procs = [subprocess.Popen([sys.executable, __file__, 'fit', '--record', r, '--scale', str(s),
                                '--n-burn', str(a.n_burn), '--n-prod', str(a.n_prod)])
              for r, s in FITS]
-    if any(p.wait() for p in procs):
-        raise SystemExit('a fit failed')
+    codes = [p.wait() for p in procs]
+    if any(codes):
+        raise SystemExit(f'fits failed, exit codes {codes}')
     cmd_collect(a)
 
 

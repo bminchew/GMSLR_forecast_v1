@@ -32,15 +32,25 @@ with an exclusive end)."""
 # ---------------------------------------------------------------------------
 # Thermosteric equation of state
 # ---------------------------------------------------------------------------
-KAPPA_EOS: float = 0.24689
+KAPPA_EOS: float = 0.26497
 """Equation-of-state coefficient (1/m) tying the thermosteric quadratic
 coefficient to the linear one in the two-layer model: a_u = KAPPA_EOS * b_u**2
-(a_u in m/C^2, b_u in m/C).  KAPPA_EOS = 1/2 int alpha' g^2 dz / (int alpha_0 g dz)^2
+(a_u in m/C^2, b_u in m/C).  KAPPA_EOS = 1/2 int f alpha' g^2 dz / (int f alpha_0 g dz)^2
 over 0-700 m, with TEOS-10 alpha and d(alpha)/d(CT) from the EN4.2.2 1995-2005
-mean temperature and salinity and a uniform profile shape g.  Printed by
+mean temperature and salinity, a uniform profile shape g, and f(z) the wet-area
+fraction of the sea surface at depth z (the records are global-mean heights).  Printed by
 scripts/thermosteric_eos_coefficient.py.  a_u is not fitted (decision D5,
 2026-10-18): the NOAA records after 1990 leave a free a_u unconstrained.
 Imported by component_ocean.ipynb and scripts/ocean_early_holdout.py."""
+
+GEOFFROY2013_C0: tuple = (53, 90, 71, 69, 99, 69, 127, 105, 126, 82, 317, 95, 145, 71, 64, 105.)
+GEOFFROY2013_GAMMA: tuple = (0.67, 0.53, 0.59, 0.93, 0.50, 0.88, 0.76, 0.90, 1.16, 0.55,
+                             0.65, 0.59, 0.76, 0.72, 0.66, 0.88)
+"""Deep-ocean heat capacity C_0 (W yr m-2 K-1) and exchange coefficient gamma
+(W m-2 K-1) of the 16 CMIP5 models in Geoffroy et al. (2013), Table 4, in the
+table's order.  The thermosteric deep-layer time scale tau_d = C_0 / gamma has a
+lognormal prior with the mean and sample SD of log(C_0 / gamma)
+(component_ocean.ipynb cell 5, scripts/thermosteric_record_sensitivity.py)."""
 
 # ---------------------------------------------------------------------------
 # Monte Carlo / sampling

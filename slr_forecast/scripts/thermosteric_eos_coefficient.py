@@ -4,11 +4,14 @@ a_u to b_u in the two-layer model (component_ocean.ipynb, cell 5).
 Main text (Eqs. for H_u): with Delta theta(z, t) = S_u(t) phi(z) over the
 upper h_u = 700 m and alpha_sw = alpha_0(z) + alpha'(z) theta',
 
-    a_u = 1/2 int_0^h alpha'(z) phi(z)^2 dz,   b_u = int_0^h alpha_0(z) phi(z) dz.
+    a_u = 1/2 int_0^h f alpha'(z) phi(z)^2 dz,   b_u = int_0^h f alpha_0(z) phi(z) dz,
 
-For a profile shape g(z) with phi = A g, eliminating A gives
+where f(z) = A_wet(z) / A_wet(0) is the fraction of the sea-surface area that is
+ocean at depth z, because the records are global-mean heights (expansion at depth
+z spread over the surface area). For a profile shape g(z) with phi = A g,
+eliminating A gives
 
-    a_u = kappa * b_u**2,   kappa = 1/2 int alpha' g^2 dz / (int alpha_0 g dz)^2,
+    a_u = kappa * b_u**2,   kappa = 1/2 int f alpha' g^2 dz / (int f alpha_0 g dz)^2,
 
 so a_u is fixed by seawater physics once b_u is fitted (decision D5,
 2026-10-18: a_u is not a free parameter, because the NOAA data after 1990
@@ -80,16 +83,19 @@ def main():
 
     w = np.broadcast_to(np.cos(np.deg2rad(lat))[None, :, None], alpha.shape)
     ok = np.isfinite(alpha) & np.isfinite(alpha_p)
-    a0_z = np.nansum(np.where(ok, alpha * w, 0), axis=(1, 2)) / np.sum(np.where(ok, w, 0), axis=(1, 2))
-    ap_z = np.nansum(np.where(ok, alpha_p * w, 0), axis=(1, 2)) / np.sum(np.where(ok, w, 0), axis=(1, 2))
+    wet = np.sum(np.where(ok, w, 0), axis=(1, 2))
+    a0_z = np.nansum(np.where(ok, alpha * w, 0), axis=(1, 2)) / wet
+    ap_z = np.nansum(np.where(ok, alpha_p * w, 0), axis=(1, 2)) / wet
+    f_z = wet / wet[0]                 # wet-area fraction relative to the surface
     dz = bnds[:, 1] - bnds[:, 0]
     zc = 0.5 * (bnds[:, 0] + bnds[:, 1])
 
     print(f'EN4.2.2, {n_months} monthly analyses {YEARS[0]}-{YEARS[-1]}; '
           f'{len(depth)} levels to {bnds[-1, 1]:.0f} m; gsw {gsw.__version__}')
-    print(f'{"z (m)":>8} {"alpha_0 (1e-4/C)":>17} {"alpha\' (1e-5/C^2)":>18}')
+    hdr = "alpha' (1e-5/C^2)"
+    print(f'{"z (m)":>8} {"alpha_0 (1e-4/C)":>17} {hdr:>18} {"f":>6}')
     for i in range(0, len(depth), 3):
-        print(f'{depth[i]:8.0f} {a0_z[i] * 1e4:17.3f} {ap_z[i] * 1e5:18.3f}')
+        print(f'{depth[i]:8.0f} {a0_z[i] * 1e4:17.3f} {ap_z[i] * 1e5:18.3f} {f_z[i]:6.3f}')
 
     shapes = {
         'uniform (production)': np.ones_like(zc),
@@ -100,7 +106,7 @@ def main():
     }
     print(f'\n{"shape g(z)":28s} {"kappa (1/m)":>12} {"a_u at b_u = 50 mm/C (mm/C^2)":>31}')
     for name, g in shapes.items():
-        kappa = 0.5 * np.sum(ap_z * g**2 * dz) / np.sum(a0_z * g * dz) ** 2
+        kappa = 0.5 * np.sum(f_z * ap_z * g**2 * dz) / np.sum(f_z * a0_z * g * dz) ** 2
         print(f'{name:28s} {kappa:12.4e} {kappa * 0.050**2 * 1e3:31.3f}')
         if name.startswith('uniform'):
             kappa_prod = kappa

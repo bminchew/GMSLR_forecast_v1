@@ -62,7 +62,7 @@ Subcommands
       h5 series if --h5 is given, and writes en4_greenland_box_series_monthly.csv
       and en4_greenland_box_series_annual.csv.
   figure  --derived-dir DIR --out FILE
-      Three-panel diagnostic figure.
+      Four-panel diagnostic figure.
 
 Run from the repository root, e.g.
   python -I scripts/en4_greenland_profile_counts.py counts \
@@ -380,7 +380,7 @@ def cmd_figure(args):
     a = ax[1]
     n = cnt.set_index('year')['n_qc_pos']
     pos = n[n > 0]
-    a.bar(pos.index, pos, width=0.8, color=ink, bottom=0.7)
+    a.bar(pos.index, pos - 0.7, width=0.8, color=ink, bottom=0.7)   # top at n
     zero = n[n == 0].index
     a.plot(zero, np.full(len(zero), 0.9), 'x', color='#b4423a', ms=4,
            label='zero profiles')

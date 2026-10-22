@@ -1,8 +1,8 @@
 """Unit tests for the ocean (thermosteric) component.
 
 Tests cover: the stored full-depth observations, the two-layer ODE solver,
-the stored fit (five-parameter posterior, x1.14 correction, fixed tau_d,
-below-2000 m rate), projection structure and baseline, save_ocean_hybrid
+the stored fit (eight sampled parameters with a = KAPPA_EOS b_u^2, x1.14
+correction, tau_d sampled from the CMIP5 prior, below-2000 m rate), projection structure and baseline, save_ocean_hybrid
 side effects on sibling groups, IPCC AR6 oceandynamics input, and physical
 plausibility of the projections.
 """
@@ -181,8 +181,8 @@ class TestOceanSaveLoad:
         assert mt == 'twolayer_noaa', f"Unexpected model_type: {mt}"
 
     def test_metadata_fixed_constants(self, loaded):
-        """tau_d sampled from the CMIP5 C_0/gamma prior (median 133 yr, flat
-        likelihood, so the posterior median stays near it); below-2000 m rate
+        """tau_d sampled from the CMIP5 C_0/gamma prior (median 133 yr; the
+        likelihood is weak, so the posterior median stays within 100-175 yr); below-2000 m rate
         0.117 mm/yr; Li x1.14."""
         md = loaded['metadata']
         assert 100.0 < md['tau_d_median_yr'] < 175.0

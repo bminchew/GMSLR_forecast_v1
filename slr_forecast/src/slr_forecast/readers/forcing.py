@@ -75,7 +75,7 @@ def read_volcanic_erf(filepath, years) -> np.ndarray:
     years = np.round(np.asarray(years, dtype=float), 1)
     if years.min() < erf.index.min():
         raise ValueError(f'volcanic ERF starts at {erf.index.min()}, requested {years.min()}')
-    out = erf.reindex(years).values
+    out = erf.reindex(years).to_numpy(dtype=float, copy=True)
     after = years > erf.index.max()
     out[after] = 0.0
     if np.isnan(out).any():

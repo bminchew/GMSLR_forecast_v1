@@ -59,8 +59,10 @@ import h5py
 import numpy as np
 import pandas as pd
 import xarray as xr
+from scipy.stats import t as student_t
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(ROOT / 'src'), str(ROOT / 'notebooks')]
 CATALOG = 'https://storage.googleapis.com/cmip6/pangeo-cmip6.csv'
 ESGF_SEARCH = 'https://esgf-data.dkrz.de/esg-search/search'
 NODE_PREF = ['esgf.ceda.ac.uk', 'esgf3.dkrz.de', 'esgf-data1.llnl.gov', 'esgf-node.ornl.gov',
@@ -506,6 +508,9 @@ def cmd_fetch(a):
     hist_models = ({m for (m, e) in emem if e == 'historical'}
                    | set(pcat[(pcat.variable_id == 'zostoga')
                               & (pcat.experiment_id == 'historical')].source_id))
+    if a.models and Path(a.out_csv).exists():
+        # --models writes only the listed models; it does not merge into an existing CSV
+        raise SystemExit(f'{a.out_csv} exists; with --models write to a separate --out-csv')
     models = sorted(hist_models if not a.models else set(a.models))
     frames, infos, skipped = [], {}, {}
 
@@ -547,8 +552,10 @@ def _trend(t, y):
     r1 = np.corrcoef(r[:-1], r[1:])[0, 1]
     n = len(t)
     neff = max(3.0, n * (1 - r1) / (1 + r1))
-    se = np.sqrt(r @ r / (n - 2) / ((t - t.mean())**2).sum()) * np.sqrt(n / neff)
-    return float(c[1]), float(1.645 * se)
+    # Santer et al. (2008): residual variance and t quantile on neff - 2 dof
+    dof = neff - 2
+    se = np.sqrt(r @ r / dof / ((t - t.mean())**2).sum())
+    return float(c[1]), float(student_t.ppf(0.95, dof) * se)
 
 
 def q3(x):
@@ -633,6 +640,7 @@ def cmd_analyze(a):
     obs = json.loads(OBS_JSON.read_text())
     S = dict(n_models=len(models), models=models, skipped=prov['skipped'],
              post2014_models=sorted(post), join_flagged=sorted(join_bad),
+             n_reaching_2024=int(sum(Z[m].index.max() >= 2024 for m in models)),
              qc_excluded_1955_2014_trend_mm_per_yr=qc_bad,
              members={m: [prov['models'][m]['member_id'], prov['models'][m]['picontrol_member']]
                       for m in models})
@@ -652,6 +660,8 @@ def cmd_analyze(a):
     S['drift'] = dict(
         per_model=dr,
         n_parallel=sum(v['mode'].startswith('parallel') for v in dr.values()),
+        mode_counts={k: sum(v['mode'] == k for v in dr.values())
+                     for k in sorted({v['mode'] for v in dr.values()})},
         drift_lin_mm_per_yr=q3([v['drift_lin_mm_per_yr'] for v in dr.values()]),
         abs_drift_over_trend=q3([abs(v['drift_lin_mm_per_yr']) / v['trend_1955_2014_lin']
                                  for v in dr.values()]),
@@ -708,10 +718,11 @@ def cmd_analyze(a):
     per = {}
     for m in models:
         z, t = Z[m], T[m]
-        if m not in post or t.loc[b0:b1].isna().any() or t.loc[a0:a1].isna().any():
+        ws = [win(x, w) for x in (z, t) for w in PD_WINDOWS]
+        if m not in post or any(v is None for v in ws):
             continue
-        dH = z.loc[b0:b1].mean() - z.loc[a0:a1].mean()
-        dT = t.loc[b0:b1].mean() - t.loc[a0:a1].mean()
+        dH = ws[1].mean() - ws[0].mean()
+        dT = ws[3].mean() - ws[2].mean()
         per[m] = dict(dH_mm=float(dH), dT_K=float(dT), mm_per_K=float(dH / dT))
     i0 = (py >= a0) & (py <= a1)
     i1 = (py >= b0) & (py <= b1)
@@ -749,23 +760,34 @@ def cmd_analyze(a):
     (f0, f1), (g0, g1) = PD_FUTURE
     per3 = {}
     for m in post:
-        if T[m].loc[g0:g1].isna().any() or Z[m].loc[g0:g1].isna().any():
+        ws = [win(x, w) for x in (Z[m], T[m]) for w in PD_FUTURE]
+        if any(v is None for v in ws):
             continue
-        dH = Z[m].loc[g0:g1].mean() - Z[m].loc[f0:f1].mean()
-        dT = T[m].loc[g0:g1].mean() - T[m].loc[f0:f1].mean()
+        dH = ws[1].mean() - ws[0].mean()
+        dT = ws[3].mean() - ws[2].mean()
         per3[m] = dict(dH_mm=float(dH), dT_K=float(dT), mm_per_K=float(dH / dT))
     j0 = (py >= f0) & (py <= f1)
     j1 = (py >= g0) & (py <= g1)
     dHf = full[:, j1].mean(1) - full[:, j0].mean(1)
     dTf = float(gm.loc[g0:g1].mean() - gm.loc[f0:f1].mean())
+    # Each production member follows its own AR6 percentile path (warming_paths,
+    # same seed and member order as component_ocean); its warming is the median
+    # path's plus its own offset, which is zero through 2024 and held flat to 2100.
+    from warming_paths import warming_z, ssp_row_offsets
+    ar = pd.read_hdf(H5_PROC, 'projections/temp/SSP2_4_5')
+    offs = pd.DataFrame(ssp_row_offsets(ar, warming_z(full.shape[0])).T,
+                        index=ar['decimal_year'].astype(int).values)
+    offs.loc[2100] = offs.loc[2099]
+    dTi = dTf + offs.loc[g0:g1].mean().values - offs.reindex(range(f0, f1 + 1)).fillna(0).mean().values
     pdg['ssp245_2081_2100_vs_1995_2014'] = dict(
         per_model=per3, n=len(per3), cmip6_mm_per_K=q3([v['mm_per_K'] for v in per3.values()]),
         cmip6_dH_mm=q3([v['dH_mm'] for v in per3.values()]),
         cmip6_dT_K=q3([v['dT_K'] for v in per3.values()]),
         production_dH_mm=q3(dHf), ar6_median_dT_K=dTf, ar6_offset_K=off,
+        production_dT_K=q3(dTi), production_mm_per_K=q3(dHf / dTi),
         production_mm_per_K_at_median_dT=q3(dHf / dTf),
-        note='production members follow AR6 GMST percentile paths; dividing by the AR6 '
-             'median warming is an approximation for the ratio')
+        note='production_mm_per_K divides each member by its own AR6 percentile-path '
+             'warming; the _at_median_dT variant divides every member by the median')
 
     # AR6 reference (local FACTS files): thermal expansion samples (oceandynamics-tlm,
     # ssp245, base year 2005 = 1995-2014 mean, decadal) and the AR6 two-layer model GMST
@@ -827,7 +849,7 @@ def cmd_analyze(a):
                             float(stats.spearmanr(x, [pm[m]['dH_mm'] for m in mm]).pvalue)],
         spearman_dT_vs_ECS=[float(stats.spearmanr(x, [pm[m]['dT_K'] for m in mm]).statistic),
                             float(stats.spearmanr(x, [pm[m]['dT_K'] for m in mm]).pvalue)],
-        ols_dH_on_dT=dict(slope_mm_per_K=float(lr.slope), slope_90=float(1.645 * lr.stderr),
+        ols_dH_on_dT=dict(slope_mm_per_K=float(lr.slope), slope_90=float(student_t.ppf(0.95, len(dTs) - 2) * lr.stderr),
                           intercept_mm=float(lr.intercept), r=float(lr.rvalue),
                           p=float(lr.pvalue)))
     S['per_degree'] = pdg
