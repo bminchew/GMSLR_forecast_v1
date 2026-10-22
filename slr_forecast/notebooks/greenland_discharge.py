@@ -132,52 +132,16 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
     Returns {ssp: ndarray (n_samples, len(proj_years))}.
     """
     n_samples = len(alpha_draws)
-    tau_draws = np.zeros(n_samples) if tau_draws is None else np.asarray(tau_draws, float)
     out = {}
     for ssp in ssps:
-        T_mon = proj_monthly_temps[ssp]
-        t_mon = proj_monthly_times[ssp]
-        T_off_mon = proj_monthly_offsets[ssp]
-
-        ssp_start_idx = min(np.searchsorted(t_mon, temp_time_monthly[-1]), len(t_mon) - 1)
-        ssp_start = t_mon[ssp_start_idx]
-        ssp_mask = t_mon >= ssp_start
-
-        # EN4 annual observations before the scenario branch (full years)
-        hist_mask_oc = time_ocean_monthly < ssp_start
-        oc_hist_t = time_ocean_monthly[hist_mask_oc]
-        oc_hist_T = T_ocean_monthly[hist_mask_oc]
-        en4_years = np.unique(np.floor(oc_hist_t).astype(int))
-        en4_ann = np.array([oc_hist_T[np.floor(oc_hist_t).astype(int) == y].mean()
-                            for y in en4_years])
-
-        # Observed surface T before the branch: Greenland regional T where it
-        # exists, GMST x AA (member-dependent) before it
-        use_gr = gr_temp_monthly is not None
-        if use_gr:
-            gr_t = np.asarray(gr_time_monthly, float)
-            gr_T = np.asarray(gr_temp_monthly, float)
-            obs_mask = gr_t < ssp_start
-            obs_t, obs_Ts = gr_t[obs_mask], gr_T[obs_mask]
-            pre_mask = temp_time_monthly < gr_t.min()
-        else:
-            obs_t = obs_Ts = np.array([])
-            pre_mask = temp_time_monthly < ssp_start
-        pre_t = temp_time_monthly[pre_mask]
-        pre_T_gmst = temp_monthly[pre_mask]
-        pre_aa_scale = (np.ones_like(pre_t) if aa_scale is None else aa_scale(pre_t))
-        proj_t = t_mon[ssp_mask]
-
-        # Calendar-year index of every month of the surface series
-        t_surf = np.concatenate([pre_t, obs_t, proj_t])
-        yr_floor = np.floor(t_surf).astype(int)
-        unique_yrs, yr_idx = np.unique(yr_floor, return_inverse=True)
-        n_per_yr = np.bincount(yr_idx)
+        unique_yrs, T_oc = project_greenland_ocean_temperature(
+            proj_monthly_temps[ssp], proj_monthly_times[ssp], proj_monthly_offsets[ssp],
+            temp_monthly, temp_time_monthly, T_ocean_monthly, time_ocean_monthly,
+            alpha_draws, beta_draws, AA_draws, oc_noise, oc_noise_years,
+            oc_noise_pre, oc_noise_pre_years, sample_warming_paths,
+            aa_scale=aa_scale, gr_temp_monthly=gr_temp_monthly,
+            gr_time_monthly=gr_time_monthly, tau_draws=tau_draws)
         t_oc_ann_proj = unique_yrs.astype(float) + 0.5
-        is_en4 = np.isin(unique_yrs, en4_years)
-        en4_vals = en4_ann[np.searchsorted(en4_years, unique_yrs[is_en4])]
-        fut = unique_yrs >= np.floor(ssp_start)
-        pre = ~fut & ~is_en4
 
         ens_dyn = np.zeros((n_samples, len(proj_years)))
         dt_proj = np.diff(proj_years, prepend=proj_years[0] - 1)
@@ -187,20 +151,7 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
             delta_i = result_discharge.delta_posterior[i]
             gamma_i = result_discharge.gamma_posterior[i]
             r0_i = result_discharge.r0_posterior[i]
-
-            # GMST for member i: median path plus its AR6 warming percentile path
-            T_gmst_i = T_mon[ssp_mask] + (T_off_mon[i, ssp_mask] if sample_warming_paths else 0.0)
-            Ts_mon = np.concatenate([pre_T_gmst * AA_draws[i] * pre_aa_scale, obs_Ts,
-                                     T_gmst_i * AA_draws[i]])
-            Ts_ann = np.bincount(yr_idx, weights=Ts_mon) / n_per_yr
-
-            # Low-pass transfer to ocean T; EN4 observations where they exist
-            T_oc_ann_proj = alpha_draws[i] * ema_filter(Ts_ann, tau_draws[i]) + beta_draws[i]
-            T_oc_ann_proj[is_en4] = en4_vals
-            # Transfer residual: projected years, and (separate path) the
-            # other years EN4 does not cover
-            T_oc_ann_proj[fut] += oc_noise[i, unique_yrs[fut] - oc_noise_years[0]]
-            T_oc_ann_proj[pre] += oc_noise_pre[i, unique_yrs[pre] - oc_noise_pre_years[0]]
+            T_oc_ann_proj = T_oc[i]
 
             # Delay: T_delayed(t) = T_ocean(t - delta); zero before the ocean
             # series starts, and the last annual value held flat after it ends
@@ -216,3 +167,84 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
             ens_dyn[i] = H_dyn_i - H_dyn_i[bl_idx]
         out[ssp] = ens_dyn
     return out
+
+
+def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
+                                       temp_monthly, temp_time_monthly,
+                                       T_ocean_monthly, time_ocean_monthly,
+                                       alpha_draws, beta_draws, AA_draws,
+                                       oc_noise, oc_noise_years,
+                                       oc_noise_pre, oc_noise_pre_years,
+                                       sample_warming_paths, aa_scale=None,
+                                       gr_temp_monthly=None, gr_time_monthly=None,
+                                       tau_draws=None):
+    """Annual ocean temperature (200-500 m, EN4 box) per member for one SSP.
+
+    This is the ocean forcing of project_greenland_discharge (see there for
+    the construction and the arguments); T_mon, t_mon and T_off_mon are one
+    SSP's entries of proj_monthly_temps, proj_monthly_times and
+    proj_monthly_offsets.
+
+    Returns (years, T_oc): calendar years (int) and an
+    (n_samples, len(years)) array of annual means in degC, on the baseline
+    of T_ocean_monthly.
+    """
+    n_samples = len(alpha_draws)
+    tau_draws = np.zeros(n_samples) if tau_draws is None else np.asarray(tau_draws, float)
+
+    ssp_start_idx = min(np.searchsorted(t_mon, temp_time_monthly[-1]), len(t_mon) - 1)
+    ssp_start = t_mon[ssp_start_idx]
+    ssp_mask = t_mon >= ssp_start
+
+    # EN4 annual observations before the scenario branch (full years)
+    hist_mask_oc = time_ocean_monthly < ssp_start
+    oc_hist_t = time_ocean_monthly[hist_mask_oc]
+    oc_hist_T = T_ocean_monthly[hist_mask_oc]
+    en4_years = np.unique(np.floor(oc_hist_t).astype(int))
+    en4_ann = np.array([oc_hist_T[np.floor(oc_hist_t).astype(int) == y].mean()
+                        for y in en4_years])
+
+    # Observed surface T before the branch: Greenland regional T where it
+    # exists, GMST x AA (member-dependent) before it
+    use_gr = gr_temp_monthly is not None
+    if use_gr:
+        gr_t = np.asarray(gr_time_monthly, float)
+        gr_T = np.asarray(gr_temp_monthly, float)
+        obs_mask = gr_t < ssp_start
+        obs_t, obs_Ts = gr_t[obs_mask], gr_T[obs_mask]
+        pre_mask = temp_time_monthly < gr_t.min()
+    else:
+        obs_t = obs_Ts = np.array([])
+        pre_mask = temp_time_monthly < ssp_start
+    pre_t = temp_time_monthly[pre_mask]
+    pre_T_gmst = temp_monthly[pre_mask]
+    pre_aa_scale = (np.ones_like(pre_t) if aa_scale is None else aa_scale(pre_t))
+    proj_t = t_mon[ssp_mask]
+
+    # Calendar-year index of every month of the surface series
+    t_surf = np.concatenate([pre_t, obs_t, proj_t])
+    yr_floor = np.floor(t_surf).astype(int)
+    unique_yrs, yr_idx = np.unique(yr_floor, return_inverse=True)
+    n_per_yr = np.bincount(yr_idx)
+    is_en4 = np.isin(unique_yrs, en4_years)
+    en4_vals = en4_ann[np.searchsorted(en4_years, unique_yrs[is_en4])]
+    fut = unique_yrs >= np.floor(ssp_start)
+    pre = ~fut & ~is_en4
+
+    T_oc = np.zeros((n_samples, len(unique_yrs)))
+    for i in range(n_samples):
+        # GMST for member i: median path plus its AR6 warming percentile path
+        T_gmst_i = T_mon[ssp_mask] + (T_off_mon[i, ssp_mask] if sample_warming_paths else 0.0)
+        Ts_mon = np.concatenate([pre_T_gmst * AA_draws[i] * pre_aa_scale, obs_Ts,
+                                 T_gmst_i * AA_draws[i]])
+        Ts_ann = np.bincount(yr_idx, weights=Ts_mon) / n_per_yr
+
+        # Low-pass transfer to ocean T; EN4 observations where they exist
+        T_oc_i = alpha_draws[i] * ema_filter(Ts_ann, tau_draws[i]) + beta_draws[i]
+        T_oc_i[is_en4] = en4_vals
+        # Transfer residual: projected years, and (separate path) the
+        # other years EN4 does not cover
+        T_oc_i[fut] += oc_noise[i, unique_yrs[fut] - oc_noise_years[0]]
+        T_oc_i[pre] += oc_noise_pre[i, unique_yrs[pre] - oc_noise_pre_years[0]]
+        T_oc[i] = T_oc_i
+    return unique_yrs, T_oc

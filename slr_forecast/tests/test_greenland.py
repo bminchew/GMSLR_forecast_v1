@@ -1045,3 +1045,31 @@ class TestProjectDischargeForcingHold:
         assert after.sum() > 10
         np.testing.assert_allclose(rate[after], gamma * T_last + r0, rtol=1e-10)
         assert np.all(rate[after] > r0 + 0.5 * gamma * T_last)
+
+
+class TestProjectOceanTemperature:
+    """project_greenland_ocean_temperature, the ocean forcing of
+    project_greenland_discharge: EN4 observations in EN4 years and
+    g * EMA_tau(T_surface) + c elsewhere."""
+
+    def test_en4_years_and_projection(self):
+        from greenland_discharge import project_greenland_ocean_temperature
+        from component_analysis import ema_filter
+        months = lambda y0, y1: np.arange(y0 * 12, y1 * 12) / 12.0 + 1 / 24
+        t_obs = months(1990, 2001)
+        t_full = np.concatenate([t_obs, months(2001, 2100)])
+        T_full = np.where(t_full > 2001, 0.02 * (t_full - 2001), 0.0)
+        t_oc = months(1995, 2001)
+        T_oc = np.repeat(np.arange(6) * 0.1, 12)          # EN4, 1995-2000
+        g, c, aa, tau = 0.3, -0.05, 2.0, 4.0
+        noise_years = np.arange(2000, 2131)
+        yrs, T = project_greenland_ocean_temperature(
+            T_full, t_full, np.zeros((1, len(t_full))), np.zeros(len(t_obs)), t_obs,
+            T_oc, t_oc, np.array([g]), np.array([c]), np.array([aa]),
+            np.zeros((1, len(noise_years))), noise_years, np.zeros((1, 10)),
+            np.arange(1990, 2000), sample_warming_paths=False, tau_draws=np.array([tau]))
+        assert T.shape == (1, len(yrs))
+        en4 = (yrs >= 1995) & (yrs <= 2000)
+        np.testing.assert_allclose(T[0, en4], np.arange(6) * 0.1)
+        Ts = np.array([T_full[np.floor(t_full) == y].mean() for y in yrs]) * aa
+        np.testing.assert_allclose(T[0, ~en4], (g * ema_filter(Ts, tau) + c)[~en4])
