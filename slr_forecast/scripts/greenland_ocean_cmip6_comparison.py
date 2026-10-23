@@ -6,7 +6,8 @@ EN4 Greenland box, the forcing of the discharge model. It is rebuilt here with
 the production code (greenland_discharge.project_greenland_ocean_temperature),
 the production inputs (component_greenland.ipynb cells 3 and 17) and the
 production seeds (700 for the transfer and AA draws, 701 and 702 for the
-transfer residual), from the transfer fit stored in component_results.h5
+transfer residual after and before EN4; the path after EN4 is conditioned
+on each member's 2020 residual), from the transfer fit stored in component_results.h5
 (greenland/ocean_transfer). As a check, the same inputs passed through
 project_greenland_discharge reproduce the stored discharge ensemble
 (greenland/projections_discharge) for every SSP.
@@ -120,12 +121,12 @@ def production_inputs():
                 temps=temps, times=times, offs=offs)
 
 
-def production_draws(transfer, temp_time_monthly):
+def production_draws(transfer, temp_time_monthly, time_ocean_monthly):
     """Transfer, AA and residual draws in the order of cell 17."""
     rng = np.random.default_rng(700)
     tr = draw_lowpass_transfer(transfer, N_SAMPLES, rng)
     AA_draws = rng.normal(AA, AA_SIGMA, size=N_SAMPLES)
-    noise_years = np.arange(int(np.floor(temp_time_monthly[-1])), int(PROJ_YEARS[-1]) + 1)
+    noise_years = np.arange(int(np.floor(time_ocean_monthly[-1])), int(PROJ_YEARS[-1]) + 1)
     sd = tr['sd'] * np.sqrt(1 - tr['phi'] ** 2)
     noise = ar1_noise(sd, tr['phi'], len(noise_years), np.random.default_rng(701))
     pre_years = np.arange(int(np.floor(temp_time_monthly[0])), noise_years[0])
@@ -178,7 +179,7 @@ def main():
                                                      ('int_T_mean_cal', 't_mean_cal', 'H_mean_cal')}))
         stored = {s: hf[f'greenland/projections_discharge/{s}/samples'][:] for s in CHECK_SSPS}
     tr, AA_draws, noise, noise_years, noise_pre, pre_years = production_draws(
-        transfer, inp['temp_time_monthly'])
+        transfer, inp['temp_time_monthly'], inp['t_oc'])
     common = dict(temp_monthly=inp['temp_monthly'], temp_time_monthly=inp['temp_time_monthly'],
                   T_ocean_monthly=inp['T_oc'], time_ocean_monthly=inp['t_oc'],
                   alpha_draws=tr['g'], beta_draws=tr['c'], AA_draws=AA_draws,
@@ -186,7 +187,7 @@ def main():
                   oc_noise_pre=noise_pre, oc_noise_pre_years=pre_years,
                   sample_warming_paths=SAMPLE_WARMING_PATHS,
                   gr_temp_monthly=inp['gr_T'], gr_time_monthly=inp['gr_t'],
-                  tau_draws=tr['tau'])
+                  tau_draws=tr['tau'], oc_noise_phi=tr['phi'])
 
     # Check: these inputs and draws reproduce the stored production discharge
     dyn = project_greenland_discharge(CHECK_SSPS, PROJ_YEARS, inp['temps'], inp['times'],

@@ -105,7 +105,7 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
                                 oc_noise_pre, oc_noise_pre_years,
                                 baseline_year, sample_warming_paths,
                                 aa_scale=None, gr_temp_monthly=None,
-                                gr_time_monthly=None, tau_draws=None):
+                                gr_time_monthly=None, tau_draws=None, oc_noise_phi=None):
     """Discharge ensemble per SSP (metres SLE, rebased to *baseline_year*).
 
     For each member: draw (gamma, r0, delta) from the discharge posterior and
@@ -118,6 +118,14 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
     un-demean with the calibration means. The filter runs through the EN4
     years, so its state at the end of EN4 reflects the observed surface
     history. tau_draws = None means tau = 0 (no filter).
+
+    Transfer residual: oc_noise holds stationary AR(1) paths indexed by
+    oc_noise_years, which must start at or before the last EN4 year; it is
+    used for every year after EN4. With oc_noise_phi (each member's lag-1
+    coefficient) the path is conditioned on the member's residual in the
+    last EN4 year, r = EN4 - (g EMA + c), so an anomaly at the end of the
+    record decays as phi^k instead of vanishing. oc_noise_pre (indexed by
+    oc_noise_pre_years) is used, unconditioned, before EN4 starts.
 
     Surface T before the scenario branch: if gr_temp_monthly/gr_time_monthly
     (observed Greenland regional T, the series the transfer function is
@@ -140,7 +148,8 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
             alpha_draws, beta_draws, AA_draws, oc_noise, oc_noise_years,
             oc_noise_pre, oc_noise_pre_years, sample_warming_paths,
             aa_scale=aa_scale, gr_temp_monthly=gr_temp_monthly,
-            gr_time_monthly=gr_time_monthly, tau_draws=tau_draws)
+            gr_time_monthly=gr_time_monthly, tau_draws=tau_draws,
+            oc_noise_phi=oc_noise_phi)
         t_oc_ann_proj = unique_yrs.astype(float) + 0.5
 
         ens_dyn = np.zeros((n_samples, len(proj_years)))
@@ -177,7 +186,7 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
                                        oc_noise_pre, oc_noise_pre_years,
                                        sample_warming_paths, aa_scale=None,
                                        gr_temp_monthly=None, gr_time_monthly=None,
-                                       tau_draws=None):
+                                       tau_draws=None, oc_noise_phi=None):
     """Annual ocean temperature (200-500 m, EN4 box) per member for one SSP.
 
     This is the ocean forcing of project_greenland_discharge (see there for
@@ -230,9 +239,18 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
     n_per_yr = np.bincount(yr_idx)
     is_en4 = np.isin(unique_yrs, en4_years)
     en4_vals = en4_ann[np.searchsorted(en4_years, unique_yrs[is_en4])]
-    # Residual noise never goes on an observed EN4 year
-    fut = (unique_yrs >= np.floor(ssp_start)) & ~is_en4
-    pre = (unique_yrs < np.floor(ssp_start)) & ~is_en4
+    # Residual noise never goes on an observed EN4 year: one path after EN4
+    # (conditioned on the last EN4 residual when oc_noise_phi is given), and
+    # a separate path before it
+    if len(en4_years) == 0:
+        raise ValueError('no EN4 years before the scenario branch')
+    y_last = int(en4_years.max())
+    if oc_noise_years[0] > y_last:
+        raise ValueError('oc_noise_years must start at or before the last EN4 year')
+    post = unique_yrs > y_last
+    pre = unique_yrs < en4_years.min()
+    i_last = int(np.searchsorted(unique_yrs, y_last))
+    k_post = unique_yrs[post] - y_last
 
     T_oc = np.zeros((n_samples, len(unique_yrs)))
     for i in range(n_samples):
@@ -244,10 +262,14 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
 
         # Low-pass transfer to ocean T; EN4 observations where they exist
         T_oc_i = alpha_draws[i] * ema_filter(Ts_ann, tau_draws[i]) + beta_draws[i]
+        r_last = en4_vals[-1] - T_oc_i[i_last]          # residual in the last EN4 year
         T_oc_i[is_en4] = en4_vals
-        # Transfer residual: projected years, and (separate path) the
-        # other years EN4 does not cover
-        T_oc_i[fut] += oc_noise[i, unique_yrs[fut] - oc_noise_years[0]]
+        # Transfer residual after EN4, conditioned on r_last: replacing the
+        # path's value at y_last by r_last shifts year y_last + k by phi^k
+        e = oc_noise[i, unique_yrs[post] - oc_noise_years[0]]
+        if oc_noise_phi is not None:
+            e = e - oc_noise_phi[i] ** k_post * (oc_noise[i, y_last - oc_noise_years[0]] - r_last)
+        T_oc_i[post] += e
         T_oc_i[pre] += oc_noise_pre[i, unique_yrs[pre] - oc_noise_pre_years[0]]
         T_oc[i] = T_oc_i
     return unique_yrs, T_oc

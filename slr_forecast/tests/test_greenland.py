@@ -1073,3 +1073,25 @@ class TestProjectOceanTemperature:
         np.testing.assert_allclose(T[0, en4], np.arange(6) * 0.1)
         Ts = np.array([T_full[np.floor(t_full) == y].mean() for y in yrs]) * aa
         np.testing.assert_allclose(T[0, ~en4], (g * ema_filter(Ts, tau) + c)[~en4])
+
+    def test_residual_after_en4_decays_from_last_residual(self):
+        """With zero innovations, the residual after the last EN4 year is
+        r_last * phi^k, where r_last = EN4 - (g EMA + c) in that year."""
+        from greenland_discharge import project_greenland_ocean_temperature
+        months = lambda y0, y1: np.arange(y0 * 12, y1 * 12) / 12.0 + 1 / 24
+        t_obs = months(1990, 2006)
+        t_full = np.concatenate([t_obs, months(2006, 2100)])
+        T_full = np.zeros(len(t_full))
+        t_oc = months(1995, 2001)                      # EN4 ends in 2000
+        T_oc = np.full(len(t_oc), -0.3)                # model gives c = 0.1 there
+        g, c, phi = 0.3, 0.1, 0.6
+        noise_years = np.arange(2000, 2131)
+        yrs, T = project_greenland_ocean_temperature(
+            T_full, t_full, np.zeros((1, len(t_full))), np.zeros(len(t_obs)), t_obs,
+            T_oc, t_oc, np.array([g]), np.array([c]), np.array([1.0]),
+            np.zeros((1, len(noise_years))), noise_years, np.zeros((1, 10)),
+            np.arange(1990, 2000), sample_warming_paths=False,
+            tau_draws=np.array([4.0]), oc_noise_phi=np.array([phi]))
+        after = yrs > 2000
+        k = yrs[after] - 2000
+        np.testing.assert_allclose(T[0, after], c + (-0.3 - c) * phi ** k)
