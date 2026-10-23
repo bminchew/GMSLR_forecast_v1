@@ -578,6 +578,15 @@ def main():
     print(f'  Lin et al. (2026) 95th / S2 95th: {LIN2026_P95_MM:.0f} / {s2_hi:.0f} mm = '
           f'{LIN2026_P95_MM / s2_hi:.2f}')
 
+    # Volcanic term of the thermosteric upper layer (config): c_v and the
+    # NOAA 0-700 m expansion efficiency it uses, and the prior sd of m_v.
+    from slr_forecast.config import THERMO_VOLC_KV, THERMO_VOLC_M_SD
+    eeh_0700 = THERMO_VOLC_KV / (0.71 * 5.10e14 * 3.156e7) * 1e24   # m per YJ: c_v / (ocean area x 1 W m-2 x 1 yr)
+    der['volcanic'] = dict(c_v_mm=THERMO_VOLC_KV * M_TO_MM, eeh_0700_m_per_YJ=eeh_0700,
+                           m_v_prior_sd=THERMO_VOLC_M_SD)
+    print(f'  Volcanic term: c_v = {THERMO_VOLC_KV * M_TO_MM:.2f} mm per W m-2 yr, '
+          f'0-700 m expansion efficiency {eeh_0700:.3f} m/YJ, m_v prior sd {THERMO_VOLC_M_SD:.2f}')
+
     # Discount rate of the value-of-information analysis (compute_evpi).
     with h5py.File(H5, 'r') as hf:
         dr = float(hf['voi'].attrs['discount_rate'])
