@@ -62,6 +62,7 @@ from smb_emulator import ar1_noise  # noqa: E402
 
 H5_PATH = ROOT / 'data' / 'processed' / 'slr_processed_data.h5'
 EN4_CSV = ROOT / 'data' / 'raw' / 'ocean_temp' / 'en4' / 'derived' / 'en4_greenland_box_series_monthly.csv'
+EN4_COUNTS = ROOT / 'data' / 'raw' / 'ocean_temp' / 'en4' / 'derived' / 'en4_greenland_box_profile_counts.csv'
 EN4_ANNUAL = ROOT / 'data' / 'raw' / 'ocean_temp' / 'en4' / 'derived' / 'en4_greenland_box_series_annual.csv'
 GRIDDED_PATH = ROOT / 'data' / 'raw' / 'gmst' / 'berkEarth_Global_TAVG_Gridded_1deg.nc'
 GREENLAND_MASK = ROOT / 'data' / 'processed' / 'greenland_mask_berkeley_1deg.csv'
@@ -128,6 +129,10 @@ def main():
                       np.random.default_rng(1))
     obs = annual(to, xo, years)
     w_obs = pd.read_csv(EN4_ANNUAL).set_index('year')['obs_weight_mean'].reindex(years).values
+    # QC-passed profiles at 200-500 m in the box (position rule), per year
+    n_prof = pd.read_csv(EN4_COUNTS).set_index('year')['n_qc_pos']
+    print(f'QC-passed EN4 profiles per year in the box: fit years {FIT[0]}-{FIT[1]} '
+          f'{n_prof.loc[FIT[0]:FIT[1]].min()} to {n_prof.loc[FIT[0]:FIT[1]].max()}')
 
     for name, (a, b) in PERIODS.items():
         s = (years >= a) & (years <= b)
@@ -142,7 +147,8 @@ def main():
         by_tau = [tr['g_by_tau'][i] * E_[idx][s].mean() + tr['c_by_tau'][i]
                   for i, E_ in enumerate(ema_filter(sa, t) for t in tr['tau_grid'])]
         print(f'\n{name}, {s.sum()} years, mean EN4 observation weight '
-              f'{w_obs[s].min():.2f}-{w_obs[s].max():.2f}:')
+              f'{w_obs[s].min():.2f}-{w_obs[s].max():.2f}, QC-passed profiles per year '
+              f'{n_prof.loc[a:b].min()} to {n_prof.loc[a:b].max()}:')
         print(f'  period mean: EN4 {m_obs:+.3f} degC; predicted {med:+.3f} [{lo:+.3f}, {hi:+.3f}] degC; '
               f'EN4 at percentile {100 * np.mean(m_pred < m_obs):.0f} of the prediction')
         print(f'  years inside the 90% predictive interval: {np.sum((o >= plo) & (o <= phi_))} of {s.sum()}')
