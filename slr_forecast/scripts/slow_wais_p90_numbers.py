@@ -47,7 +47,6 @@ def weighted_quantile(v, w, q):
 
 def main():
     from compute_evpi import ADAPT_COST_PER_M as ADAPT, damage_vec
-    from slr_data_readers import people_displaced_kulpstrauss2019 as kulp
 
     with h5py.File(ROOT / 'data' / 'processed' / 'component_results.h5', 'r') as hf:
         yrs = hf['blended/forecast_years'][:]
@@ -116,10 +115,7 @@ def main():
     print('\n1.8 C to 3.6 C shift in the median:')
     for p in P_CASES:
         d = out[f'p{p:g}']['SSP3-7.0']['median_cm'] - out[f'p{p:g}']['SSP1-2.6']['median_cm']
-        pop = kulp(out[f'p{p:g}']['SSP3-7.0']['median_cm'] / 100) - \
-            kulp(out[f'p{p:g}']['SSP1-2.6']['median_cm'] / 100)
-        print(f'  p(S1)={p:.1f}: {d:.1f} cm, {pop:.0f} M more people, '
-              f'US${ADAPT * d / 100:.0f}B/yr adaptation')
+        print(f'  p(S1)={p:.1f}: {d:.1f} cm, US${ADAPT * d / 100:.0f}B/yr adaptation')
 
     # ---- line 418: the 5% exceedance design threshold and its impacts ------
     print('\n=== 5% exceedance threshold at 2.7 C (Fig. 2b stars) ===')
@@ -128,16 +124,15 @@ def main():
         v, w = branches('SSP2-4.5', p)
         slow95 = float(weighted_quantile(v, w, [0.95])[0])
         gap = fast95 - slow95
-        dpop = float(kulp(fast95) - kulp(slow95))
         dadapt = ADAPT * gap
         ddam = float(damage_vec(np.array([fast95]))[0]
                      - damage_vec(np.array([slow95]))[0])
         out[f'p{p:g}']['threshold_5pct'] = dict(
             slow_95th_m_rel2000=slow95, fast_95th_m_rel2000=float(fast95),
-            gap_m=float(gap), delta_people_M=dpop,
+            gap_m=float(gap),
             delta_adapt_B_per_yr=float(dadapt), delta_damage_B_per_yr=ddam)
         print(f'  p(S1)={p:.1f}: slow {slow95:.3f} m, fast {fast95:.3f} m, '
-              f'gap {gap:.2f} m -> {dpop:.0f} M people, US${dadapt:.0f}B/yr '
+              f'gap {gap:.2f} m -> US${dadapt:.0f}B/yr '
               f'adaptation, US${ddam / 1000:.1f}T/yr damages')
 
     # Multiple of the observed rise over the past 125 years, as quoted at 436.

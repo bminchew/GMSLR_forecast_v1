@@ -117,7 +117,7 @@ Projections & IPCC AR6 FACTS & 2020--2150 & Comparison & Garner et~al.~\citeyear
 \subsection{Variables and parameters}
 \label{s:variables}
 
-Table~\ref{tab:variables} lists every symbol that appears in the main text, with a plain-language description, the value where one is assigned, units, and the source of any assigned value. Symbols used only in this supplement, including those of the value-of-information analysis, are defined where they appear there and are not repeated here.
+Table~\ref{tab:variables} lists every symbol that appears in the main text, with a plain-language description, the value where one is assigned, units, and the source of any assigned value. Symbols used only in this supplement are defined where they appear there and are not repeated here.
 
 \begingroup
 \footnotesize
@@ -530,101 +530,27 @@ The tabulated values are the fractions of posterior samples above each threshold
 
 %% ================================================================
 \FloatBarrier
-\section{Value of Information Analysis}
-\label{sec:voi}
+\section{Coastal Adaptation Costs and Flood Damages}
+\label{sec:costs}
 %% ================================================================
 
-The value of information (VoI) analysis quantifies the economic benefit of resolving the binary uncertainty about whether WAIS retreat remains slow (Scenario 1) or allows for the possibility of rapid retreat (Scenario 2). We compute the expected value of perfect information (EVPI), the perfect-information limit of the sample-information framework of \citet{Raiffa1961}. No signal model is specified, so any test that discriminates the two scenarios imperfectly would return less than the values reported here.
+The main text converts GMSL rise into annual global coastal adaptation costs and annual global flood damages without further adaptation (right-hand axes of Fig.~11a and the associated text).
 
-\subsection{Decision framework}
-
-We consider an illustrative coastal adaptation decision where a planner must choose a defense height $d$ (meters of sea-level protection) to minimize total expected costs, evaluated against the sea-level rise distribution $S$ at a representative target year of 2100. For a given sea-level rise distribution $S$ at 2100, the total annual cost of defense height $d$ is
-\begin{equation}
-C(d) = C_{\mathrm{adapt}}(d) + \mathbb{E}\bigl[D\bigl(\max(S - d,\, 0)\bigr)\bigr],
-\label{eq:total_cost}
-\end{equation}
-where $C_{\mathrm{adapt}}(d) = c_{\mathrm{a}} \cdot d$ is the annualized adaptation cost and $\mathbb{E}\bigl[D(\cdot)\bigr]$ is the expected value of the residual damage $D$ from SLR exceeding the defense height (overtopping).
-
-\subsubsection{Adaptation cost}
+\subsection{Adaptation cost}
 \label{s:adaptation_cost}
 
 The total capital cost of coastal adaptation is estimated at $C_{\mathrm{cap}} = \$4$\,T/m of GMSL rise. This is derived from Tiggeloven et~al.~\citeyearpar{Tiggeloven2020}, who estimate that 3.4\% of the global coastline ($\sim$54{,}400~km of $\sim$1.6~million~km total) warrants dike heightening under cost-benefit optimality, at a unit cost of \$7\,M per km per meter of dike height (the median cost raising dikes in New Orleans post-Hurricane Katrina). This yields $\sim$\$400\,B/m for dike raising alone along the optimal 3.4\% of coastline. We apply a conservative 10$\times$ multiplier to account for the full societal adaptation burden---including seawalls, nature-based solutions, managed retreat, and infrastructure relocation---across a broader fraction of the global coastline.
 
-Because the cost function $C(d)$ (Eq.~\ref{eq:total_cost}) combines adaptation costs with annual flood damages from Jevrejeva et~al.~\citeyearpar{Jevrejeva2018}, both terms need to be expressed in consistent units. Adaptation is dominated by capital investment deployed over the planning horizon, so we conservatively annualize $C_{\mathrm{cap}}$ using the capital recovery factor (CRF):
+Adaptation is dominated by capital investment deployed over the planning horizon, so we express it as an annual cost, in the same units as the flood damages below, using the capital recovery factor (CRF):
 \begin{equation}
 c_{\mathrm{a}} = C_{\mathrm{cap}} \times \mathrm{CRF}, \qquad \mathrm{CRF} = \frac{r\,(1+r)^n}{(1+r)^n - 1},
 \label{eq:crf}
 \end{equation}
-where $r = 0.03$ is the real discount rate and $n = 75$\,yr is the planning horizon. This gives $\mathrm{CRF} \approx 0.034$ and an annualized adaptation cost of $c_{\mathrm{a}} \approx \$135$\,B/(m$\cdot$yr) of GMSL rise. The resulting $C(d)$ is in \$/yr, the EVPI is in \$/yr, and the present-value conversion (Eq.~\ref{eq:voi}) produces a present-value total in \$.
+where $r = 0.03$ is the real discount rate and $n = 75$\,yr is the planning horizon. This gives $\mathrm{CRF} \approx 0.034$ and an annualized adaptation cost of $c_{\mathrm{a}} \approx \$135$\,B/(m$\cdot$yr) of GMSL rise.
 
-\subsubsection{Damage function}
+\subsection{Flood damages}
 
-Residual flood damages are computed from the estimates of Jevrejeva et~al.~\citeyearpar{Jevrejeva2018}, which relate GMSL rise to annual global flood costs without additional adaptation, based on estimated asset exposure. We interpolate linearly between six points. Four are values stated in their text, \$10.2, 11.7, 14.3, and 27.0\,T/yr at 0.52, 0.63, 0.86, and 1.80~m of rise. One is zero cost at zero rise. The sixth, \$2.5\,T/yr at 0.20~m, is read from their Fig.~4a, where the curves for their 1.5 $^\circ$C, 2 $^\circ$C, and RCP8.5 median scenarios pass through \$2.3--2.7\,T/yr at that level of rise. Beyond 1.80~m we extrapolate linearly using the slope of the final segment, \$13.5\,T/yr per meter.
-
-\subsection{Two-world structure}
-
-The forecast distribution is decomposed into two conditional distributions, conditioned directly on WAIS scenario membership rather than on a percentile-threshold proxy:
-\begin{itemize}
-\item \textbf{The S1 world} ($S_{\mathrm{S1}}$) samples from the blended forecast conditional on WAIS Scenario 1, representing continued mass loss along the observed trajectory.
-\item \textbf{The S2 world} ($S_{\mathrm{S2}}$) samples from the full forecast conditional on WAIS Scenario 2, representing outcomes that allow for rapid WAIS retreat.
-\end{itemize}
-Because the WAIS mixture comprises exactly these two scenarios, the two worlds partition it completely, but they are built differently. Every Monte Carlo sample's WAIS scenario assignment is recorded at the point of sampling and carried through the component-summation and rate-space-blending pipeline as a per-sample label, and $S_{\mathrm{S2}}$ is the 1{,}805 samples of the blended forecast carrying the S2 label, an exact conditional subset rather than a percentile-threshold proxy. $S_{\mathrm{S1}}$ is not the 195 samples carrying the S1 label, which would be too few to resolve the tail; it is a separate 2{,}000-member ensemble in which WAIS is replaced by its S1 trajectory for every sample, with the non-WAIS components unchanged. The two branches therefore have different sample sizes, 2{,}000 and 1{,}805.
-
-The VoI takes these two conditional worlds as its inputs and recombines them below with the prior $p_{\mathrm{s}}$ as the weight, so the slow- and fast-WAIS cases of the main text, at $p(\mathrm{S1}) = 0.90$ and $0.10$, are mixtures of these worlds rather than inputs to the calculation. Because the value depends on the prior, we report it as a function of $p_{\mathrm{s}}$ rather than at a single value.
-
-\subsection{EVPI calculation}
-
-For a given prior $p_{\mathrm{s}} \equiv p(\mathrm{S1})$ on the S1 world, the EVPI is the annual benefit of learning which scenario holds before choosing the defense height for coastal development.
-
-\subsubsection{Hedging cost (no information)}
-
-Without additional information, the planner hedges by choosing the single defense height $d^*_{\mathrm{hedge}}$ that minimizes the prior-weighted expected cost:
-\begin{equation}
-C^*_{\mathrm{hedge}} = \min_{d}\; \bigl[\, p_{\mathrm{s}} \cdot C_{\mathrm{S1}}(d) + (1 - p_{\mathrm{s}}) \cdot C_{\mathrm{S2}}(d) \,\bigr],
-\label{eq:hedge}
-\end{equation}
-where $C_{\mathrm{S1}}(d) = C_{\mathrm{adapt}}(d) + \mathbb{E}[D(\max(S_{\mathrm{S1}} - d, 0))]$ and $C_{\mathrm{S2}}(d)$ is defined analogously using $S_{\mathrm{S2}}$.
-
-\subsubsection{Perfect information cost}
-
-With perfect information, the planner would tailor the defense height to whichever world is realized:
-\begin{equation}
-C^*_{\mathrm{perfect}} = p_{\mathrm{s}} \cdot \min_{d}\, C_{\mathrm{S1}}(d) \;+\; (1 - p_{\mathrm{s}}) \cdot \min_{d}\, C_{\mathrm{S2}}(d).
-\label{eq:perfect}
-\end{equation}
-
-\subsubsection{Annual EVPI}
-
-The annual value of perfect information is the difference between the hedging cost and the perfect-information cost:
-\begin{equation}
-\mathrm{EVPI}_{\mathrm{ann}} = C^*_{\mathrm{hedge}} - C^*_{\mathrm{perfect}}.
-\label{eq:evsi}
-\end{equation}
-This is the annual cost penalty of having to compromise on a single design rather than tailoring to the true state. It is non-negative by construction, because $C^*_{\mathrm{hedge}}$ minimizes a weighted sum of the two cost curves while $C^*_{\mathrm{perfect}}$ minimizes each of them separately. As a minimum over $d$ of functions affine in $p_{\mathrm{s}}$, $C^*_{\mathrm{hedge}}$ is concave in $p_{\mathrm{s}}$, and subtracting the affine $C^*_{\mathrm{perfect}}$ leaves a concave function that vanishes at $p_{\mathrm{s}} = 0$ and $p_{\mathrm{s}} = 1$, so the maximum is interior. Its location is set by the geometry of the two cost curves and need not be at $p_{\mathrm{s}} = 0.5$. Here the two worlds are strongly asymmetric, with optimal designs of 0.85\,m under S1 against 3.10\,m under S2, and the maximum falls at $p_{\mathrm{s}} = 0.74$.
-
-\subsection{Discounting and the VoI surface}
-
-The annual EVPI is converted to a present value at the year of arrival by discounting the stream of benefits from the year information arrives ($t_{\mathrm{a}}$) to the target year ($t_{\mathrm{T}} = 2100$) at a real discount rate $r = 3\%$:
-\begin{equation}
-\mathrm{VoI}(t_{\mathrm{a}}, p_{\mathrm{s}}) = \mathrm{EVPI}_{\mathrm{ann}}(p_{\mathrm{s}})\,\max\!\left(0,\; \frac{1 - (1+r)^{-(t_{\mathrm{T}} - t_{\mathrm{a}})}}{r}\right).
-\label{eq:voi}
-\end{equation}
-The annuity factor $[1 - (1+r)^{-n}]/r$ captures the number of discounted years over which the improved decision yields benefits.
-
-The VoI surface (Fig.~11c of the main text) is computed over a grid of arrival years ($t_{\mathrm{a}} \in [2026, 2150]$) and prior probabilities ($p_{\mathrm{s}} \in [0.01, 0.99]$). All calculations use the 2.7 $^\circ$C warming trajectory, the scenario closest to current policies \citep{Hausfather2025}. The choice of warming trajectory has qualitatively little impact on the results given all the uncertainties involved. Note that our cost estimates are likely to be underestimates (see \S\ref{s:adaptation_cost}), but the takeaway message remains even if the true costs or damages are an order of magnitude lower. The main text quotes the maximum of this surface over both axes, US\$4.7 trillion, which is attained at $p_{\mathrm{s}} = 0.74$ for information arriving in 2026. For the same arrival year it also quotes the values at the priors of the two storylines, US\$3.9 trillion at $p_{\mathrm{s}} = 0.90$ (slow-WAIS) and US\$0.9 trillion at $p_{\mathrm{s}} = 0.10$ (fast-WAIS).
-
-\subsection{Key assumptions and limitations}
-
-The VoI calculation is intended to be simple analysis to make a simple point, not to stand for detailed financial decisions. As such, we make several simplifying assumptions:
-\begin{enumerate}
-\item \textbf{Binary resolution.} Information perfectly resolves the slow/fast dichotomy. Partial information (e.g., updating $p_{\mathrm{s}}$ from 0.10 to 0.30 without full resolution) would yield lower VoI.
-\item \textbf{Single decision.} The planner makes one irreversible design choice. In practice, adaptive management with staged decisions would reduce the hedging penalty, lowering VoI.
-\item \textbf{Global aggregation.} Costs are aggregated globally. Local VoI would differ based on coastal exposure and elevation.
-\item \textbf{Linear adaptation cost.} We assume $C_{\mathrm{adapt}}$ scales linearly with defense height. Economies or diseconomies of scale would modify the optimal designs.
-\item \textbf{Discount rate.} The 3\% real discount rate is standard for infrastructure but lower rates (reflecting intergenerational equity) would increase VoI. Higher discount rates, that would lower VoI, are unlikely given the long timeline of risk exposure from sea level rise. 
-\end{enumerate}
-
-Despite these simplifications, the analysis provides a rough order-of-magnitude estimate of the economic value of resolving WAIS uncertainty, supporting the argument that targeted investment in ice-sheet observations and process understanding has large expected returns.
+Flood damages are computed from the estimates of Jevrejeva et~al.~\citeyearpar{Jevrejeva2018}, which relate GMSL rise to annual global flood costs without additional adaptation, based on estimated asset exposure. We interpolate linearly between six points. Four are values stated in their text, \$10.2, 11.7, 14.3, and 27.0\,T/yr at 0.52, 0.63, 0.86, and 1.80~m of rise. One is zero cost at zero rise. The sixth, \$2.5\,T/yr at 0.20~m, is read from their Fig.~4a, where the curves for their 1.5 $^\circ$C, 2 $^\circ$C, and RCP8.5 median scenarios pass through \$2.3--2.7\,T/yr at that level of rise. Beyond 1.80~m we extrapolate linearly using the slope of the final segment, \$13.5\,T/yr per meter.
 
 
 

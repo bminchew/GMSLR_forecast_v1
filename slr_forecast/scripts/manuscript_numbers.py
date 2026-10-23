@@ -357,14 +357,6 @@ def main():
         out.setdefault('warming_added_2025_2099_C', {})[s] = added
         print(f'  {LABEL[s]}: {added:.2f}')
 
-    # ── People on land below the annual flood level per cm of GMSL rise ──
-    # Secant slope of our quadratic fit to Kulp & Strauss (2019) over 0-1 m.
-    from slr_data_readers import people_displaced_kulpstrauss2019 as kulp
-    per_cm = float((kulp(1.0) - kulp(0.0)) / 100)
-    out['kulp_people_per_cm_M'] = per_cm
-    print(f'\nPeople below the annual flood level per cm of rise, 0-1 m secant '
-          f'(Kulp & Strauss 2019 fit): {per_cm:.2f} million')
-
     # ── Energetic consistency of the thermosteric projections (Supplement) ──
     # Implied ocean heat uptake = thermosteric change / expansion efficiency
     # of heat (EEH), on the AR6 window: mean(2081-2100) minus mean(1995-2014),
