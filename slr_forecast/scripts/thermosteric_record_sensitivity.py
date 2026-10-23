@@ -184,7 +184,7 @@ def build_data(record, scale, start700, se_mode='noaa'):
     k700 = np.array([np.argmin(np.abs(y7 - y)) for y in y2])
     assert np.allclose(y7[k700], y2)
     cmid = c2 - c7[k700]
-    sigmid = np.sqrt(s2**2 + s7[k700]**2 + (RESIDUAL_STRUCTURAL * np.abs(cmid))**2)
+    sigmid = np.sqrt(s2**2 + s7[k700]**2 + (RESIDUAL_STRUCTURAL * np.abs(cmid - cmid[0]))**2)
     assert np.allclose(np.diff(y7), 1) and np.allclose(np.diff(y2), 1)
     D = dict(y7=y7, y2=y2, c7=c7, c2=c2, cmid=cmid, sig7=sig7, sig2=sig2, sigmid=sigmid,
              s7=s7, s2=s2,

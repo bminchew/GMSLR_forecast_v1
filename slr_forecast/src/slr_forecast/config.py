@@ -30,6 +30,16 @@ same 1995-2005 window as literals (e.g. ``reference_period=(1995, 2006)``
 with an exclusive end)."""
 
 # ---------------------------------------------------------------------------
+# Thermosteric upper-layer response-time prior
+# ---------------------------------------------------------------------------
+TAU_U_PRIOR_MEDIAN_YR: float = 8.0
+TAU_U_PRIOR_LOG_SD: float = 0.5
+"""Prior on the upper-layer relaxation time of the two-layer thermosteric
+model: ln tau_u ~ N(ln TAU_U_PRIOR_MEDIAN_YR, TAU_U_PRIOR_LOG_SD**2), tau_u in
+years, consistent with the 4-17 yr range of Geoffroy et al. (2013, Table 4).
+Used by component_ocean and printed by scripts/manuscript_numbers.py."""
+
+# ---------------------------------------------------------------------------
 # Thermosteric equation of state
 # ---------------------------------------------------------------------------
 KAPPA_EOS: float = 0.26497

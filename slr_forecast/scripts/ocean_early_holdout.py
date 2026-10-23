@@ -121,7 +121,7 @@ _k700 = np.array([np.argmin(np.abs(noaa_year - y)) for y in noaa_deep_year])
 assert np.allclose(noaa_year[_k700], noaa_deep_year)
 noaa_mid_corr = noaa_2000_corr - noaa_700_corr[_k700]
 sig_mid = np.sqrt(noaa_deep_se_m**2 + noaa_tsl_se_m[_k700]**2
-                  + (RESIDUAL_STRUCTURAL * np.abs(noaa_mid_corr))**2)
+                  + (RESIDUAL_STRUCTURAL * np.abs(noaa_mid_corr - noaa_mid_corr[0]))**2)
 lag_mid = np.abs(np.subtract.outer(noaa_deep_year, noaa_deep_year))
 
 idx700_all = np.array([np.argmin(np.abs(T_annual_years - y)) for y in noaa_year])

@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'notebooks'))
 sys.path.insert(0, str(ROOT / 'src'))
 
-from component_projections import read_ipcc_component_nc, ipcc_extract  # noqa: E402
+from component_projections import read_ipcc_component_nc, ipcc_extract, A4_SCENARIOS  # noqa: E402
 
 H5 = ROOT / 'data' / 'processed' / 'component_results.h5'
 H5_OBS = ROOT / 'data' / 'processed' / 'slr_processed_data.h5'
@@ -504,6 +504,85 @@ def main():
         mm_per_K_ssp245=dict(cmip6=fu['cmip6_mm_per_K'],
                              production=fu['production_mm_per_K'],
                              ar6_ratio_of_medians=a6['mm_per_K_ratio_of_medians']))
+
+    # ── Derived values and settings quoted in the main text ──
+    # Numbers that are arithmetic on inputs, analytic consequences of a
+    # setting, or settings themselves, printed so that every number in the
+    # .tex traces to code.
+    print('\nDerived values and settings quoted in the text:')
+    der = out.setdefault('derived', {})
+
+    # AR6 central GMST paths at 2099 (rel. 1850-1900), the last AR6 year.
+    t99 = {}
+    for s in POLICY:
+        df = pd.read_hdf(H5_OBS, f'projections/temp/{s.replace("-", "_").replace(".", "_")}')
+        t99[s] = float(np.interp(2099, df['decimal_year'].values, df['temperature'].values))
+    der['ar6_median_gmst_2099_C'] = t99
+    print('  AR6 median GMST at 2099 (C, rel. 1850-1900): '
+          + ', '.join(f'{LABEL[s]} {v:.2f}' for s, v in t99.items()))
+
+    # Thermosteric upper-layer response-time prior (component_ocean cell 5).
+    from slr_forecast.config import TAU_U_PRIOR_MEDIAN_YR, TAU_U_PRIOR_LOG_SD
+    lo, hi = (TAU_U_PRIOR_MEDIAN_YR * np.exp(z * 1.6448536 * TAU_U_PRIOR_LOG_SD) for z in (-1, 1))
+    der['tau_u_prior_yr'] = [TAU_U_PRIOR_MEDIAN_YR, lo, hi]
+    print(f'  tau_u prior: median {TAU_U_PRIOR_MEDIAN_YR:.1f} yr, 90% [{lo:.2f}, {hi:.2f}] yr')
+
+    # Greenland ocean-sensitivity scaling (Methods, Eqs. melt_rate to gamma_estimate).
+    # Literature inputs as stated in the text: maximum melt sensitivity
+    # 90-260 m/yr/C (Xu 2013, Rignot 2016, Slater 2022), face average 2.5x
+    # smaller (Wood 2021), mu = 3-10 (assumed), front area 0.9-2.7 km2
+    # (Rignot 2016), N = 219 outlets (Mouginot 2019).
+    KMAX, FACE, MU, AF_KM2, N_OUT = (90.0, 260.0), 2.5, (3.0, 10.0), (0.9, 2.7), 219
+    RHO_ICE, RHO_FW, A_OCEAN = 900.0, 1000.0, 3.625e14
+    kap = tuple(k / FACE for k in KMAX)
+    gt = tuple(N_OUT * m * RHO_ICE * a * 1e6 * k / (A_OCEAN * RHO_FW) * M_TO_MM
+               for m, a, k in zip(MU, AF_KM2, kap))
+    der['greenland_scaling'] = dict(kappa_i=kap, kappa_i_geomean=float(np.sqrt(kap[0] * kap[1])),
+                                    gamma_tilde=gt, gamma_tilde_ratio=gt[1] / gt[0])
+    print(f'  kappa_i = {kap[0]:.0f}-{kap[1]:.0f} m/yr/C (geometric mean {np.sqrt(kap[0] * kap[1]):.0f}); '
+          f'gamma~ = {gt[0]:.3f}-{gt[1]:.2f} mm/yr/C, ratio {gt[1] / gt[0]:.0f}')
+
+    # Glacier calibration window: GMST span of the GlaMBIE record.
+    be = pd.read_hdf(H5_OBS, 'harmonized/df_berkeley_h')['temperature']
+    ta = be.groupby(be.index.year).mean().loc[2000:2023]
+    der['glambie_gmst_span_C'] = float(ta.max() - ta.min())
+    print(f'  Annual GMST range over the GlaMBIE record 2000-2023: {ta.max() - ta.min():.2f} C')
+
+    # Peripheral glaciers (scripts/glacier_bookkeeping_check.py).
+    from glacier_bookkeeping_check import read as gl_read, fit as gl_fit
+    T_be = be.groupby(be.index.year).mean()
+    T_be = T_be - T_be.loc[1995:2005].mean()
+    r5, r19 = gl_read('5_greenland_periphery'), gl_read('19_antarctic_and_subantarctic')
+    b5, c5 = gl_fit(r5, T_be)
+    r5_1950 = float(-(b5 * T_be + c5).loc[1950:1999].sum())
+    der['rgi19_mean_rate_mm_yr'] = float(r19['rate'].mean())
+    der['rgi5_rise_1950_2000_mm'] = r5_1950
+    print(f'  Antarctic peripheral glaciers (RGI 19), mean rate {r19.index.min()}-{r19.index.max()}: '
+          f'{r19["rate"].mean():.3f} mm/yr; Greenland peripheral glaciers (RGI 5), '
+          f'hindcast rise 1950-2000: {-r5_1950:.1f} mm')
+
+    # Blend weight (component_forecast): w falls from 0.9 to 0.1 over
+    # t_center -/+ ln(9) tau_blend.
+    with h5py.File(H5, 'r') as hf:
+        tc = float(hf['blended'].attrs['t_center'])
+        tb = float(hf['blended'].attrs['tau_blend'])
+    half = np.log(9.0) * tb
+    der['blend'] = dict(t_center=tc, tau_blend=tb, half_width_in_tau=np.log(9.0), span_yr=2 * half)
+    print(f'  Blend weight 0.9 to 0.1 over t_r -/+ {np.log(9.0):.2f} tau_r = '
+          f'{tc - half:.1f}-{tc + half:.1f}, a span of {2 * half:.1f} yr')
+
+    # S2 95th percentile compared with Lin et al. (2026), whole AIS, 4.4 C, 95th = 254 mm.
+    LIN2026_P95_MM = 254.0
+    s2_hi = float(A4_SCENARIOS['S2_fast_wais']['high_mm'])
+    der['lin2026_p95_over_s2_p95'] = LIN2026_P95_MM / s2_hi
+    print(f'  Lin et al. (2026) 95th / S2 95th: {LIN2026_P95_MM:.0f} / {s2_hi:.0f} mm = '
+          f'{LIN2026_P95_MM / s2_hi:.2f}')
+
+    # Discount rate of the value-of-information analysis (compute_evpi).
+    with h5py.File(H5, 'r') as hf:
+        dr = float(hf['voi'].attrs['discount_rate'])
+    der['discount_rate'] = dr
+    print(f'  Discount rate, value of information: {100 * dr:.0f}% per year')
 
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')

@@ -2,6 +2,16 @@
 
 Read-only sweep. 6 units, each reviewed independently by one Fable and one Opus agent (all 12 reported every changed line read), then one adversarial Opus verifier per unit. 34 findings, 0 refuted. Diffs and extracted notebook code: scratchpad bugsweep/.
 
+**Status (2026-10-22).**
+- Closed in efab5b3: ocean-pipeline-1 and the thermo-records, cmip6-zostoga and downstream fixes made before that rerun, including greenland-pipeline-2 (the `_gls_ar1` covariance scale).
+- Closed after efab5b3 (uncommitted at the time of writing):
+  - ocean-pipeline-2: the structural term on 700-2000 m is now referenced to 2005.5, in the notebook, the holdout script and the record-sensitivity script, followed by a rerun.
+  - ocean-pipeline-5: the panel is in `fig3_calibration_validation.png` (not Fig. S0, and not in the manuscript). It now shows the fitted 700-2000 m record and the deep-layer curve.
+- Closed by the peer session in 7ab8812: greenland-cmip6-1 through -6, greenland-pipeline-3 and greenland-pipeline-4. The pipeline-4 guard leaves outputs unchanged.
+- Peer additions:
+  - greenland-cmip6-3: the same repeated-chunk fault also hit FIO-ESM-2-0 ssp585 2045-46, GFDL-CM4 historical 1972-73 and ssp245 2037-38, and HadGEM3-GC31-MM historical 1970-71 and ssp585 2032-33. All are re-extracted and clean, and none falls in the baseline, window or junction years.
+  - greenland-cmip6-4: with z measured against each model's own 5-yr variability, EC-Earth3-Veg stays below 3. The flagged models are MCM-UA-1-0, INM-CM4-8 ssp126, GISS-E2-1-G ssp245 and EC-Earth3 ssp585.
+
 ## ocean-pipeline-1 [high, CONFIRMED, found by both]
 `notebooks/component_ocean.ipynb` cell 5 twolayer_log_prob (Su[0]=Sd[0]=T_annual[0], HEAD.py 302-311) vs solve_twolayer_ode calls with the volcanic-shifted target at HEAD.py 458, 826, 1140, 1177, 1436; also component_summation cell 11 (HEAD.py 970)
 
