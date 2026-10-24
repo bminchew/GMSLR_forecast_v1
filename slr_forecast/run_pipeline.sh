@@ -34,7 +34,6 @@ ENTRIES=(
     "peninsula:component_apeninsula.ipynb:4800"
     "pencurv:scripts/peninsula_curvature_check.py:0"
     "wais:component_wais.ipynb:4800"
-    "ratestate:bayesian_ratestate.ipynb:21600"
     "ipccdist:notebooks/precompute_ipcc_distributions.py:0"
     "summation:component_summation.ipynb:4800"
     "forecast:component_forecast.ipynb:4800"
