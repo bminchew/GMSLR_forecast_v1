@@ -318,7 +318,6 @@ for x, yr in ((SX0, "1950"), (SX1, "2025"), (SX2, "2100")):
 add(f'<line x1="{SX1}" x2="{SX1}" y1="280" y2="{BASE}" stroke="{GREY}" stroke-width="1.5" stroke-dasharray="4 4"/>')
 add(f'<line x1="{SX2}" x2="{SX2}" y1="{TAIL_TOP}" y2="{BASE}" stroke="{OVER}" stroke-width="2" stroke-dasharray="4 4"/>')
 add(f'<text x="{(SX0+SX2)/2}" y="{BASE+56}" text-anchor="middle" class="tag" style="fill:{GREY}">schematic stack and fan</text>')
-add(f'<text x="1062" y="156">2000 members per scenario</text>')
 
 # test block below the stack
 tx, ty = 890, BASE + 98
