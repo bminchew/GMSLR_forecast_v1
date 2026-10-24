@@ -30,6 +30,10 @@ Thumbs.db
 slr_forecast/data/raw/
 slr_forecast/data/processed/*.h5
 
+# Isolated pipeline-run copies (e.g. the 10k trial)
+slr_forecast/slr_trial10k/
+slr_forecast/run10k_20261024/
+
 # LaTeX build artifacts
 *.aux
 *.log
