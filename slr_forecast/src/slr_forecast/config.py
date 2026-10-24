@@ -65,7 +65,7 @@ lognormal prior with the mean and sample SD of log(C_0 / gamma)
 # ---------------------------------------------------------------------------
 # Monte Carlo / sampling
 # ---------------------------------------------------------------------------
-N_SAMPLES: int = 2000
+N_SAMPLES: int = 10000
 """Default number of Monte Carlo ensemble members for projections."""
 
 SEEDS: dict[str, int] = {

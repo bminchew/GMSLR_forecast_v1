@@ -21,23 +21,23 @@ DEFAULT_TIMEOUT=600  # 10 minutes
 
 # Pipeline order and mapping (name:filename:timeout_seconds)
 ENTRIES=(
-    "ocean:component_ocean.ipynb:3600"
+    "ocean:component_ocean.ipynb:14400"
     "oceanholdout:scripts/ocean_early_holdout.py:0"
-    "glacier:component_glacier.ipynb:1200"
+    "glacier:component_glacier.ipynb:4800"
     "glacierdelay:scripts/glacier_delayed_response.py:0"
-    "greenland:component_greenland.ipynb:1200"
+    "greenland:component_greenland.ipynb:4800"
     "smbsupp:scripts/plot_supp_greenland_smb_emulator.py:0"
     "smbrcm:scripts/plot_greenland_smb_mar_vs_emulator.py:0"
     "smbstate:scripts/smb_state_space_diagnostic.py:0"
     "smblag:scripts/joint_lag_fit_mar.py:0"
-    "eais:component_eais.ipynb:1200"
-    "peninsula:component_apeninsula.ipynb:1200"
+    "eais:component_eais.ipynb:4800"
+    "peninsula:component_apeninsula.ipynb:4800"
     "pencurv:scripts/peninsula_curvature_check.py:0"
-    "wais:component_wais.ipynb:1200"
-    "ratestate:bayesian_ratestate.ipynb:5400"
+    "wais:component_wais.ipynb:4800"
+    "ratestate:bayesian_ratestate.ipynb:21600"
     "ipccdist:notebooks/precompute_ipcc_distributions.py:0"
-    "summation:component_summation.ipynb:1200"
-    "forecast:component_forecast.ipynb:1200"
+    "summation:component_summation.ipynb:4800"
+    "forecast:component_forecast.ipynb:4800"
     "slowwais:scripts/build_slow_wais_p90.py:0"
     "grsens:scripts/greenland_sensitivity_forecast.py:0"
     "slownums:scripts/slow_wais_p90_numbers.py:0"
@@ -46,7 +46,7 @@ ENTRIES=(
     "defense:notebooks/compute_optimal_defense.py:0"
     "shapley:notebooks/compute_shapley_risk.py:0"
     "numbers:scripts/manuscript_numbers.py:0"
-    "figures:results_figures.ipynb:1200"
+    "figures:results_figures.ipynb:4800"
 )
 
 lookup_entry() {
