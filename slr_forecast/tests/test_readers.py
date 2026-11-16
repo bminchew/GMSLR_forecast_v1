@@ -231,9 +231,20 @@ class TestIPCCObservedSigma:
 class TestImpacts:
     def test_kulpstrauss_baseline(self):
         from slr_forecast.readers import people_displaced_kulpstrauss2019
-        # At SLR=0, ~250–260 M people exposed
+        # At SLR=0, the present-day 250 M of Kulp & Strauss Table 1
         val = people_displaced_kulpstrauss2019(0.0)
-        assert 250 < val < 270
+        assert abs(val - 250.0) < 1e-9
+
+    def test_kulpstrauss_table1_medians(self):
+        from slr_forecast.readers import people_displaced_kulpstrauss2019
+        # Kulp & Strauss Table 1 (CoastalDEM, RL1 total) at the Supp. Table 1
+        # GMSL medians: K14 then K17, RCP2.6/4.5/8.5, 2050 then 2100
+        slr = [0.24, 0.26, 0.29, 0.49, 0.59, 0.79,
+               0.23, 0.26, 0.31, 0.56, 0.91, 1.46]
+        pop = [300, 300, 300, 340, 360, 390,
+               290, 300, 300, 350, 400, 480]
+        res = people_displaced_kulpstrauss2019(slr) - pop
+        assert np.abs(res).max() <= 10.5
 
     def test_jevrejeva_zero(self):
         from slr_forecast.readers import slr_cost_jevrejeva2018

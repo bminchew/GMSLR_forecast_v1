@@ -3619,52 +3619,8 @@ if __name__ == "__main__":
 # IMPACT ESTIMATION FUNCTIONS
 # =============================================================================
 
-def people_displaced_kulpstrauss2019(slr_m):
-    """Estimate millions of people on land below annual flood level.
-
-    Quadratic fit to data extracted from Kulp & Strauss (2019), Nature
-    Communications, Table 1 and main text (CoastalDEM).  The smooth
-    polynomial allows extrapolation beyond the reported SLR range
-    (0–2 m); residuals within the reported range are < 30 M.
-
-    **Important**: these are elevation-only exposure counts — people
-    living on land whose elevation is below the annual flood water
-    surface.  Coastal defenses (levees, seawalls, dikes) are **not**
-    included, so the numbers overestimate actual flooding impact.
-    The paper explicitly states: "Results should therefore not be
-    taken as projected impacts" and describes them as a "threat
-    indicator."  At SLR = 0 the baseline exposure is ~250 M, a large
-    fraction of whom are protected by existing infrastructure (e.g.
-    the Netherlands).
-
-    Population counts correspond to present-day (~2010 census era)
-    population; they do *not* include future population growth or
-    coastal migration.
-
-    Parameters
-    ----------
-    slr_m : float or array-like
-        Global mean sea-level rise in **meters** above present (~year 2000).
-
-    Returns
-    -------
-    float or np.ndarray
-        Millions of people on land below the annual flood level
-        (elevation-only, no coastal defenses).
-
-    Reference
-    ---------
-    Kulp, S. A. & Strauss, B. H. (2019). New elevation data triple
-    estimates of global vulnerability to sea-level rise and coastal
-    flooding. Nature Communications, 10, 4844.
-    """
-    # Quadratic least-squares fit to reported data points:
-    #   SLR (m):  0.00  0.25  0.50  0.60  0.80  1.46  2.00
-    #   Pop (M): 250   300   340   360   400   480   630
-    # Coefficients: pop = 17.03·slr² + 145.0·slr + 260.0
-    slr = np.asarray(slr_m, dtype=float)
-    return 17.03 * slr**2 + 145.0 * slr + 260.0
-
-
-# The damage knots live only in the package; see JEVREJEVA2018_* there.
-from slr_forecast.readers.impacts import slr_cost_jevrejeva2018  # noqa: E402
+# The impact functions live only in the package; see KULPSTRAUSS2019_* and
+# JEVREJEVA2018_* there.
+from slr_forecast.readers.impacts import (  # noqa: E402
+    people_displaced_kulpstrauss2019, slr_cost_jevrejeva2018,
+)
