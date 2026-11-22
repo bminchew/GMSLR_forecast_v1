@@ -1012,6 +1012,29 @@ class TestOceanLowpassTransfer:
         np.testing.assert_allclose(freq, tr['tau_weights'], atol=0.03)
 
 
+class TestStartOfYearGrid:
+    """to_start_of_year moves Greenland levels from the end of calendar year Y
+    to Y.0, the grid convention of the other components."""
+
+    def test_shift_and_rebase(self):
+        from greenland_discharge import to_start_of_year
+        y = np.arange(1998, 2004, dtype=float)
+        # end-of-year levels, zero at the end of 2000; increments 1, 2, 3, ...
+        end = np.cumsum(np.arange(1, 7, dtype=float))
+        end = end - end[2]
+        out = to_start_of_year(end[None, :], y, 2000.0)[0]
+        assert out[y == 2000][0] == 0.0
+        # level at 2003.0 is the end-of-2002 level, relative to the end of 1999
+        assert out[y == 2003][0] == pytest.approx(end[y == 2002][0] - end[y == 1999][0])
+        # increments of calendar years 1998-2002; the first is repeated backward
+        np.testing.assert_allclose(np.diff(out), [2.0, 2.0, 3.0, 4.0, 5.0])
+
+    def test_needs_unit_grid(self):
+        from greenland_discharge import to_start_of_year
+        with pytest.raises(ValueError):
+            to_start_of_year(np.zeros((1, 3)), np.array([2000.0, 2002.0, 2004.0]), 2000.0)
+
+
 class TestProjectDischargeForcingHold:
     """project_greenland_discharge holds the last annual ocean temperature
     flat after the forcing ends, so the discharge rate stays at

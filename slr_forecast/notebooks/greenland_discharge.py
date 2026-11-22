@@ -43,6 +43,30 @@ def full_years_only(t_monthly, x_monthly):
     return t_monthly[keep], np.asarray(x_monthly)[keep]
 
 
+def to_start_of_year(levels, years, baseline_year):
+    """Greenland levels on the integer grid, moved to the start-of-year
+    convention of the other components.
+
+    The Greenland models hold at grid year Y the level at the end of
+    calendar year Y (the Mouginot records label it Y + 0.5; the SMB emulator
+    and the discharge model integrate calendar-year forcing through Y). Every
+    other component holds the level at Y.0, the start of year Y. This returns
+    the level at Y.0, i.e. the end-of-year level of Y - 1, rebased to zero at
+    *baseline_year*. The first grid year has no earlier level, so it is
+    extended back one year by repeating the next increment. *levels* is
+    (..., len(years)) on a 1-yr grid.
+    """
+    years = np.asarray(years, dtype=float)
+    if not np.all(np.diff(years) == 1.0):
+        raise ValueError('to_start_of_year needs a 1-yr grid')
+    a = np.asarray(levels, dtype=float)
+    out = np.empty_like(a)
+    out[..., 1:] = a[..., :-1]
+    out[..., 0] = 2.0 * a[..., 0] - a[..., 1]
+    i0 = int(np.argmin(np.abs(years - baseline_year)))
+    return out - out[..., i0:i0 + 1]
+
+
 def calibrate_greenland_discharge(gr_temp_monthly, gr_time_monthly,
                                   T_ocean_monthly, time_ocean_monthly,
                                   mou_comp, delta_candidates,
