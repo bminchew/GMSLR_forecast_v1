@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 # Pinned versions: those imported in the macOS development environment
-# (python2025, osx-64).  The results of record come from the linux/amd64
+# (python2025, osx-64).  The results of record come from the linux/arm64
 # container run with these versions.
 EXPECTED = {
     "numpy": "2.3.2",
@@ -110,6 +110,27 @@ specs = KernelSpecManager().find_kernel_specs()
 print(f"kernelspecs: {specs}")
 if "python3" not in specs:
     failures.append("python3 kernelspec")
+else:
+    # Start the kernel and run one cell: under Docker Desktop's Rosetta
+    # emulation the linux/amd64 image starts kernels that then hang, which
+    # imports alone do not reveal.
+    from jupyter_client.manager import start_new_kernel  # noqa: E402
+    km = kc = None
+    try:
+        km, kc = start_new_kernel(kernel_name="python3", startup_timeout=60)
+        reply = kc.execute_interactive("1 + 1", timeout=60, output_hook=lambda msg: None)
+        if reply["content"]["status"] != "ok":
+            raise RuntimeError(f"cell status {reply['content']['status']}")
+        print("python3 kernel: started and ran a cell")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  FAIL  python3 kernel did not run a cell: {exc!r}")
+        failures.append("python3 kernel start")
+    finally:
+        if kc is not None:
+            kc.stop_channels()
+        if km is not None:
+            km.shutdown_kernel(now=True)
+        del km, kc   # avoid jupyter_client finalizer noise at interpreter exit
 
 import h5py, tables, netCDF4  # noqa: E401,E402
 print(f"HDF5: h5py {h5py.version.hdf5_version}, PyTables {tables.hdf5_version}, "

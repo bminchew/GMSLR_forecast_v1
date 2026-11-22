@@ -3,7 +3,7 @@
 # Every package is pinned to the version imported in the macOS development
 # environment (conda env "python2025", Python 3.13.7, osx-64 under Rosetta 2):
 # first the direct dependencies, then the transitive ones.  The results of
-# record come from the linux/amd64 container run built from these pins.
+# record come from the linux/arm64 container run built from these pins.
 # The fully resolved, per-platform locks are conda-linux-64.lock and
 # conda-linux-aarch64.lock (generated from this file with conda-lock; see
 # VERSIONS.md).  Deviations from production are listed in VERSIONS.md.

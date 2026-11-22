@@ -1,6 +1,6 @@
 # Software versions: macOS development environment vs. container
 
-The results of record (the archived numbers and figures) come from the final run in the linux/amd64 container. The container's package versions are pinned to those of the macOS development environment, `python2025`, in which the pipeline was developed and run. In this file, "production" means that macOS environment and its runs.
+The results of record (the archived numbers and figures) come from the final run in the linux/arm64 container on an Apple Silicon Mac. The container's package versions are pinned to those of the macOS development environment, `python2025`, in which the pipeline was developed and run. In this file, "production" means that macOS environment and its runs.
 
 ## Production environment (macOS)
 
@@ -99,7 +99,7 @@ What the check shows:
 - The numpy random streams (PCG64) and seeded emcee chains with a cheap log-probability are identical everywhere. The random draws that drive the ensembles are therefore the same.
 - BLAS level-3 results differ in the last bits with the **thread count, even within production** (10 threads vs. 1). They also differ with the OpenBLAS kernel: production and linux-64 under Rosetta both select `Nehalem`, and linux-aarch64 selects `neoversen1`. Native x86 hosts were not tested; OpenBLAS picks a kernel to match the CPU, so they will likely differ from Nehalem. Transcendental functions differ between the macOS and glibc math libraries and numpy's SIMD dispatch.
 - Over long MCMC chains (emcee with BLAS-dependent likelihoods), last-bit differences grow into different chains and different samples. Posteriors and projection quantiles should agree to within Monte Carlo sampling error, not to the last digit.
-- linux/amd64 is the closer match to production: same instruction set, and the same OpenBLAS kernel when run under Rosetta on Apple Silicon. linux/arm64 runs natively on Apple Silicon and is much faster than emulated amd64.
+- linux/amd64 is numerically the closer match to production (same instruction set, and the same OpenBLAS kernel under Rosetta), but on Apple Silicon with Docker Desktop's Rosetta emulation the Jupyter kernels in the amd64 image start and then hang, so no notebook step runs; the scripts and pytest are unaffected. The results of record therefore come from the native linux/arm64 image. The amd64 image is meant for native x86_64 hosts. `check_env.py` starts a kernel to catch this.
 
 ### Thread settings (Dockerfile `ENV`)
 

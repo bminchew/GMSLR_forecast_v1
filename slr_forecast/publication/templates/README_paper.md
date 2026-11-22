@@ -70,10 +70,10 @@ follow `SLR_N_SAMPLES`: the WAIS mixture in `component_wais.ipynb` (at least
 posterior subsamples and diagnostic sweeps also do not follow it
 (`src/slr_forecast/config.py` lists them).
 
-The results in the paper come from a run of the linux/amd64 image. The image
-pins the package versions of the macOS environment in which the pipeline was
-developed; a 10,000-member run there took about 2 h 40 min (10 threads), and
-container run time has not been measured yet. The notebook timeouts in
+The results in the paper come from a run of the linux/arm64 image on an Apple
+Silicon Mac. The image pins the package versions of the macOS environment in
+which the pipeline was developed; a 10,000-member run there took about
+2 h 40 min (10 threads). A 500-member run of the arm64 image took 2 h 15 min. The notebook timeouts in
 `run_pipeline.sh` were set for that machine; for a slower run, scale them with
 `NB_TIMEOUT_SCALE` or remove them with `NB_TIMEOUT=-1` (see
 `environment/README.md`).

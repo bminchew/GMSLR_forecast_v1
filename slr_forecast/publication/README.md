@@ -32,7 +32,8 @@ dev repo (this one) --export_publication.sh--> clone of spectrum-gmsl --commit /
    `PROVENANCE`; personal paths (`/Users/`, `Dropbox`, the home directory)
    only produce warnings.
 
-2. **Final production run** (10,000 members) in the linux/amd64 image, with
+2. **Final production run** (10,000 members) in the linux/arm64 image on an
+   Apple Silicon Mac, with
    the dev repo mounted at `/work` so notebook outputs, figures and
    `data/processed/` update in place. This run gives the results of record.
    `run_pipeline.sh` runs only the paper's steps; the development-only steps
@@ -45,10 +46,10 @@ dev repo (this one) --export_publication.sh--> clone of spectrum-gmsl --commit /
 
    ```bash
    mv data/processed/component_results.h5 /path/outside/the/repo/component_results.before.h5
-   docker build -f environment/Dockerfile --platform linux/amd64 -t spectrum:1.0-amd64 .
-   docker run --rm --platform linux/amd64 -e NB_TIMEOUT=-1 \
+   docker build -f environment/Dockerfile --platform linux/arm64 -t spectrum:1.0 .
+   docker run --rm --platform linux/arm64 -e NB_TIMEOUT=-1 \
      -v "$PWD":/work -v "$PWD/data/raw":/work/data/raw:ro \
-     spectrum:1.0-amd64
+     spectrum:1.0
    ```
 
    Review the diff (numbers, figures, notebook outputs) and commit the outputs.

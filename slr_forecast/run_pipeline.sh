@@ -24,7 +24,7 @@
 #
 # Notebook timeouts: each notebook entry's nbconvert timeout (per cell) was
 # set for the macOS development machine (10 threads). A slower run (the
-# container uses one thread; linux/amd64 on Apple Silicon is emulated) can
+# container uses one thread) can
 # hit them. NB_TIMEOUT_SCALE multiplies every notebook timeout (default 1,
 # e.g. NB_TIMEOUT_SCALE=4); NB_TIMEOUT sets every notebook timeout in seconds
 # and takes precedence (NB_TIMEOUT=-1: no limit).
