@@ -66,9 +66,11 @@ def main():
     # The blended ensembles must come from the same run as the Greenland changes
     n = full[SSPS[0]].shape[0]
     n_sens = next(iter(cases.values()))[SSPS[0]].shape[0]
-    assert n == n_sens, f'blended has {n} members, greenland/sensitivity has {n_sens}'
-    assert pd.Timestamp(ba['saved_at']) > sens_saved, \
-        'blended predates greenland/sensitivity: rerun component_forecast and slowwais first'
+    if not n == n_sens:
+        raise RuntimeError(f'blended has {n} members, greenland/sensitivity has {n_sens}')
+    if not pd.Timestamp(ba['saved_at']) > sens_saved:
+        raise RuntimeError(
+            'blended predates greenland/sensitivity: rerun component_forecast and slowwais first')
 
     i_f = int(np.argmin(np.abs(fy - 2100)))
     zeros = np.zeros((n, len(g_years)))

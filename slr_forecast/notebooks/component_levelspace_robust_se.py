@@ -108,7 +108,7 @@ def _anchor_covariance(years, sigma_obs, baseline_year):
     # Split on the baseline itself, not on the argmin index: once the
     # zero-sigma baseline row is dropped from end-of-year labels, 1999.0 and
     # 2001.0 tie, argmin returns 1999.0, and an index split would group 1999
-    # with the post-baseline points (MD-19).
+    # with the post-baseline points.
     pre = years < baseline_year
     Sigma = np.zeros((n, n))
     for i in range(n):

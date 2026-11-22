@@ -1,7 +1,7 @@
 """
 Tests for slr_forecast.readers — sign conventions, units, metadata.
 
-These are regression tests for the known bugs documented in refactor.md §1:
+These are regression tests for known reader bugs:
 - IMBIE Gt files use glaciology convention (negative = loss); must flip to SLR
 - IMBIE mm files have negative sigma values; must apply np.abs()
 - GlaMBIE files use glaciology convention; must flip to SLR
@@ -21,6 +21,24 @@ from slr_forecast.config import RAW_DATA_DIR
 ICE_GT = RAW_DATA_DIR / "ice_sheets" / "Gt"
 ICE_ANT = RAW_DATA_DIR / "ice_sheets" / "antarctica"
 GLACIERS = RAW_DATA_DIR / "glaciers"
+IPCC_OBS = RAW_DATA_DIR / "gmslr" / "ipccar6_global_sea_level_observed.csv"
+
+IMBIE_GR_GT = ICE_GT / "imbie_greenland_2021_Gt.csv"
+IMBIE_EAIS_GT = ICE_GT / "imbie_east_antarctica_2021_Gt.csv"
+IMBIE_AP_GT = ICE_GT / "imbie_antarctic_peninsula_2021_Gt.csv"
+IMBIE_AIS_GT = ICE_GT / "imbie_antarctica_2021_Gt.csv"
+IMBIE_ALL_GT = ICE_GT / "imbie_all_2021_Gt.csv"
+IMBIE_WAIS_MM = ICE_ANT / "imbie_west_antarctica_2021_mm.csv"
+GLAMBIE_GLOBAL = GLACIERS / "0_global_glambie_consensus.csv"
+
+HAS_IMBIE_GR_GT = IMBIE_GR_GT.exists()
+HAS_IMBIE_EAIS_GT = IMBIE_EAIS_GT.exists()
+HAS_IMBIE_AP_GT = IMBIE_AP_GT.exists()
+HAS_IMBIE_AIS_GT = IMBIE_AIS_GT.exists()
+HAS_IMBIE_ALL_GT = IMBIE_ALL_GT.exists()
+HAS_IMBIE_WAIS_MM = IMBIE_WAIS_MM.exists()
+HAS_GLAMBIE_GLOBAL = GLAMBIE_GLOBAL.exists()
+HAS_IPCC_OBS = IPCC_OBS.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -55,11 +73,15 @@ class TestIMBIEGtSignConvention:
         # Units should be meters (values << 1)
         assert df.attrs.get("units", {}).get("cumulative_mass_balance") == "m"
 
+    @pytest.mark.skipif(not HAS_IMBIE_GR_GT,
+                        reason="IMBIE Greenland Gt CSV not found")
     def test_greenland(self):
         from slr_forecast.readers import read_imbie_greenland
         df = read_imbie_greenland(str(ICE_GT / "imbie_greenland_2021_Gt.csv"))
         self._check_slr_convention(df, "Greenland")
 
+    @pytest.mark.skipif(not HAS_IMBIE_EAIS_GT,
+                        reason="IMBIE East Antarctica Gt CSV not found")
     def test_east_antarctica(self):
         from slr_forecast.readers import read_imbie_east_antarctica
         df = read_imbie_east_antarctica(
@@ -71,6 +93,8 @@ class TestIMBIEGtSignConvention:
         assert (df["mass_balance_rate_sigma"] >= 0).all()
         assert (df["cumulative_mass_balance_sigma"] >= 0).all()
 
+    @pytest.mark.skipif(not HAS_IMBIE_AP_GT,
+                        reason="IMBIE Antarctic Peninsula Gt CSV not found")
     def test_antarctic_peninsula(self):
         from slr_forecast.readers import read_imbie_antarctic_peninsula
         df = read_imbie_antarctic_peninsula(
@@ -78,6 +102,8 @@ class TestIMBIEGtSignConvention:
         )
         self._check_slr_convention(df, "Antarctic Peninsula")
 
+    @pytest.mark.skipif(not HAS_IMBIE_AIS_GT,
+                        reason="IMBIE Antarctica total Gt CSV not found")
     def test_antarctica_total(self):
         from slr_forecast.readers import read_imbie_antarctica
         df = read_imbie_antarctica(
@@ -85,6 +111,8 @@ class TestIMBIEGtSignConvention:
         )
         self._check_slr_convention(df, "Antarctica total")
 
+    @pytest.mark.skipif(not HAS_IMBIE_ALL_GT,
+                        reason="IMBIE all-ice-sheets Gt CSV not found")
     def test_all_ice_sheets(self):
         from slr_forecast.readers import read_imbie_all
         df = read_imbie_all(str(ICE_GT / "imbie_all_2021_Gt.csv"))
@@ -95,6 +123,8 @@ class TestIMBIEGtSignConvention:
 # IMBIE mm-format: sigma must be positive (known negative sigma quirk)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skipif(not HAS_IMBIE_WAIS_MM,
+                    reason="IMBIE West Antarctica mm CSV not found")
 class TestIMBIEMmSigmaFix:
     """IMBIE mm readers must fix negative sigma values."""
 
@@ -140,6 +170,8 @@ class TestIMBIEMmSigmaFix:
 # GlaMBIE: sign convention must be SLR (positive = mass loss = rise)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skipif(not HAS_GLAMBIE_GLOBAL,
+                    reason="GlaMBIE global consensus CSV not found")
 class TestGlaMBIESignConvention:
     """GlaMBIE readers must flip negative mass loss → positive SLR."""
 
@@ -179,7 +211,7 @@ class TestGlaMBIESignConvention:
 
     def test_global_sigma_is_95pct_over_1p96(self):
         """GlaMBIE errors are 95% half-widths; both readers must convert
-        them to 1-sigma by dividing by 1.96 (IN-10 regression)."""
+        them to 1-sigma by dividing by 1.96."""
         import sys
         from slr_forecast.config import PROJECT_ROOT
         from slr_forecast.readers import read_glambie_global
@@ -200,11 +232,13 @@ class TestGlaMBIESignConvention:
 # IPCC AR6 observed GMSL: sigma from the 17-83% range
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skipif(not HAS_IPCC_OBS,
+                    reason="IPCC AR6 observed GMSL CSV not found")
 class TestIPCCObservedSigma:
     """The 17-83% half-range of a normal distribution is 0.9542 sigma, so
-    gmsl_sigma must be (upper - lower) / (2 * 0.9542) (MD-15)."""
+    gmsl_sigma must be (upper - lower) / (2 * 0.9542)."""
 
-    PATH = RAW_DATA_DIR / "gmslr" / "ipccar6_global_sea_level_observed.csv"
+    PATH = IPCC_OBS
 
     def _check(self, df):
         from scipy.stats import norm

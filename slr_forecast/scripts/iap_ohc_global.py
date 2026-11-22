@@ -13,8 +13,12 @@ Usage
       --tmp DIR [--first-year 1950] [--last-year 2025]
 """
 import argparse
-import subprocess
+import http.client
+import shutil
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import netCDF4 as nc
@@ -41,6 +45,34 @@ def integrate(path):
     return out
 
 
+def download(url, dest, timeout=300, attempts=4):
+    """Download url to dest. Return False if the server reports it missing (HTTP 4xx).
+
+    Transient failures (network errors, HTTP 5xx) are retried up to `attempts`
+    times in all; the file is written under a temporary name and renamed when
+    complete, so an interrupted download never leaves a partial file at dest.
+    """
+    part = dest.with_name(dest.name + '.part')
+    for k in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r, part.open('wb') as fh:
+                shutil.copyfileobj(r, fh)
+            part.replace(dest)
+            return True
+        except urllib.error.HTTPError as e:
+            part.unlink(missing_ok=True)
+            if e.code < 500:
+                return False
+            err = e
+        except (OSError, http.client.HTTPException) as e:   # network errors, timeouts, truncated reads
+            part.unlink(missing_ok=True)
+            err = e
+        if k < attempts - 1:
+            time.sleep(2 ** k)
+    print(f'  download failed after {attempts} attempts: {err}', file=sys.stderr)
+    return False
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -62,9 +94,7 @@ def main():
             if key in done:
                 continue
             f = tmp / f'iap_{key}.nc'
-            r = subprocess.run(['curl', '-sSf', '-m', '300', '--retry', '3', '-o', str(f),
-                                URL.format(y=y, m=f'{m:02d}')])
-            if r.returncode != 0:
+            if not download(URL.format(y=y, m=f'{m:02d}'), f):
                 print(f'  {key}: not available', file=sys.stderr)
                 continue
             vals = integrate(f)

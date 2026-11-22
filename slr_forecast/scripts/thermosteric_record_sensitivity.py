@@ -31,6 +31,7 @@ projections (checked in the collect step).
 Usage
 -----
   python scripts/thermosteric_record_sensitivity.py all        # 6 fits in parallel, then collect
+  python scripts/thermosteric_record_sensitivity.py            # same as 'all' (run_pipeline.sh)
   python scripts/thermosteric_record_sensitivity.py fit --record en4 --scale 1.14
   python scripts/thermosteric_record_sensitivity.py collect
 
@@ -165,7 +166,7 @@ def build_data(record, scale, start700, se_mode='noaa'):
         if se_mode == 'zero':
             s7 = np.zeros_like(v7)
             s2 = np.zeros_like(v2)
-    # forcing coverage (OC-2) and start year
+    # forcing coverage and start year
     k = (y7 <= T_annual_years[-1]) & (y7 >= start700 + 0.5 - 1e-6) & np.isfinite(v7)
     y7, v7, s7 = y7[k], v7[k], s7[k]
     k = y2 <= T_annual_years[-1]
@@ -556,7 +557,7 @@ def main():
         if name == 'fit':
             s.add_argument('--record', choices=['noaa', 'en4', 'iap'], required=True)
             s.add_argument('--scale', type=float, default=STRUCTURAL_FRAC + 1)
-    a = ap.parse_args()
+    a = ap.parse_args(sys.argv[1:] or ['all'])      # no arguments (run_pipeline.sh): all
     {'fit': cmd_fit, 'all': cmd_all, 'collect': cmd_collect}[a.cmd](a)
 
 

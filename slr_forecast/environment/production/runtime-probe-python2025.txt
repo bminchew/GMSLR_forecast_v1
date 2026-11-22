@@ -1,0 +1,261 @@
+<python2025>/lib/python3.13/site-packages/arviz/__init__.py:50: FutureWarning: 
+ArviZ is undergoing a major refactor to improve flexibility and extensibility while maintaining a user-friendly interface.
+Some upcoming changes may be backward incompatible.
+For details and migration guidance, visit: https://python.arviz.org/en/latest/user_guide/migration_guide.html
+  warn(
+python 3.13.7 | packaged by conda-forge | (main, Sep  3 2025, 14:33:26) [Clang 19.1.7 ] x86_64 macOS-27.0.1-x86_64-i386-64bit-Mach-O
+numpy            2.3.2          <python2025>/lib/python3.13/site-packages/numpy/__init__.py
+scipy            1.16.1         <python2025>/lib/python3.13/site-packages/scipy/__init__.py
+pandas           2.3.2          <python2025>/lib/python3.13/site-packages/pandas/__init__.py
+matplotlib       3.10.6         <python2025>/lib/python3.13/site-packages/matplotlib/__init__.py
+h5py             3.15.1         <python2025>/lib/python3.13/site-packages/h5py/__init__.py
+tables           3.10.2         <python2025>/lib/python3.13/site-packages/tables/__init__.py
+netCDF4          1.7.2          <python2025>/lib/python3.13/site-packages/netCDF4/__init__.py
+cftime           1.6.5          <python2025>/lib/python3.13/site-packages/cftime/__init__.py
+xarray           2026.2.0       <python2025>/lib/python3.13/site-packages/xarray/__init__.py
+h5netcdf         1.8.1          <python2025>/lib/python3.13/site-packages/h5netcdf/__init__.py
+statsmodels      0.14.6         <python2025>/lib/python3.13/site-packages/statsmodels/__init__.py
+seaborn          0.13.2         <python2025>/lib/python3.1/site-packages/seaborn/__init__.py
+emcee            3.1.6          <python2025>/lib/python3.13/site-packages/emcee/__init__.py
+corner           2.2.3          <python2025>/lib/python3.13/site-packages/corner/__init__.py
+arviz            0.23.4         <python2025>/lib/python3.13/site-packages/arviz/__init__.py
+openpyxl         3.1.5          <python2025>/lib/python3.13/site-packages/openpyxl/__init__.py
+tqdm             4.67.3         <python2025>/lib/python3.1/site-packages/tqdm/__init__.py
+numexpr          2.14.1         <python2025>/lib/python3.13/site-packages/numexpr/__init__.py
+blosc2           4.0.0          <python2025>/lib/python3.13/site-packages/blosc2/__init__.py
+pytest           9.0.2          <python2025>/lib/python3.13/site-packages/pytest/__init__.py
+jupyter_core     5.9.1          <python2025>/lib/python3.1/site-packages/jupyter_core/__init__.py
+nbconvert        7.17.0         <python2025>/lib/python3.1/site-packages/nbconvert/__init__.py
+nbclient         0.10.4         <python2025>/lib/python3.1/site-packages/nbclient/__init__.py
+nbformat         5.10.4         <python2025>/lib/python3.1/site-packages/nbformat/__init__.py
+ipykernel        7.2.0          <python2025>/lib/python3.1/site-packages/ipykernel/__init__.py
+IPython          9.10.0         <python2025>/lib/python3.1/site-packages/IPython/__init__.py
+jupyter_client   8.8.0          <python2025>/lib/python3.1/site-packages/jupyter_client/__init__.py
+caltech_mpl      0.2.0          <python2025>/lib/python3.13/site-packages/caltech_mpl/__init__.py
+slr_forecast     0.1.0          <project>/src/slr_forecast/__init__.py
+sklearn          1.7.2          <python2025>/lib/python3.13/site-packages/sklearn/__init__.py
+xarray_einstats  0.9.1          <python2025>/lib/python3.13/site-packages/xarray_einstats/__init__.py
+setuptools       82.0.0         <python2025>/lib/python3.1/site-packages/setuptools/__init__.py
+h5py hdf5 1.14.6
+tables hdf5 1.14.3
+netCDF4 hdf5 1.14.6 netcdf 4.9.3
+=== numpy config
+Build Dependencies:
+  blas:
+    detection method: pkgconfig
+    found: true
+    include directory: <python2025>/include
+    lib directory: <python2025>/lib
+    name: blas
+    openblas configuration: unknown
+    pc file directory: <python2025>/lib/pkgconfig
+    version: 3.9.0
+  lapack:
+    detection method: pkgconfig
+    found: true
+    include directory: <python2025>/include
+    lib directory: <python2025>/lib
+    name: lapack
+    openblas configuration: unknown
+    pc file directory: <python2025>/lib/pkgconfig
+    version: 3.9.0
+Compilers:
+  c:
+    args: -march=core2, -mtune=haswell, -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong,
+      -O2, -pipe, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    commands: x86_64-apple-darwin13.4.0-clang
+    linker: ld64
+    linker args: -Wl,-headerpad_max_install_names, -Wl,-dead_strip_dylibs, -Wl,-rpath,<python2025>/lib,
+      -L<python2025>/lib, -march=core2, -mtune=haswell,
+      -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong, -O2, -pipe, -isystem,
+      <python2025>/include, -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    name: clang
+    version: 19.1.7
+  c++:
+    args: -march=core2, -mtune=haswell, -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong,
+      -O2, -pipe, -stdlib=libc++, -fvisibility-inlines-hidden, -fmessage-length=0,
+      -isystem, <python2025>/include, -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    commands: x86_64-apple-darwin13.4.0-clang++
+    linker: ld64
+    linker args: -Wl,-headerpad_max_install_names, -Wl,-dead_strip_dylibs, -Wl,-rpath,<python2025>/lib,
+      -L<python2025>/lib, -march=core2, -mtune=haswell,
+      -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong, -O2, -pipe, -stdlib=libc++,
+      -fvisibility-inlines-hidden, -fmessage-length=0, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    name: clang
+    version: 19.1.7
+  cython:
+    commands: cython
+    linker: cython
+    name: cython
+    version: 3.1.3
+Machine Information:
+  build:
+    cpu: x86_64
+    endian: little
+    family: x86_64
+    system: darwin
+  host:
+    cpu: x86_64
+    endian: little
+    family: x86_64
+    system: darwin
+Python Information:
+  path: <python2025>/bin/python
+  version: '3.13'
+SIMD Extensions:
+  baseline:
+  - SSE
+  - SSE2
+  - SSE3
+  - SSSE3
+  found:
+  - SSE41
+  - POPCNT
+  - SSE42
+  not found:
+  - AVX
+  - F16C
+  - FMA3
+  - AVX2
+  - AVX512F
+  - AVX512CD
+  - AVX512_SKX
+  - AVX512_CLX
+  - AVX512_CNL
+  - AVX512_ICL
+
+=== scipy config
+Build Dependencies:
+  blas:
+    detection method: pkgconfig
+    found: true
+    include directory: <python2025>/include
+    lib directory: <python2025>/lib
+    name: blas
+    openblas configuration: unknown
+    pc file directory: <python2025>/lib/pkgconfig
+    version: 3.9.0
+  lapack:
+    detection method: pkgconfig
+    found: true
+    include directory: <python2025>/include
+    lib directory: <python2025>/lib
+    name: lapack
+    openblas configuration: unknown
+    pc file directory: <python2025>/lib/pkgconfig
+    version: 3.9.0
+  pybind11:
+    detection method: pkgconfig
+    include directory: <python2025>/include
+    name: pybind11
+    version: 3.0.1
+Compilers:
+  c:
+    args: -march=core2, -mtune=haswell, -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong,
+      -O2, -pipe, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    commands: x86_64-apple-darwin13.4.0-clang
+    linker: ld64
+    linker args: -Wl,-headerpad_max_install_names, -Wl,-dead_strip_dylibs, -Wl,-rpath,<python2025>/lib,
+      -L<python2025>/lib, -march=core2, -mtune=haswell,
+      -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong, -O2, -pipe, -isystem,
+      <python2025>/include, -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    name: clang
+    version: 19.1.7
+  c++:
+    args: -march=core2, -mtune=haswell, -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong,
+      -O2, -pipe, -stdlib=libc++, -fvisibility-inlines-hidden, -fmessage-length=0,
+      -isystem, <python2025>/include, -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    commands: x86_64-apple-darwin13.4.0-clang++
+    linker: ld64
+    linker args: -Wl,-headerpad_max_install_names, -Wl,-dead_strip_dylibs, -Wl,-rpath,<python2025>/lib,
+      -L<python2025>/lib, -march=core2, -mtune=haswell,
+      -mssse3, -ftree-vectorize, -fPIC, -fstack-protector-strong, -O2, -pipe, -stdlib=libc++,
+      -fvisibility-inlines-hidden, -fmessage-length=0, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix,
+      -D_FORTIFY_SOURCE=2, -isystem, <python2025>/include,
+      -mmacosx-version-min=10.13, -mmacosx-version-min=10.13
+    name: clang
+    version: 19.1.7
+  cython:
+    commands: cython
+    linker: cython
+    name: cython
+    version: 3.1.3
+  fortran:
+    args: -march=core2, -mtune=haswell, -ftree-vectorize, -fPIC, -fstack-protector,
+      -O2, -pipe, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix
+    commands: <build>
+    linker: ld64
+    linker args: -Wl,-headerpad_max_install_names, -Wl,-dead_strip_dylibs, -Wl,-rpath,<python2025>/lib,
+      -L<python2025>/lib, -march=core2, -mtune=haswell,
+      -ftree-vectorize, -fPIC, -fstack-protector, -O2, -pipe, -isystem, <python2025>/include,
+      -fdebug-prefix-map=<build>,
+      -fdebug-prefix-map=<python2025>=/usr/local/src/conda-prefix
+    name: gcc
+    version: 14.3.0
+  pythran:
+    include directory: ../../_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/python3.13/site-packages/pythran
+    version: 0.18.0
+Machine Information:
+  build:
+    cpu: x86_64
+    endian: little
+    family: x86_64
+    system: darwin
+  cross-compiled: false
+  host:
+    cpu: x86_64
+    endian: little
+    family: x86_64
+    system: darwin
+Python Information:
+  path: <python2025>/bin/python
+  version: '3.13'
+
+[
+ {
+  "user_api": "blas",
+  "internal_api": "openblas",
+  "num_threads": 10,
+  "prefix": "libopenblas",
+  "filepath": "<python2025>/lib/libopenblasp-r0.3.30.dylib",
+  "version": "0.3.30",
+  "threading_layer": "openmp",
+  "architecture": "Nehalem"
+ },
+ {
+  "user_api": "openmp",
+  "internal_api": "openmp",
+  "num_threads": 10,
+  "prefix": "libomp",
+  "filepath": "<python2025>/lib/libomp.dylib",
+  "version": null
+ }
+]

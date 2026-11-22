@@ -63,7 +63,7 @@ def build_dols_design_matrix(sea_level, temperature, gmsl_sigma=None,
     Parameters
     ----------
     sea_level : pd.Series with DatetimeIndex
-        Sea level observations (metres).
+        Sea level observations (meters).
     temperature : pd.Series with DatetimeIndex
         Global mean surface temperature (°C).
     gmsl_sigma : pd.Series or None
@@ -1224,13 +1224,13 @@ def build_rate_correlation_matrix(
     accounts for the reduced effective sample size.
 
     The correlation between rates at t_i and t_j is computed
-    numerically as the normalised inner product of their kernel
+    numerically as the normalized inner product of their kernel
     weight vectors:
 
         ρ_ij = Σ_k w_i(k) w_j(k) / sqrt(Σ_k w_i(k)² · Σ_k w_j(k)²)
 
     where w_i(k) = K((t_k − t_i) / h) is the kernel weight that data
-    point k receives in the local regression centred at t_i, and h is
+    point k receives in the local regression centered at t_i, and h is
     the bandwidth (``span_years``).
 
     This gives the exact overlap-induced correlation for
@@ -1238,7 +1238,7 @@ def build_rate_correlation_matrix(
     definiteness (it is a Gram matrix).
 
     An optional ``nugget`` adds a fraction of independent variance to
-    each observation, modelling sources of rate variability not
+    each observation, modeling sources of rate variability not
     captured by the smooth kernel model (e.g. interannual climate
     noise, volcanic/ENSO transients).  The final correlation is:
 
@@ -1294,7 +1294,7 @@ def build_rate_correlation_matrix(
         u = (t_grid - time[i]) / h
         W[i] = K(u)
 
-    # Correlation = normalised Gram matrix  W W^T / (||w_i|| ||w_j||)
+    # Correlation = normalized Gram matrix  W W^T / (||w_i|| ||w_j||)
     norms = np.sqrt(np.sum(W**2, axis=1))  # (n,)
     norms = np.maximum(norms, 1e-30)       # guard against zero
     W_normed = W / norms[:, None]
@@ -1416,7 +1416,7 @@ def fit_bayesian_rate_model(
         Kernel type used in ``compute_kinematics()``.
     nugget : float, default 0.0
         Fraction of independent variance added to the correlation
-        matrix.  Regularises the near-singular kernel-overlap
+        matrix.  Regularizes the near-singular kernel-overlap
         correlation.  Typical values: 0.05–0.20.
     order : int
         Polynomial order: 1 (linear) or 2 (quadratic).
@@ -1676,7 +1676,7 @@ def prepare_rate_data(
         'kernel'     : str
         'units'      : str
     """
-    # Normalise indices to month-start
+    # Normalize indices to month-start
     sl_ms = _to_month_start(sea_level)
     temp_ms = _to_month_start(temperature)
 
@@ -1782,8 +1782,8 @@ def calibrate_exponential_prior(
 
         μ = −threshold / ln(prob_exceed)
 
-    This is the standard penalised-complexity (PC) prior calibration:
-    the prior penalises departure from x=0 (the simpler nested model)
+    This is the standard penalized-complexity (PC) prior calibration:
+    the prior penalizes departure from x=0 (the simpler nested model)
     in proportion to the magnitude of x.
 
     Parameters
@@ -1961,7 +1961,7 @@ def build_level_design_vectors(
     I0 = t - t[0]
 
     # Match observation times to nearest monthly index. A time outside the
-    # monthly grid would silently take the end value (MD-28), so warn when
+    # monthly grid would silently take the end value, so warn when
     # any time snaps by more than one grid step. A time midway between two
     # months (e.g. an end-of-year label Y.0) resolves to the earlier month.
     obs_idx = np.array([
@@ -2251,7 +2251,7 @@ def fit_satellite_era_quadratic(
         (as nuisance terms), as Nerem et al. (2022) and Hamlington et al.
         (2024) do by removing the seasonal cycle first. Without them the
         residual lag-1 correlation, and with it the serial-correlation
-        covariance, is dominated by the deterministic annual cycle (SF-4).
+        covariance, is dominated by the deterministic annual cycle.
         Only the three quadratic coefficients are returned.
 
     Returns
@@ -2282,7 +2282,7 @@ def fit_satellite_era_quadratic(
     if eval_time is None:
         eval_time = t_fit[-1]
 
-    # Centre time on t_start for numerical stability
+    # Center time on t_start for numerical stability
     dt = t_fit - t_start
 
     # Design matrix: [1, dt, dt²] (+ annual and semi-annual harmonics)
@@ -2382,8 +2382,8 @@ def fit_satellite_era_quadratic(
         ra_cov_gia[0, 0] = sigma_gia**2
 
         # Total: sum independent sources. GIA is a constant rate error, so
-        # it enters the trend c1 (rate = c1 + 2 c2 dt) in both covariances
-        # (MD-18 / SF-16). sigma_inflate applies to rate_accel_cov only.
+        # it enters the trend c1 (rate = c1 + 2 c2 dt) in both covariances.
+        # sigma_inflate applies to rate_accel_cov only.
         cov_params = cov_beta_meas + cov_beta_serial
         cov_params[1, 1] += sigma_gia**2
         rate_accel_cov = sigma_inflate**2 * (
@@ -2622,7 +2622,7 @@ def fit_bayesian_level(
     where σ(t)² = σ_obs(t)² + σ_extra² combines the known time-varying
     observation uncertainty with a learned model-inadequacy term.
 
-    The forward model is pre-linearised: ``H = a·I₂ + b·I₁ + c·I₀ + H₀``
+    The forward model is pre-linearized: ``H = a·I₂ + b·I₁ + c·I₀ + H₀``
     where the design vectors (I₂, I₁, I₀) are computed beforehand by
     ``build_level_design_vectors()``.
 
@@ -2692,7 +2692,7 @@ def fit_bayesian_level(
         prior_sigma_extra_scale,  # [4] HC γ for σ_extra
         prior_H0_sigma,         # [5] Normal σ for H₀
     ])
-    H0_prior_mean = H_obs[0]   # centre H₀ prior on first observation
+    H0_prior_mean = H_obs[0]   # center H₀ prior on first observation
 
     # ---- Compute T_end and dT/dt for rate prior ----
     T_end_val = 0.0
@@ -2709,7 +2709,7 @@ def fit_bayesian_level(
         T_end_val = temperature_monthly[idx_eval]
         # Estimate dT/dt via linear fit over a ±5 yr window.
         # A wide window smooths interannual variability (ENSO) and
-        # avoids boundary artefacts if the temperature record ends
+        # avoids boundary artifacts if the temperature record ends
         # near eval_time.
         dt_window = 5.0  # years
         mask_window = ((time_monthly >= rate_prior.eval_time - dt_window) &
@@ -2719,7 +2719,7 @@ def fit_bayesian_level(
             T_w = temperature_monthly[mask_window]
             _fit = np.polyfit(t_w, T_w, 1)
             dTdt_end_val = _fit[0]
-            # T_end from the same fit (IN-17): a single month's T can sit
+            # T_end from the same fit: a single month's T can sit
             # ~0.1 °C off the local trend
             T_end_val = float(np.polyval(_fit, rate_prior.eval_time))
         else:
@@ -2899,7 +2899,7 @@ def fit_bayesian_level(
 #
 # 1. H0 anchored at the wrong point.  fit_bayesian_level() integrates
 #    from the start of the temperature record (e.g. 1850), so H0
-#    represents the model level in 1850 while its prior is centred at
+#    represents the model level in 1850 while its prior is centered at
 #    the first FITTED observation's value (~0 after rebasing) -- a
 #    physically wrong assumption that, combined with the huge 1850-to-
 #    2000 temperature-integral lever arm, lets a 5 mm H0 prior set
@@ -2939,7 +2939,7 @@ def fit_bayesian_level(
 # increments from 1979). This is the record's own anchor, not the
 # projection baseline: H0 absorbs the level, and projections are rebased
 # afterwards. The forward-only (one-directional) covariance construction
-# below is only valid for that anchor=0 case; it does NOT generalise to a
+# below is only valid for that anchor=0 case; it does NOT generalize to a
 # record anchored in its interior without rebuilding the covariance
 # bidirectionally (see component_greenland_robust_se.py's general form).
 #
@@ -2961,7 +2961,7 @@ class BayesianLevelCorrelatedResult(BayesianLevelResult):
     phi_posterior: Optional[np.ndarray] = None   # AR(1) coefficient draws (fit_ar1)
     # Full Gaussian -2 ln L at the posterior mean (chi2 + ln|Sigma| + n ln 2 pi)
     # and the number of fitted parameters (rate coefficients, H0, sigma_extra
-    # and phi when fitted), so BIC = m2lnL + k_fit ln n (MD-1)
+    # and phi when fitted), so BIC = m2lnL + k_fit ln n
     m2lnL: float = float('nan')
     k_fit: int = 0
 
@@ -2996,7 +2996,7 @@ def _level_correlated_log_prior(phys, H0, prior_scales, H0_prior_mean,
     -- identical layout/meaning to ``_rate_linear_log_prob``'s
     ``prior_scales``, so priors read the same regardless of n_phys.
 
-    ``prior_b_mean`` defaults to 0 (the original zero-centred HalfNormal,
+    ``prior_b_mean`` defaults to 0 (the original zero-centered HalfNormal,
     ``b >= 0`` enforced below unless ``symmetric_b``). Passing a nonzero
     mean (e.g. a published literature estimate) turns this into a
     Normal(mean, scale_b) truncated at b >= 0, or an untruncated
@@ -3164,9 +3164,9 @@ def fit_bayesian_level_annual_correlated(
         1 = linear (dH/dt = b*T + c), 2 = quadratic (adds a*T^2).
     prior_b_mean : float
         Normal prior mean for b (m/yr/degC), default 0.0 (the original
-        zero-centred HalfNormal shrinkage-to-zero prior; b >= 0 is
+        zero-centered HalfNormal shrinkage-to-zero prior; b >= 0 is
         enforced as a hard bound unless ``symmetric_b``). Passing a
-        nonzero value (e.g. a published estimate) centres the prior
+        nonzero value (e.g. a published estimate) centers the prior
         there instead -- if doing so, do not also cite that same source
         as independent corroboration that the posterior falls "inside"
         the prior; that becomes circular. Corroborate against a
@@ -3246,7 +3246,7 @@ def fit_bayesian_level_annual_correlated(
         a_prior_str = (f"a~N(0,{prior_scale_a*1e3:.2f} mm/yr/°C²)"
                        if symmetric_a else
                        f"a~Exp(mean={prior_scale_a*1e3:.2f} mm/yr/°C²)")
-        # The sampled b prior is centred at prior_b_mean in every case (AN-12)
+        # The sampled b prior is centered at prior_b_mean in every case
         b_prior_str = (f"b~N({prior_b_mean*1e3:.2f},{prior_scale_b*1e3:.2f} mm/yr/°C)"
                        if symmetric_b else
                        f"b~N({prior_b_mean*1e3:.2f},{prior_scale_b*1e3:.1f} mm/yr/°C) truncated b>=0"
@@ -3385,7 +3385,7 @@ def fit_bayesian_level_annual_correlated(
         Sigma_inv_mean = Sigma_inv0
         log_det_mean = float(log_det_Sigma0)
     # Degrees of freedom count every fitted parameter: the rate
-    # coefficients, H0, and sigma_extra and phi when fitted (GL-4)
+    # coefficients, H0, and sigma_extra and phi when fitted
     k_fit = n_phys + 1 + int(fit_sigma_extra) + int(fit_ar1)
     chi2 = float(resid @ Sigma_inv_mean @ resid)
     chi2_dof = chi2 / (n - k_fit)
@@ -3482,7 +3482,7 @@ def fit_bayesian_level_annual_correlated(
 #
 # carries a baseline nuisance parameter H0 and design integrals that
 # start at the beginning of the temperature record rather than at the
-# calibration window.  Anchoring the modelled level to the observed
+# calibration window.  Anchoring the modeled level to the observed
 # level inside the window then imposes a near-linear constraint linking
 # (b, c, H0), so b's posterior width is largely inherited from the H0
 # prior rather than from the temperature signal.  Cumulating reported
@@ -3539,7 +3539,7 @@ class BayesianRateLinearResult:
     time: np.ndarray                     # observation times (decimal year)
     temperature: np.ndarray              # matched temperature (degC)
     rate_obs: np.ndarray                 # observed rates (m/yr)
-    rate_model_mean: np.ndarray          # posterior-mean modelled rates (m/yr)
+    rate_model_mean: np.ndarray          # posterior-mean modeled rates (m/yr)
     sigma_obs: np.ndarray                # reported rate sigma (m/yr)
     H_obs: Optional[np.ndarray] = None   # cumulated levels, diagnostics only
     H_model_mean: Optional[np.ndarray] = None
@@ -3705,7 +3705,7 @@ def fit_bayesian_rate_linear(
     prior_scales = np.array([prior_scale_a, prior_scale_b, prior_c_mean,
                              prior_c_sigma, prior_sigma_extra_scale])
 
-    # ---- WLS initialisation (the flat-prior solution) ----
+    # ---- WLS initialization (the flat-prior solution) ----
     w = 1.0 / sigma_obs**2
     A_wls = X.T @ (X * w[:, None])
     beta_wls = np.linalg.solve(A_wls, X.T @ (w * rate_obs))
@@ -3738,7 +3738,7 @@ def fit_bayesian_rate_linear(
               + ", ".join(f"{k}={v*1e3:.4f}" for k, v in zip(_lab, beta_wls))
               + f"  (chi2/dof = {chi2_wls:.3f} vs reported sigma)")
 
-    # ---- Initialise walkers at the WLS solution ----
+    # ---- Initialize walkers at the WLS solution ----
     rng = np.random.default_rng(seed)
     p0_center = np.concatenate([
         beta_wls,
@@ -3763,7 +3763,7 @@ def fit_bayesian_rate_linear(
         args=(X, rate_obs, sigma_obs, prior_scales, n_phys, fit_sigma_extra),
         kwargs={'symmetric_a': symmetric_a, 'symmetric_b': symmetric_b},
     )
-    # Seed emcee's own proposal stream as well as the walker initialisation.
+    # Seed emcee's own proposal stream as well as the walker initialization.
     # emcee draws its stretch-move proposals from a sampler-local RandomState
     # that defaults to the global numpy state, so without this a rerun with the
     # same ``seed`` reproduces the starting ball but not the chain, and the
@@ -3886,7 +3886,7 @@ class BayesianStateLevelResult:
         H(t)   = H₀ + ∫ rate(τ) dτ
         H_obs  ~ N(H(t), σ(t)²)
 
-    The disequilibrium term d·(S−T) captures the lag between realised
+    The disequilibrium term d·(S−T) captures the lag between realized
     and equilibrium SLR rates from slow ocean/ice-sheet response.
     As τ→0, S→T and the model reduces to the instantaneous
     ``BayesianLevelResult`` (d·(S−T) → 0).
@@ -4312,7 +4312,7 @@ def fit_bayesian_state_level(
         the 5-regressor model with I_S is ill-conditioned and
         typically gives infeasible negative d and b.
     init_order : {1, 2}, default 2
-        Order of the initialisation model.  When init_order=1 and
+        Order of the initialization model.  When init_order=1 and
         init_from_level is provided, a₀ is overridden to ≈0 so that
         walkers start in the linear subspace.  This is consistent
         with the PC prior philosophy (start at the simpler model)
@@ -4367,7 +4367,7 @@ def fit_bayesian_state_level(
     # ---- Compute rate prior quantities ----
     # Note: idx_eval_rp indexes into T_monthly (the calibration-period
     # array used for the ODE solve).  dT/dt is estimated from a ±5 yr
-    # window centred on eval_time using the SAME array; if this array
+    # window centered on eval_time using the SAME array; if this array
     # ends near eval_time, the user should extend T_monthly to cover
     # at least ±5 yr beyond eval_time, or pass a longer temperature
     # record.
@@ -4381,7 +4381,7 @@ def fit_bayesian_state_level(
         dt_window = 5.0
         mask_w = ((time_monthly >= rate_prior.eval_time - dt_window) &
                   (time_monthly <= rate_prior.eval_time + dt_window))
-        # T and dT/dt at eval_time both come from this fit (IN-17): a
+        # T and dT/dt at eval_time both come from this fit: a
         # single month's T can sit ~0.1 °C off the local trend.
         if mask_w.sum() >= 12:
             _fit = np.polyfit(time_monthly[mask_w], T_monthly[mask_w], 1)
@@ -4896,7 +4896,7 @@ def _thermosteric_log_prob(
 ):
     """Log-posterior for the physically-motivated thermosteric model.
 
-    Optimised for MCMC: uses pre-computed annual T_avg and dt arrays
+    Optimized for MCMC: uses pre-computed annual T_avg and dt arrays
     with an inline ODE solve (~120 steps instead of ~1400 monthly).
 
     Forward model (level-space, no integration needed):
@@ -5507,7 +5507,7 @@ def fit_bayesian_thermosteric(
 #  atmospheric (meltwater lubrication, surface lowering) and oceanic
 #  (submarine melt) forcing pathways.
 #
-#  Limiting behaviours:
+#  Limiting behaviors:
 #  - τ_dyn → 0: D_eff → T, H_dyn → γ·I₁, recovering polynomial
 #  - γ → 0: pure SMB model, H = a_eff·I₂ + b_eff·I₁ + c·I₀ + H₀
 #
@@ -5702,7 +5702,7 @@ def _greenland_log_prob(
 
     total = lp + ll
 
-    # ── Rate prior: penalise model rate that deviates from observed ──
+    # ── Rate prior: penalize model rate that deviates from observed ──
     if rate_prior_mean is not None and rate_prior_sigma > 0:
         # D_eff at end of annual grid is `d` after the ODE loop
         rate_model = a_eff * T_end**2 + b_eff * T_end + gamma_dyn * d + c
@@ -5870,7 +5870,7 @@ def fit_bayesian_greenland(
         Initial condition for the discharge ODE (D_eff at t=0).
         If None, uses the mean of the first 30 years of annual
         temperature (pre-industrial equilibrium).  Set to 0.0 to
-        initialise at the anomaly baseline.
+        initialize at the anomaly baseline.
 
     Returns
     -------
@@ -6975,7 +6975,7 @@ def _cumulate(rate, sigma, times, bl_window):
     # Rebase level: subtract value at baseline midpoint. With mid-year
     # labels the midpoint of (1995, 2005) falls between 1999.5 and 2000.5;
     # the tie goes to the earlier point (1999.5), stated explicitly here
-    # rather than left to argmin (GR-19). Zeroing at 2000.0 instead would
+    # rather than left to argmin. Zeroing at 2000.0 instead would
     # need interpolation and would change the stored Greenland observations.
     if bl_mask.sum() > 0:
         _d = np.abs(times - np.mean(bl_window))
@@ -7188,7 +7188,7 @@ def prepare_mouginot_components(
     -------
     dict with same keys as prepare_greenland_components. The arrays are
     restricted to ``start_year``-``end_year``, but ``'df'`` is the full,
-    unmasked input DataFrame (GR-30); index it with the returned times, not
+    unmasked input DataFrame; index it with the returned times, not
     by position.
     """
     mou = mouginot_df.copy()

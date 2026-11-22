@@ -1,0 +1,174 @@
+# Publication allowlist for the SPECTRUM paper repository.
+#
+# Format: one path per line, relative to slr_forecast/ (the project root, P).
+# A path may be a file or a directory. A directory entry ships the files git
+# tracks under it (`git ls-files`; `git ls-tree` with --from-commit): ignored
+# files never ship, and an untracked, non-ignored file under it is an error.
+# 'SRC -> DEST' ships the file SRC as DEST. Text after '#' is a comment.
+# A line whose path is commented out is NOT exported; uncomment it to ship it.
+#
+# export_publication.sh copies exactly these paths and fails if any is missing.
+# Anything not named here does not ship (archive/, papers/, memory/,
+# manuscripts/, run10k_*, save_figures_*, exploratory notebooks, notes, ...).
+#
+# Dependency closure traced statically on 2026-11-21 from the ENTRIES array of
+# run_pipeline.sh (imports followed transitively; data paths read from the code).
+
+# =============================================================================
+# (a) Pipeline code
+# =============================================================================
+
+# --- (a1) Runner ---
+run_pipeline.sh
+
+# --- (a1) ENTRIES: notebooks, in pipeline order ---
+notebooks/component_ocean.ipynb
+notebooks/component_glacier.ipynb
+notebooks/component_greenland.ipynb
+notebooks/component_eais.ipynb
+notebooks/component_apeninsula.ipynb
+notebooks/component_wais.ipynb
+notebooks/component_summation.ipynb
+notebooks/component_forecast.ipynb
+notebooks/results_figures.ipynb
+
+# --- (a1) ENTRIES: scripts, in pipeline order ---
+scripts/ocean_early_holdout.py               # oceanholdout
+scripts/glacier_delayed_response.py          # glacierdelay
+scripts/plot_supp_greenland_smb_emulator.py  # smbsupp (also imported by smbrcm)
+scripts/plot_greenland_smb_mar_vs_emulator.py  # smbrcm
+scripts/smb_state_space_diagnostic.py        # smbstate
+scripts/joint_lag_fit_mar.py                 # smblag
+scripts/peninsula_curvature_check.py         # pencurv
+notebooks/precompute_ipcc_distributions.py   # ipccdist
+scripts/thermosteric_record_sensitivity.py   # thermorec (data/processed/thermosteric_record_sensitivity.json)
+scripts/cmip6_zostoga.py                     # zostoga: 'analyze' (default subcommand) writes
+                                             # data/processed/cmip6_zostoga_summary.json from cached
+                                             # inputs; 'fetch' (network) and 'extract-ar6' build those
+                                             # inputs upstream (data_manifest.md section 4.2)
+scripts/build_slow_wais_p90.py               # slowwais (also loaded by grsens and tests)
+scripts/greenland_sensitivity_forecast.py    # grsens
+scripts/slow_wais_p90_numbers.py             # slownums
+scripts/variance_shares.py                   # varshares
+scripts/manuscript_numbers.py                # numbers
+
+# --- (a2) Local helper modules imported by the entries (transitive closure) ---
+notebooks/ar6_gmst.py
+notebooks/bayesian_models.py
+notebooks/component_analysis.py
+notebooks/component_io.py
+notebooks/component_levelspace_robust_se.py
+notebooks/component_plotting.py
+notebooks/component_projections.py
+notebooks/greenland_discharge.py
+notebooks/impact_costs.py                    # adaptation cost and damage function (slownums, numbers)
+notebooks/slr_analysis.py
+notebooks/slr_data_readers.py
+notebooks/slr_projections.py
+notebooks/smb_emulator.py
+notebooks/smb_projections.py
+notebooks/smb_state.py
+notebooks/warming_paths.py
+scripts/test_scenario_transfer_mar.py        # module imported by joint_lag_fit_mar.py (not a pytest file)
+scripts/glacier_bookkeeping_check.py         # imported by manuscript_numbers.py
+scripts/glacier_zemp_diagnostic.py           # imported by glacier_bookkeeping_check.py
+
+# --- (a3) Figure style (non-.py files the figure code reads) ---
+notebooks/arete_mpl/arete_mpl.py             # local copy; sys.path puts it ahead of any installed arete_mpl
+notebooks/arete_mpl/styles                   # *.mplstyle loaded by arete_mpl.use()
+
+# --- (a4) Upstream preprocessing: builds processed inputs; NOT in ENTRIES ---
+# The pipeline reads these outputs but never rebuilds them. Shipped so every
+# processed input has its build code in the repo. See data_manifest.md.
+notebooks/read_process_datafiles.ipynb       # builds data/processed/slr_processed_data.h5 (mode='w')
+scripts/refresh_processed_keys.py            # run after the notebook: rewrites 5 tables, adds the NOAA and EN4 keys (EN4 1970-2021)
+scripts/extract_en4_layers.py                # data/processed/en4_greenland_peripheral_*m.csv (EN4, 52 GB)
+scripts/make_greenland_mask.py               # data/processed/greenland_mask_berkeley_1deg.csv
+scripts/extract_mar_protect_smb.py           # raw/ice_sheets/greenland/mar_protect/mar_protect_integrated_smb.csv
+scripts/gcm_greenland_temperature.py         # raw/ice_sheets/greenland/mar_protect/gcm_temperature.csv
+scripts/thermosteric_eos_coefficient.py      # prints KAPPA_EOS in src/slr_forecast/config.py (EN4)
+scripts/integrate_glaude2024_smb.py          # raw/ice_sheets/greenland/glaude2024/glaude2024_integrated_smb.csv (data/raw/glaude2024, 9.6 GB); also imported by extract_mar_protect_smb.py
+scripts/en4_thermosteric.py                  # data/processed/en4_thermosteric_annual.csv (EN4; input to thermorec)
+scripts/iap_ohc_global.py                    # data/processed/iap_v42_ohc_global_monthly.csv (downloads IAP; input to thermorec)
+
+# =============================================================================
+# (b) Package
+# =============================================================================
+src/slr_forecast                             # config, units, readers (whole package)
+
+# =============================================================================
+# (c) Environment and build
+# =============================================================================
+pyproject.toml
+environment/Dockerfile
+environment/entrypoint.sh
+environment/environment.yml
+environment/conda-linux-64.lock
+environment/conda-linux-aarch64.lock
+environment/check_env.py
+environment/README.md
+environment/VERSIONS.md
+# Not shipped (dev only): environment/parity_check.py and environment/production/
+# (records of the production env); VERSIONS.md summarizes their results.
+.dockerignore                                # build context of environment/Dockerfile is the project root
+
+# =============================================================================
+# (d) Tests: pass in the dev repo, exercise shipped code, write only to tmp
+# =============================================================================
+# Run with:  pytest   (pyproject.toml sets testpaths = ["tests"])
+tests/__init__.py
+tests/test_apeninsula.py
+tests/test_config_and_entry_points.py
+tests/test_eais.py
+tests/test_forecast.py
+tests/test_glacier.py
+tests/test_greenland.py
+tests/test_mcmc_reproducibility.py
+tests/test_ocean.py
+tests/test_pipeline_guards.py
+tests/test_readers.py
+tests/test_smb_emulator.py
+tests/test_smb_state.py
+tests/test_summation.py
+tests/test_units.py
+tests/test_wais_sampling.py
+tests/test_ratestate.py                      # rate-and-state functions still live in bayesian_models.py / slr_projections.py
+notebooks/component_greenland_robust_se.py   # test support only (tests/test_greenland.py); not used by the pipeline
+# Dev-repo result 2026-11-21: 518 passed, 0 skipped, 0 failed (76 s), with the
+# dev data present; no file under data/ was written. In a copy with no data/
+# (2026-11-21): 294 passed, 224 skipped, 0 failed; tests/test_readers.py has
+# skip guards (4 passed, 14 skipped).
+
+# =============================================================================
+# (e) Small tracked data files the code needs (fine to ship)
+# =============================================================================
+notebooks/s1_quadratic_fit.json              # WAIS S1 quadratic; component_wais loads it at import and raises if absent
+data/processed/greenland_mask_berkeley_1deg.csv        # 12 KB; lat/lon cell list (Berkeley Earth grid)
+data/processed/en4_greenland_peripheral_200_500m.csv   # 44 KB; EN4-derived (verify EN4 license terms)
+data/processed/en4_greenland_peripheral_100_400m.csv   # 44 KB; EN4-derived, sensitivity layers
+data/processed/en4_greenland_peripheral_300_600m.csv   # 44 KB; EN4-derived, sensitivity layers
+
+# =============================================================================
+# (f) Top-level files of the paper repository
+# =============================================================================
+publication/templates/LICENSE -> LICENSE
+
+# =============================================================================
+# Not shipped: development-only pipeline steps
+# =============================================================================
+# run_extras.sh (dev only) runs these after a completed run_pipeline.sh; it
+# sources run_pipeline.sh for the runner machinery. They read
+# component_results.h5 and feed nothing the paper uses:
+#   run_extras.sh                          the dev-only runner
+#   notebooks/compute_evpi.py              evpi     (value of information)
+#   notebooks/compute_optimal_defense.py   defense  (optimal defense height)
+#   notebooks/compute_shapley_risk.py      shapley  (Shapley risk attribution)
+#   notebooks/results_figures_extra.ipynb  figextra (unpublished figures)
+#   notebooks/dusk_cmap.json               colormap read only by results_figures_extra.ipynb
+
+# =============================================================================
+# Not shipped by default -- user decision
+# =============================================================================
+# README.md      dev README is stale (describes TODO.md, bayesian_dols.py); write a paper-repo README instead.
+# .gitignore     dev version names dev-only paths; export_publication.sh installs
+#                publication/templates/gitignore as .gitignore instead.

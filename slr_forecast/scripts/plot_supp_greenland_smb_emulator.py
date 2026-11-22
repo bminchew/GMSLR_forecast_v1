@@ -13,7 +13,7 @@ positive for sea-level rise, with a the quadratic and b the linear term,
 
 so b_gris = -b1 / 362.5 and a_gris = -b2 / 362.5 for the module's mass-gain
 coefficients (b1, b2) in Gt/yr.  T (dT in the module) is the GMST anomaly relative to
-1995-2005 (11-yr centred mean).  The member draws (seed 600) are those of
+1995-2005 (11-yr centered mean).  The member draws (seed 600) are those of
 component_greenland.ipynb.  The hindcast figure uses a fixed anchor, the
 observed 1995-2005 mean with sd M0_SIGMA (draws seed 602), as before the drift
 state was adopted; the production projections instead take each member's
@@ -237,7 +237,7 @@ def fig_lomo(df):
 
 # ── Figure 3: observed-GMST hindcast ─────────────────────────────────────
 def observed_driver():
-    """Calendar-year Berkeley Earth GMST rel. 1995-2005, 11-yr centred mean
+    """Calendar-year Berkeley Earth GMST rel. 1995-2005, 11-yr centered mean
     through 2024, with 2025-2029 from the SSP2-4.5 AR6 path (as in
     component_greenland.ipynb)."""
     be = pd.read_hdf(H5, 'harmonized/df_berkeley_h')

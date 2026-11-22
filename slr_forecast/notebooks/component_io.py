@@ -30,7 +30,7 @@ File layout (single HDF5 file, one group per component)::
         ├── a4_scenarios/         scenario mixture params
         ...
 
-Other top-level groups (blended*, wais_slow90, voi, hindcast_20c, ...) are
+Other top-level groups (blended*, wais_slow90, hindcast_20c, ...) are
 written by component_forecast, component_summation and later scripts.
 The ``model_type`` strings of some groups predate the current models (see
 the save_* docstrings).
@@ -52,10 +52,11 @@ import numpy as np
 # ---------------------------------------------------------------------------
 try:
     from slr_forecast.config import BASELINE_YEAR, N_SAMPLES, PROCESSED_DATA_DIR
-except ImportError:
-    BASELINE_YEAR = 2000.0
-    N_SAMPLES = 2000
-    PROCESSED_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
+except ImportError as e:
+    raise ImportError(
+        "slr_forecast is not importable: install it with 'pip install -e .' "
+        "from the repository root, or run in the container "
+        "(environment/README.md)") from e
 
 DEFAULT_H5_PATH = PROCESSED_DATA_DIR / "component_results.h5"
 
@@ -75,7 +76,7 @@ def _require_file(path):
 
     The root ``baseline_year`` attribute is refreshed on every save, so it
     describes the current pipeline rather than the run that created the
-    file (MD-12). There is no root sample count: member counts differ by
+    file. There is no root sample count: member counts differ by
     group (N_SAMPLES for most components, more for WAIS and the slow-WAIS
     mixture), so each group's count is the first dimension of its
     ``samples`` arrays.
@@ -360,7 +361,7 @@ def save_ocean_hybrid(
     or posteriors. The hindcast and the projections come from the two-layer
     (Geoffroy) thermosteric model driven by Berkeley Earth GMST and the AR6
     GMST paths; its posterior draws are cached by component_ocean in the
-    top-level ``ocean_posteriors`` group. The group is labelled
+    top-level ``ocean_posteriors`` group. The group is labeled
     ``model_type = 'twolayer_noaa'`` unless ``extra_metadata`` overrides it.
     No ``model_order`` is stored: the two-layer model has no rate-polynomial
     order, and no reader uses an ocean value (the name predates the
@@ -406,7 +407,7 @@ def save_ocean_hybrid(
 def _fit_extra_posteriors(result):
     """Nuisance posteriors of a fit_bayesian_level_annual_correlated result
     that the manuscript quotes (sigma_extra, T_eq0), so they can be read back
-    and printed from the HDF5 (GL-2)."""
+    and printed from the HDF5."""
     out = {}
     sx = getattr(result, "sigma_extra_posterior", None)
     if sx is not None and np.any(np.asarray(sx) != 0):
@@ -658,9 +659,6 @@ def save_wais(
     a4_scenarios,
     obs_years, obs_H, obs_sigma,
     wais_proj,
-    rheology_factor_median=1.0,
-    rheology_factor_sigma=0.0,
-    rheology_mode='B',
     wais_onset_year=None,
     extra_metadata=None,
     h5_path=None,
@@ -677,12 +675,6 @@ def save_wais(
     wais_proj : dict
         ``{ssp: {'samples': ndarray, ...}}``.
         WAIS is SSP-independent; same samples used for all SSPs.
-    rheology_factor_median, rheology_factor_sigma : float
-        Rheology correction parameters (n=3 → n=4). The correction is
-        deprecated; the defaults (1.0, 0.0) record that none is applied.
-    rheology_mode : str
-        Which rheology correction mode was used ('A' or 'B'); default 'B',
-        the production setting (no correction).
     wais_onset_year : float or None
         WAIS onset year for the power-law ramp.
     extra_metadata : dict or None
@@ -697,9 +689,6 @@ def save_wais(
         cg.attrs["model_type"] = "a4_deep_uncertainty"
         cg.attrs["ssp_independent"] = True
         cg.attrs["saved_at"] = datetime.now(timezone.utc).isoformat()
-        cg.attrs["rheology_factor_median"] = rheology_factor_median
-        cg.attrs["rheology_factor_sigma"] = rheology_factor_sigma
-        cg.attrs["rheology_mode"] = rheology_mode
         if wais_onset_year is not None:
             cg.attrs["wais_onset_year"] = float(wais_onset_year)
         if extra_metadata:
@@ -984,10 +973,11 @@ def list_components(h5_path=None):
 # Provenance of groups derived from the blended forecast
 # =========================================================================
 
-DERIVED_FROM_BLENDED = ('blended_slow90', 'wais_slow90', 'voi',
-                        'optimal_defense', 'risk_shapley')
+DERIVED_FROM_BLENDED = ('blended_slow90', 'wais_slow90')
 """Groups computed from `blended` (and the groups component_forecast writes
-with it) by scripts that run after component_forecast."""
+with it) by the pipeline step that runs after component_forecast
+(scripts/build_slow_wais_p90.py). Callers that read other derived groups pass
+those group names to check_derived explicitly."""
 
 
 def stamp_derived(hf, group):
@@ -1006,4 +996,4 @@ def check_derived(hf, groups=DERIVED_FROM_BLENDED):
         raise RuntimeError(
             f'Derived groups {stale} are missing or predate the current '
             f'blended forecast ({current}); rerun the pipeline steps after '
-            f'`forecast` (slowwais, evpi, defense, shapley).')
+            f'`forecast`.')

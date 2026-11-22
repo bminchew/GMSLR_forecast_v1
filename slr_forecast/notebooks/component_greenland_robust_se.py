@@ -1,7 +1,7 @@
 """
 Correlation-aware standard errors for the Greenland discharge delay model.
 
-Not used in production since 2026-10-17: the delay model is now fitted to the
+Not used in production: the delay model is fitted to the
 annual increments of the cumulative record (fit_discharge_delay_model with
 sigma_rate), which is the GLS fit this module approximated with a sandwich
 covariance around the level fit. Kept for comparison; tests use
@@ -43,7 +43,7 @@ where ``A`` is the signed increment-path operator of the bidirectional
 cumulation in ``_cumulate`` and ``v`` the per-step variance increments from
 the reported annual rate uncertainties.  Two consequences fall out
 automatically: the demeaning is handled (it is in ``M``), and the rate
-constraint is correctly recognised as a deterministic function of data
+constraint is correctly recognized as a deterministic function of data
 already in the fit (it is in ``c'``) rather than as independent
 information.
 
@@ -51,7 +51,7 @@ Error scale
 -----------
 The reported annual uncertainties are known to understate the true
 observational errors, more so for the older part of the record.  The
-generalised chi-square of the fit measures this, and ``scale='auto'``
+generalized chi-square of the fit measures this, and ``scale='auto'``
 (the default) inflates ``Omega`` by chi2/dof accordingly.  Pass
 ``scale=1.0`` to report intervals conditional on the formal errors being
 correct.
@@ -126,7 +126,7 @@ def robust_delay_intervals(
         Must match the settings used for the fit.
     scale : {'auto', float}
         Variance inflation applied to Omega.  ``'auto'`` estimates it as
-        the generalised chi2/dof of the fit, which absorbs the known
+        the generalized chi2/dof of the fit, which absorbs the known
         understatement of the formal observational errors.
     conf : float
         Interval level.  Default 0.90.
@@ -196,7 +196,7 @@ def robust_delay_intervals(
         L = np.vstack([M, c_v[None, :]])
         Omega = L @ Sigma @ L.T
 
-        # Error-scale calibration from the generalised chi-square
+        # Error-scale calibration from the generalized chi-square
         beta_pub = np.array([fr['gamma'], fr['r0']])
         resid_lvl = fr['H_dm'] - X_lvl @ beta_pub
         Sig_dm = M @ Sigma @ M.T

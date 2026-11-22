@@ -19,7 +19,7 @@ P_M = 2000.0**2                     # diffuse prior variance on M, (Gt/yr)^2
 TAU = np.geomspace(3.0, 150.0, 32)
 SD_D = np.linspace(0.0, 240.0, 41)
 # sigma_eps grid starts at 0: the posterior mass rises toward the low end,
-# and a grid starting at 20 Gt/yr truncated its lower tail (GR-6)
+# and a grid starting at 20 Gt/yr would truncate its lower tail
 SD_E = np.linspace(0.0, 250.0, 51)
 
 
@@ -52,7 +52,7 @@ def log_prior(tg, sdg, prior='narrow'):
     return lp_tau + lp_sd
 
 
-# ── Kalman filter, vectorised over a leading batch dimension ──
+# ── Kalman filter, vectorized over a leading batch dimension ──
 def kalman(r, s_obs, phi, sd_d, sd_e, H=None, prior_c=None, return_path=False):
     """r: (B, T) or (T,) observations with NaN for missing years; s_obs: (T,)
     reported errors; phi, sd_d, sd_e: (B,).  State [M, (c), delta].  H: (T,)

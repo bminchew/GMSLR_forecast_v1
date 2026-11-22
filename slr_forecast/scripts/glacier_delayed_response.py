@@ -11,7 +11,7 @@ Roe et al. 2021):
     rate(t) = b (T(t) - T_eq(t)),      dT_eq/dt = (T - T_eq) / tau,
 
 with T_eq the temperature the glaciers are adjusted to and T_eq = T_eq0 in
-1850. Discretised annually, T_eq(t) = phi T_eq(t-1) + (1 - phi) T(t) with
+1850. Discretized annually, T_eq(t) = phi T_eq(t-1) + (1 - phi) T(t) with
 phi = exp(-1/tau), so for fixed tau
 
     rate = b X1(t) + kappa X2(t),   X1 = T - F0,   X2 = phi^(t - 1850),
@@ -32,8 +32,7 @@ GlaMBIE's 95% intervals are converted to 1 sigma, and the GlaMBIE block
 carries the production model-inadequacy term sigma_gl,extra (posterior
 median read from component_results.h5, written by component_glacier), as in
 the production glacier fit, so the two models are compared under the same
-error model. Before 2026-10-17 the GlaMBIE errors entered unconverted and
-without sigma_extra (GL-1).
+error model.
 Hydrological-year regressors use 0.25 X(Y-1) + 0.75 X(Y).
 
 Inference: for each tau on a grid (3 to 3000 yr, plus the linear limit),
@@ -113,9 +112,7 @@ def temperatures():
     be = pd.read_hdf(H5, 'harmonized/df_berkeley_h')
     obs = be['temperature'].groupby(be.index.year).agg(['mean', 'count'])
     obs = obs.loc[obs['count'] == 12, 'mean']
-    # AR6 -> Berkeley Earth offset shared with the component notebooks (OC-8).
-    # Before 2026-10-18 this script matched AR6 Historical to Berkeley over
-    # 1995-2005 instead.
+    # AR6 -> Berkeley Earth offset shared with the component notebooks.
     off = ar6_to_berkeley_offset(str(H5))
     base = obs.loc[1995:2005].mean()
     obs = obs - base
@@ -257,14 +254,14 @@ def main():
         print(f'  tau {ftau(tau):>6s}: early b {bs[0][0]:5.2f} ± {bs[0][1]:.2f}, late b {bs[1][0]:5.2f} ± {bs[1][1]:.2f}'
               f'  ({dz:+.1f} sigma)')
 
-    # ── Stationarity under a quadratic dependence on GMST (GL-10) ──
+    # ── Stationarity under a quadratic dependence on GMST ──
     # rate = a T^2 + b T + c. As with tau above, a is fixed and (b, c) are
     # refitted to each Zemp window with the same priors; b is the slope at
     # T = 0, so the value of a at which the two b agree is the curvature a
     # single quadratic would need. The quadratic fitted to all of Zemp
     # 1962-2016 gives a's own estimate, and the chi-square of the linear,
     # quadratic and window-split linear fits to that record (one covariance,
-    # generalised least squares, no prior) shows how much of the early/late
+    # generalized least squares, no prior) shows how much of the early/late
     # difference each model takes up.
     print('\n=== Stationarity under rate = a T^2 + b T + c: Zemp 1962-1989 vs 1990-2016 ===')
     Tz = design(T, np.inf, z.index.values, np.array([], dtype=int))[:, 0]     # hydrological-year T
@@ -347,7 +344,7 @@ def main():
     print('  model                          ' + '  '.join(f'{s:>18s}' for s in SSPS))
     # 'linear' is b T + kappa fitted here (kappa free, b untruncated, no
     # sigma_extra on Zemp, Zemp 1962-1999 in the calibration): the tau -> inf
-    # limit of this script's model, not the production fit (GL-12). The
+    # limit of this script's model, not the production fit. The
     # production medians are printed below the table.
     rows = [('linear (tau -> inf, this fit)', lin_tau, lin_bk)]
     # tau quantiles from the same weighted CDF as the tau-posterior print above
@@ -357,7 +354,7 @@ def main():
     for lab, tf in ((f'delayed, tau {tq5:.0f} (5th pct)', tq5), (f'delayed, tau {tq50:.0f} (median)', tq50),
                     (f'delayed, tau {tq95:.0f} (95th pct)', tq95)):
         rows.append((lab,) + draws('a', None, tau_fixed=tf))
-    rows.append(('delayed, tau marginalised', tau_a, bk_a))
+    rows.append(('delayed, tau marginalized', tau_a, bk_a))
     rows.append(('delayed, log-uniform tau prior',) + draws('a', 'log-uniform'))
     proj = {}
     for lab, tt, bb in rows:
@@ -406,7 +403,7 @@ def main():
     ax = axes[2]
     yrs = np.arange(2000, 2101)
     for ssp, col in (('SSP1-2.6', '#1b9e77'), ('SSP5-8.5', '#d95f02')):
-        for lab, ls in (('linear (tau -> inf, this fit)', '-'), ('delayed, tau marginalised', '--')):
+        for lab, ls in (('linear (tau -> inf, this fit)', '-'), ('delayed, tau marginalized', '--')):
             Rs = proj[(lab, ssp)]
             ax.plot(yrs, Rs[yrs].median(axis=0), color=col, ls=ls, lw=1.6, label=f'{ssp}, {lab}')
     ax.set_ylabel('mm/yr SLE'); ax.set_title('(c) Projected rates (median)', fontsize=10)

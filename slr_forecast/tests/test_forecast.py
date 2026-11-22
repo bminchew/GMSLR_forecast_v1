@@ -370,8 +370,7 @@ class TestHeadlineStatistics:
     def test_2100_values_plausible(self, headline):
         """2100 medians should be between 0.6 and 2.0 m rel. preindustrial.
 
-        SSP1-1.9 is 0.70 m since the computed 0.150 m pre-industrial offset
-        replaced 0.19 m (2026-10-14).
+        SSP1-1.9 is 0.70 m with the computed 0.150 m pre-industrial offset.
         """
         for ssp in PROJ_SSPS:
             med = headline['scenarios'][ssp]['2100']['median_m_rel_preindustrial']
@@ -400,7 +399,7 @@ class TestHeadlineStatistics:
     def test_nearly_all_exceed_0_5m(self, headline):
         """P(>0.5m) should be at least 95% for all SSPs at 2100.
 
-        Since the computed 0.150 m pre-industrial offset (2026-10-14),
+        With the computed 0.150 m pre-industrial offset,
         SSP1-1.9 is 97.0% and SSP1-2.6 is 98.9%; the other SSPs are 100%.
         """
         for ssp in PROJ_SSPS:
@@ -475,7 +474,8 @@ class TestTWSLoading:
             samples = grp['samples'][:]
             assert samples.ndim == 2
             assert len(years) == samples.shape[1]
-            assert samples.shape[0] >= 1000  # enough samples
+            # every draw the file records (SLR_N_SAMPLES at precompute time)
+            assert samples.shape[0] == int(f.attrs['n_samples'])
 
     def test_tws_units_mm(self):
         """TWS samples should be in mm (values 0-100 at 2100)."""

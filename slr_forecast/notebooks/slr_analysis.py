@@ -808,7 +808,7 @@ def compute_kinematics(
         None keeps the original standard errors (diagonal WLS, scaled by
         the weighted residual variance). Those treat the kernel-times-
         inverse-variance weights as inverse variances and ignore serial
-        correlation, so they are nominal (MD-29); use them for
+        correlation, so they are nominal; use them for
         diagnostics only. When given, the point estimates
         are unchanged and the standard errors come from the sandwich
         A X'W C W X A, with A = (X'WX)^-1 and W the combined weights on
@@ -1095,7 +1095,7 @@ def calibrate_dols(
     Parameters
     ----------
     sea_level : pd.Series
-        Sea level with datetime index (e.g. metres).
+        Sea level with datetime index (e.g. meters).
     temperature : pd.Series
         Temperature anomaly with datetime index (°C).
     gmsl_sigma : pd.Series, optional
@@ -1134,7 +1134,7 @@ def calibrate_dols(
         raise ValueError(f"order must be 1, 2, or 3, got {order}")
 
     # ---- 1. Align series on common datetime index ----
-    # Normalise all indices to month-start so that series with different
+    # Normalize all indices to month-start so that series with different
     # day-of-month conventions (e.g. 1st vs 15th) can be matched.
     sl_ms   = _to_month_start(sea_level)
     temp_ms = _to_month_start(temperature)
@@ -1460,7 +1460,7 @@ def calibrate_dols_sliding(
     Parameters
     ----------
     sea_level : pd.Series
-        Sea level with datetime index (e.g. metres).
+        Sea level with datetime index (e.g. meters).
     temperature : pd.Series
         Temperature anomaly with datetime index (°C).
     gmsl_sigma : pd.Series, optional

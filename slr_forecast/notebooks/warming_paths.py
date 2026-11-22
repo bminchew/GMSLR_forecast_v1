@@ -24,11 +24,11 @@ import numpy as np
 try:
     from slr_forecast.config import (N_SAMPLES, SEEDS, SAMPLE_WARMING_PATHS,
                                      WARMING_ANCHOR_YEAR)
-except ImportError:
-    N_SAMPLES = 2000
-    SEEDS = {'warming': 2027}
-    SAMPLE_WARMING_PATHS = True
-    WARMING_ANCHOR_YEAR = 2024.0
+except ImportError as e:
+    raise ImportError(
+        "slr_forecast is not importable: install it with 'pip install -e .' "
+        "from the repository root, or run in the container "
+        "(environment/README.md)") from e
 
 Z_90 = 1.645  # standard-normal quantile of the AR6 5th/95th percentiles
 

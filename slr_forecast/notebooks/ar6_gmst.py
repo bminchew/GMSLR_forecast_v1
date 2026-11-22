@@ -4,7 +4,7 @@ The AR6 GMST tables (`projections/temp/*` in slr_processed_data.h5) give
 annual means relative to 1850-1900, stamped at 1 January. Every component
 model is driven by Berkeley Earth GMST relative to 1995-2005 through the end
 of the observed record (2024) and by the AR6 median path after it. Two
-choices must therefore be the same in every component (OC-8 / SF-3):
+choices must therefore be the same in every component:
 
 - Time stamps: AR6 annual means are placed at mid-year (`midyear`), like the
   Berkeley annual means they continue.
@@ -14,9 +14,8 @@ choices must therefore be the same in every component (OC-8 / SF-3):
   cover. Members follow observed GMST through 2024, so the offset only sets
   where the AR6 path takes over after it.
 
-Before 2026-10-17 the ocean used this definition (0.755 C) and the glacier,
-Greenland, EAIS and Peninsula notebooks matched AR6 Historical to Berkeley
-over 1995-2005 with 1 January stamps (0.726 C).
+This definition gives 0.755 C. Matching AR6 Historical to Berkeley over
+1995-2005 with 1 January stamps would give 0.726 C instead.
 """
 
 import numpy as np

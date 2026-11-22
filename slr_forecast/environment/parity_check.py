@@ -1,0 +1,16 @@
+import hashlib, numpy as np, scipy.stats as st, scipy.linalg as sl, emcee, warnings
+warnings.filterwarnings("ignore")
+h = lambda a: hashlib.sha256(np.ascontiguousarray(a).tobytes()).hexdigest()[:12]
+rng = np.random.default_rng(42)
+x = rng.normal(size=100000); print("rng normal      ", h(x))
+A = rng.normal(size=(300, 300)); b = rng.normal(size=300)
+print("linalg.solve    ", h(np.linalg.solve(A, b)))
+print("matmul 300^2    ", h(A @ A))
+print("cholesky/cov    ", h(sl.cho_factor(A @ A.T + 300*np.eye(300))[0]))
+print("sum/mean        ", repr(x.sum()), repr(x.mean()))
+print("skewnorm.ppf    ", h(st.skewnorm.ppf(np.linspace(0.01, 0.99, 99), 4.0, 1.0, 2.0)))
+print("exp/log/sin     ", h(np.exp(x[:1000])), h(np.log(np.abs(x[:1000]))), h(np.sin(x[:1000])))
+np.random.seed(42)
+def lp(t): return -0.5*np.sum((t - 1.0)**2 / 0.3**2)
+s = emcee.EnsembleSampler(16, 3, lp); s.run_mcmc(np.random.default_rng(1).normal(size=(16, 3)), 500, progress=False)
+c = s.get_chain(flat=True); print("emcee chain     ", h(c), repr(c.mean()))

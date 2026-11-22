@@ -311,7 +311,7 @@ class TestSigmaTaper:
 # =========================================================================
 
 class TestComputeRates:
-    """Test rate computation via centred differences."""
+    """Test rate computation via centered differences."""
 
     def test_linear_signal(self):
         """Rate of a linear signal should be constant."""
@@ -535,8 +535,8 @@ class TestDischargeDelayModelWLS:
 
     Fits H_dm = gamma * int_T_dm + r0 * t_dm by demeaned WLS with diagonal
     weights and the end-of-record rate row, BIC-weighted across candidate
-    deltas.  Production has used the increment estimator (sigma_rate given,
-    TestDischargeDelayModelIncrements) since 2026-10-17; the level estimator
+    deltas.  Production uses the increment estimator (sigma_rate given,
+    TestDischargeDelayModelIncrements); the level estimator
     remains callable, so these tests keep its arithmetic checked.
     """
 
@@ -1014,7 +1014,7 @@ class TestOceanLowpassTransfer:
 
 class TestProjectDischargeForcingHold:
     """project_greenland_discharge holds the last annual ocean temperature
-    flat after the forcing ends (GR-4), so the discharge rate stays at
+    flat after the forcing ends, so the discharge rate stays at
     gamma * T_last + r0 instead of dropping to r0."""
 
     def test_rate_after_forcing_ends(self):

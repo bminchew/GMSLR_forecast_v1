@@ -20,7 +20,7 @@ Steps
   4. Fit the combined record (Zemp 1962-1999, GlaMBIE 2000-2023).
   5. Cumulative hindcast relative to 2000 for each fit, against Frederikse.
 
-Fits are generalised least squares in rate space with no prior on b and
+Fits are generalized least squares in rate space with no prior on b and
 c free, so the GlaMBIE fit here is not the production fit (which has the b
 prior, the balance prior and a fitted sigma_extra in level space).
 Zemp's geodetic uncertainty (sig_Geod) is constant over long periods and is
@@ -29,7 +29,7 @@ GlaMBIE errors, as independent; Zemp's and GlaMBIE's 95% intervals are
 converted to 1 sigma (slr_data_readers.read_zemp2019_global), and the
 GlaMBIE errors carry the production sigma_gl,extra in quadrature (posterior
 median from component_results.h5). T is Berkeley Earth annual GMST relative to
-1995-2005; for Zemp's hydrological years (October to September, labelled by
+1995-2005; for Zemp's hydrological years (October to September, labeled by
 the end year) T is 0.25 T(Y-1) + 0.75 T(Y). Intervals are 90%, inflated by
 sqrt(chi2/dof) where that exceeds 1. Nothing here feeds the pipeline.
 

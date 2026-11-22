@@ -1,4 +1,4 @@
-"""Antarctic Peninsula: linear vs quadratic rate model, full likelihood (AN-6).
+"""Antarctic Peninsula: linear vs quadratic rate model, full likelihood.
 
 The production Peninsula model is linear in GMST, rate = b T + c, with the
 quadratic term a_p set to zero. The notebook's own BIC comparison cannot

@@ -20,7 +20,7 @@ The component decomposition is the primary framework. Each contributor is modele
 | Greenland discharge | ODE with ocean thermal lag | Mouginot discharge + EN4 ocean T | gamma_atm, gamma_ocean, tau |
 | EAIS | Trend-only (literature SMB sensitivity) | IMBIE (1992-2020) | b, c |
 | Peninsula | Bayesian linear DOLS | IMBIE (1992-2020) | b, c, H0 |
-| WAIS | A4 deep-uncertainty scenario mixture | Expert judgment + rheology correction | Scenario weights, skew-normal params |
+| WAIS | A4 deep-uncertainty scenario mixture | Expert judgment | Scenario weights, skew-normal params |
 
 ## Project Structure
 
@@ -89,7 +89,7 @@ slr_forecast/
 ## Quick Start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - Core: `numpy`, `pandas`, `scipy`, `statsmodels`, `matplotlib`, `h5py`, `netCDF4`
 - Bayesian: `emcee`, `arviz`
 - Optional: `tables` (HDF5 via pandas), `openpyxl`
@@ -142,7 +142,7 @@ Bayesian linear rate-temperature fit to GlaMBIE:
 - **Discharge**: ODE driven by subsurface ocean temperature via jointly-calibrated transfer function
 
 ### WAIS
-A4 deep-uncertainty scenario mixture with skew-normal distributions in log-space (Robel et al. 2019), rheology correction (n=3 to n=4, Martin et al.), SSP-independent.
+A4 deep-uncertainty scenario mixture with skew-normal distributions in log-space (Robel et al. 2019), SSP-independent.
 
 ## Key Constants
 

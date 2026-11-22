@@ -171,8 +171,9 @@ class TestFittedEmulator:
         for g, f in emu['fits'].items():
             assert f['segments'][0] == 'history' and 'ssp585' in f['segments'], g
 
-    def test_cesm2_matches_cross_gcm_script(self, emu):
-        # scripts/cross_gcm_test_mar.py gives M 56.7, b1 -39.9, b2 -48.4 for CESM2
+    def test_cesm2_matches_single_gcm_fit(self, emu):
+        # A fit to CESM2's MAR runs alone (all scenarios, separate AR(1)
+        # segments) gives M 56.7, b1 -39.9, b2 -48.4
         m = np.median(emu['fits']['CESM2']['beta'], axis=0)
         assert m[0] == pytest.approx(56.7, abs=5)
         assert m[1] == pytest.approx(-39.9, abs=5)

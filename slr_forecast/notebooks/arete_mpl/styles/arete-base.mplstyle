@@ -24,7 +24,7 @@ axes.edgecolor:   .15
 axes.linewidth:   1.25
 axes.grid:        False
 
-# Arête color cycle: six distinguishable colours anchored to brand palette
+# Arête color cycle: six distinguishable colors anchored to brand palette
 #   GB400   Earth   teal    muted-red  GB300   amber
 axes.prop_cycle: cycler('color', ['036C9A', 'AB6638', '2A9D8F', 'C44E52', '72A3C3', 'D4A24E'])
 

@@ -20,9 +20,6 @@ from component_projections import (
     A4_SCENARIOS,
     get_s1_quadratic,
     read_ipcc_component_nc, ipcc_extract,
-    N_OBS_MEAN,
-    N_OBS_SIGMA,
-    N_REF,
     WAIS_ONSET_YEAR,
     WAIS_MAX_SLE_MM,
 )
@@ -34,8 +31,8 @@ from slr_forecast.config import Z_90
 # Paths
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 RAW_DIR = os.path.join(PROJECT_ROOT, 'data', 'raw')
-# Legacy IMBIE v2021 file -- superseded by IMBIE-3 (IMBIE3_WAIS_PATH below)
-# as of the 2026-09-17 refit, but kept here since read_imbie_west_antarctica
+# Legacy IMBIE v2021 file -- superseded by IMBIE-3 (IMBIE3_WAIS_PATH below),
+# but kept here since read_imbie_west_antarctica
 # is still exercised for regression/comparison purposes.
 IMBIE_WAIS_PATH = os.path.join(
     RAW_DIR, 'ice_sheets', 'antarctica', 'imbie_west_antarctica_2021_mm.csv')
@@ -53,10 +50,6 @@ HAS_IPCC_AIS = os.path.exists(os.path.join(
 
 N = 200_000  # large enough for percentile checks at ~1% tolerance
 RNG_SEED = 2026
-# Production rheology mode. The samplers in component_projections.py still
-# default to the deprecated Mode A (S2 x N(1.28, 0.07)), which no pipeline
-# caller uses, so every call here passes the mode explicitly (IN-5).
-MODE = 'B'
 
 
 # =========================================================================
@@ -113,7 +106,7 @@ class TestEndpointSampling:
 
     def test_returns_meters(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais_endpoint(N, rng, rheology_mode=MODE)
+        samples = sample_a4_wais_endpoint(N, rng)
         # The mixture median is a few tenths of a meter; in mm it would be
         # > 100
         med = np.median(samples)
@@ -122,7 +115,7 @@ class TestEndpointSampling:
 
     def test_shape(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais_endpoint(1000, rng, rheology_mode=MODE)
+        samples = sample_a4_wais_endpoint(1000, rng)
         assert samples.shape == (1000,)
 
     def test_scenario_weight_override(self):
@@ -130,7 +123,7 @@ class TestEndpointSampling:
         rng = np.random.default_rng(RNG_SEED)
         weights = {'S1_status_quo': 1.0, 'S2_fast_wais': 0.0}
         samples = sample_a4_wais_endpoint(
-            N, rng, rheology_mode=MODE, scenario_overrides={'weights': weights})
+            N, rng, scenario_overrides={'weights': weights})
         # S1's 2100 90% interval is about [-0.01, 0.18] m, so its 99th
         # percentile stays well below 0.25 m; S2 draws would exceed it.
         assert np.percentile(samples, 99) < 0.25, (
@@ -141,33 +134,28 @@ class TestEndpointSampling:
         (removing the positive skew that pushes mass toward the lower tail)."""
         rng1 = np.random.default_rng(RNG_SEED)
         rng2 = np.random.default_rng(RNG_SEED)
-        base = sample_a4_wais_endpoint(N, rng1, rheology_mode=MODE)
+        base = sample_a4_wais_endpoint(N, rng1)
         modified = sample_a4_wais_endpoint(
-            N, rng2, rheology_mode=MODE,
+            N, rng2,
             scenario_overrides={'S2_fast_wais': {'alpha': 0}})
         # alpha=0 (symmetric log-normal) has a higher median than alpha=3
         assert np.median(modified) > np.median(base)
 
-    def test_mode_b_applies_no_rheology_correction(self):
-        """With n held at N_REF (the rheology correction is deprecated),
-        Mode B leaves the S2 endpoint distribution unscaled: its 5th and
-        95th percentiles equal the stated low_mm and high_mm."""
-        assert N_OBS_MEAN == N_REF and N_OBS_SIGMA == 0.0
+    def test_s2_endpoint_percentiles_match_bounds(self):
+        """The S2 endpoint distribution's 5th and 95th percentiles equal
+        the stated low_mm and high_mm."""
         s2 = A4_SCENARIOS['S2_fast_wais']
         b = sample_a4_wais_endpoint(
-            100_000, np.random.default_rng(RNG_SEED), rheology_mode='B',
+            100_000, np.random.default_rng(RNG_SEED),
             scenario_overrides={'weights': {'S1_status_quo': 0.0,
                                             'S2_fast_wais': 1.0}}) * M_TO_MM
         assert np.percentile(b, 5) == pytest.approx(s2['low_mm'], rel=0.03)
         assert np.percentile(b, 95) == pytest.approx(s2['high_mm'], rel=0.03)
 
-    @pytest.mark.parametrize('mode', ['A', 'B'])
-    def test_endpoint_never_exceeds_wais_cap(self, mode):
-        """No endpoint draw exceeds the marine-based WAIS volume, in either
-        rheology mode (Mode A multiplies by a factor >= 1 after sampling).
-        The 'A' case can go when Mode A is removed from the module."""
+    def test_endpoint_never_exceeds_wais_cap(self):
+        """No endpoint draw exceeds the marine-based WAIS volume."""
         x = sample_a4_wais_endpoint(
-            100_000, np.random.default_rng(RNG_SEED), rheology_mode=mode,
+            100_000, np.random.default_rng(RNG_SEED),
             scenario_overrides={'weights': {'S1_status_quo': 0.0,
                                             'S2_fast_wais': 1.0}}) * M_TO_MM
         assert x.max() <= WAIS_MAX_SLE_MM
@@ -185,7 +173,7 @@ class TestTrajectories:
         rng = np.random.default_rng(RNG_SEED)
         years = np.arange(1990, 2110, dtype=float)
         samples_m, params = sample_a4_wais_trajectories(
-            500, rng, years, rheology_mode=MODE,
+            500, rng, years,
             anchor_year=2020.0,
             anchor_value_mm=5.0,
             anchor_sigma_mm=0.7,
@@ -216,14 +204,14 @@ class TestTrajectories:
         """Each non-S1 (S2/power-law-ramp) sample's trajectory should be
         monotonically non-decreasing after the anchor year (2020).
 
-        S1_status_quo is excluded as of the 2026-09-17 ISMIP6
+        S1_status_quo is excluded because of the ISMIP6
         extrapolation-error widening (S1_ISMIP6_STD_COEFFS in
-        component_projections.py): S1 trajectories are now H_quad(t) +
+        component_projections.py): S1 trajectories are H_quad(t) +
         eta*sqrt(extra_var(t)) with one eta per sample, and for eta<0
         this smooth curve can legitimately dip within its post-anchor
         range -- a real, intentional consequence of giving S1 a
-        non-trivial probability of net mass gain by 2100 (see round-3/3b
-        write-up), not a bug. S2's power-law ramp is unaffected and
+        non-trivial probability of net mass gain by 2100, not a
+        bug. S2's power-law ramp is unaffected and
         still checked here."""
         samples_m, params, years = trajectory_result
         scenario_names = list(A4_SCENARIOS.keys())
@@ -278,8 +266,8 @@ class TestTrajectories:
         the second derivative should not change sign (for beta >= 1, it's
         convex).
 
-        S1_status_quo is excluded as of the 2026-09-17 ISMIP6
-        extrapolation-error widening: S1's curve is now H_quad(t) +
+        S1_status_quo is excluded because of the ISMIP6
+        extrapolation-error widening: S1's curve is H_quad(t) +
         eta*sqrt(extra_var(t)), a smooth function of t but not a pure
         power law, so its second-difference sign is no longer expected to
         be constant -- this is intentional (see test_monotonic_post_anchor)
@@ -301,16 +289,12 @@ class TestTrajectories:
         # S2 samples near the low_mm bound (h_remaining small) have
         # correspondingly small
         # curvature there too, which pushes some fraction of samples below
-        # floating-point noise. Threshold history: 0.85 -> 0.80 when S2's
-        # high_mm dropped 1300->1000 (smaller mixture p95, see
-        # test_mixture_p95_not_above_ar6_low_confidence); -> 0.75
-        # (2026-09-17) when low_mm dropped 139->84 (pinned to S1's median
-        # rather than an upper-tail percentile -- see the A4_SCENARIOS
-        # comment block), which put more S2 samples close enough to
-        # low_mm for the same floating-point noise-floor effect (measured
-        # frac_smooth was 0.77 at that point; this is a test-sensitivity
-        # artifact of the curvature-sign check on near-flat curves, not a
-        # real change in trajectory quality).
+        # floating-point noise. With low_mm pinned to S1's median (see the
+        # A4_SCENARIOS comment block), enough S2 samples sit close to low_mm
+        # for this noise-floor effect that the threshold is 0.75 (measured
+        # frac_smooth was 0.77); this is a test-sensitivity artifact of the
+        # curvature-sign check on near-flat curves, not a problem with
+        # trajectory quality.
         assert frac_smooth > 0.75, (
             f"Only {frac_smooth:.0%} of non-S1 trajectories are smooth (expected >75%)")
 
@@ -367,7 +351,7 @@ class TestLegacySampler:
 
     def test_returns_meters(self):
         rng = np.random.default_rng(RNG_SEED)
-        samples = sample_a4_wais(1000, rng, year=2100, rheology_mode=MODE)
+        samples = sample_a4_wais(1000, rng, year=2100)
         med = np.median(samples)
         assert 0.05 < med < 5.0, f"Median {med:.3f} suggests wrong units"
 
@@ -375,7 +359,7 @@ class TestLegacySampler:
         """Before anchor year, should return N(obs_value, obs_sigma)."""
         rng = np.random.default_rng(RNG_SEED)
         samples = sample_a4_wais(
-            10000, rng, year=2015, rheology_mode=MODE,
+            10000, rng, year=2015,
             anchor_year=2020, anchor_value_mm=5.0, anchor_sigma_mm=0.7,
             obs_value_mm=3.0, obs_sigma_mm=0.5,
         )
@@ -384,7 +368,7 @@ class TestLegacySampler:
 
 
 # =========================================================================
-# Gap 1: I/O roundtrip (save_wais / load_component)
+# I/O roundtrip (save_wais / load_component)
 # =========================================================================
 
 class TestWAISIO:
@@ -526,14 +510,14 @@ class TestWAISIO:
 
 
 # =========================================================================
-# Gap 2: IMBIE West Antarctica reader
+# IMBIE West Antarctica reader
 # =========================================================================
 
 @pytest.mark.skipif(not HAS_IMBIE_WAIS, reason="IMBIE WAIS data file not found")
 class TestIMBIEWAISReader:
     """Verify read_imbie_west_antarctica + annualize_imbie on the legacy
     IMBIE v2021 WAIS record. component_wais.ipynb no longer reads this file
-    (superseded by IMBIE-3 as of the 2026-09-17 refit -- see
+    (superseded by IMBIE-3 -- see
     TestIMBIE3WAISReader below), but the reader function itself remains in
     slr_data_readers.py and this class is kept as a regression check on it."""
 
@@ -589,8 +573,8 @@ class TestIMBIEWAISReader:
 
 
 # =========================================================================
-# Gap 2b: IMBIE-3 (Otosaka et al. 2026) West Antarctica reader -- the
-# record component_wais.ipynb actually reads as of the 2026-09-17 refit.
+# IMBIE-3 (Otosaka et al. 2026) West Antarctica reader -- the
+# record component_wais.ipynb actually reads.
 # =========================================================================
 
 @pytest.mark.skipif(not HAS_IMBIE3_WAIS, reason="IMBIE-3 WAIS data file not found")
@@ -661,7 +645,7 @@ class TestIMBIE3WAISReader:
 
 
 # =========================================================================
-# Gap 3: A4 scenario parameter consistency
+# A4 scenario parameter consistency
 # =========================================================================
 
 class TestA4ScenarioParameters:
@@ -749,18 +733,9 @@ class TestA4ScenarioParameters:
         """S2's low_mm should be pinned to (approximately) the median
         (50th percentile) of S1's endpoint distribution.
 
-        NOTE: unlike the earlier percentile choices, pinning to the
-        median means S2's floor sits in the *middle* of S1's own
-        distribution rather than above its tail -- see the A4_SCENARIOS
-        comment block for this caveat.
-
-        History (2026-09-17, all same day): p99 (pre-ISMIP6-widening) ->
-        p95 (alongside the ISMIP6 extrapolation-error widening added to
-        _sample_s1_quadratic_mm, S1_ISMIP6_STD_COEFFS in
-        component_projections.py, since S1's p99 was no longer a stable,
-        sample-efficient anchor once it had a real tail) -> p83 (closer
-        to the independent basin-by-basin estimate) -> p50/median (on
-        request) -- see the A4_SCENARIOS comment block."""
+        NOTE: pinning to the median means S2's floor sits in the
+        *middle* of S1's own distribution rather than above its tail --
+        see the A4_SCENARIOS comment block for this caveat."""
         rng = np.random.default_rng(0)
         s1_samples_mm = _sample_s1_quadratic_mm(200_000, rng, [2100.0])[:, 0]
         s1_median = np.percentile(s1_samples_mm, 50)
@@ -768,7 +743,7 @@ class TestA4ScenarioParameters:
         assert s2['low_mm'] == pytest.approx(s1_median, abs=5.0)
 
     def test_s2_high_mm_is_1300(self):
-        """S2_fast_wais's 95th percentile bound is 1300 mm (set 2026-09-18),
+        """S2_fast_wais's 95th percentile bound is 1300 mm,
         approximately the IPCC AR6 low-confidence AIS SSP5-8.5 p95 at 2100
         (~1309 mm), as stated in the main text -- see also
         test_mixture_p95_not_above_ar6_low_confidence."""
@@ -785,7 +760,7 @@ class TestA4ScenarioParameters:
         (1309 mm) -- there is no additional data to defend a mixture tail
         heavier than AR6's own low-confidence storyline."""
         rng = np.random.default_rng(42)
-        mix_mm = sample_a4_wais_endpoint(500_000, rng, rheology_mode='B') * 1000.0
+        mix_mm = sample_a4_wais_endpoint(500_000, rng) * 1000.0
         assert np.percentile(mix_mm, 95) < 1309.0 + 50.0
 
     def test_s2_alpha_is_representative_literature_value(self):
@@ -803,7 +778,7 @@ class TestA4ScenarioParameters:
 
 
 # =========================================================================
-# Gap 4: IPCC unit conversion
+# IPCC unit conversion
 # =========================================================================
 
 @pytest.mark.skipif(not HAS_IPCC_AIS, reason="IPCC AIS data not found")
@@ -849,30 +824,28 @@ class TestIPCCUnitConversion:
 
 
 # =========================================================================
-# Gap 5: Sensitivity analysis logic
+# Sensitivity analysis logic
 # =========================================================================
 
 class TestSensitivityAnalysisLogic:
-    """Test the range override used in the notebook's sensitivity cells
-    (the tornado-weight and bound-scaling checks that never called the
-    sampler were removed, IN-9)."""
+    """Test the range override used in the notebook's sensitivity cells."""
 
     def test_range_override_affects_median(self):
         """Scaling S2_fast_wais's bounds up by 20% should increase the
         mixture median endpoint."""
         rng1 = np.random.default_rng(77)
         rng2 = np.random.default_rng(77)
-        base = sample_a4_wais_endpoint(50000, rng1, rheology_mode=MODE)
+        base = sample_a4_wais_endpoint(50000, rng1)
         s2 = A4_SCENARIOS['S2_fast_wais']
         overrides = {'S2_fast_wais': {'low_mm': s2['low_mm'] * 1.2,
                                        'high_mm': s2['high_mm'] * 1.2}}
         scaled = sample_a4_wais_endpoint(
-            50000, rng2, rheology_mode=MODE, scenario_overrides=overrides)
+            50000, rng2, scenario_overrides=overrides)
         assert np.median(scaled) > np.median(base), (
             "Scaling S2 bounds up 20% should increase median")
 
 # =========================================================================
-# Physical cap on WAIS (3.3 m SLE), added 2026-09-29
+# Physical cap on WAIS (3.3 m SLE)
 # =========================================================================
 
 class TestWaisCap:
@@ -903,7 +876,7 @@ class TestWaisCap:
         the cap, and some S2 paths reach it by 2150."""
         years = np.arange(1990, 2151, dtype=float)
         samples_m, params = sample_a4_wais_trajectories(
-            5000, np.random.default_rng(RNG_SEED), years, rheology_mode=MODE,
+            5000, np.random.default_rng(RNG_SEED), years,
             anchor_year=2020.0, anchor_value_mm=5.0, anchor_sigma_mm=0.7)
         assert samples_m.max() * M_TO_MM <= WAIS_MAX_SLE_MM + 1e-9
         assert params['h2100_mm'].max() <= WAIS_MAX_SLE_MM

@@ -22,8 +22,8 @@ has more members than rows, an evenly spaced subset by rank (branch_row_index). 
 quantiles of the two branches before anything is written.
 
 Writes groups `blended_slow90` and `wais_slow90` to component_results.h5.
-`blended_stable` is left untouched: the VoI and expected-loss analyses need the
-conditional S1 world, not this mixture.
+`blended_stable` is left untouched: it remains the conditional S1 world, which
+scripts/slow_wais_p90_numbers.py reads as one branch of the mixture.
 
 Run from the repository root:  python scripts/build_slow_wais_p90.py
 """
@@ -146,8 +146,8 @@ def main():
             'Slow-WAIS total GMSL forecast at p(S1) = 0.9: mixture of the S1 '
             'world (blended_stable) and the S2 world (the S2 members of '
             'blended), realized as equally weighted trajectories for figure '
-            'code. Presentational case only. The VoI and expected-loss '
-            'analyses use blended_stable, the conditional S1 world.'
+            'code. Presentational case only. blended_stable remains the '
+            'conditional S1 world.'
         )
         g.attrs['p_s1'] = P_S1
         g.attrs['n_samples'] = N_OUT
@@ -182,7 +182,7 @@ def main():
 
         # Component shares quoted in the text come from variance_shares.py
         # (variance) and manuscript_numbers.py (90% interval widths, the basis
-        # of the Fig. 4b pies); none are computed here (SF-18).
+        # of the Fig. 4b pies); none are computed here.
 
 if __name__ == '__main__':
     main()

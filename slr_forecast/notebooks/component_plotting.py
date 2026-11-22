@@ -1,8 +1,8 @@
 """
 Component decomposition plotting functions.
 
-Extracted from component_decomposition.ipynb to keep notebooks free of
-function definitions.  All plotting functions accept data in internal
+Kept in a module so that the notebooks stay free of function
+definitions.  All plotting functions accept data in internal
 units (meters, °C, yr) and convert to display units (mm) internally.
 """
 
@@ -23,7 +23,7 @@ except ImportError:
     Z_90 = 1.645
 
 # ---------------------------------------------------------------------------
-# Standard colour palettes
+# Standard color palettes
 # ---------------------------------------------------------------------------
 SSP_COLORS = {
     'SSP1-2.6': '#2166ac', 'SSP2-4.5': '#4393c3',
@@ -33,7 +33,7 @@ SSP_COLORS = {
 
 COMP_COLORS = {
     'Thermosteric': '#B22222',  # firebrick red (complementary warm)
-    'Glaciers':     '#808080',  # grey
+    'Glaciers':     '#808080',  # gray
     'Greenland':    '#2E8B57',  # sea green (complementary to red)
     'TWS':          '#AB6638',  # Arete Earth (brown/copper)
     'WAIS':         '#036C9A',  # Glacier Blue 400 (darkest blue)
@@ -128,7 +128,7 @@ def plot_frederikse_overview(fred_year, fred_gmsl, fred_gmsl_sigma,
 
 
 # =========================================================================
-# Model fit visualisation
+# Model fit visualization
 # =========================================================================
 
 def plot_model_fits(fred_year, steric_rebase, steric_sigma,
@@ -439,7 +439,7 @@ def plot_variance_decomposition(var_fracs_wc, var_fracs_full,
     ax_a.set_xlim(2020, 2150)
     ax_a.set_ylim(0, 1.05)
     ax_a.set_xlabel('Year')
-    ax_a.set_ylabel('Fraction of variance (normalised)')
+    ax_a.set_ylabel('Fraction of variance (normalized)')
     ax_a.set_title(f'Panel A: Well-constrained components — {ssp_label}')
     ax_a.legend(fontsize=9, loc='center right')
 
@@ -454,7 +454,7 @@ def plot_variance_decomposition(var_fracs_wc, var_fracs_full,
     ax_b.set_xlim(2020, 2150)
     ax_b.set_ylim(0, 1.05)
     ax_b.set_xlabel('Year')
-    ax_b.set_ylabel('Fraction of variance (normalised)')
+    ax_b.set_ylabel('Fraction of variance (normalized)')
     ax_b.set_title(f'Panel B: All components (incl. WAIS) — {ssp_label}')
     ax_b.legend(fontsize=8, loc='center right', ncol=1)
 
@@ -856,7 +856,7 @@ def plot_component_projection_twopanel(comp_proj, proj_years, component_name,
     ipcc_data : dict or None
         ``{ssp: ipcc_component_dict}`` for IPCC comparison (dashed lines).
     ipcc_key : str or None
-        Key name for labelling IPCC data.
+        Key name for labeling IPCC data.
     obs_years, obs_vals, obs_sigma : ndarray or None
         Observational data to overlay on the upper panel (meters).
     obs_label : str or None

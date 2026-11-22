@@ -3,7 +3,7 @@
 - branch_row_index (scripts/build_slow_wais_p90.py) at any branch size
 - check_derived / stamp_derived (component_io) provenance of derived groups
 - fit_bayesian_level_annual_correlated reports convergence diagnostics
-- low-severity sweep guards: check_convergence tail ESS, component_io root
+- smaller guards: check_convergence tail ESS, component_io root
   attributes and skipped-metadata warnings, _anchor_covariance split,
   save_s1_quadratic skips identical rewrites
 """
@@ -63,23 +63,23 @@ class TestDerivedProvenance:
     def _file(self, tmp_path):
         f = h5py.File(tmp_path / 'r.h5', 'w')
         f.create_group('blended').attrs['saved_at'] = '2026-10-17 10:00:00+00:00'
-        for g in ('blended_slow90', 'voi'):
+        for g in ('blended_slow90', 'wais_slow90'):
             f.create_group(g)
         return f
 
     def test_current_passes(self, tmp_path):
         with self._file(tmp_path) as f:
-            for g in ('blended_slow90', 'voi'):
+            for g in ('blended_slow90', 'wais_slow90'):
                 stamp_derived(f, g)
-            check_derived(f, ('blended_slow90', 'voi'))
+            check_derived(f, ('blended_slow90', 'wais_slow90'))
 
     def test_stale_raises(self, tmp_path):
         with self._file(tmp_path) as f:
             stamp_derived(f, 'blended_slow90')
-            stamp_derived(f, 'voi')
+            stamp_derived(f, 'wais_slow90')
             f['blended'].attrs['saved_at'] = '2026-10-18 10:00:00+00:00'   # forecast rerun
             with pytest.raises(RuntimeError, match='blended_slow90'):
-                check_derived(f, ('blended_slow90', 'voi'))
+                check_derived(f, ('blended_slow90', 'wais_slow90'))
 
     def test_missing_raises(self, tmp_path):
         with self._file(tmp_path) as f:
@@ -108,7 +108,7 @@ def test_level_fitter_reports_convergence():
 
 @pytest.mark.parametrize('region', ['east_antarctica', 'antarctic_peninsula', 'west_antarctica'])
 def test_imbie_annual_sigma_reproduces_cumulative(region):
-    """AN-3: the annual 1-sigma from imbie_annual_rates (RMS of the monthly
+    """The annual 1-sigma from imbie_annual_rates (RMS of the monthly
     sigmas), accumulated over independent years, reproduces IMBIE-3's own
     cumulative sigma at each year end."""
     from slr_data_readers import read_imbie3
@@ -136,7 +136,7 @@ _PROCESSED = os.path.join(ROOT, 'data', 'processed', 'slr_processed_data.h5')
 @pytest.mark.skipif(not os.path.exists(_PROCESSED), reason='slr_processed_data.h5 not built')
 class TestProcessedDataCurrent:
     """slr_processed_data.h5 is built outside run_pipeline.sh, so stale tables can outlive
-    reader fixes (MD-4, MD-24). Regenerate with scripts/refresh_processed_keys.py."""
+    reader fixes. Regenerate with scripts/refresh_processed_keys.py."""
 
     def test_berkeley_sigma_is_95pct_halfwidth_over_1p96(self):
         import pandas as pd
@@ -167,12 +167,12 @@ class TestProcessedDataCurrent:
 
 
 # ---------------------------------------------------------------------------
-# Low-severity sweep (MD-11, MD-12, MD-13, MD-19, IN-23)
+# Convergence, HDF5 metadata, baseline-split and S1-fit rewrite guards
 # ---------------------------------------------------------------------------
 
 
 def test_check_convergence_requires_tail_ess(monkeypatch):
-    """MD-11: `converged` checks tail ESS as well as R-hat and bulk ESS."""
+    """`converged` checks tail ESS as well as R-hat and bulk ESS."""
     import arviz as az
     import bayesian_models
     from bayesian_models import check_convergence
@@ -196,7 +196,7 @@ def test_check_convergence_requires_tail_ess(monkeypatch):
 class TestComponentIO:
 
     def test_root_baseline_refreshed_and_no_root_sample_count(self, tmp_path):
-        """MD-12: a file created under an old baseline gets the current
+        """A file created under an old baseline gets the current
         baseline_year on the next save, and the stale root n_samples
         attribute is dropped."""
         from component_io import _require_file, BASELINE_YEAR
@@ -211,7 +211,7 @@ class TestComponentIO:
             assert 'n_samples' not in f.attrs
 
     def test_unsaveable_metadata_warns(self, tmp_path):
-        """MD-13: metadata that cannot be stored is reported, not dropped
+        """Metadata that cannot be stored is reported, not dropped
         silently; arrays with ndim > 2 in a projection dict likewise."""
         from component_io import _write_scalar_attrs, _save_projection_ssp
         with h5py.File(tmp_path / 'm.h5', 'w') as f:
@@ -228,7 +228,7 @@ class TestComponentIO:
 
 
 def test_anchor_covariance_splits_on_baseline_year():
-    """MD-19: with end-of-year labels and the zero-sigma 2000.0 row dropped,
+    """With end-of-year labels and the zero-sigma 2000.0 row dropped,
     1999.0 and 2001.0 tie in argmin; 1999 must still be on the pre side."""
     from component_levelspace_robust_se import _anchor_covariance
     years = np.array([1997.0, 1998.0, 1999.0, 2001.0, 2002.0, 2003.0])
@@ -241,7 +241,7 @@ def test_anchor_covariance_splits_on_baseline_year():
 
 
 def test_s1_quadratic_identical_refit_does_not_rewrite(tmp_path):
-    """IN-23: an identical refit leaves the tracked JSON (and its
+    """An identical refit leaves the tracked JSON (and its
     fitted_at stamp) untouched; a changed fit rewrites it."""
     import json
     import component_projections as cp

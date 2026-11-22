@@ -39,9 +39,9 @@ def read_en4_regional(
     The depth average is an unweighted mean over the EN4 levels inside
     ``depth_bounds`` (for 200-500 m, levels at about 207-447 m whose layer
     thicknesses range from about 25 to 83 m), so the thinner upper levels
-    carry more weight than their share of the water column (MD-22 /
-    GR-16). A thickness-weighted mean (depth_bnds) would change the
-    Greenland discharge forcing; that change is pending an author decision.
+    carry more weight than their share of the water column. A
+    thickness-weighted mean (depth_bnds) would change the Greenland
+    discharge forcing, which uses this unweighted mean.
 
     Default region: Greenland-peripheral waters (58–80°N, 75–5°W,
     200–500 m depth), capturing subsurface Atlantic Water in the
@@ -57,7 +57,7 @@ def read_en4_regional(
         (lon_min, lon_max) in degrees east.  Negative values are
         converted internally to EN4's 0–360° convention.
     depth_bounds : tuple of float
-        (depth_min, depth_max) in metres.
+        (depth_min, depth_max) in meters.
     year_range : tuple of int or None
         (start_year, end_year) inclusive.  If None, reads all available
         zip files.
@@ -265,7 +265,7 @@ def read_argo_rg_regional(
         (lon_min, lon_max) in degrees east.  Negative values are
         converted to the Argo 20.5–379.5° convention.
     depth_bounds : tuple of float
-        (depth_min, depth_max) in dbar (≈ metres).
+        (depth_min, depth_max) in dbar (≈ meters).
     reference_period : tuple of float
         (start, end) decimal years for computing anomalies.
         Default (1995, 2006) matches the project baseline (1995–2005).

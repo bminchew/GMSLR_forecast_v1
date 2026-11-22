@@ -7,7 +7,7 @@ has already written; nothing is refit. Companion scripts cover the rest:
 slow_wais_p90_numbers.py (slow-WAIS exceedance, widths, impacts) and
 variance_shares.py (variance shares). Writes manuscript_numbers.json.
 
-Conventions: levels in metres relative to 2000 unless a line says otherwise.
+Conventions: levels in meters relative to 2000 unless a line says otherwise.
 "AR6 baseline" values subtract the 1995-2014 mean of Frederikse et al.
 (2020) relative to 2000, as component_forecast.ipynb does. Component values
 on the AR6 baseline subtract each member's own 1995-2014 mean.
@@ -69,7 +69,7 @@ def ar6(ssp, comp, conf='medium_confidence', year=2100):
 def main():
     out = {}
 
-    # ── AR6 baseline offset (shared with component_forecast; SF-2) ──
+    # ── AR6 baseline offset (shared with component_forecast) ──
     from component_analysis import ar6_baseline_offset_m
     off = ar6_baseline_offset_m(H5_OBS, BASELINE_YEAR)
     out['ar6_baseline_offset_m'] = off
@@ -77,7 +77,8 @@ def main():
 
     with h5py.File(H5, 'r') as hf:
         from component_io import check_derived
-        check_derived(hf)
+        # Groups this script reads that are derived from `blended` (slowwais)
+        check_derived(hf, ('blended_slow90', 'wais_slow90'))
         fy = hf['blended/forecast_years'][:]
         i21 = int(np.argmin(np.abs(fy - 2100)))
         fast = {s: hf[f'blended/{s}/samples'][:, i21] for s in LABEL}
@@ -263,7 +264,7 @@ def main():
                                             rise_mm=float(o[-1] - o[0]))
             print(f'  {lab} ({y[0]:.1f}-{y[-1]:.1f}): RMS {np.sqrt(np.mean(r ** 2)):.3f} | rise {o[-1] - o[0]:.1f}')
 
-    # ── Fitted nuisance parameters quoted in Methods (GL-2) ──
+    # ── Fitted nuisance parameters quoted in Methods ──
     print('\nFitted error and balance terms (median [5th, 95th]):')
     with h5py.File(H5, 'r') as hf:
         for c, lab in [('glacier', 'sigma_gl,extra'), ('apeninsula', 'sigma_p,extra')]:
@@ -276,7 +277,7 @@ def main():
             v = q(hf['glacier/posteriors/T_eq0_posterior'][:])
             out['glacier_T_eq0_C'] = v
             print(f'  T_gl,eq = {fmt(v)} C (rel. 1995-2005)')
-        # Rate coefficients of the linear Antarctic fits; columns (a, b, c), a = 0 (AN-20)
+        # Rate coefficients of the linear Antarctic fits; columns (a, b, c), a = 0
         for c, s in [('apeninsula', 'p'), ('eais', 'e')]:
             k = f'{c}/posteriors/posterior_samples'
             if k in hf:
@@ -314,7 +315,7 @@ def main():
 
     # ── S2 95th percentile against the AR6 Antarctic range (WAIS subsection) ──
     # Each S2 member on its own 1995-2014 mean (the AR6 baseline), as for
-    # the components above (SF-13)
+    # the components above
     s2 = w2k[w_idx == 1] * M_TO_MM
     s2 = s2 - s2[:, (w2k_y >= 1995) & (w2k_y <= 2014)].mean(axis=1, keepdims=True)
     s2_95 = np.percentile(s2, 95, axis=0)
@@ -412,6 +413,9 @@ def main():
     # Refits on EN4 and IAP in place of NOAA, unscaled and x1.14
     # (scripts/thermosteric_record_sensitivity.py). Trends are OLS with 90%
     # intervals from an AR(1)-adjusted effective sample size.
+    if not TRS_JSON.exists():
+        raise SystemExit(f'{TRS_JSON} not found; run scripts/thermosteric_record_sensitivity.py '
+                         '(run_pipeline.sh entry thermorec)')
     trs = json.loads(TRS_JSON.read_text())
     tr = trs['trends_mm_per_yr']
     iv = lambda v: [v[0] - v[1], v[0] + v[1]]
@@ -430,9 +434,10 @@ def main():
     # the JSON snapshots must come from the current component_results.h5
     for s in POLICY:
         h5_med = float(np.median(comp['ocean'][s][:, j21])) * M_TO_MM
-        assert abs(prod[s][0] - h5_med) < 0.05, (
-            f'thermosteric_record_sensitivity.json is stale ({s}: {prod[s][0]:.2f} vs h5 '
-            f'{h5_med:.2f} mm); rerun scripts/thermosteric_record_sensitivity.py all')
+        if not abs(prod[s][0] - h5_med) < 0.05:
+            raise RuntimeError(
+                f'thermosteric_record_sensitivity.json is stale ({s}: {prod[s][0]:.2f} vs h5 '
+                f'{h5_med:.2f} mm); rerun scripts/thermosteric_record_sensitivity.py all')
     print('  2100 thermosteric rise rel. 2000 (mm), median [5th, 95th]:')
     for s in POLICY:
         print(f'    {LABEL[s]}: production {fmt(prod[s], nd=0)}; '
@@ -457,17 +462,21 @@ def main():
         rho={k: f['params']['rho'] for k, f in fits.items()})
 
     # ---- CMIP6 zostoga comparison (scripts/cmip6_zostoga.py analyze), supp Fig. S12c,d
+    if not CZ_JSON.exists():
+        raise SystemExit(f'{CZ_JSON} not found; run scripts/cmip6_zostoga.py analyze '
+                         '(run_pipeline.sh entry zostoga; see data/data_manifest.md)')
     cz = json.loads(CZ_JSON.read_text())
     ct, cp = cz['trends_mm_per_yr'], cz['per_degree']
     _ref = (cy >= 1995) & (cy <= 2014)
     _o = comp['ocean']['SSP2-4.5'] * M_TO_MM
     _h5 = float(np.median(_o[:, j21] - _o[:, _ref].mean(axis=1)))
     _cz = cp['ar6_reference']['production_dH_2100_rel_1995_2014_mm'][0]
-    assert abs(_cz - _h5) < 0.05, (f'cmip6_zostoga_summary.json is stale ({_cz:.2f} vs h5 '
-                                   f'{_h5:.2f} mm); rerun scripts/cmip6_zostoga.py analyze')
+    if not abs(_cz - _h5) < 0.05:
+        raise RuntimeError(f'cmip6_zostoga_summary.json is stale ({_cz:.2f} vs h5 '
+                           f'{_h5:.2f} mm); rerun scripts/cmip6_zostoga.py analyze')
     fq = lambda q, d=2: f'{q[0]:.{d}f} [{q[1]:.{d}f}, {q[2]:.{d}f}]'
     print('\nCMIP6 zostoga (median [5th, 95th] across models; production median [90% CI])')
-    print(f'  models analysed {cz["n_models"]}, reaching 2024 under SSP2-4.5 {cz["n_reaching_2024"]}, '
+    print(f'  models analyzed {cz["n_models"]}, reaching 2024 under SSP2-4.5 {cz["n_reaching_2024"]}, '
           f'used after 2014 {len(cz["post2014_models"])} (join-flagged: {", ".join(cz["join_flagged"])}); '
           f'drift fits {cz["drift"]["mode_counts"]}')
     for w in ('1955-2012', '2005-2024', '2013-2024'):
@@ -579,11 +588,12 @@ def main():
     print(f'  Volcanic term: c_v = {THERMO_VOLC_KV * M_TO_MM:.2f} mm per W m-2 yr, '
           f'0-700 m expansion efficiency {eeh_0700:.3f} m/YJ, m_v prior sd {THERMO_VOLC_M_SD:.2f}')
 
-    # Discount rate of the value-of-information analysis (compute_evpi).
-    with h5py.File(H5, 'r') as hf:
-        dr = float(hf['voi'].attrs['discount_rate'])
+    # Real discount rate of the capital recovery factor that annualizes the
+    # adaptation cost (supplement, Eq. crf; notebooks/impact_costs.py).
+    from impact_costs import DR as dr
+    dr = float(dr)
     der['discount_rate'] = dr
-    print(f'  Discount rate, value of information: {100 * dr:.0f}% per year')
+    print(f'  Discount rate, adaptation cost: {100 * dr:.0f}% per year')
 
     OUT_JSON.write_text(json.dumps(out, indent=2, default=float))
     print(f'\nWrote {OUT_JSON}')

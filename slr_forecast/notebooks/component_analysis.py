@@ -1,8 +1,8 @@
 """
 Component decomposition analysis functions.
 
-Extracted from component_decomposition.ipynb to keep notebooks free of
-function definitions.  All functions operate in SLR convention
+Kept in a module so that the notebooks stay free of function
+definitions.  All functions operate in SLR convention
 (positive = sea level rise) and SI-derived internal units (meters, °C, yr).
 """
 
@@ -14,17 +14,17 @@ from bayesian_models import (
 )
 
 # ---------------------------------------------------------------------------
-# Constants (re-exported from config when available; local fallbacks here
-# so the module works standalone from the notebooks/ directory)
+# Constants (re-exported from config; the slr_forecast package must be
+# installed)
 # ---------------------------------------------------------------------------
 try:
     from slr_forecast.config import BASELINE_YEAR, N_SAMPLES, PREIND_TO_1900_M
     from slr_forecast import M_TO_MM
-except ImportError:
-    BASELINE_YEAR = 2000.0
-    M_TO_MM = 1000.0
-    N_SAMPLES = 2000
-    PREIND_TO_1900_M = 0.010
+except ImportError as e:
+    raise ImportError(
+        "slr_forecast is not importable: install it with 'pip install -e .' "
+        "from the repository root, or run in the container "
+        "(environment/README.md)") from e
 
 
 # =========================================================================
@@ -72,7 +72,7 @@ def ar6_baseline_offset_m(h5_path, baseline_year=BASELINE_YEAR):
     [1995, 2015) minus its value at that sample, so it is consistent with
     the forecast's zero by construction. Subtract it from our values to put
     them on the AR6 baseline; add it to AR6 values to put them on ours.
-    One shared definition for every comparison with AR6 (SF-2).
+    One shared definition for every comparison with AR6.
     """
     d = pd.read_hdf(h5_path, 'harmonized/df_nasa_gmsl_h')
     t = d['decimal_year'].values
@@ -160,7 +160,7 @@ def imbie_annual_rates(df):
     independent with variance sigma_m^2 / 12, so the annual increment has
     1-sigma sqrt(mean(sigma_m^2)) (the RMS, not the mean or the December
     value); this reproduces IMBIE-3's cumulative sigma.  Used for WAIS,
-    EAIS and the Peninsula alike (AN-3).
+    EAIS and the Peninsula alike.
     """
     t = df['decimal_year'].values
     yi = np.floor(t).astype(int)
@@ -224,7 +224,7 @@ def time_model_draws(tm):
     """Posterior draws (A, a, v, H0) of a ``fit_imbie_time_model`` result.
 
     H0 is the level at ``baseline_year``: the level before the first
-    increment plus the modelled increments of the years before baseline.
+    increment plus the modeled increments of the years before baseline.
     A is zero for order=1.
     """
     fit = tm['fit']
@@ -276,7 +276,7 @@ def anchor_to_observed(samples, proj_years, obs_years, obs_H, obs_sigma,
     uncertainty (relative to the baseline, as returned by
     ``annualize_imbie``).  The offset ramps linearly from zero at the
     baseline to D_k at t_a and is constant after it, so members keep their
-    modelled shape, the projection is conditioned on the observed record's
+    modeled shape, the projection is conditioned on the observed record's
     end point (as the WAIS trajectories are), and the baseline and the
     pre-baseline hindcast are unchanged.  The draws A_k are shared across
     scenarios when the same ``seed`` is used.
@@ -452,7 +452,7 @@ def eval_model_median(result, design, order=1):
 
 
 def compute_component_rates(years, H, window=3):
-    """Compute rate via centred differences with given half-window.
+    """Compute rate via centered differences with given half-window.
 
     Parameters
     ----------
@@ -460,7 +460,7 @@ def compute_component_rates(years, H, window=3):
     H : ndarray
         Cumulative values (meters).
     window : int
-        Half-window for centred differences.
+        Half-window for centered differences.
 
     Returns
     -------
@@ -593,7 +593,7 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
         If > 0, ocean T is assumed to lag surface T by this many years.
         The surface T is shifted forward by ``lag_years`` before alignment.
     annual : bool
-        If True (default), annualise both series before fitting to reduce
+        If True (default), annualize both series before fitting to reduce
         noise.  If False, fit on monthly data.
     hac_maxlags : int, optional
         Maximum lags for the HAC covariance.  If None, uses the Newey–West
@@ -623,13 +623,13 @@ def fit_ocean_transfer_function(T_surface_monthly, time_surface,
     import statsmodels.api as sm
 
     if annual:
-        # Annualise surface T
+        # Annualize surface T
         yr_surf = np.floor(time_surface).astype(int)
         unique_surf = np.unique(yr_surf)
         T_surf_ann = np.array([T_surface_monthly[yr_surf == y].mean()
                                for y in unique_surf])
 
-        # Annualise ocean T
+        # Annualize ocean T
         yr_ocean = np.floor(time_ocean).astype(int)
         unique_ocean = np.unique(yr_ocean)
         T_ocean_ann = np.array([T_ocean_monthly[yr_ocean == y].mean()
@@ -726,7 +726,7 @@ def ema_filter(x, tau):
 
 
 def _gls_ar1(X, y):
-    """Exact-likelihood GLS with AR(1) errors; phi by profile maximisation.
+    """Exact-likelihood GLS with AR(1) errors; phi by profile maximization.
 
     Returns (loglik, coef, cov, phi, sigma_innov, resid), where resid are
     the untransformed residuals y - X coef.
@@ -771,7 +771,7 @@ def fit_ocean_lowpass_transfer(T_surface_monthly, time_surface,
     For each tau on the grid, (g, c) are fitted by exact-likelihood GLS with
     AR(1) residuals (phi profiled). Each grid value has the same number of
     parameters, so with a uniform prior on the grid the posterior weight of
-    tau is proportional to its maximised likelihood (as BIC weights would
+    tau is proportional to its maximized likelihood (as BIC weights would
     be). Within each tau, (g, c) are normal with the GLS covariance.
 
     The surface series must be contiguous in calendar years from its start
@@ -907,7 +907,7 @@ def fit_discharge_delay_model(
       the same increments, so a separate row would count them twice.  The
       end-of-record rate is still computed and returned as a check
       (``r_obs_dyn`` against each fit's ``r_model``).
-    * ``sigma_rate`` None (the estimator used before 2026-10-17): demeaned
+    * ``sigma_rate`` None: demeaned
       WLS on the cumulative levels with diagonal weights 1/sigma_dyn^2 plus
       the end-of-record rate-constraint row.  Its BIC treats the cumulative
       values as independent, which is not correct for a running sum; kept
@@ -958,7 +958,7 @@ def fit_discharge_delay_model(
             the discharge rate to the lagged ocean-temperature LEVEL, so
             peak_lag is not the model's delta. Key names kept for the
             notebook and tests.
-        bic_weights : ndarray — normalised BIC weights
+        bic_weights : ndarray — normalized BIC weights
         DELTA_CANDIDATES : ndarray
     """
     from types import SimpleNamespace
@@ -981,7 +981,7 @@ def fit_discharge_delay_model(
     t_end = dyn_years[-1]
 
     # ── Cross-correlation diagnostic: ocean T RATE vs discharge RATE ──
-    # (rate vs rate; the fit below uses the lagged ocean T level, GR-21)
+    # (rate vs rate; the fit below uses the lagged ocean T level)
     dT_ocean = np.diff(T_ocean_ann) / np.diff(T_ocean_years)
     t_dT = 0.5 * (T_ocean_years[:-1] + T_ocean_years[1:])
     dH_dyn = np.diff(H_dyn) / np.diff(dyn_years)
@@ -1008,7 +1008,7 @@ def fit_discharge_delay_model(
     # evaluated on, the same years -- those the delayed forcing covers for
     # all candidates.  The likelihood includes -0.5*sum(log sigma^2), so
     # per-delta windows of different length (a shorter delay reaches
-    # earlier years) make the BICs incomparable and favour short delays.
+    # earlier years) make the BICs incomparable and favor short delays.
     # The level estimator drops points with sigma_dyn == 0 (the rebase
     # anchor of annualize_imbie, where 1/sigma^2 is undefined).  The
     # increment estimator weights by the rate errors, and the anchor level
@@ -1112,7 +1112,7 @@ def fit_discharge_delay_model(
 
         if sigma_rate is not None:
             # Same operator as r_obs_dyn (WLS slope of the levels over the
-            # final window) applied to the modelled levels
+            # final window) applied to the modeled levels
             in_rate = rate_mask[valid]
             if in_rate.sum() != rate_mask.sum():
                 raise ValueError('end-of-record window lies outside the fit window')
@@ -1175,7 +1175,7 @@ def fit_discharge_delay_model(
         delta_posterior[idx_start:idx_start + n_d] = d
         idx_start += n_d
 
-    # Shuffle to avoid ordering artefacts
+    # Shuffle to avoid ordering artifacts
     shuffle_idx = rng_mc.permutation(n_samples)
     gamma_posterior = gamma_posterior[shuffle_idx]
     r0_posterior = r0_posterior[shuffle_idx]

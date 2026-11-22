@@ -20,8 +20,8 @@ priors, volcanic term, Li et al. (2022) x1.14 correction, 5% residual
 structural error, demeaning and MCMC settings are copied from the
 production cell, except that tau_d is fixed at TAU_D_FIXED here while
 production samples it from the CMIP5 prior, so the full-record b_d, rho and
-sigma_extra_2 below are not the production posterior (no linear drift term since 2026-10-16; the first run of
-this script, with the drift term, found it traded off against b_u). Both the
+sigma_extra_2 below are not the production posterior (there is no linear drift term: with one,
+this holdout found it traded off against b_u). Both the
 production (full-record) fit and the holdout fit are run here with identical
 code, so the parameter comparison between them is like for like. As in production, the 5%
 structural term is independent per point (not a correlated scale error), and
@@ -68,10 +68,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src'))
 from slr_forecast.config import (SEEDS, Z_90, KAPPA_EOS, VOLC_ERF_CSV,
                                  THERMO_VOLC_KV, THERMO_VOLC_M_SD)
-from slr_forecast.readers.forcing import read_volcanic_erf
+from slr_forecast.readers.forcing import read_noaa_thermosteric_yearly, read_volcanic_erf
 from scipy.linalg import cho_factor, cho_solve
 
 H5_DATA = ROOT / 'data/processed/slr_processed_data.h5'
+RAW_DIR = ROOT / 'data/raw'
 H5_OUT = ROOT / 'data/processed/component_results.h5'
 OUT_FIG = ROOT / 'figures/component_ocean_early_holdout.png'
 M_TO_MM = 1000.0
@@ -96,15 +97,16 @@ unique_yrs = np.unique(yr_int)
 T_annual = np.array([temp_monthly[yr_int == y].mean() for y in unique_yrs])
 T_annual_years = unique_yrs + 0.5
 
-d700 = pd.read_hdf(H5_DATA, 'harmonized/df_noaa_tsl_0_700m')
-d700 = d700[d700['decimal_year'].values <= T_annual_years[-1]]    # forcing coverage, as production (OC-2)
+# NOAA read from the raw files, as component_ocean.ipynb cell 3
+d700 = read_noaa_thermosteric_yearly(RAW_DIR / 'steric/noaa_tsl_yearly_0-700m.dat')
+d700 = d700[d700['decimal_year'].values <= T_annual_years[-1]]    # forcing coverage, as production
 noaa_year = d700['decimal_year'].values
 _mm = d700['tsl_mm'].values
 _bl = (noaa_year >= 1995.0) & (noaa_year <= 2006.0)
 noaa_tsl_m = (_mm - _mm[_bl].mean()) / M_TO_MM
 noaa_tsl_se_m = d700['tsl_se_mm'].values / M_TO_MM
 
-d2000 = pd.read_hdf(H5_DATA, 'harmonized/df_noaa_tsl_0_2000m')
+d2000 = read_noaa_thermosteric_yearly(RAW_DIR / 'steric/noaa_tsl_yearly_0-2000m.dat')
 d2000 = d2000[d2000['decimal_year'].values <= T_annual_years[-1]]
 noaa_deep_year = d2000['decimal_year'].values
 noaa_deep_m = (d2000['tsl_mm'].values - d2000['tsl_mm'].values[0]) / M_TO_MM
@@ -191,7 +193,7 @@ class LogProb:
 
     def __call__(self, theta):
         b_u, b_d, log_tau_u, log_sigma_extra, rho, log_sigma_extra_2, m_v = theta
-        a = KAPPA_EOS * b_u**2          # fixed by the equation of state (D5)
+        a = KAPPA_EOS * b_u**2          # fixed by the equation of state
         if b_u < 0 or b_d < 0 or m_v <= 0:
             return -np.inf
         tau_u = np.exp(log_tau_u)
@@ -247,7 +249,8 @@ def run_fit(label):
     chain = sampler.get_chain()
     flat = sampler.get_chain(flat=True)
     # Derived a as column 0, so flat[:, 0..4] = (a, b_u, b_d, log_tau_u,
-    # log_sigma_extra) as before D5; then rho, log_sigma_extra_2, m_v.
+    # log_sigma_extra), the column layout predict() indexes; then rho,
+    # log_sigma_extra_2, m_v.
     flat = np.column_stack([KAPPA_EOS * flat[:, 0]**2, flat])
     tau_int = sampler.get_autocorr_time(quiet=True)
     n, m, _ = chain.shape
@@ -385,7 +388,7 @@ def report_and_save(full, hold):
             gg = g.create_group(r['label'])
             # Random rows, not a fixed stride: the flat chain is step-major
             # (row = step * n_walkers + walker), so a stride that is a
-            # multiple of the walker count keeps only a few walkers (OC-3)
+            # multiple of the walker count keeps only a few walkers
             _rng_thin = np.random.default_rng(4242)
             _n_keep = min(20000, r['flat'].shape[0])
             thin = r['flat'][np.sort(_rng_thin.choice(r['flat'].shape[0], _n_keep, replace=False))]

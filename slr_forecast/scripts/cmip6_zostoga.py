@@ -29,18 +29,27 @@ branch point or parallel segment lies outside the piControl run, the fit uses
 the whole piControl run and the model is flagged. GMST is not drift corrected.
 
 Subcommands:
-  fetch    build the per-model annual CSV (--out-csv)
-  analyze  trends, per-degree rise, summary JSON (--summary-json), figure (--figure)
+  fetch       network. Builds the per-model annual CSV (--out-csv) and caches, in
+              --download-dir, fetch_provenance.json (members, sources, drift fits)
+              and zelinka_ecs.json (ECS of each model, Zelinka et al. 2020).
+  extract-ar6 local. Copies the three AR6 two-layer-model datasets that analyze reads
+              (ssp245 surface_temperature, ECS, TCR) from the 574 MB
+              tlmdata/twolayer_SSPs.h5 into a small HDF5 file (--out). analyze
+              reads the full file instead when the extract is absent.
+  analyze     local; the run_pipeline.sh entry 'zostoga'. Trends, per-degree rise,
+              summary JSON (--summary-json) and a diagnostic figure (--figure), from
+              the cached inputs above, the AR6 thermal-expansion samples, the
+              thermorec JSON and component_results.h5. Without a subcommand the
+              script runs analyze with the default paths.
 
 Usage (from the repository root; -I because downloaded files are read):
   python -I scripts/cmip6_zostoga.py fetch --download-dir data/raw/steric/cmip6_zostoga \
       --out-csv data/processed/cmip6_zostoga_global.csv
-  python -I scripts/cmip6_zostoga.py analyze --out-csv data/processed/cmip6_zostoga_global.csv \
-      --download-dir data/raw/steric/cmip6_zostoga \
-      --summary-json data/processed/cmip6_zostoga_summary.json --figure DIAGNOSTIC.png
+  python -I scripts/cmip6_zostoga.py extract-ar6
+  python -I scripts/cmip6_zostoga.py analyze          # or no subcommand; default paths
 The summary JSON is read by notebooks/results_figures.ipynb (supplementary Fig. S12c,d)
-and scripts/manuscript_numbers.py. analyze needs fetch_provenance.json and
-zelinka_ecs.json from the download directory.
+and scripts/manuscript_numbers.py, which stop if it does not match the current
+component_results.h5. Rerun analyze after any ocean rerun.
 """
 
 import argparse
@@ -72,6 +81,14 @@ H5_COMP = ROOT / 'data/processed/component_results.h5'
 H5_PROC = ROOT / 'data/processed/slr_processed_data.h5'
 OBS_JSON = ROOT / 'data/processed/thermosteric_record_sensitivity.json'
 AR6_DIR = ROOT / 'data/raw/ipcc_ar6/slr/ar6'
+AR6_TLM_FULL = AR6_DIR / 'tlmdata/twolayer_SSPs.h5'
+AR6_TLM_DATASETS = ('ssp245/surface_temperature', 'ssp245/ECS', 'ssp245/TCR')
+# Default paths of the analyze inputs and outputs (relative to ROOT)
+DEF_DOWNLOAD_DIR = ROOT / 'data/raw/steric/cmip6_zostoga'
+DEF_CSV = ROOT / 'data/processed/cmip6_zostoga_global.csv'
+DEF_AR6_TLM = ROOT / 'data/processed/cmip6_zostoga_ar6_tlm_ssp245.h5'
+DEF_SUMMARY = ROOT / 'data/processed/cmip6_zostoga_summary.json'
+DEF_FIGURE = ROOT / 'figures/diagnostics/cmip6_zostoga.png'
 ECS_URL = ('https://raw.githubusercontent.com/mzelinka/cmip56_forcing_feedback_ecs/'
            'master/cmip56_forcing_feedback_ecs.json')
 
@@ -240,7 +257,7 @@ def branch_year(hist_ds, pi_times):
 
 
 def drift_fit(pi, y0, y1):
-    """Linear and quadratic fits (in mm, centred year) on piControl years [y0, y1]."""
+    """Linear and quadratic fits (in mm, centered year) on piControl years [y0, y1]."""
     s = pi.loc[y0:y1].dropna()
     t = s.index.values.astype(float)
     tc = t.mean()
@@ -440,7 +457,7 @@ def process_member(model, mem, parent, hds, hsrc, tried, ssp_m, pcat, emem, dl, 
         z = pd.concat([z, sp])
     yrs = z.index.values
     if off is None:
-        off = int(np.round(tc)) - int(np.mean(HIST_SPAN))  # centred mapping for whole-run fit
+        off = int(np.round(tc)) - int(np.mean(HIST_SPAN))  # centered mapping for whole-run fit
         info['piC_offset_years_fallback'] = off
     tp = yrs + off - tc
     dl_mm = np.polyval(p1, tp)
@@ -502,6 +519,9 @@ def process_member(model, mem, parent, hds, hsrc, tried, ssp_m, pcat, emem, dl, 
 def cmd_fetch(a):
     dl = Path(a.download_dir)
     dl.mkdir(parents=True, exist_ok=True)
+    ecs_path = dl / 'zelinka_ecs.json'
+    if not ecs_path.exists():
+        urllib.request.urlretrieve(ECS_URL, ecs_path)
     pcat = load_pangeo(dl)
     emem = esgf_members(dl)
     tcache = tas_cache()
@@ -632,8 +652,37 @@ def ar6_ssp245_berkeley():
     return s, float(off)
 
 
+def cmd_extract_ar6(a):
+    """Copy AR6_TLM_DATASETS from twolayer_SSPs.h5 into a small HDF5 file with the
+    same dataset paths, values and dtypes."""
+    out = Path(a.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with h5py.File(a.source, 'r') as f, h5py.File(out, 'w') as g:
+        for k in AR6_TLM_DATASETS:
+            g.create_dataset(k, data=f[k][:], compression='gzip', compression_opts=4)
+        g.attrs['source'] = 'IPCC AR6 FACTS, slr/ar6/tlmdata/twolayer_SSPs.h5'
+        g.attrs['note'] = 'ssp245 datasets of the AR6 two-layer model, copied unchanged'
+    log(f'wrote {out}')
+
+
+def _require(path, how):
+    if not Path(path).exists():
+        raise SystemExit(f'{path} not found; {how} (see data/data_manifest.md)')
+
+
 def cmd_analyze(a):
     dl = Path(a.download_dir)
+    _require(dl / 'fetch_provenance.json', 'run scripts/cmip6_zostoga.py fetch')
+    _require(dl / 'zelinka_ecs.json', 'run scripts/cmip6_zostoga.py fetch')
+    _require(a.out_csv, 'run scripts/cmip6_zostoga.py fetch')
+    tlm = Path(a.ar6_tlm)
+    if not tlm.exists() and AR6_TLM_FULL.exists():
+        # The extract holds the same datasets; the full AR6 file serves as well
+        log(f'{tlm} not found; reading {AR6_TLM_FULL}')
+        tlm = AR6_TLM_FULL
+    _require(tlm, 'run scripts/cmip6_zostoga.py extract-ar6')
+    _require(OBS_JSON, 'run scripts/thermosteric_record_sensitivity.py '
+                       '(run_pipeline.sh entry thermorec)')
     prov = json.loads((dl / 'fetch_provenance.json').read_text())
     d, Z, ZQ, T, post, join_bad, qc_bad = load_cmip(a.out_csv, prov)
     models = sorted(Z)
@@ -759,7 +808,7 @@ def cmd_analyze(a):
     gm, off = ar6_ssp245_berkeley()
     (f0, f1), (g0, g1) = PD_FUTURE
     per3 = {}
-    for m in post:
+    for m in sorted(post):
         ws = [win(x, w) for x in (Z[m], T[m]) for w in PD_FUTURE]
         if any(v is None for v in ws):
             continue
@@ -791,39 +840,33 @@ def cmd_analyze(a):
 
     # AR6 reference (local FACTS files): thermal expansion samples (oceandynamics-tlm,
     # ssp245, base year 2005 = 1995-2014 mean, decadal) and the AR6 two-layer model GMST
-    # samples (twolayer_SSPs.h5, annual from 1750). Samples are not assumed paired, so
-    # the per-degree value is a ratio of medians.
-    ar6 = {}
-    try:
-        fz = AR6_DIR / 'global/full_sample_components/oceandynamics-tlm-oceandynamics-ssp245_globalsl.nc'
-        with xr.open_dataset(fz) as ds:
-            yz = ds['years'].values
-            hz = ds['sea_level_change'].values.squeeze().astype(float)
-            included = ds.attrs.get('comment', '')
-        ya = np.arange(g0, g1 + 1)
-        h8 = np.array([np.interp(ya, yz, r).mean() for r in hz])   # 2081-2100 mean, mm rel. 2005
-        h21 = hz[:, list(yz).index(2100)]
-        with h5py.File(AR6_DIR / 'tlmdata/twolayer_SSPs.h5', 'r') as f:
-            Tt = f['ssp245/surface_temperature'][:]
-            ecs6, tcr6 = f['ssp245/ECS'][:], f['ssp245/TCR'][:]
-        yt = np.arange(1750, 1750 + Tt.shape[0])
-        dT6 = Tt[(yt >= g0) & (yt <= g1)].mean(0) - Tt[(yt >= f0) & (yt <= f1)].mean(0)
-        ar6 = dict(source=str(fz.relative_to(ROOT)), included_models_comment=included,
-                   dH_2081_2100_mm=q3(h8), dH_2100_mm=q3(h21), tlm_dT_K=q3(dT6),
-                   mm_per_K_ratio_of_medians=float(np.median(h8) / np.median(dT6)),
-                   tlm_ECS=q3(ecs6), tlm_TCR=q3(tcr6))
-        k0 = (py >= f0) & (py <= f1)
-        i21 = int(np.where(py == 2100)[0][0])
-        ar6['production_dH_2100_rel_1995_2014_mm'] = q3(full[:, i21] - full[:, k0].mean(1))
-        ar6['production_dH_2081_2100_rel_1995_2014_mm'] = q3(dHf)
-    except Exception as e:  # noqa: BLE001
-        ar6 = dict(error=f'{type(e).__name__}: {e}')
+    # samples (twolayer_SSPs.h5, annual from 1750, read from the extract-ar6 copy).
+    # Samples are not assumed paired, so the per-degree value is a ratio of medians.
+    fz = AR6_DIR / 'global/full_sample_components/oceandynamics-tlm-oceandynamics-ssp245_globalsl.nc'
+    with xr.open_dataset(fz) as ds:
+        yz = ds['years'].values
+        hz = ds['sea_level_change'].values.squeeze().astype(float)
+        included = ds.attrs.get('comment', '')
+    ya = np.arange(g0, g1 + 1)
+    h8 = np.array([np.interp(ya, yz, r).mean() for r in hz])   # 2081-2100 mean, mm rel. 2005
+    h21 = hz[:, list(yz).index(2100)]
+    with h5py.File(tlm, 'r') as f:     # the AR6_TLM_DATASETS of twolayer_SSPs.h5
+        Tt = f['ssp245/surface_temperature'][:]
+        ecs6, tcr6 = f['ssp245/ECS'][:], f['ssp245/TCR'][:]
+    yt = np.arange(1750, 1750 + Tt.shape[0])
+    dT6 = Tt[(yt >= g0) & (yt <= g1)].mean(0) - Tt[(yt >= f0) & (yt <= f1)].mean(0)
+    ar6 = dict(source=str(fz.relative_to(ROOT)), included_models_comment=included,
+               dH_2081_2100_mm=q3(h8), dH_2100_mm=q3(h21), tlm_dT_K=q3(dT6),
+               mm_per_K_ratio_of_medians=float(np.median(h8) / np.median(dT6)),
+               tlm_ECS=q3(ecs6), tlm_TCR=q3(tcr6))
+    k0 = (py >= f0) & (py <= f1)
+    i21 = int(np.where(py == 2100)[0][0])
+    ar6['production_dH_2100_rel_1995_2014_mm'] = q3(full[:, i21] - full[:, k0].mean(1))
+    ar6['production_dH_2081_2100_rel_1995_2014_mm'] = q3(dHf)
     pdg['ar6_reference'] = ar6
 
-    # ECS (Zelinka et al. 2020, GitHub JSON)
+    # ECS (Zelinka et al. 2020, GitHub JSON; downloaded by fetch)
     ecs_path = dl / 'zelinka_ecs.json'
-    if not ecs_path.exists():
-        urllib.request.urlretrieve(ECS_URL, ecs_path)
     E = json.loads(ecs_path.read_text())['CMIP6']
     ecs = {}
     for m in models:
@@ -921,6 +964,7 @@ def make_figure(S, obs, py, full, upper, path):
     bx.grid(axis='x', color=C['grid'], lw=0.6)
     bx.legend(frameon=False, fontsize=6.8, loc='upper center', bbox_to_anchor=(0.45, -0.12), ncol=2)
     fig.tight_layout()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=200)
     log(f'wrote {path}')
 
@@ -934,14 +978,21 @@ def main():
     f.add_argument('--out-csv', required=True)
     f.add_argument('--models', nargs='*')
     f.add_argument('--workers', type=int, default=6)
+    e = sub.add_parser('extract-ar6')
+    e.add_argument('--source', default=str(AR6_TLM_FULL))
+    e.add_argument('--out', default=str(DEF_AR6_TLM))
     g = sub.add_parser('analyze')
-    g.add_argument('--out-csv', required=True)
-    g.add_argument('--download-dir', required=True)
-    g.add_argument('--summary-json', required=True)
-    g.add_argument('--figure', required=True)
-    a = ap.parse_args()
+    g.add_argument('--out-csv', default=str(DEF_CSV))
+    g.add_argument('--download-dir', default=str(DEF_DOWNLOAD_DIR))
+    g.add_argument('--ar6-tlm', default=str(DEF_AR6_TLM))
+    g.add_argument('--summary-json', default=str(DEF_SUMMARY))
+    g.add_argument('--figure', default=str(DEF_FIGURE))
+    # No subcommand (the run_pipeline.sh entry): analyze with the default paths
+    a = ap.parse_args(sys.argv[1:] or ['analyze'])
     if a.cmd == 'fetch':
         cmd_fetch(a)
+    elif a.cmd == 'extract-ar6':
+        cmd_extract_ar6(a)
     else:
         cmd_analyze(a)
 

@@ -14,8 +14,7 @@ Groups:
               components with calibrated sensitivities)
   wais        WAIS mixture at the fast-WAIS weighting, p(S1) = 0.10
               (wais_2k/full_samples, the samples summed in the forecast;
-              the realized S1 fraction of that draw is printed, 0.0975 in
-              the 2026-10-18 run, SF-12)
+              the realized S1 fraction of that draw is printed)
 
 A second table repeats the WAIS share as p(S1) varies. The WAIS variance at
 weight p is that of the two-branch mixture, from the S1 branch

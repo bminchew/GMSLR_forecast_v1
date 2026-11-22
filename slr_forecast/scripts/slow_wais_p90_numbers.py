@@ -13,7 +13,7 @@ threshold and the impacts that follow from it). The variance and interval
 shares in the text come from variance_shares.py and manuscript_numbers.py.
 The "S2-branch var" column printed here is the share of the mixture variance
 carried by the S2 branch and its offset from S1, a check on a different basis
-that the text does not quote (SF-18).
+that the text does not quote.
 
 Run from the repository root:  python scripts/slow_wais_p90_numbers.py
 """
@@ -32,7 +32,6 @@ sys.path.insert(0, str(ROOT / 'src'))
 
 M_TO_MM = 1000.0
 PREIND_M = None          # pre-industrial to 2000, from blended attrs (component_forecast)
-ADAPT_COST_PER_M = None  # filled from compute_evpi
 SSPS = ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']
 LABEL = {'SSP1-2.6': '1.8 C', 'SSP2-4.5': '2.7 C', 'SSP3-7.0': '3.6 C'}
 P_CASES = [0.9, 1.0]
@@ -46,7 +45,7 @@ def weighted_quantile(v, w, q):
 
 
 def main():
-    from compute_evpi import ADAPT_COST_PER_M as ADAPT, damage_vec
+    from impact_costs import ADAPT_COST_PER_M as ADAPT, damage_vec
 
     with h5py.File(ROOT / 'data' / 'processed' / 'component_results.h5', 'r') as hf:
         yrs = hf['blended/forecast_years'][:]

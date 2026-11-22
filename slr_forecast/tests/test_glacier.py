@@ -319,7 +319,7 @@ class TestLevelCorrelatedFit:
 
     def test_parameter_count(self, linear_truth):
         """k_fit counts b, T_eq0 (in c's place), H0 and sigma_extra, plus a
-        for the quadratic (MD-1)."""
+        for the quadratic."""
         lin, quad, _ = linear_truth
         assert lin.k_fit == 4
         assert quad.k_fit == 5

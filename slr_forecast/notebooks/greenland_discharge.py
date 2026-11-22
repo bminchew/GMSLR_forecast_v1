@@ -6,7 +6,7 @@ alternative Arctic amplification factor or ocean-temperature layer. Keeping
 one implementation means the sensitivity tests run exactly the production
 code with one input changed.
 
-Since 2026-10-17 the delay model is fitted to the annual increments of the
+The delay model is fitted to the annual increments of the
 cumulative discharge record (fit_discharge_delay_model with sigma_rate),
 which replaces the level fit with diagonal weights, the end-of-record rate
 row and the sandwich covariance of component_greenland_robust_se.
@@ -106,7 +106,7 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
                                 baseline_year, sample_warming_paths,
                                 aa_scale=None, gr_temp_monthly=None,
                                 gr_time_monthly=None, tau_draws=None, oc_noise_phi=None):
-    """Discharge ensemble per SSP (metres SLE, rebased to *baseline_year*).
+    """Discharge ensemble per SSP (meters SLE, rebased to *baseline_year*).
 
     For each member: draw (gamma, r0, delta) from the discharge posterior and
     (g, c, tau, AA) from their draws (alpha_draws = g, beta_draws = c); build

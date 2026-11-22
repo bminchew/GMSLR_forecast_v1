@@ -380,7 +380,7 @@ def read_ipcc_ar6_observed_gmsl(filepath: str) -> pd.DataFrame:
 
     # 1-sigma from the 17%-83% range: the 83rd percentile of a normal lies
     # 0.9542 sigma above the median (norm.ppf(0.83)), so divide the
-    # half-range by 0.9542 (MD-15)
+    # half-range by 0.9542
     df["gmsl_sigma"] = (df["gmsl_upper"] - df["gmsl_lower"]) / (2 * 0.9542)
     df["decimal_year"] = df["year"].astype(float) + 0.5
 

@@ -547,10 +547,8 @@ class TestProjectGmslStateEnsemble:
 # =========================================================================
 
 class TestStateSpinupAndBaseline:
-    """State-variable spin-up (IN-18), rate-prior temperature (IN-17) and
-    the projection baseline range check (MD-23 / IN-3). These replace three
-    tests that checked literal arithmetic without calling production code
-    (IN-9)."""
+    """State-variable spin-up, rate-prior temperature and the projection
+    baseline range check."""
 
     def test_spinup_state_matches_concatenated_solve(self, ramp_temperature):
         from bayesian_models import _spinup_state

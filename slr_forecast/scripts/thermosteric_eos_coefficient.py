@@ -13,9 +13,8 @@ eliminating A gives
 
     a_u = kappa * b_u**2,   kappa = 1/2 int f alpha' g^2 dz / (int f alpha_0 g dz)^2,
 
-so a_u is fixed by seawater physics once b_u is fitted (decision D5,
-2026-10-18: a_u is not a free parameter, because the NOAA data after 1990
-leave it unconstrained). kappa has units of 1/m (a_u in m/C^2, b_u in m/C).
+so a_u is fixed by seawater physics once b_u is fitted (a_u is not a
+free parameter, because the NOAA data after 1990 leave it unconstrained). kappa has units of 1/m (a_u in m/C^2, b_u in m/C).
 
 alpha_0(z) and alpha'(z) = d alpha / d CT are TEOS-10 values (gsw) computed
 in every EN4.2.2 grid cell from the 1995-2005 mean temperature and salinity

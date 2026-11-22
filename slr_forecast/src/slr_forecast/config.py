@@ -7,6 +7,7 @@ ensemble sizes, random seeds, and directory paths.
 """
 
 import os
+import re
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -14,8 +15,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 BASELINE_YEAR: float = 2000.0
 """Reference year for sea-level and temperature anomalies.
-Changed from 2005 to 2000 to align with the manuscript convention
-of reporting 21st-century contributions relative to the year 2000."""
+2000 matches the paper's convention of reporting 21st-century
+contributions relative to the year 2000."""
 
 WAIS_ONSET_YEAR: float = 2010.0
 """Year at which WAIS contribution begins ramping.  Physically motivated
@@ -49,8 +50,8 @@ coefficient to the linear one in the two-layer model: a_u = KAPPA_EOS * b_u**2
 over 0-700 m, with TEOS-10 alpha and d(alpha)/d(CT) from the EN4.2.2 1995-2005
 mean temperature and salinity, a uniform profile shape g, and f(z) the wet-area
 fraction of the sea surface at depth z (the records are global-mean heights).  Printed by
-scripts/thermosteric_eos_coefficient.py.  a_u is not fitted (decision D5,
-2026-10-18): the NOAA records after 1990 leave a free a_u unconstrained.
+scripts/thermosteric_eos_coefficient.py.  a_u is not fitted: the NOAA records
+after 1990 leave a free a_u unconstrained.
 Imported by component_ocean.ipynb and scripts/ocean_early_holdout.py."""
 
 GEOFFROY2013_C0: tuple = (53, 90, 71, 69, 99, 69, 127, 105, 126, 82, 317, 95, 145, 71, 64, 105.)
@@ -65,8 +66,49 @@ lognormal prior with the mean and sample SD of log(C_0 / gamma)
 # ---------------------------------------------------------------------------
 # Monte Carlo / sampling
 # ---------------------------------------------------------------------------
-N_SAMPLES: int = 10000
-"""Default number of Monte Carlo ensemble members for projections."""
+def _n_samples_from_env(default: int) -> int:
+    """Ensemble size from the environment variable SLR_N_SAMPLES, else *default*.
+
+    Unset or blank gives *default*.  Otherwise the value, stripped of
+    surrounding whitespace, must be ASCII decimal digits only (no sign,
+    underscores, exponent or non-ASCII digits) and at least 1."""
+    raw = os.environ.get("SLR_N_SAMPLES", "").strip()
+    if not raw:
+        return default
+    if not re.fullmatch(r"[0-9]+", raw):
+        raise ValueError(f"SLR_N_SAMPLES must be a positive integer, got {raw!r}")
+    n = int(raw)
+    if n < 1:
+        raise ValueError(f"SLR_N_SAMPLES must be a positive integer, got {raw!r}")
+    return n
+
+
+N_SAMPLES: int = _n_samples_from_env(10000)
+"""Default number of Monte Carlo ensemble members for projections.
+10000 (the production run) unless the environment variable SLR_N_SAMPLES is
+set, e.g. ``SLR_N_SAMPLES=500 ./run_pipeline.sh`` for a quick test run.  Every
+module and notebook imports N_SAMPLES from here, so the variable must be set
+for the whole pipeline run.  A reduced run overwrites the production results
+in data/processed/ in place.
+
+These ensemble sizes do not follow SLR_N_SAMPLES:
+  - component_wais.ipynb: N_SAMPLES = max(10_000, N_SAMPLES) for the A4
+    mixture (its export is downsampled to N_SAMPLES);
+  - scripts/build_slow_wais_p90.py: N_OUT = 20_000 draws of the slow-WAIS
+    mixture;
+  - component_forecast.ipynb: N_RIDGE = 10_000 for the ridge plots;
+  - component_summation.ipynb: _n_mc_sq = 10_000 draws for the satellite-era
+    quadratic interval;
+  - notebooks/precompute_ipcc_distributions.py: n_ridge=10000 IPCC ridge
+    samples (--n-ridge).
+Fixed draw counts for bootstraps, posterior subsamples, comparison samples,
+diagnostic sweeps and MCMC chains do not follow SLR_N_SAMPLES either, e.g. the
+10000-draw IPCC histogram samples (rng_hist) in component_ocean,
+component_glacier and component_greenland, the _N_BOOT = 2000 rate-doubling
+bootstrap in results_figures.ipynb, N_SWEEP_TRAJ = 5_000 and the
+100_000-200_000-draw endpoint sweeps in component_wais.ipynb, and
+N_DRAW = 4000 in scripts/ocean_early_holdout.py and
+scripts/glacier_delayed_response.py."""
 
 SEEDS: dict[str, int] = {
     "projections": 42,
@@ -118,8 +160,9 @@ FIG_DIR: Path = PROJECT_ROOT / "figures"
 VOLC_ERF_CSV: Path = RAW_DATA_DIR / "forcing/igcc2024/ERF_best_aggregates_1750-2024.csv"
 """Annual effective radiative forcing, column 'volcanic' (W m-2): Indicators
 of Global Climate Change 2024 (Forster et al. 2025), data release v2025.06.11,
-doi:10.5281/zenodo.15639576; provenance in data/raw/forcing/README.md.  AR6
-convention: anomaly from the 500 BCE-1749 mean, mean over 1850-2024 near zero.
+doi:10.5281/zenodo.15639576; provenance in data/raw/forcing/README.md and
+data/data_manifest.md.  AR6 convention: anomaly from the 500 BCE-1749 mean,
+mean over 1850-2024 near zero.
 Zero after the last year of the record, as in the AR6 SSP forcing."""
 
 THERMO_VOLC_KV: float = 0.71 * 5.10e14 * 3.156e7 * (0.41e-3 / (16.7 / (24.0 / 0.43) * 1e22))
@@ -152,10 +195,10 @@ SSPS: list[str] = [
 # Physical / unit constants
 # ---------------------------------------------------------------------------
 GT_TO_M_SLE: float = 1.0 / 362500.0
-"""Gigatonnes of ice to metres of sea-level equivalent."""
+"""Gigatonnes of ice to meters of sea-level equivalent."""
 
 PREIND_TO_1900_M: float = 0.010
-"""GMSL rise from the pre-industrial (1850-1900) mean to 1900 (metres).
+"""GMSL rise from the pre-industrial (1850-1900) mean to 1900 (meters).
 The 1850-1900 mean sits ~25 yr before 1900, and the late-19th-century rate
 was 0-1 mm/yr: Kopp et al. (2016, PNAS, p. E1436) give 0.0 +/- 0.4 mm/yr
 (2 sigma) for 1800-1900, and AR6 WG1 Ch. 9 (p. 1295) dates the onset of the

@@ -1,0 +1,29 @@
+# .gitignore for the SPECTRUM paper repository (installed by export_publication.sh)
+
+# Data are distributed separately (see data/data_manifest.md). Keep only the
+# placeholders, the manifest and the small shipped inputs under version control.
+data/raw/*
+!data/raw/README.md
+data/processed/*
+!data/processed/README.md
+!data/processed/greenland_mask_berkeley_1deg.csv
+!data/processed/en4_greenland_peripheral_*m.csv
+
+# Pipeline outputs (figures/, figures/diagnostics/ and notebooks/figures/ keep
+# only their .gitkeep placeholders)
+/figures/**/*.png
+/figures/**/*.pdf
+/notebooks/figures/*
+!/notebooks/figures/.gitkeep
+# Executed copy written by the preprocessing step (data/data_manifest.md, section 4.1)
+/notebooks/read_process_datafiles.executed.ipynb
+
+# Python and Jupyter
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# OS
+.DS_Store

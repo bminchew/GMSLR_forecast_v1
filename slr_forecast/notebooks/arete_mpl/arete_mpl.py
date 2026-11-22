@@ -64,7 +64,7 @@ BLACK   = "#000000"
 CYCLE = ["#036C9A", "#AB6638", "#2A9D8F", "#C44E52", "#72A3C3", "#D4A24E"]
 
 # ---------------------------------------------------------------------------
-#  Colour-space helpers
+#  Color-space helpers
 # ---------------------------------------------------------------------------
 
 def _hex_to_rgb(h: str) -> np.ndarray:
@@ -78,7 +78,7 @@ def _rgb_to_hex(rgb: np.ndarray) -> str:
 
 def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     """Convert sRGB [0-1] to CIELAB via XYZ (D65).  Input shape (..., 3)."""
-    # Linearise sRGB
+    # Linearize sRGB
     lin = np.where(rgb > 0.04045, ((rgb + 0.055) / 1.055) ** 2.4, rgb / 12.92)
     # sRGB -> XYZ  (D65 reference white)
     M = np.array([
@@ -87,7 +87,7 @@ def _rgb_to_lab(rgb: np.ndarray) -> np.ndarray:
         [0.0193339, 0.1191920, 0.9503041],
     ])
     xyz = lin @ M.T
-    # Normalise by D65 white point
+    # Normalize by D65 white point
     xyz /= np.array([0.95047, 1.00000, 1.08883])
     # XYZ -> Lab
     eps = 216.0 / 24389.0
@@ -191,7 +191,7 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
 
     # ---- Perceptually-uniform bivariate blends (Arête blue -> X) ----
     # Strategy: interpolate in CIELAB with a *monotonic* L* ramp.
-    # L* rises linearly from the dark-blue start to a lighter end colour.
+    # L* rises linearly from the dark-blue start to a lighter end color.
     # a* and b* are blended with a sigmoid-weighted transition so hue shifts
     # smoothly over the upper third of the map, keeping blues dominant.
 
@@ -203,7 +203,7 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
         t = np.linspace(0, 1, N)
         # L* ramps linearly
         L = lab0[0] + (lab1[0] - lab0[0]) * t
-        # a*, b* transition via a sigmoid centred at transition_centre
+        # a*, b* transition via a sigmoid centered at transition_centre
         sig = 1 / (1 + np.exp(-(t - transition_centre) / transition_width))
         a = lab0[1] * (1 - sig) + lab1[1] * sig
         b = lab0[2] * (1 - sig) + lab1[2] * sig
@@ -233,7 +233,7 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
     )
 
     # 4. Blue -> Red  (dark navy -> blush;  L* 10.6 -> 74)
-    #    useful for cold-to-warm without a white centre
+    #    useful for cold-to-warm without a white center
     cmaps["arete_blue2red"] = _blend_cmap(
         "arete_blue2red", GLACIER_BLUE[600], "#E8A6A6",
         transition_centre=0.55, transition_width=0.15,
@@ -292,7 +292,7 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
         full_rgb = _lab_to_rgb(full_lab)
         return LinearSegmentedColormap.from_list(name, full_rgb, N=len(full_rgb))
 
-    # Midpoint colours: slightly tinted toward each pair for warmth
+    # Midpoint colors: slightly tinted toward each pair for warmth
     NEUTRAL = "#F5F5F5"       # L*≈96.5, nearly achromatic
 
     # All endpoints at L*≈28 so hue is clearly visible.
@@ -322,14 +322,14 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
         GLACIER_BLUE[500], "#4c376d", NEUTRAL,
     )
 
-    # 5. Blue ↔ Orange  (high contrast, better for colour-vision deficiency)
+    # 5. Blue ↔ Orange  (high contrast, better for color-vision deficiency)
     cmaps["arete_div_blue_orange"] = _diverging_cmap(
         "arete_div_blue_orange",
         GLACIER_BLUE[500], "#673400", NEUTRAL,
     )
 
     # ---- Cyclic colormaps ----
-    # For periodic data (phase, azimuth, direction).  Start colour == end colour.
+    # For periodic data (phase, azimuth, direction).  Start color == end color.
 
     def _cyclic_constant_L(name, L, C, h_start_deg=255.0, N=256):
         """Full 360° hue rotation at constant L* and chroma C.
@@ -340,13 +340,13 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
         b = C * np.sin(h_rad)
         lab = np.column_stack([np.full(N, L), a, b])
         rgb = _lab_to_rgb(lab)
-        # Append the first colour to close the loop
+        # Append the first color to close the loop
         rgb = np.vstack([rgb, rgb[0:1]])
         return LinearSegmentedColormap.from_list(name, rgb, N=N)
 
     def _cyclic_twilight_style(name, h_dark_deg, h_warm_deg,
                                L_dark, L_peak, C_dark, C_peak, N=256):
-        """Dark-light-dark cyclic map.  Both endpoints are the SAME colour
+        """Dark-light-dark cyclic map.  Both endpoints are the SAME color
         (at h_dark_deg, L_dark, C_dark), guaranteeing true cyclicity.
 
         First half:  dark (h_dark) -> light peak, sweeping through cool hues.
@@ -408,7 +408,7 @@ def _build_colormaps() -> dict[str, LinearSegmentedColormap]:
     # 2. arete_cyclic_twilight  — dark-light-dark, cool/warm split
     #    Wrap point at L*=45, peak at L*=92.
     #    Outgoing half sweeps through cool blues; return half through warm earth tones.
-    #    Both endpoints are the same colour, ensuring true cyclicity.
+    #    Both endpoints are the same color, ensuring true cyclicity.
     cmaps["arete_cyclic_twilight"] = _cyclic_twilight_style(
         "arete_cyclic_twilight",
         h_dark_deg=255, h_warm_deg=55,

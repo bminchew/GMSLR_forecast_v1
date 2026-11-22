@@ -1,8 +1,8 @@
 """
 Component decomposition projection and export functions.
 
-Extracted from component_decomposition.ipynb to keep notebooks free of
-function definitions.  All functions operate in SLR convention
+Kept in a module so that the notebooks stay free of function
+definitions.  All functions operate in SLR convention
 (positive = sea level rise) and SI-derived internal units (meters, °C, yr).
 """
 
@@ -21,11 +21,11 @@ from scipy.special import expit
 try:
     from slr_forecast.config import BASELINE_YEAR, N_SAMPLES, WAIS_ONSET_YEAR
     from slr_forecast import M_TO_MM
-except ImportError:
-    BASELINE_YEAR = 2000.0
-    M_TO_MM = 1000.0
-    N_SAMPLES = 2000
-    WAIS_ONSET_YEAR = 2010.0
+except ImportError as e:
+    raise ImportError(
+        "slr_forecast is not importable: install it with 'pip install -e .' "
+        "from the repository root, or run in the container "
+        "(environment/README.md)") from e
 
 
 # =========================================================================
@@ -37,8 +37,8 @@ except ImportError:
 #
 # Each scenario specifies:
 #   P        – mixture weight (must sum to 1)
-#   low_mm   – 5th-percentile SLR at 2100 (mm, n=3 baseline)
-#   high_mm  – 95th-percentile SLR at 2100 (mm, n=3 baseline)
+#   low_mm   – 5th-percentile SLR at 2100 (mm)
+#   high_mm  – 95th-percentile SLR at 2100 (mm)
 #   alpha    – skew-normal shape parameter in log-space
 #              alpha > 0: positive skew (heavy right tail, Robel et al. 2019)
 #              alpha < 0: negative skew (mode toward upper range)
@@ -47,9 +47,9 @@ except ImportError:
 #   beta_scale – log-std of trajectory exponent β
 #              β = 1: linear (constant rate)
 #              β > 1: accelerating (back-loaded, MISI dynamics)
-#              Derived from grounding-line flux scaling q_g ∝ h_g^{n+1}
-#              (Schoof 2007); on retrograde beds, cumulative loss grows
-#              as (t − t₀)^β with β ≈ 1.5–2.5 for n = 3–4.
+#              On retrograde beds, grounding-line flux grows as the
+#              grounding line retreats into deeper water (Schoof 2007), so
+#              cumulative loss accelerates as (t − t₀)^β with β > 1.
 #   misi     – whether MISI is active (informational flag)
 #
 # S1: Status quo — current discharge, no instability. Sampled directly
@@ -60,49 +60,31 @@ except ImportError:
 #     baseline is the naive statistical continuation of what has actually
 #     been observed, requiring no assumption about future ocean-warming
 #     magnitude or melt-discharge sensitivity coefficients. See
-#     get_s1_quadratic() and _sample_s1_quadratic_mm() below, and
-#     manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3
-#     for the derivation this replaced and its reconciliation with the
-#     new approach. `low_mm`/`high_mm`/`alpha`/`beta_loc`/`beta_scale` are
+#     get_s1_quadratic() and _sample_s1_quadratic_mm() below.
+#     `low_mm`/`high_mm`/`alpha`/`beta_loc`/`beta_scale` are
 #     not defined for S1 and are not read by the sampling functions below.
 # S2: Fast WAIS (MISI + MICI) — marine ice sheet instability, with or
-#     without cascading ice-cliff failure. Merges the former three-scenario
-#     split (S1/S2/S3) into two: there is no physically defensible case for
-#     MISI proceeding without amplification from processes that models omit
-#     (Martin et al., AGU Advances), so "moderate MISI" and "MISI+MICI" are
+#     without cascading ice-cliff failure. There is no physically
+#     defensible case for MISI proceeding without amplification from processes that models omit
+#     (Martin et al. 2026, AGU Advances), so "moderate MISI" and "MISI+MICI" are
 #     treated as one probability-weighted regime rather than two competing
-#     branches. Its 95th-percentile bound is high_mm=1300 mm since
-#     2026-09-18 (see the dict entry below). The rest of this paragraph is
-#     the history of the earlier value, high_mm=1000 mm, a round
-#     number chosen so the full two-scenario *mixture's* own p95 at 2100
-#     (last checked against the p83-based low_mm rule below; see the
-#     validation cell in component_wais.ipynb for the current value) sits at or
-#     below the IPCC AR6 low-confidence AIS storyline's p95 under SSP5-8.5
-#     (Fox-Kemper et al. 2021: 1309 mm) -- rather than pinning S2's
-#     within-scenario p95 to that storyline directly, which pushed the
-#     mixture's own p95 to ~1.6 m, meaningfully above AR6 low confidence
-#     with no additional data to defend the excess. 1 m remains consistent
-#     with independent cross-checks: the Amundsen Sea Embayment's ice
+#     branches. Its 95th-percentile bound is high_mm=1300 mm, the IPCC AR6
+#     low-confidence AIS storyline's p95 under SSP5-8.5 (Fox-Kemper et al.
+#     2021: 1309 mm), rounded (see the dict entry below; the validation
+#     cell in component_wais.ipynb prints the mixture's own p95).
+#     Independent values for comparison: the Amundsen Sea Embayment's ice
 #     volume above flotation plus spillover to neighboring basins
 #     (~1.1 m; Morlighem et al. 2020), Bamber et al. (2019)'s WAIS 95th
-#     percentile at +5C after rheology correction (~1.19 m), and DeConto &
+#     percentile at +5C (930 mm), and DeConto &
 #     Pollard (2016)'s most aggressive MICI projection (0.64-1.14 m total
 #     Antarctic). Its 5th-percentile bound
-#     (low_mm=84 mm) is pinned to the 50th percentile (median) of
-#     S1_status_quo's 2100 endpoint distribution. NOTE this is a
-#     qualitatively different anchor than the earlier percentile choices
-#     below: at the median, S2's floor sits in the *middle* of S1's own
-#     distribution rather than above its upper tail -- about half of
-#     S1's possible outcomes exceed S2's floor. This means S2 is no
-#     longer strictly "worse than any plausible no-instability outcome";
-#     its low end now overlaps the bulk of S1's own spread. History
-#     (2026-09-17, all same day): 94 mm (99th percentile, pre-ISMIP6-
-#     widening) -> 180 mm (95th percentile, when the ISMIP6
-#     extrapolation-error widening below was added, since S1's 99th
-#     percentile was no longer a tight, sample-efficient anchor once S1
-#     carried a real tail) -> 139 mm (83rd percentile, closer to the
-#     independent basin-by-basin estimate) -> 84 mm (50th percentile, on
-#     request). See _sample_s1_quadratic_mm() and S1_ISMIP6_STD_COEFFS
+#     (low_mm, about 84 mm) is pinned to the 50th percentile (median) of
+#     S1_status_quo's 2100 endpoint distribution. NOTE: at the median,
+#     S2's floor sits in the *middle* of S1's own distribution rather
+#     than above its upper tail -- about half of S1's possible outcomes
+#     exceed S2's floor. This means S2 is not strictly "worse than any
+#     plausible no-instability outcome"; its low end overlaps the bulk of
+#     S1's own spread. See _sample_s1_quadratic_mm() and S1_ISMIP6_STD_COEFFS
 #     above for the current S1 distribution this is computed from. To
 #     regenerate: draw a large sample (e.g. N=2,000,000) from
 #     _sample_s1_quadratic_mm(N, rng, [2100.0]) or sample_a4_wais_endpoint
@@ -120,20 +102,15 @@ except ImportError:
 
 A4_SCENARIOS = {
     'S1_status_quo': {'P': 0.10, 'misi': False},
-    # low_mm regenerated 2026-09-17: 50th percentile (median) of
-    # S1_status_quo's 2100 endpoint distribution (~84 mm) INCLUDING the
-    # ISMIP6 extrapolation-error widening (S1_ISMIP6_STD_COEFFS above).
-    # History: 94 mm (p99, pre-ISMIP6-widening) -> 180 mm (p95) -> 139 mm
-    # (p83) -> 84 mm (p50/median, on request) -- all same day. NOTE: at
-    # the median, S2's floor no longer sits above S1's tail; see the
-    # paragraph above for the full derivation and this rule's caveat.
-    # high_mm and beta_loc set 2026-09-18 as clean rounded values: 1300 mm
-    # is the IPCC AR6 low-confidence AIS p95 under SSP5-8.5 (1309 mm)
-    # rounded; median beta 2 is a clean value (previous effective value was
-    # 2.35 = 1.84 x rheology factor 1.275; 2.25 and 2.5 also tried 2026-09-18).
-    # Both are adopted values describing the
+    # low_mm: 50th percentile (median) of S1_status_quo's 2100 endpoint
+    # distribution (~84 mm) INCLUDING the ISMIP6 extrapolation-error
+    # widening (S1_ISMIP6_STD_COEFFS above). NOTE: at the median, S2's
+    # floor does not sit above S1's tail; see the paragraph above for this
+    # rule's caveat.
+    # high_mm and beta_loc are clean rounded values: 1300 mm is the IPCC
+    # AR6 low-confidence AIS p95 under SSP5-8.5 (1309 mm) rounded; median
+    # beta 2 is a clean value. Both are adopted values describing the
     # qualitative shape suggested by the literature, not derived from physics.
-    # Was high_mm=1000, beta_loc=log(1.84) with an n-driven rheology rescaling.
     # low_mm is DERIVED, not stored: set_s1_quadratic() fills it from the
     # installed fit via s1_median_mm(), so the S2 floor follows the S1
     # median automatically instead of drifting out of step with it when
@@ -147,9 +124,8 @@ A4_SCENARIOS = {
 # ---------------------------------------------------------------------------
 # S1_status_quo: direct posterior sampling (quadratic-in-time fit)
 #
-# S1 has no MISI by construction, so unlike S2 -- whose range comes from a
-# forward physical/ISMIP6-adjacent scaling chain subject to the same n=3
-# rheology bias as the rest of ISMIP6 -- S1 is grounded directly in the
+# S1 has no MISI by construction, so unlike S2 -- whose bounds are adopted
+# values (see A4_SCENARIOS above) -- S1 is grounded directly in the
 # observed IMBIE-3 WAIS record via a Bayesian quadratic-in-time fit
 # (kinematics form -- position under constant acceleration):
 #     rate(t) = a*(t-2000) + v,   H(t) = 0.5*a*(t-2000)^2 + v*(t-2000) + H0
@@ -160,10 +136,8 @@ A4_SCENARIOS = {
 # physical constraint -- WAIS's own record shows both acceleration and
 # deceleration). The naive continuation of this fit is the most direct
 # "nothing new happens" baseline available: it needs no assumption about
-# future ocean-warming magnitude or melt-discharge sensitivity, unlike the
-# physical scaling chain it replaces (documented, and reconciled against
-# this approach, in
-# manuscripts/00_ddpi_slrforecast2026/a4_scenario_justification.md §3).
+# future ocean-warming magnitude or melt-discharge sensitivity, unlike
+# a forward physical scaling chain from ocean warming to discharge.
 #
 # The S1 quadratic is (a, v, H0) in (m/yr^2, m/yr, m), with the posterior
 # covariance of fit_imbie_time_model, whose increment likelihood is already
@@ -182,7 +156,7 @@ A4_SCENARIOS = {
 #                                 cells run BEFORE its save_wais cell, so
 #                                 within a single run there is no stored
 #                                 copy for them to read.  Do not remove
-#                                 the setter in favour of the loader.
+#                                 the setter in favor of the loader.
 #
 #   load_s1_quadratic()           every other consumer (results_figures,
 #                                 the tests, and anything else calling the
@@ -272,7 +246,7 @@ def save_s1_quadratic(mean, cov, path=None, provenance='', fitted_at=None):
 
     If the file already holds the same mean, covariance and provenance, it
     is left untouched, so an identical refit does not show up as a git diff
-    of the ``fitted_at`` stamp alone (IN-23).
+    of the ``fitted_at`` stamp alone.
     """
     from datetime import datetime, timezone
     mean, cov = set_s1_quadratic(mean, cov, provenance=provenance or 'fresh fit')
@@ -389,8 +363,7 @@ def describe_s1_quadratic():
 # Fitting std(t) (which grows closer to quadratically in time) and
 # squaring afterward is well-behaved (R^2=0.994, residuals <=2.3 mm, and
 # the resulting extra_var(t) is exactly monotonically non-decreasing from
-# the anchor year out to 2150 -- verified in
-# notebooks/scratch_wais_dlm_prototype.py, round 3b).
+# the anchor year out to 2150 -- verified when the fit was made).
 #
 # S1_ISMIP6_FIT_ANCHOR_YEAR is the anchor year (last IMBIE-3 observation,
 # wais_year[-1]) AT THE TIME THIS FIT WAS PERFORMED -- it is where the
@@ -399,9 +372,7 @@ def describe_s1_quadratic():
 # _sample_s1_quadratic_mm() receives at call time (extra_var(anchor_year)
 # is always exactly 0 regardless, since both std(anchor_year) terms use
 # the same fixed curve). To regenerate after IMBIE-3 or the ISMIP6
-# emulator file are updated: rerun the fit in
-# notebooks/scratch_wais_dlm_prototype.py's build_extra_variance_interpolator
-# / fit_and_report_quadratic_extension() (round 3b), or equivalently:
+# emulator file are updated, rerun the fit:
 #   df = read_ipcc_ar6_component(CONF_BASE, 'icesheets', 'WAIS',
 #            'ipccar6-ismipemuicesheet', 'ssp245', convert_to_meters=True)
 #   e = df.index.values - anchor_year   # anchor_year = wais_year[-1]
@@ -437,11 +408,7 @@ def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
     (S1_ISMIP6_STD_COEFFS) that grows the spread at long lead times
     beyond what IMBIE-3's 45-yr record alone can constrain -- see the
     S1_ISMIP6_STD_COEFFS comment block above for the full derivation and
-    Tarantola (2005) framing. No rheology correction is applied to either
-    term: that correction addresses ice-sheet-model (n=3 vs n≈4)
-    structural bias, which does not apply to a statistical fit of real
-    satellite-observed mass balance or to an independent projection
-    ensemble's own reported uncertainty.
+    Tarantola (2005) framing.
 
     This is the single shared implementation used by both
     sample_a4_wais_endpoint() and sample_a4_wais_trajectories() so the
@@ -484,23 +451,6 @@ def _sample_s1_quadratic_mm(n_samples, rng, years, anchor_year=None):
 
     return H_m * M_TO_MM
 
-
-# Mode A rheology correction (n=3 -> n=4; deprecated, used only by Mode A,
-# which no pipeline call selects). Martin et al. (2026).
-RHEOLOGY_FACTOR_MEDIAN = 1.28
-RHEOLOGY_FACTOR_SIGMA = 0.07
-
-# Glen's law exponent. Rheology sensitivity deprecated (2026-09-18): n is held
-# constant at N_REF, so Mode B gives R(n) = 1 and beta(n) = beta_ref exactly --
-# S2's endpoint bounds and beta_loc in A4_SCENARIOS are used as stated.
-# Previously n ~ N(4.1, 0.4^2) (Millstein, Minchew, & Pegler 2022).
-N_OBS_MEAN = 3.0
-N_OBS_SIGMA = 0.0
-N_REF = 3         # reference exponent used by ISMIP6 and literature scenarios
-
-# Rheology sensitivity: fractional increase in SLR per unit increase in n
-# Martin et al. (2026): 21-35% for Δn=1 → r₀ ≈ 0.28
-RHEOLOGY_SENSITIVITY = 0.28
 
 # S2_fast_wais near-term blend: same sigmoid window (T_CENTER, TAU_BLEND)
 # as component_forecast.ipynb's aggregate rate-space blend
@@ -594,7 +544,7 @@ def _sample_log_skewnormal(n, low, high, alpha, rng, upper=None):
     return out[:n]
 
 
-def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
+def sample_a4_wais(n_samples, rng, year=2100,
                    anchor_year=None, anchor_value_mm=None,
                    anchor_sigma_mm=None, obs_value_mm=None,
                    obs_sigma_mm=None):
@@ -618,28 +568,6 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
     n_samples : int
     rng : numpy.random.Generator
     year : float
-    rheology_mode : {'A', 'B'}
-        How the rheology correction (n=3 → n≈4) is applied. The correction
-        is deprecated (n is held at N_REF, so Mode B applies none); every
-        pipeline caller passes 'B', which is also the default.
-
-        **Mode A** — Independent corrections (deprecated; kept for tests).
-          Scenario ranges and β priors are defined at n=3 (matching the
-          literature). Two separate corrections are applied:
-            1. Endpoint: R ~ N(1.28, 0.07²), truncated ≥ 1.
-            2. Trajectory: β_corrected = β_{n=3} · (n_draw + 1) / (n_ref + 1),
-               where n_draw ~ N(N_OBS_MEAN, N_OBS_SIGMA²), now N(3, 0)
-               (formerly N(4.1, 0.4²)).
-          R and the β correction are drawn independently.
-
-        **Mode B** — Unified n-driven corrections (default, production).
-          With N_OBS_MEAN = N_REF and N_OBS_SIGMA = 0, R = 1 and β = β_ref.
-          A single draw of n per sample drives both endpoint and trajectory:
-            1. n_draw ~ N(N_OBS_MEAN, N_OBS_SIGMA²), clipped ≥ n_ref
-               (now N(3, 0), so n_draw = n_ref; formerly N(4.1, 0.4²)).
-            2. Endpoint: R(n) = 1 + r₀ · (n_draw − n_ref).
-            3. Trajectory: β(n) = β_ref · (n_draw + 1) / (n_ref + 1).
-          Correlates the endpoint and trajectory corrections through n.
     anchor_year : float or None
         Year at which the projection is anchored to observations.  If None,
         uses ``WAIS_ONSET_YEAR`` from config (default 2010).
@@ -678,9 +606,6 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
 
     t_norm = (year - anchor_year) / (2100 - anchor_year)
 
-    if rheology_mode not in ('A', 'B'):
-        raise ValueError(f"rheology_mode must be 'A' or 'B', got {rheology_mode!r}")
-
     # Per-sample anchor with IMBIE uncertainty
     if anchor_sigma_mm > 0:
         anchor_draws = rng.normal(anchor_value_mm, anchor_sigma_mm,
@@ -693,11 +618,6 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
     probs = np.array([A4_SCENARIOS[s]['P'] for s in scenario_names])
 
     scenario_idx = rng.choice(len(scenario_names), size=n_samples, p=probs)
-
-    # ── Pre-draw n for Mode B (shared across scenarios within each sample) ──
-    if rheology_mode == 'B':
-        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
-        n_draw_all = np.maximum(n_draw_all, N_REF)  # n ≥ n_ref
 
     # Spawn independent child RNGs per scenario
     child_rngs = rng.spawn(len(scenario_names))
@@ -712,10 +632,10 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
         if sname == 'S1_status_quo':
             # Direct posterior sampling (quadratic-in-time fit), spliced
             # onto the shared anchor -- see A4_SCENARIOS comment block.
-            # No rheology correction, no power-law ramp. anchor_year is
-            # passed through so the ISMIP6 extra-variance term (see
-            # S1_ISMIP6_STD_COEFFS) is exactly zero at this function's own
-            # splice anchor, not S1_ISMIP6_FIT_ANCHOR_YEAR's default.
+            # No power-law ramp. anchor_year is passed through so the
+            # ISMIP6 extra-variance term (see S1_ISMIP6_STD_COEFFS) is
+            # exactly zero at this function's own splice anchor, not
+            # S1_ISMIP6_FIT_ANCHOR_YEAR's default.
             h_model = _sample_s1_quadratic_mm(n_s, crng, [anchor_year, year],
                                                anchor_year=anchor_year)
             anchor_i = anchor_draws[mask]
@@ -724,41 +644,17 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
 
         s = A4_SCENARIOS[sname]
 
-        # ── Endpoint: draw H_2100 from skew-normal (n=3 ranges) ──
+        # ── Endpoint: draw H_2100 from the truncated skew-normal ──
         base = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
             upper=WAIS_MAX_SLE_MM,
         )
 
-        if rheology_mode == 'A':
-            # ── Mode A: independent endpoint and trajectory corrections ──
-            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
-                               size=n_s)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)
-
-            # Trajectory exponent: draw β at n=3, then correct for n≈4
-            if s['beta_scale'] > 0:
-                beta_n3 = crng.lognormal(s['beta_loc'], s['beta_scale'],
-                                         size=n_s)
-                n_draw = crng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
-                n_draw = np.maximum(n_draw, N_REF)
-                beta = beta_n3 * (n_draw + 1) / (N_REF + 1)
-            else:
-                beta = np.ones(n_s)  # S1: linear ramp, no correction
-
-        else:  # Mode B
-            n_draw = n_draw_all[mask]
-            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
-
-            if s['beta_scale'] > 0:
-                beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
-                                          size=n_s)
-                beta = beta_ref * (n_draw + 1) / (N_REF + 1)
-            else:
-                beta = np.ones(n_s)
+        # Trajectory exponent
+        if s['beta_scale'] > 0:
+            beta = crng.lognormal(s['beta_loc'], s['beta_scale'], size=n_s)
+        else:
+            beta = np.ones(n_s)
 
         # Remaining contribution after anchor: H_2100 - H_anchor_i
         anchor_i = anchor_draws[mask]
@@ -769,26 +665,23 @@ def sample_a4_wais(n_samples, rng, year=2100, rheology_mode='B',
     return np.minimum(samples, WAIS_MAX_SLE_MM) / M_TO_MM  # meters
 
 
-def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='B',
+def sample_a4_wais_endpoint(n_samples, rng,
                              scenario_overrides=None, anchor_year=None,
                              anchor_value_mm=None):
     """Draw WAIS SLR endpoint samples (meters) at 2100 from the A4 mixture.
 
     This is a lightweight wrapper for sensitivity analyses that need to
     perturb scenario parameters without trajectory or anchor logic.
-    S2_fast_wais's endpoint is sampled from the log-skew-normal, multiplied
-    by the rheology correction. S1_status_quo is instead sampled directly
-    from its quadratic-in-time posterior (see get_s1_quadratic() and
-    _sample_s1_quadratic_mm above) with no rheology correction -- see the
-    A4_SCENARIOS comment block for why.
+    S2_fast_wais's endpoint is sampled from the log-skew-normal, truncated
+    at WAIS_MAX_SLE_MM. S1_status_quo is instead sampled directly from its
+    quadratic-in-time posterior (see get_s1_quadratic() and
+    _sample_s1_quadratic_mm above) -- see the A4_SCENARIOS comment block
+    for why.
 
     Parameters
     ----------
     n_samples : int
     rng : numpy.random.Generator
-    rheology_mode : {'A', 'B'}
-        Default 'B' (production; no rheology correction). 'A' applies the
-        deprecated R ~ N(1.28, 0.07) endpoint factor; see sample_a4_wais.
     scenario_overrides : dict or None
         Per-scenario parameter overrides.  Keys are scenario names
         (e.g. 'S2_fast_wais'); values are dicts that can override any of
@@ -804,7 +697,7 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='B',
         When None (the default), S1 is the unspliced quadratic (H0 = 0)
         with the S1_ISMIP6_FIT_ANCHOR_YEAR default. Passing the
         trajectories' splice anchor and observed level makes the two
-        samplers agree (MD-20; the difference is about 0.4 mm).
+        samplers agree (the difference is about 0.4 mm).
 
     Returns
     -------
@@ -838,11 +731,6 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='B',
 
     scenario_idx = rng.choice(len(scenario_names), size=n_samples, p=probs)
 
-    # Pre-draw n for Mode B
-    if rheology_mode == 'B':
-        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
-        n_draw_all = np.maximum(n_draw_all, N_REF)
-
     # Spawn independent child RNGs per scenario so that changing n_s in
     # one scenario (e.g. via weight perturbation) does not shift the RNG
     # state for subsequent scenarios.
@@ -871,29 +759,16 @@ def sample_a4_wais_endpoint(n_samples, rng, rheology_mode='B',
             continue
 
         s = eff[sname]
-        base = _sample_log_skewnormal(
+        samples[mask] = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
             upper=WAIS_MAX_SLE_MM,
         )
-
-        if rheology_mode == 'A':
-            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
-                               size=n_s)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)
-        else:
-            n_draw = n_draw_all[mask]
-            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
-
-        samples[mask] = base
 
     # WAIS cannot supply more than its marine-based ice (WAIS_MAX_SLE_MM).
     return np.minimum(samples, WAIS_MAX_SLE_MM) / M_TO_MM  # meters
 
 
-def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
+def sample_a4_wais_trajectories(n_samples, rng, years,
                                  anchor_year=None, anchor_value_mm=None,
                                  anchor_sigma_mm=None,
                                  obs_years=None, obs_values_mm=None,
@@ -901,8 +776,8 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
     """Draw coherent WAIS SLR trajectories from the A4 scenario mixture.
 
     Unlike ``sample_a4_wais`` (which draws independently at each year),
-    this function draws scenario assignments, endpoint values, rheology
-    factors, and trajectory exponents **once** per sample, then evaluates
+    this function draws scenario assignments, endpoint values, and
+    trajectory exponents **once** per sample, then evaluates
     the power-law ramp deterministically across all years.  This ensures
     that individual trajectories are smooth and internally consistent.
 
@@ -912,7 +787,7 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
     get_s1_quadratic() above), spliced onto the same shared
     ``anchor_draws`` every scenario uses so trajectories stay continuous
     at ``anchor_year``: samples_mm = anchor_draws + (H_model(t) -
-    H_model(anchor_year)). No rheology correction is applied to S1.
+    H_model(anchor_year)).
 
     Parameters
     ----------
@@ -920,9 +795,6 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
     rng : numpy.random.Generator
     years : array-like
         Projection years (e.g. 1950–2150).
-    rheology_mode : {'A', 'B'}
-        Default 'B' (production; no rheology correction). 'A' applies the
-        deprecated corrections; see sample_a4_wais.
     anchor_year : float or None
         Defaults to WAIS_ONSET_YEAR.
     anchor_value_mm : float or None
@@ -931,7 +803,10 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
         IMBIE 1-sigma (mm) at anchor_year.
     obs_years, obs_values_mm, obs_sigmas_mm : array-like or None
         IMBIE time series for pre-anchor interpolation (years, mm, mm).
-        If provided, pre-anchor samples are drawn from N(obs(t), sigma(t)²).
+        If provided, pre-anchor samples are obs(t) plus correlated
+        observation errors (independent increments of variance
+        |sigma_j^2 - sigma_{j-1}^2|, cumulated; see cumulative_error_paths),
+        conditioned to end at each member's anchor draw.
 
     Returns
     -------
@@ -962,14 +837,8 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
     if obs_years is not None and obs_values_mm is not None:
         obs_interp = interp1d(obs_years, obs_values_mm,
                               kind='linear', bounds_error=False, fill_value=0.0)
-        if obs_sigmas_mm is not None:
-            sig_interp = interp1d(obs_years, obs_sigmas_mm,
-                                  kind='linear', bounds_error=False, fill_value=0.0)
-        else:
-            sig_interp = lambda t: 0.0
     else:
         obs_interp = lambda t: anchor_value_mm
-        sig_interp = lambda t: 0.0
 
     # ── Draw all per-sample parameters once ──
     scenario_names = list(A4_SCENARIOS.keys())
@@ -988,8 +857,8 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
     # increments and cumulated (cumulative_error_paths), zero where the
     # record is rebased (smallest sigma), then conditioned so each path ends
     # at that member's anchor draw (random-walk bridge, weights from the
-    # accumulated variance). A separate generator leaves the main stream as
-    # before.
+    # accumulated variance). The errors come from a separate generator, not
+    # from rng.
     obs_err = None
     if (obs_years is not None and obs_values_mm is not None
             and obs_sigmas_mm is not None and np.any(np.asarray(obs_sigmas_mm) > 0)):
@@ -1005,11 +874,6 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
                            for k in range(n_samples)])
         _target = anchor_draws - float(obs_interp(anchor_year))
         obs_err = _paths + (_target - _p_end)[:, None] * _w[None, :]
-
-    # Pre-draw n for Mode B
-    if rheology_mode == 'B':
-        n_draw_all = rng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_samples)
-        n_draw_all = np.maximum(n_draw_all, N_REF)
 
     h2100 = np.zeros(n_samples)
     beta_arr = np.zeros(n_samples)
@@ -1046,40 +910,18 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
 
         s = A4_SCENARIOS[sname]
 
-        # Endpoint: draw H_2100 from skew-normal (n=3 ranges)
-        base = _sample_log_skewnormal(
+        # Endpoint: draw H_2100 from the truncated skew-normal
+        h2100[mask] = _sample_log_skewnormal(
             n_s, s['low_mm'], s['high_mm'], s['alpha'], crng,
             upper=WAIS_MAX_SLE_MM,
         )
 
-        if rheology_mode == 'A':
-            rheo = crng.normal(RHEOLOGY_FACTOR_MEDIAN, RHEOLOGY_FACTOR_SIGMA,
-                               size=n_s)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)
-
-            if s['beta_scale'] > 0:
-                beta_n3 = crng.lognormal(s['beta_loc'], s['beta_scale'],
-                                         size=n_s)
-                n_draw = crng.normal(N_OBS_MEAN, N_OBS_SIGMA, size=n_s)
-                n_draw = np.maximum(n_draw, N_REF)
-                beta_arr[mask] = beta_n3 * (n_draw + 1) / (N_REF + 1)
-            else:
-                beta_arr[mask] = 1.0
-        else:  # Mode B
-            n_draw = n_draw_all[mask]
-            rheo = 1.0 + RHEOLOGY_SENSITIVITY * (n_draw - N_REF)
-            rheo = np.maximum(rheo, 1.0)
-            base = np.minimum(base * rheo, WAIS_MAX_SLE_MM)  # rheo = 1 in Mode B
-
-            if s['beta_scale'] > 0:
-                beta_ref = crng.lognormal(s['beta_loc'], s['beta_scale'],
-                                          size=n_s)
-                beta_arr[mask] = beta_ref * (n_draw + 1) / (N_REF + 1)
-            else:
-                beta_arr[mask] = 1.0
-
-        h2100[mask] = base
+        # Trajectory exponent
+        if s['beta_scale'] > 0:
+            beta_arr[mask] = crng.lognormal(s['beta_loc'], s['beta_scale'],
+                                            size=n_s)
+        else:
+            beta_arr[mask] = 1.0
 
     # ── Compute trajectories across all years ──
     samples_mm = np.zeros((n_samples, n_years))
@@ -1092,12 +934,8 @@ def sample_a4_wais_trajectories(n_samples, rng, years, rheology_mode='B',
             continue
         elif yr <= anchor_year:
             # Pre-anchor: IMBIE observation with correlated measurement
-            # error (obs_err above). The independent draw is kept and
-            # discarded so the main random stream is unchanged.
+            # error (obs_err above).
             val = float(obs_interp(yr))
-            sig = float(sig_interp(yr))
-            if sig > 0:
-                rng.normal(val, sig, size=n_samples)
             if obs_err is not None:
                 samples_mm[:, j] = val + np.array(
                     [np.interp(yr, obs_years, obs_err[k]) for k in range(n_samples)])
@@ -1275,7 +1113,7 @@ def project_greenland_joint_ensemble(
 ):
     """Project Greenland SLR from the joint SMB + discharge model.
 
-    Legacy (MD-25): no pipeline caller. It projects the retired joint
+    Legacy: no pipeline caller. It projects the retired joint
     SMB + discharge model with AA = 2.58 times GMST; component_greenland
     uses the MAR emulator with a drift state and the analytic discharge
     fit driven by Greenland regional temperature.
@@ -1936,7 +1774,7 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
         Observed GMSL at t_origin (meters, rel. to baseline); an array
         gives each sample its own origin level.
     t_center : float
-        Centre of sigmoid transition.
+        Center of sigmoid transition.
     tau_blend : float
         Width of sigmoid transition (years).
 
@@ -1962,7 +1800,7 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
     # Component-sum rate: central difference on annual grid
     dt_proj = np.diff(proj_years)
     comp_rate_all = np.diff(comp_samples, axis=1) / dt_proj[None, :]
-    # Rate at midpoints; shift to full-year grid via averaging neighbours
+    # Rate at midpoints; shift to full-year grid via averaging neighbors
     comp_rate_full = np.zeros_like(comp_samples)
     comp_rate_full[:, 1:-1] = 0.5 * (comp_rate_all[:, :-1] + comp_rate_all[:, 1:])
     comp_rate_full[:, 0] = comp_rate_all[:, 0]
@@ -2049,7 +1887,7 @@ def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None
     Returns
     -------
     np.ndarray, shape (n_samples, len(years))
-        Cumulative contribution in metres SLE, rebased to ``baseline_year``.
+        Cumulative contribution in meters SLE, rebased to ``baseline_year``.
     """
     years = np.asarray(years, dtype=float)
     yy = np.arange(1900, max(int(years.max()), int(baseline_year)) + 1)

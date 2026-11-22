@@ -96,8 +96,7 @@ physical plausibility, not by Bayesian updating from data. As
 observational constraints on WAIS dynamics improve, some scenarios may
 be excluded and the weights revised.
 
-> **TODO — A4 framework extensions.** The current A4 correction
-> addresses rheology (n=3 vs n=4) only. Planned updates:
+> **TODO — A4 framework extensions.** Planned updates:
 >
 > 1. **Calving processes.** Calving is not well represented in any
 >    IPCC ice sheet model (Aschwanden et al., 2021). Iceberg calving
@@ -138,18 +137,6 @@ long-term forcing. Contributes to predictive variance at short horizons
 (decadal) but is dominated by other sources at centennial horizons.
 Partially absorbed by sigma_extra in the Bayesian fits; partially
 captured by the residual variance in hindcast skill scores.
-
-**Rheology bias (A1 correction)**
-A specific, quantifiable component of structural uncertainty in ice sheet
-process models: the systematic underestimate of ice sheet response arising
-from the use of Glen's flow law exponent n=3 when observational evidence
-supports n=4 (Millstein, Minchew, & Pegler, 2022; Martin et al., in press).
-This bias is correctable via a multiplicative factor (A1 in the A4
-framework) and applies to all ice sheet projections, not just WAIS.
-Separated from generic structural uncertainty because it has a known
-physical origin and a quantified magnitude (21-35% underestimate at 2100).
-This is the first of several planned quantifiable corrections to the
-ISMIP6 baseline (see TODO under Deep uncertainty above).
 
 ---
 

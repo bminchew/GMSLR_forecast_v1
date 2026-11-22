@@ -13,7 +13,7 @@ available SSP 2015-2100, each a separate AR(1) segment):
 
 where dM is the SMB anomaly (Gt/yr) relative to the history run's 1995-2005
 mean and x the GCM's GMST anomaly relative to 1995-2005, smoothed with an
-11-yr centred mean.  The posterior is analytic: Prais-Winsten whitening for
+11-yr centered mean.  The posterior is analytic: Prais-Winsten whitening for
 each AR(1) coefficient on a grid, a normal-inverse-gamma prior, and the grid
 mixed by marginal likelihood.
 
@@ -71,7 +71,7 @@ MAR_CSV = MAR_DIR / 'mar_protect_integrated_smb.csv'
 TEMP_CSV = MAR_DIR / 'gcm_temperature.csv'
 
 BASE = (1995, 2005)
-SMOOTH_YRS = 11                                  # centred running mean of GMST
+SMOOTH_YRS = 11                                  # centered running mean of GMST
 HIST_YEARS = (1980, 2014)
 SSP_YEARS = (2015, 2100)
 SCENARIOS = ('ssp126', 'ssp245', 'ssp585')
@@ -106,7 +106,7 @@ def load_data():
 
 
 def gmst_driver(temp, gcm, scen):
-    """GCM GMST anomaly rel. 1995-2005, 11-yr centred mean (pd.Series by year)."""
+    """GCM GMST anomaly rel. 1995-2005, 11-yr centered mean (pd.Series by year)."""
     t = temp[(temp.gcm == gcm) & temp.experiment.isin(['historical', scen])]
     t = t.set_index('year').sort_index()
     t = t[~t.index.duplicated(keep='last')]['gmst_K']
@@ -224,7 +224,7 @@ def fit_smb_emulator(n_samples, seed=600, gcms=GCMS):
 
 
 def _centred_mean(T, n=SMOOTH_YRS):
-    """Centred running mean that shortens the window at the ends."""
+    """Centered running mean that shortens the window at the ends."""
     h = n // 2
     c = np.concatenate([[0.0], np.cumsum(T)])
     k = np.arange(len(T))
@@ -233,7 +233,7 @@ def _centred_mean(T, n=SMOOTH_YRS):
 
 
 def smooth_observed(T, years, through):
-    """11-yr centred mean of T for years <= through (the observed record,
+    """11-yr centered mean of T for years <= through (the observed record,
     matching the training driver); later years are returned unchanged."""
     T = np.asarray(T, dtype=float)
     return np.where(np.asarray(years) <= through, _centred_mean(T), T)
@@ -284,7 +284,7 @@ def project_smb_emulator(emulator, T_proj, time_proj, M0, T_offsets=None,
         zero over the observed record; added after smoothing
     baseline_year : rebase cumulative values to zero at this year
     smooth_through : last year of the observed GMST record.  T_proj is
-        replaced by its 11-yr centred mean up to this year, matching the
+        replaced by its 11-yr centered mean up to this year, matching the
         training driver; later years (smooth AR6 paths) are used as given.
     noise : (n_samples, n_times) noise in Gt/yr added to the rate, shared
         across SSPs: in production the drift path delta plus white weather

@@ -87,7 +87,7 @@ def read_noaa_thermosteric(zip_path: str, start_year: int = 1955) -> pd.DataFram
     """Read NOAA NCEI thermosteric sea level from ZIP archive.
 
     Extracts depth range from filename. Returns quarterly DataFrame
-    with values in **mm** (native, not yet standardised to meters —
+    with values in **mm** (native, not yet standardized to meters —
     caller should convert if needed).
 
     Reference

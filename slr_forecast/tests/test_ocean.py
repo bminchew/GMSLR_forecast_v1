@@ -276,7 +276,7 @@ class TestOceanProjections:
 
         The ocean median rises about 6.6 mm from 2000 to 2005, so a 1 mm bound
         catches a rebase at the wrong year. (Rebasing at 1999.5 instead of
-        2000.0, OC-14, leaves 0.4 mm at 2000, inside this bound.)
+        2000.0 leaves 0.4 mm at 2000, inside this bound.)
         """
         years = loaded['proj_years']
         idx = int(np.flatnonzero(years == BASELINE_YEAR)[0])
@@ -472,7 +472,7 @@ class TestOceanStoredFit:
     """Checks on what component_ocean cell 5 writes for the two-layer fit."""
 
     def test_posterior_parameters_no_drift(self):
-        """a (derived), b_u, b_d, tau_u, sigma_extra, tau_d, rho, sigma_extra_2, m_v; the drift term c was removed 2026-10-16."""
+        """a (derived), b_u, b_d, tau_u, sigma_extra, tau_d, rho, sigma_extra_2, m_v; there is no drift term c."""
         with h5py.File(H5_PATH, 'r') as f:
             if 'ocean_posteriors' not in f:
                 pytest.skip("ocean_posteriors not in component_results.h5")
@@ -528,7 +528,7 @@ class TestSaveOceanHybridGroups:
         save_ocean_hybrid(np.arange(3.0), np.zeros(3), np.ones(3), self._proj(),
                           h5_path=path)
         with h5py.File(path, 'a') as f:
-            assert 'proj_years' in f            # fresh file initialized (OC-19)
+            assert 'proj_years' in f            # fresh file initialized
             f.create_group('ocean_posteriors').create_dataset('a_posterior', data=[1.0])
             f.create_group('ocean_early_holdout')
             f['ocean'].create_group('stale_subgroup')

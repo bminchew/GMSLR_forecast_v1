@@ -16,8 +16,8 @@ data/processed/ipcc_distributions.h5
     └── attrs: n_samples, seed, baseline_year, rebase_mm_total
 
 Only the "total" quantiles are shifted to BASELINE_YEAR, by the shared
-offset component_analysis.ar6_baseline_offset_m (13.3 mm in the 2026-10-18
-run; stored as attrs['rebase_mm_total']); the component quantiles stay on
+offset component_analysis.ar6_baseline_offset_m (13.3 mm; stored as
+attrs['rebase_mm_total']); the component quantiles stay on
 the AR6 reference (zero at the 2005 node).
 Each member of samples/ follows one quantile path across all years.
 
@@ -65,11 +65,10 @@ except ImportError:
 # IPCC AR6 projections are relative to the 1995-2014 mean. The *total*
 # quantiles are shifted to our baseline by the shared offset
 # (component_analysis.ar6_baseline_offset_m: NASA altimetry 1995-2014 mean
-# minus its value at the sample that defines our zero; SF-2; was a fixed
-# 10.7 mm before 2026-10-17).
+# minus its value at the sample that defines our zero).
 # That offset is the total's own rebase and is applied to "total" only.
-# Adding it to every component (as before 2026-10-14) put each component,
-# including TWS, ~10.7 mm too high. The AR6 component files are zero at
+# Adding it to every component would put each component, including TWS,
+# too high by that offset. The AR6 component files are zero at
 # their 2005 node and carry no per-component 2000-2005 change, so the
 # components stay on the AR6 reference; for TWS this matches the
 # hindcast, which holds TWS at zero before 2003.
@@ -172,7 +171,7 @@ def main(n_samples=N_SAMPLES, seed=777, n_ridge=10000, ridge_seed=888):
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Write to a temp file, then replace — avoids Dropbox/Google Drive
+    # Write to a temp file, then replace — avoids cloud-sync folder
     # lock conflicts on macOS.
     import tempfile, shutil
     _tmp_fd, _tmp_path = tempfile.mkstemp(suffix=".h5", dir=str(PROCESSED_DIR))

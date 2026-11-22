@@ -1,16 +1,16 @@
 """Integrate the Glaude et al. (2024) 1-km SMB grids to annual Greenland totals.
 
-Inputs (Zenodo 10.5281/zenodo.13270554), kept outside Dropbox:
+Inputs (Zenodo 10.5281/zenodo.13270554), in data/raw/glaude2024/ (9.6 GB):
   MAR_SMB_1km.nc     ISMIP6 1-km grid (EPSG:3413), 1950-2100, mm w.e./yr,
                      forced by 'CESM2-Leo' (the branch run that also forced
                      the Noel et al. 2021 RACMO run)
   HIRHAM_SMB_1km.nc  ISMIP6 1-km grid, 1971-2100, mm w.e. accumulated per
                      year, forced by CESM2 historical/ssp585 r1i1p1f1
   RACMO_SMB_1km.nc   Noel 1-km EPSG:3413 grid (x/y are cell corners, offset
-                     500 m from centres), 1950-2099
+                     500 m from centers), 1950-2099
 Mask: Promicemask from Noel et al. (2021) (Zenodo 4289959) on the RACMO grid;
 3 = ice sheet, 1-2 = peripheral glaciers and ice caps.  Mapped to the ISMIP6
-grid by nearest cell centre.  Only the ice sheet (3) enters the emulator,
+grid by nearest cell center.  Only the ice sheet (3) enters the emulator,
 because GlaMBIE already counts RGI region 05; the with-periphery total is kept
 for comparison with the published Glaude numbers.
 
@@ -34,8 +34,7 @@ import pandas as pd
 from pyproj import Proj
 
 ROOT = Path(__file__).resolve().parents[1]
-GRID_DIR = Path('/Users/minchew/Documents/Research/SLR/forecasting/'
-                'global_simple_v1/slr_forecast/data/raw/glaude2024')
+GRID_DIR = ROOT / 'data/raw/glaude2024'
 MASK = ROOT / 'data/raw/ice_sheets/greenland/noel2021/Icemask_Topography_lon_lat_average_1km_GrIS.nc'
 OUT = ROOT / 'data/raw/ice_sheets/greenland/glaude2024/glaude2024_integrated_smb.csv'
 P3413 = Proj('+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45 +ellps=WGS84')
@@ -56,7 +55,7 @@ def racmo_grid():
 
 
 def map_mask(xc, yc, mask, X, Y):
-    """Nearest-centre lookup of the RACMO-grid mask at ISMIP6 centres."""
+    """Nearest-center lookup of the RACMO-grid mask at ISMIP6 centers."""
     dx = np.median(np.diff(xc)); dy = np.median(np.diff(yc))
     j = np.rint((X - xc[0]) / dx).astype(int)
     i = np.rint((Y - yc[0]) / dy).astype(int)

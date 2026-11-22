@@ -44,11 +44,8 @@ from slr_forecast import M_TO_MM
 # (W/m^2, the number after the dash) for monotonicity checks.
 SSPS_BY_FORCING = sorted(PROJ_SSPS, key=lambda s: float(s.split('-')[-1]))
 
-# Components that should be summed. EAIS was previously excluded (IMBIE
-# record too short/noisy to constrain a reliable trend); re-included
-# 2026-09-13 following the correlation-aware CI and b>=0 prior fix, which
-# better constrains its projected range (matches component_summation.ipynb
-# and component_forecast.ipynb).
+# Components that should be summed, EAIS included (matches
+# component_summation.ipynb and component_forecast.ipynb).
 SUMMED_COMPONENTS = ['ocean', 'glacier', 'greenland', 'eais', 'apeninsula', 'wais']
 ALL_HDF5_COMPONENTS = ['ocean', 'glacier', 'greenland', 'apeninsula', 'wais', 'eais']
 

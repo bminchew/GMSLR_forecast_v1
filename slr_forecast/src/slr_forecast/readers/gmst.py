@@ -119,7 +119,7 @@ def read_berkeley_earth_gridded(
         giving an ocean-dominated average.  Cells with ``land_mask >= 1``
         are excluded.  Default False.
     cell_mask : str, path or DataFrame, optional
-        Cell centres to keep (columns ``lat``, ``lon``), e.g.
+        Cell centers to keep (columns ``lat``, ``lon``), e.g.
         ``data/processed/greenland_mask_berkeley_1deg.csv`` from
         scripts/make_greenland_mask.py.  Applied in addition to the box and
         the weighting.  Default None keeps every cell in the box.

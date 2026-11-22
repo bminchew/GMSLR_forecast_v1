@@ -69,7 +69,7 @@ def _baseline_index(time_years, baseline_year):
     ``baseline_year``. If ``baseline_year`` lies off the grid (e.g. a grid
     that starts in 2015 with baseline 2000), argmin would silently pin the
     series at the grid edge, so raise when the nearest point is more than
-    half a grid step away (MD-23). A half-step tie (e.g. 1999.5 vs 2000.5
+    half a grid step away. A half-step tie (e.g. 1999.5 vs 2000.5
     for 2000.0) passes and resolves to the earlier point.
     """
     time_years = np.asarray(time_years, dtype=float)
@@ -690,7 +690,6 @@ def project_gmsl_tau_sensitivity(
     # project_gmsl_state_ensemble resamples posterior_samples with
     # replacement; one fixed seed for every tau makes that resampling the
     # same for all tau values, so the tau comparison uses common draws
-    # (MD-25: it was unseeded, a different subsample per tau)
     inner_seed = int(rng.integers(2**32))
 
     for tau_val in tau_values:
@@ -751,7 +750,7 @@ def project_thermosteric_ensemble(
 ) -> dict:
     """Project thermosteric sea level using the physically-motivated model.
 
-    Legacy (MD-25): no pipeline caller (component_ocean imports it but
+    Legacy: no pipeline caller (component_ocean imports it but
     builds its projections inline). It keeps the retired drift term
     c·(t − t₀) and a 2005 default baseline; do not use for new work.
 
@@ -901,7 +900,7 @@ def project_greenland_ensemble(
 ) -> dict:
     """Project Greenland SLR using the physics-informed two-component model.
 
-    Legacy (GR-30 / MD-25): no pipeline caller. It projects the retired
+    Legacy: no pipeline caller. It projects the retired
     GMST-driven SMB + discharge-ODE model with a drift term c·(t − t₀) and a
     2005 default baseline. component_greenland uses the MAR emulator with a
     drift state for SMB and the analytic increment fit for discharge,
@@ -1003,7 +1002,7 @@ def project_greenland_ensemble(
             # Discharge ODE on full timeline
             D_eff, _ = solve_twolayer_ode(T_full, time_full, tau_k, np.inf)
 
-            # Cumulative ∫D_eff (vectorised trapezoidal)
+            # Cumulative ∫D_eff (vectorized trapezoidal)
             D_mid = 0.5 * (D_eff[:-1] + D_eff[1:])
             cum_D = np.concatenate([[0], np.cumsum(D_mid * dt_full)])
             cum_D_proj = cum_D[n_hist:]
@@ -1184,7 +1183,7 @@ def project_component_level_ensemble(
 
     if temperature_offsets is not None:
         # Per-member integrals: same cumulative trapezoid as
-        # build_level_design_vectors, vectorised over members.
+        # build_level_design_vectors, vectorized over members.
         T_k = (temperature_monthly[None, :] + temperature_offsets) * temp_scale
         dt_m = np.diff(time_monthly)[None, :]
         I2_k = np.concatenate([np.zeros((n_samples, 1)), np.cumsum(
@@ -1199,7 +1198,7 @@ def project_component_level_ensemble(
         I1 = I1[None, :]
 
     # Evaluate forward model: H(t) = a·I₂ + b·I₁ + c·I₀ + H₀
-    # Vectorised: (n_samples, 1) × (·, n_proj) → (n_samples, n_proj)
+    # Vectorized: (n_samples, 1) × (·, n_proj) → (n_samples, n_proj)
     H_ens = (a_draws[:, None] * I2
              + b_draws[:, None] * I1
              + c_draws[:, None] * I0[None, :]

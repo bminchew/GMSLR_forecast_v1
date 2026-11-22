@@ -6,16 +6,51 @@ build-backend = "setuptools.build_meta"
 name = "slr-forecast"
 version = "0.1.0"
 description = "Observation-based sea-level rise projection framework"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+# Direct runtime dependencies of the package and the pipeline (notebooks and
+# scripts run by run_pipeline.sh).  Lower bounds are the production minor
+# versions; exact pins are in environment/environment.yml and the conda locks.
 dependencies = [
-    "numpy",
-    "pandas",
-    "matplotlib",
-    "scipy",
+    "numpy>=2.3,<3",
+    "scipy>=1.16",
+    "pandas>=2.3,<3",
+    "tables>=3.10",        # pandas.read_hdf / HDFStore
+    "h5py>=3.15",
+    "netCDF4>=1.7",        # xarray backend
+    "cftime>=1.6",
+    "xarray>=2026.2",
+    "openpyxl>=3.1",       # pandas.read_excel (.xlsx)
+    "tqdm>=4.67",
+    "statsmodels>=0.14",
+    "emcee>=3.1",
+    "arviz>=0.23,<1",
+    "corner>=2.2",
+    "matplotlib>=3.10",
+    "seaborn>=0.13",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest>=9.0"]
+notebooks = [
+    "jupyter>=1.1",
+    "nbconvert>=7.17",
+    "ipykernel>=7.2",
+]
+# Preprocessing and data-download scripts (not run by run_pipeline.sh)
+preprocessing = [
+    "gsw>=3.6",
+    "cartopy>=0.25",
+    "shapely>=2.1",
+    "fsspec[http]>=2026.2",
+    "requests>=2.34",
+    "zarr>=3.1",
+    "dask>=2025.9",
+    "plotly>=6.5",
+    "pyproj>=3.7",         # scripts/integrate_glaude2024_smb.py
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

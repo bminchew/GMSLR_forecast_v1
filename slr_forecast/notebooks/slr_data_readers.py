@@ -1305,7 +1305,7 @@ def read_ipcc_ar6_observed_gmsl(filepath: str, convert_to_meters: bool = True) -
     
     # 1-sigma from the 17%-83% range: for a normal distribution the 83rd
     # percentile lies 0.9542 sigma above the median (norm.ppf(0.83)), so the
-    # half-range is 0.9542 sigma, not 1 sigma (MD-15)
+    # half-range is 0.9542 sigma, not 1 sigma
     df['gmsl_sigma'] = (df['gmsl_upper'] - df['gmsl_lower']) / (2 * 0.9542)
     
     # Add decimal year for convenience
@@ -1547,7 +1547,7 @@ def read_berkeley_earth_gridded(
         Minimum ``land_mask`` fraction for a cell to be included.
         Default 0.5 retains mixed land/ocean coastal cells.
     cell_mask : str, path or DataFrame, optional
-        Cell centres to keep (columns ``lat``, ``lon``), e.g.
+        Cell centers to keep (columns ``lat``, ``lon``), e.g.
         ``data/processed/greenland_mask_berkeley_1deg.csv`` from
         scripts/make_greenland_mask.py, which drops the non-Greenland land
         in the box.  Applied in addition to the box and the land threshold.
@@ -2916,7 +2916,7 @@ def read_zemp2019_global(filepath: str) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        Indexed by hydrological year (October to September, labelled by
+        Indexed by hydrological year (October to September, labeled by
         the end year), with columns
         rate (m SLE/yr, positive = sea-level contribution),
         sigma_ind (m SLE/yr, 1-sigma; glaciological, interpolation, area and

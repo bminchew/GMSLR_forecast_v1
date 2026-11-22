@@ -1,0 +1,50 @@
+# Development repository only; not shipped (publication/allowlist.txt lists the
+# environment/ files one by one). BuildKit uses this file instead of the root
+# .dockerignore when building environment/Dockerfile, so it repeats the root
+# rules and adds the development-only paths.
+
+# --- Rules of the root .dockerignore ---
+data/
+**/*.h5
+**/*.hdf5
+**/*.nc
+**/*.nc4
+**/*.zarr
+.git
+.gitignore
+figures/
+notebooks/figures/
+**/__pycache__/
+**/*.pyc
+**/.ipynb_checkpoints/
+**/.pytest_cache/
+**/*.egg-info/
+**/.DS_Store
+.venv/
+.mypy_cache/
+.ruff_cache/
+
+# --- Development-only paths ---
+environment/Dockerfile.dockerignore
+papers/
+archive/
+manuscripts/
+memory/
+publication/
+results/
+diagnostics/
+run10k_*/
+save_figures_*/
+notebooks/archive/
+notebooks/junk/
+settings.json
+# Notes and LaTeX at the top level (patterns are relative to the context root)
+/*.md
+/*.csv
+/*.tex
+/*.aux
+/*.log
+/*.out
+/*.toc
+/*.pdf
+/*.synctex.gz

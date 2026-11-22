@@ -30,12 +30,15 @@ EN4_DIR = ROOT / 'data' / 'raw' / 'ocean_temp' / 'en4'
 OUT_DIR = ROOT / 'data' / 'processed'
 H5 = OUT_DIR / 'slr_processed_data.h5'
 LAYERS = [(200, 500), (100, 400), (300, 600)]
+# Years of the production series (1970-01 to 2021-06). EN4_DIR also holds 1900-1969 archives,
+# which the reader would include without year_range.
+EN4_YEARS = (1970, 2021)
 
 
 def main():
     prod = pd.read_hdf(H5, 'harmonized/df_en4_greenland_200_500m')
     for lo, hi in LAYERS:
-        df = read_en4_regional(EN4_DIR, depth_bounds=(float(lo), float(hi)))
+        df = read_en4_regional(EN4_DIR, depth_bounds=(float(lo), float(hi)), year_range=EN4_YEARS)
         if (lo, hi) == (200, 500):
             a = df['temperature'] - df['temperature'].mean()
             b = prod['temperature'].reindex(df.index)

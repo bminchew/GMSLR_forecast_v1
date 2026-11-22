@@ -226,9 +226,8 @@ class TestEAISSaveLoad:
         return load_component('eais')
 
     def test_metadata_model_type(self, loaded):
-        # component_eais/apeninsula now pass 'linear_level_correlated' (IN-11);
-        # 'trend_only' is the legacy label stored before that change. Drop it
-        # from the set after the next pipeline run.
+        # component_eais/apeninsula pass 'linear_level_correlated';
+        # 'trend_only' is the legacy label in older result files.
         assert loaded['metadata']['model_type'] in ('linear_level_correlated', 'trend_only')
 
     def test_metadata_chi2_dof(self, loaded):

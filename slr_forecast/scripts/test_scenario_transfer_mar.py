@@ -9,7 +9,7 @@ fit never sees.  Three choices of driver are compared:
   +lag   -- either driver passed through an exponential filter with time
             scale tau, selected on the training run by marginal likelihood
 
-Drivers are anomalies relative to 1995-2005, smoothed with an 11-yr centred
+Drivers are anomalies relative to 1995-2005, smoothed with an 11-yr centered
 running mean (single-member GCM runs carry internal variability), and the
 lag filter starts in 1950.  SMB is the ice-sheet-only annual total
 (extract_mar_protect_smb.py); the emulator is quadratic with AR(1) residuals

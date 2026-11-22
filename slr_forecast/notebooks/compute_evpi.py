@@ -31,41 +31,27 @@ from scipy.ndimage import gaussian_filter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from slr_data_readers import slr_cost_jevrejeva2018
 from slr_forecast.config import PROCESSED_DATA_DIR
-from slr_forecast.readers.impacts import slr_cost_jevrejeva2018 as damage_vec
+# Adaptation cost per meter (Tiggeloven et al. 2020, annualized with the
+# capital recovery factor) and the Jevrejeva et al. (2018) damage function,
+# shared with scripts/slow_wais_p90_numbers.py; see impact_costs.py.
+from impact_costs import (  # noqa: F401
+    ADAPT_CAPITAL_PER_M, DR, HORIZON, _CRF, ADAPT_COST_PER_M, damage_vec,
+)
 
 H5_COMP = PROCESSED_DATA_DIR / 'component_results.h5'
 
 SSP = 'SSP2-4.5'
-# Adaptation cost per meter of global SLR.
-# Tiggeloven et al. (2020, doi:10.5194/nhess-20-1025-2020) estimate that
-# 3.4% of the entire global coastline (~1.6M km) warrants dike heightening
-# under a cost-benefit optimality criterion, at a unit cost of $7M per km
-# per meter of dike height (based on New Orleans; Bos 2008).
-# This gives 54,400 km × $7M/km/m ≈ $400B per meter of SLR as a
-# one-time capital cost for dike raising alone. That covers only the
-# 3.4% of coastline where dike economics are favorable; the remaining
-# 96.6% still faces SLR via managed retreat, nature-based solutions,
-# or absorbed losses. A conservative 10× multiplier for the full
-# societal adaptation burden (seawalls, green barriers, managed retreat,
-# etc.) across a broader fraction of coastline gives $4T/m = $4000B/m.
-ADAPT_CAPITAL_PER_M = 4000  # $B total capital per meter of SLR
 # S1 weight of the stored `blended` ensemble (fast-WAIS mixture). Used only
 # where results are compared with `blended`; see the module docstring. The
-# realized S1 fraction of that draw differs slightly (0.0975 in the
-# 2026-10-18 run; scripts/variance_shares.py prints it; SF-12, open).
+# realized S1 fraction of that draw differs slightly from 0.10, because the
+# scenario draw in component_wais is not stratified (scripts/variance_shares.py
+# prints the realized fraction).
 P_S1_BLENDED = 0.10
 # Defense heights searched. The grid starts at zero (no defense), a physical
 # bound: early target years have optima of about 0.2 m (2040, SSP2-4.5).
 # The upper end must exceed every optimum; the S2 optimum at 2100 is about
 # 3.1 m (SSP2-4.5). _check_interior enforces both.
 D_GRID = np.arange(0.0, 8.0, 0.05)
-DR = 0.03                  # discount rate
-HORIZON = 75               # planning horizon (years)
-
-# Annualize capital cost using the capital recovery factor:
-#   CRF = r(1+r)^n / ((1+r)^n - 1)
-_CRF = DR * (1 + DR)**HORIZON / ((1 + DR)**HORIZON - 1)
-ADAPT_COST_PER_M = ADAPT_CAPITAL_PER_M * _CRF  # $B/yr per meter of SLR
 
 
 def _expected_cost_voi(samples, design_m):

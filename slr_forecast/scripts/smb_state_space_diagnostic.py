@@ -14,7 +14,7 @@ Model, for emulator member k (GCM and posterior draw of b1, b2), in Gt/yr:
     delta_t = phi delta_{t-1} + eta_t,      phi = exp(-1/tau)
 
 f_k(x) = b1 x + b2 x^2 is the member's emulator anomaly at the observed GMST
-anomaly x (rel. 1995-2005, 11-yr centred mean), M a constant level (diffuse
+anomaly x (rel. 1995-2005, 11-yr centered mean), M a constant level (diffuse
 prior), delta a stationary AR(1) state with sd sigma_d, and eps weather plus
 the reported observation error: Var(eps_t) = sigma_e^2 + s_t^2. The state
 [M, delta] is estimated with a Kalman filter.
@@ -122,7 +122,7 @@ def main():
     mk = pd.read_csv(ROOT / 'data/raw/ice_sheets/greenland/mankoff/MB_SMB_D_BMB_ann.csv')
     mk = mk[(mk.time >= 1986) & (mk.time <= 2023)]
 
-    # ── Driver: observed GMST rel. 1995-2005, calendar-year mean, 11-yr centred ──
+    # ── Driver: observed GMST rel. 1995-2005, calendar-year mean, 11-yr centered ──
     be = pd.read_hdf(ROOT / 'data/processed/slr_processed_data.h5', 'harmonized/df_berkeley_h')
     tm = be['temperature'].values
     tt = be.index.year + (be.index.month - 0.5) / 12.0

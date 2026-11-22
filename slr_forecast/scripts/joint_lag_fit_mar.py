@@ -1,6 +1,6 @@
 """Joint fit of MAR SMB across all scenarios of one GCM, comparing lag models.
 
-Driver x: the GCM's GMST anomaly (rel. 1995-2005, 11-yr centred mean).
+Driver x: the GCM's GMST anomaly (rel. 1995-2005, 11-yr centered mean).
 Lagged driver x_tau: first-order relaxation dx_tau/dt = (x - x_tau)/tau,
 integrated from 1950.  SMB anomalies (rel. 1995-2005) from
 extract_mar_protect_smb.py.
