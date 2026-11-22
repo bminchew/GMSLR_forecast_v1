@@ -66,20 +66,28 @@ def ar6_baseline_offset_m(h5_path, baseline_year=BASELINE_YEAR):
     """GMSL difference between the AR6 baseline and our zero (m).
 
     AR6 sea-level projections are relative to the 1995-2014 mean. Our
-    forecast is zero at the NASA altimetry sample nearest *baseline_year*
-    (``harmonized/df_nasa_gmsl_h``, ``gmsl_smoothed``; component_forecast
-    rebases on that sample). The offset is the mean of the same series over
-    [1995, 2015) minus its value at that sample, so it is consistent with
-    the forecast's zero by construction. Subtract it from our values to put
+    forecast is zero at the satellite-era quadratic's level at
+    *baseline_year* (component_forecast: the quadratic fitted to NASA
+    altimetry ``harmonized/df_nasa_gmsl_h`` from 1993 to the end of the
+    record, with the OLS coefficients of ``fit_satellite_era_quadratic``).
+    The offset is the mean of the 60-day smoothed NASA series over
+    [1995, 2015) minus that quadratic level, so it is consistent with the
+    forecast's zero by construction. Subtract it from our values to put
     them on the AR6 baseline; add it to AR6 values to put them on ours.
     One shared definition for every comparison with AR6.
     """
+    from bayesian_models import fit_satellite_era_quadratic
     d = pd.read_hdf(h5_path, 'harmonized/df_nasa_gmsl_h')
     t = d['decimal_year'].values
-    h = d['gmsl_smoothed'].values
     lo, hi = AR6_BASELINE_WINDOW
-    i0 = int(np.argmin(np.abs(t - baseline_year)))
-    return float(np.mean(h[(t >= lo) & (t < hi)]) - h[i0])
+    quad = fit_satellite_era_quadratic(
+        time=t, gmsl=d['gmsl'].values, sigma=None,
+        t_start=1993.0, t_end=t[-1], eval_time=t[-1])
+    c0, c1, c2 = quad.coefficients
+    dt0 = baseline_year - quad.t_start
+    level0 = c0 + c1 * dt0 + c2 * dt0 ** 2
+    h = d['gmsl_smoothed'].values
+    return float(np.mean(h[(t >= lo) & (t < hi)]) - level0)
 
 
 def annualize_imbie(df, baseline_year=BASELINE_YEAR):

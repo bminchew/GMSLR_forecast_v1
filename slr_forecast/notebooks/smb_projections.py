@@ -219,14 +219,17 @@ def project_smb_ensemble(
         # Convert Gt/yr → m SLE/yr
         rates_m = rates * GT_TO_M_SLE
 
-        # Cumulative SLE (trapezoidal integration)
+        # Cumulative SLE (trapezoidal integration over the time_proj nodes,
+        # so each step uses the mean of the rates at its two ends)
         # Convention: positive rate = positive SLR contribution
         # For SMB: negative SMB (mass loss) → positive SLR
         # rates are in Gt/yr where negative = mass loss
         # We want SLR contribution: -SMB_rate * GT_TO_M_SLE
         slr_rates = -rates_m  # flip sign: mass loss → positive SLR
 
-        cumulative = np.cumsum(slr_rates * dt[None, :], axis=1)
+        step = slr_rates.copy()
+        step[:, 1:] = 0.5 * (slr_rates[:, 1:] + slr_rates[:, :-1])
+        cumulative = np.cumsum(step * dt[None, :], axis=1)
 
         # Rebase to baseline epoch
         if baseline_year is not None:

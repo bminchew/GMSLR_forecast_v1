@@ -252,14 +252,13 @@ def main():
         g = hf['ocean/fit_diagnostic']
         Ty = g['T_annual_years'][:]
         print('\nThermosteric fit (mm): RMS residual | observed rise, first to last year')
-        # 700-2000 m (0-2000 m minus 0-700 m) is fitted after removing its mean,
-        # so model and data are compared about their means over the record
+        # Residuals about their mean over each record, as in the likelihood
+        # (component_ocean: data and model each demeaned over the fitted years)
         for lab, yk, ok, mk in [('0-700 m', 'noaa_year', 'noaa_700_corrected_mm', 'H_upper_fit_mm'),
                                 ('700-2000 m', 'noaa_deep_year', 'noaa_700_2000_corrected_mm', 'H_mid_fit_mm')]:
             y, o, m = g[yk][:], g[ok][:], g[mk][:]
             r = o - m[[int(np.argmin(np.abs(Ty - v))) for v in y]]
-            if lab == '700-2000 m':
-                r = r - r.mean()
+            r = r - r.mean()
             out[f'thermo_fit_{lab}'] = dict(rms_mm=float(np.sqrt(np.mean(r ** 2))),
                                             rise_mm=float(o[-1] - o[0]))
             print(f'  {lab} ({y[0]:.1f}-{y[-1]:.1f}): RMS {np.sqrt(np.mean(r ** 2)):.3f} | rise {o[-1] - o[0]:.1f}')
@@ -338,13 +337,14 @@ def main():
     # zero at WARMING_ANCHOR_YEAR; compare its 2099 excess over the median
     # with the full AR6 upper half-width.
     from warming_paths import ssp_row_offsets, WARMING_ANCHOR_YEAR
+    from ar6_gmst import midyear
     print(f'\nUpper half-width of AR6 GMST at 2099 (95th minus median, C), '
           f'full vs warming path anchored at {WARMING_ANCHOR_YEAR:.0f}:')
     for s in ['SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0']:
         df = pd.read_hdf(H5_OBS, f'projections/temp/{s.replace("-", "_").replace(".", "_")}')
         i99 = int(np.argmin(np.abs(df['decimal_year'].values - 2099)))
         full = float(df['temperature_upper'].values[i99] - df['temperature'].values[i99])
-        path = float(ssp_row_offsets(df, np.array([1.645]))[0, i99])
+        path = float(ssp_row_offsets(midyear(df), np.array([1.645]))[0, i99])
         out.setdefault('warming_upper_halfwidth_2099_C', {})[s] = dict(full=full, path=path)
         print(f'  {LABEL[s]}: full {full:.2f}, path {path:.2f}')
 

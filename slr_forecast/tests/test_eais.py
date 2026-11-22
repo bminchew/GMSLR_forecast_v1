@@ -143,6 +143,25 @@ class TestEAISSMBParameters:
 # SMB projection logic
 # =========================================================================
 
+class TestSMBIntegration:
+    """project_smb_ensemble integrates the rate with the trapezoid rule on
+    the time_proj nodes, so each step uses the mean of its end rates."""
+
+    def test_trapezoid_steps(self):
+        from smb_projections import SMBSensitivity
+        sens = SMBSensitivity(C_T=60.0, C_T_sigma=0.0)
+        t = np.arange(2000, 2101, dtype=float)
+        T = 0.03 * (t - 2000)
+        r = project_smb_ensemble(sens, {'x': T}, t, n_samples=3, seed=1,
+                                 baseline_year=2000.0)['x']
+        rate = -60.0 * T * GT_TO_M_SLE                    # m SLE/yr, SLR-positive
+        np.testing.assert_allclose(np.diff(r['samples'][0]),
+                                   0.5 * (rate[1:] + rate[:-1]), rtol=1e-12)
+        # exact for a rate linear in time: integral from 2000 to 2100
+        assert r['samples'][0, -1] == pytest.approx(-60.0 * GT_TO_M_SLE * 0.03 * 100**2 / 2,
+                                                    rel=1e-12)
+
+
 class TestSMBProjection:
     """Verify project_smb_ensemble produces correct output structure."""
 

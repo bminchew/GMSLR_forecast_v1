@@ -1046,6 +1046,35 @@ class TestProjectDischargeForcingHold:
         np.testing.assert_allclose(rate[after], gamma * T_last + r0, rtol=1e-10)
         assert np.all(rate[after] > r0 + 0.5 * gamma * T_last)
 
+    def test_increment_paired_with_ocean_t_of_year_minus_delta(self):
+        """Grid year Y is the end of calendar year Y, so its increment uses the
+        ocean T of year Y - delta, as in the fit: a step in ocean T in 2010
+        raises the rate in full from grid year 2015 (delta = 5), not halfway."""
+        from types import SimpleNamespace
+        from greenland_discharge import project_greenland_discharge
+        months = lambda y0, y1: np.arange(y0 * 12, y1 * 12) / 12.0 + 1 / 24
+        t_obs = months(1990, 2001)
+        t_full = np.concatenate([t_obs, months(2001, 2100)])
+        T_full = (t_full >= 2010).astype(float)        # annual surface (= ocean) T steps in 2010
+        ssp = 'SSPX'
+        proj_years = np.arange(1990, 2131, dtype=float)
+        gamma, r0, delta = 0.0004, 0.0012, 5.0
+        rd = SimpleNamespace(gamma_posterior=np.array([gamma]), r0_posterior=np.array([r0]),
+                             delta_posterior=np.array([delta]), int_T_mean_cal=0.0,
+                             t_mean_cal=2000.0, H_mean_cal=0.0)
+        noise_years = np.arange(2000, 2131)
+        out = project_greenland_discharge(
+            [ssp], proj_years, {ssp: T_full}, {ssp: t_full},
+            {ssp: np.zeros((1, len(t_full)))}, np.zeros(len(t_obs)), t_obs,
+            np.zeros(len(t_obs)), t_obs, rd,
+            alpha_draws=np.array([1.0]), beta_draws=np.array([0.0]), AA_draws=np.array([1.0]),
+            oc_noise=np.zeros((1, len(noise_years))), oc_noise_years=noise_years,
+            oc_noise_pre=np.zeros((1, 1)), oc_noise_pre_years=np.array([1989]),
+            baseline_year=2000.0, sample_warming_paths=False)[ssp][0]
+        rate = dict(zip(proj_years[1:].astype(int), np.diff(out)))
+        assert rate[2014] == pytest.approx(r0, rel=1e-10)
+        assert rate[2015] == pytest.approx(gamma + r0, rel=1e-10)
+
 
 class TestProjectOceanTemperature:
     """project_greenland_ocean_temperature, the ocean forcing of
@@ -1073,6 +1102,29 @@ class TestProjectOceanTemperature:
         np.testing.assert_allclose(T[0, en4], np.arange(6) * 0.1)
         Ts = np.array([T_full[np.floor(t_full) == y].mean() for y in yrs]) * aa
         np.testing.assert_allclose(T[0, ~en4], (g * ema_filter(Ts, tau) + c)[~en4])
+
+    def test_every_observed_month_uses_regional_t(self):
+        """The scenario branch starts the month after the last observed GMST
+        month, so the whole final observed year uses observed regional T."""
+        from greenland_discharge import project_greenland_ocean_temperature
+        months = lambda y0, y1: np.arange(y0 * 12, y1 * 12) / 12.0 + 1 / 24
+        t_obs = months(1990, 2001)                     # GMST observed through 2000
+        t_full = np.concatenate([t_obs, months(2001, 2100)])
+        T_full = np.zeros(len(t_full))                 # GMST x AA = 0
+        gr_t = months(1980, 2003)
+        gr_T = np.ones(len(gr_t))                      # observed regional T = 1
+        t_oc = months(1995, 2000)                      # EN4 1995-1999
+        T_oc = np.zeros(len(t_oc))
+        g, c = 0.3, -0.05
+        noise_years = np.arange(1999, 2131)
+        yrs, T = project_greenland_ocean_temperature(
+            T_full, t_full, np.zeros((1, len(t_full))), np.zeros(len(t_obs)), t_obs,
+            T_oc, t_oc, np.array([g]), np.array([c]), np.array([2.0]),
+            np.zeros((1, len(noise_years))), noise_years, np.zeros((1, 40)),
+            np.arange(1960, 2000), sample_warming_paths=False,
+            gr_temp_monthly=gr_T, gr_time_monthly=gr_t)
+        assert T[0, yrs == 2000][0] == pytest.approx(g * 1.0 + c, abs=1e-12)
+        assert T[0, yrs == 2001][0] == pytest.approx(c, abs=1e-12)
 
     def test_residual_after_en4_decays_from_last_residual(self):
         """With zero innovations, the residual after the last EN4 year is

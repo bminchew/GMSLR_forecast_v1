@@ -238,21 +238,19 @@ def fig_lomo(df):
 # ── Figure 3: observed-GMST hindcast ─────────────────────────────────────
 def observed_driver():
     """Calendar-year Berkeley Earth GMST rel. 1995-2005, 11-yr centered mean
-    through 2024, with 2025-2029 from the SSP2-4.5 AR6 path (as in
+    through 2024, with 2025-2029 from the SSP2-4.5 AR6 path on the Berkeley
+    basis (ar6_gmst: mid-year stamps and the shared offset, as in
     component_greenland.ipynb)."""
-    be = pd.read_hdf(H5, 'harmonized/df_berkeley_h')
-    tt = (be.index.year + (be.index.month - 0.5) / 12).values
-    tm = be['temperature'].values
-    hist = pd.read_hdf(H5, 'projections/temp/Historical')
-    ssp = pd.read_hdf(H5, 'projections/temp/SSP2_4_5')
-    off = (hist.loc[(hist.decimal_year >= 1995) & (hist.decimal_year <= 2005), 'temperature'].mean()
-           - tm[(tt >= 1995) & (tt < 2006)].mean())
-    obs_end = int(np.floor(tt[-1]))
+    from ar6_gmst import midyear, ar6_to_berkeley_offset, berkeley_annual
+    by, bT = berkeley_annual(H5)                  # full years, labels Y + 0.5
+    obs_years = np.round(by - 0.5).astype(int)
+    obs_end = int(obs_years[-1])
+    ssp = midyear(pd.read_hdf(H5, 'projections/temp/SSP2_4_5'))
     years = np.arange(1850, 2101)
-    c = pd.concat([hist[hist.decimal_year < 2015], ssp])
-    T = np.interp(years, c.decimal_year, c.temperature - off)
+    T = np.interp(years + 0.5, ssp.decimal_year.values,
+                  ssp.temperature.values - ar6_to_berkeley_offset(H5))
     o = years <= obs_end
-    T[o] = pd.Series(tm).groupby(np.floor(tt).astype(int)).mean().reindex(years[o]).values
+    T[o] = pd.Series(bT, index=obs_years).reindex(years[o]).values
     return pd.Series(S.smooth_observed(T, years, obs_end), index=years)
 
 

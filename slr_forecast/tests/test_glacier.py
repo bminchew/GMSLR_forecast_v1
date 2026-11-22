@@ -634,3 +634,20 @@ class TestIPCCGlacierData:
         ex = ipcc_extract(ipcc_data)
         assert np.all(ex['q05'] <= ex['q50'] + 0.1)
         assert np.all(ex['q50'] <= ex['q95'] + 0.1)
+
+
+class TestUnchartedGlacierHindcast:
+    """The uncharted-glacier term is the level at Y.0 (start of year Y), the
+    convention of the calibrated glacier model it is added to."""
+
+    def test_level_at_start_of_year(self):
+        from component_projections import uncharted_glacier_hindcast
+        y = np.arange(1900, 2026, dtype=float)
+        a = uncharted_glacier_hindcast(y, 50, baseline_year=2000.0, seed=3)
+        # the rate is zero in 1900, so the level at the start of 1901 equals
+        # the level at the start of 1900; the rate from 2000 on is zero
+        np.testing.assert_allclose(a[:, 1], a[:, 0])
+        np.testing.assert_allclose(a[:, y >= 2000], 0.0)
+        # the 1999 rate (r2 > 0) still enters: the start of 1999 is below 2000.0
+        assert np.all(a[:, y == 1999] < 0)
+

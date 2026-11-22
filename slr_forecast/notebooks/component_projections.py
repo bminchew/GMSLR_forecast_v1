@@ -1878,7 +1878,8 @@ def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None
     Parameters
     ----------
     years : array_like
-        Output years (annual grid; level is taken at the end of each year).
+        Output years (annual grid; the level at Y.0, the start of year Y,
+        as in the calibrated glacier model on the same grid).
     n_samples : int
     baseline_year : float
         Level is rebased to zero here (SLR-positive, so negative before).
@@ -1904,7 +1905,8 @@ def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None
     rng = np.random.default_rng(seed)
     u = rng.uniform(size=(n_samples, 1))
     scale = rng.normal(1.0, 0.09, size=(n_samples, 1))
-    level = np.cumsum((lo + u * (hi - lo)) * scale, axis=1)
+    rate = (lo + u * (hi - lo)) * scale
+    level = np.cumsum(rate, axis=1) - rate        # level at the start of each year
     level -= level[:, [int(np.argmin(np.abs(yy - baseline_year)))]]
     idx = np.clip(np.searchsorted(yy, np.floor(years).astype(int)), 0, len(yy) - 1)
     return level[:, idx]

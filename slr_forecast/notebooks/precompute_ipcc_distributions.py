@@ -16,7 +16,7 @@ data/processed/ipcc_distributions.h5
     └── attrs: n_samples, seed, baseline_year, rebase_mm_total
 
 Only the "total" quantiles are shifted to BASELINE_YEAR, by the shared
-offset component_analysis.ar6_baseline_offset_m (13.3 mm; stored as
+offset component_analysis.ar6_baseline_offset_m (15.0 mm; stored as
 attrs['rebase_mm_total']); the component quantiles stay on
 the AR6 reference (zero at the 2005 node).
 Each member of samples/ follows one quantile path across all years.
@@ -65,7 +65,8 @@ except ImportError:
 # IPCC AR6 projections are relative to the 1995-2014 mean. The *total*
 # quantiles are shifted to our baseline by the shared offset
 # (component_analysis.ar6_baseline_offset_m: NASA altimetry 1995-2014 mean
-# minus its value at the sample that defines our zero).
+# minus the satellite-era quadratic's level at BASELINE_YEAR, the
+# forecast's zero).
 # That offset is the total's own rebase and is applied to "total" only.
 # Adding it to every component would put each component, including TWS,
 # too high by that offset. The AR6 component files are zero at

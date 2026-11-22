@@ -621,3 +621,25 @@ class TestForecastPlausibility:
         spread = max(medians_2030) - min(medians_2030)
         assert spread < 20, (
             f"2030 spread = {spread:.0f} mm, expected < 20 (quadratic dominates)")
+
+
+@pytest.mark.skipif(not os.path.exists(OBS_H5_PATH), reason="slr_processed_data.h5 not found")
+def test_ar6_offset_is_relative_to_quadratic_at_baseline():
+    """The AR6 offset is the 1995-2014 mean of the smoothed NASA record minus
+    the satellite-era quadratic's level at BASELINE_YEAR, the forecast's zero
+    (component_forecast: H_ORIGIN = quad(T_ORIGIN) - quad(BASELINE_YEAR))."""
+    import pandas as pd
+    from bayesian_models import fit_satellite_era_quadratic
+    from component_analysis import ar6_baseline_offset_m
+    d = pd.read_hdf(OBS_H5_PATH, 'harmonized/df_nasa_gmsl_h')
+    t = d['decimal_year'].values
+    cov = os.path.join(PROJECT_ROOT, 'data', 'raw', 'gmslr', 'ablain2019_gmsl_error_covariance.nc')
+    q = fit_satellite_era_quadratic(time=t, gmsl=d['gmsl'].values, sigma=None,
+                                    t_start=1993.0, t_end=t[-1], eval_time=t[-1],
+                                    meas_cov_path=cov if os.path.exists(cov) else None)
+    c0, c1, c2 = q.coefficients
+    dt0 = BASELINE_YEAR - q.t_start
+    w = (t >= 1995.0) & (t < 2015.0)
+    expected = d['gmsl_smoothed'].values[w].mean() - (c0 + c1 * dt0 + c2 * dt0 ** 2)
+    assert ar6_baseline_offset_m(OBS_H5_PATH) == pytest.approx(expected, abs=1e-12)
+

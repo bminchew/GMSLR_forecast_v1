@@ -164,8 +164,11 @@ def project_greenland_discharge(ssps, proj_years, proj_monthly_temps,
 
             # Delay: T_delayed(t) = T_ocean(t - delta); zero before the ocean
             # series starts, and the last annual value held flat after it ends
-            # (the scenario forcing ends in 2099, as GMST is held flat for SMB)
-            T_delayed = np.interp(proj_years, t_oc_ann_proj + delta_i, T_oc_ann_proj,
+            # (the scenario forcing ends in 2099, as GMST is held flat for SMB).
+            # Grid year Y is the end of calendar year Y, which the calibration
+            # record (Mouginot) labels Y + 0.5, so the increment of year Y is
+            # paired with the ocean T of year Y - delta, as in the fit.
+            T_delayed = np.interp(proj_years + 0.5, t_oc_ann_proj + delta_i, T_oc_ann_proj,
                                   left=0.0, right=T_oc_ann_proj[-1])
             int_T_delayed = np.cumsum(T_delayed * dt_proj)
 
@@ -201,7 +204,11 @@ def project_greenland_ocean_temperature(T_mon, t_mon, T_off_mon,
     n_samples = len(alpha_draws)
     tau_draws = np.zeros(n_samples) if tau_draws is None else np.asarray(tau_draws, float)
 
-    ssp_start_idx = min(np.searchsorted(t_mon, temp_time_monthly[-1]), len(t_mon) - 1)
+    # First scenario month: the month after the last observed GMST month
+    # (t_mon holds the observed months too), so every observed month uses
+    # observed surface T
+    ssp_start_idx = min(np.searchsorted(t_mon, temp_time_monthly[-1], side='right'),
+                        len(t_mon) - 1)
     ssp_start = t_mon[ssp_start_idx]
     ssp_mask = t_mon >= ssp_start
 
