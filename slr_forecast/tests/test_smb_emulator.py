@@ -173,11 +173,24 @@ class TestFittedEmulator:
 
     def test_cesm2_matches_single_gcm_fit(self, emu):
         # A fit to CESM2's MAR runs alone (all scenarios, separate AR(1)
-        # segments) gives M 56.7, b1 -39.9, b2 -48.4
+        # segments, complete-window years only, so 2015-2095 for each SSP)
+        # gives M 62.7, b1 -51.3, b2 -45.4
         m = np.median(emu['fits']['CESM2']['beta'], axis=0)
-        assert m[0] == pytest.approx(56.7, abs=5)
-        assert m[1] == pytest.approx(-39.9, abs=5)
-        assert m[2] == pytest.approx(-48.4, abs=3)
+        assert m[0] == pytest.approx(62.7, abs=5)
+        assert m[1] == pytest.approx(-51.3, abs=5)
+        assert m[2] == pytest.approx(-45.4, abs=3)
+
+    def test_fit_excludes_incomplete_windows(self):
+        # The GCM GMST ends in 2100, so the 11-yr centered window is complete
+        # only through 2095; the fit uses each SSP run from 2015 to 2095
+        mar, temp = S.load_data()
+        for g in S.GCMS:
+            for name, ys, xs in S.training_segments(g, mar, temp):
+                kept = S.complete_window(ys, xs)
+                if name == 'history':
+                    assert kept.index.equals(ys.index), g
+                else:
+                    assert kept.index.min() == 2015 and kept.index.max() == 2095, (g, name)
 
     def test_coefficients_negative(self, emu):
         for g, f in emu['fits'].items():

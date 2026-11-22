@@ -188,11 +188,22 @@ def fit_quadratic_ar1(x, y, n_draws, rng, starts=(0,)):
             'log_evidence': logsumexp(lz) - np.log(len(RHO_GRID))}
 
 
+def complete_window(ys, xs):
+    """The years of SMB series *ys* whose centered GMST window in *xs* is
+    complete. The GCM GMST ends in 2100, so the last SMOOTH_YRS // 2 years
+    of each SSP run have a shortened, off-center window that lags the
+    warming; the emulator is fitted without them."""
+    h = SMOOTH_YRS // 2
+    return ys[(ys.index >= xs.index.min() + h) & (ys.index <= xs.index.max() - h)]
+
+
 def fit_gcm(gcm, n_draws, rng, mar=None, temp=None):
-    """Fit one GCM's MAR runs jointly; adds 'segments' and 'x_range' to the fit."""
+    """Fit one GCM's MAR runs jointly (complete-window years only); adds
+    'segments' and 'x_range' to the fit."""
     if mar is None or temp is None:
         mar, temp = load_data()
-    segs = training_segments(gcm, mar, temp)
+    segs = [(name, complete_window(ys, xs), xs)
+            for name, ys, xs in training_segments(gcm, mar, temp)]
     starts = np.cumsum([0] + [len(s[1]) for s in segs[:-1]])
     y = np.concatenate([s[1].values for s in segs])
     x = np.concatenate([xs.loc[ys.index].values for _, ys, xs in segs])

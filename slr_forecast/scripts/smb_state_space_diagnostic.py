@@ -145,7 +145,7 @@ def main():
     sd_full, sd_hist = [], []
     for gcm, fit in emu['fits'].items():
         bm = np.median(fit['beta'], axis=0)
-        segs = S.training_segments(gcm, mar, temp)
+        segs = [(n, S.complete_window(ys, xs), xs) for n, ys, xs in S.training_segments(gcm, mar, temp)]
         res = [ys.values - (bm[0] + bm[1] * xs.loc[ys.index].values + bm[2] * xs.loc[ys.index].values ** 2)
                for _, ys, xs in segs]
         sd_full.append(np.std(np.concatenate(res))); sd_hist.append(np.std(res[0]))
