@@ -11,7 +11,7 @@ def check_readiness():
         ],
         "gmslr": [
             "nasa_GMSL_TPJAOS_5.2.txt",
-            "frederikse2020_global_timeseries.xlsx",
+            "JPL_RECON_GMSL_global_timeseries_measures.nc",
             "dangendorf2024_KalmanSmootherHR_Global.nc",
             "horwath2021_ESACCI_SLBC_v2.2.csv"
         ],

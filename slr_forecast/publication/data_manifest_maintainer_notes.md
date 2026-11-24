@@ -14,8 +14,15 @@ public manifest should not carry.
   MARv3.12 PROTECT (derived CSV), CMIP6 (derived CSV), Glaude et al. 2024
   (derived CSV), EN4 (Met Office license; the three shipped
   `en4_greenland_peripheral_*.csv` files and two h5 keys are EN4-derived),
-  IAP v4.2, the 2021 IMBIE releases and the Frederikse, Horwath and AR6
+  IAP v4.2, the 2021 IMBIE releases and the Horwath and AR6
   observed-GMSL files.
+- **Frederikse et al. 2020: checked 2026-11-24.** The Zenodo record
+  (10.5281/zenodo.3862995) is `other-closed`, "(c) 2020 All Rights Reserved".
+  The pipeline now reads the NASA PO.DAAC copy (JPL_RECON_GMSL v1.0,
+  10.5067/GMSLT-FJPL1), whose netCDF says `license: Public Domain` and whose
+  values equal the Zenodo Global sheet to float32 precision (max 5.3e-5 mm).
+  The seven Frederikse keys of `slr_processed_data.h5` were rebuilt from it.
+  Do not ship the Zenodo xlsx.
 - **Do not archive `data/raw/` whole.** The development copy also holds
   publisher PDFs (for example the Mouginot et al. 2019 PDFs in
   `data/raw/ice_sheets/greenland/`) and unrelated files.

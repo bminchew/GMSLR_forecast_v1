@@ -149,7 +149,7 @@ class is PREP, not RAW.
 
 | Path | Size | Read by | Source (citation key) | Route |
 |---|---|---|---|---|
-| `data/raw/gmslr/frederikse2020_global_timeseries.xlsx` | 52 KB | prep:read_process | Frederikse et al. 2020 (Frederikse2020) | source or zenodo |
+| `data/raw/gmslr/JPL_RECON_GMSL_global_timeseries_measures.nc` | 86 KB | prep:read_process | Frederikse et al. 2020 (Frederikse2020), as distributed by NASA PO.DAAC: JPL_RECON_GMSL v1.0, `global_timeseries_measures.nc` renamed, doi:10.5067/GMSLT-FJPL1, public domain | source or zenodo |
 | `data/raw/gmslr/dangendorf2024_KSSLfin.mat`, `dangendorf2024_KSSL_SEfin.mat` | 426 MB + 227 MB | prep:read_process, prep:refresh | Dangendorf et al. 2024 (Dangendorf2024) | source |
 | `data/raw/gmslr/horwath2021_ESACCI_SLBC_v2.2.csv` | 112 KB | prep:read_process, prep:refresh | ESA CCI sea-level budget closure (Horwath2022) | source or zenodo |
 | `data/raw/gmslr/nasa_GMSL_TPJAOS_5.2.txt` | 148 KB | prep:read_process | NASA GSFC altimetry GMSL v5.2 (Beckley2017) | source |
@@ -195,6 +195,8 @@ tests pass and 224 skip (2026-11-21).
 (45 MB), `data/raw/ismip6_greenland/` (56 MB),
 `data/raw/ice_sheets/imbie2026/imbie3_antarctica_mm_partitioned.csv`,
 `data/raw/gmslr/frederikse2020_global_basin_timeseries.xlsx`,
+`data/raw/gmslr/frederikse2020_global_timeseries.xlsx` (the Zenodo copy of
+the same numbers, "All Rights Reserved"; do not redistribute),
 `data/raw/gmslr/matlab/` and the rest of `data/raw/ipcc_ar6/`. None of
 these is needed.
 

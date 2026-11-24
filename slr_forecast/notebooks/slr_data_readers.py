@@ -689,6 +689,39 @@ def read_nasa_gmsl(filepath: str, convert_to_meters: bool = True) -> pd.DataFram
     return df
 
 
+# PO.DAAC JPL_RECON_GMSL v1.0 variable for each column of the Frederikse et al. (2020)
+# "Global" sheet. The PO.DAAC file has the same numbers (it says so in its summary
+# attribute; they agree to float32 precision, 5e-5 mm) and is public domain.
+_FREDERIKSE_PODAAC_VARS = {
+    'Observed GMSL': ('global_average_sea_level_change',
+                      'global_average_sea_level_change_lower',
+                      'global_average_sea_level_change_upper'),
+    'Sum of contributors': ('sum_of_contrib_processes_mean',
+                            'sum_of_contrib_processes_lower',
+                            'sum_of_contrib_processes_upper'),
+    'Steric': ('global_average_thermosteric_sea_level_change',
+               'global_average_thermosteric_sea_level_change_lower',
+               'global_average_thermosteric_sea_level_change_upper'),
+    'Glaciers': ('glac_mean', 'glac_lower', 'glac_upper'),
+    'Greenland Ice Sheet': ('GrIS_mean', 'GrIS_lower', 'GrIS_upper'),
+    'Antarctic Ice Sheet': ('AIS_mean', 'AIS_lower', 'AIS_upper'),
+    'Terrestrial Water Storage': ('tws_mean', 'tws_lower', 'tws_upper'),
+}
+
+
+def _frederikse2020_podaac_as_sheet(filepath: str) -> pd.DataFrame:
+    """Read the PO.DAAC netCDF into the layout of the Zenodo "Global" sheet (mm)."""
+    import xarray as xr
+    with xr.open_dataset(filepath) as ds:
+        out = {'Unnamed: 0': pd.DatetimeIndex(ds['time'].values).year.astype(int)}
+        for name, (v_mean, v_lower, v_upper) in _FREDERIKSE_PODAAC_VARS.items():
+            for suffix, v in (('lower', v_lower), ('mean', v_mean), ('upper', v_upper)):
+                if ds[v].attrs.get('units') != 'mm':
+                    raise ValueError(f"{v}: expected units 'mm', got {ds[v].attrs.get('units')!r}")
+                out[f'{name} [{suffix}]'] = ds[v].values.astype(np.float64)
+    return pd.DataFrame(out)
+
+
 def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.DataFrame:
     """
     Read Frederikse et al. (2020) global sea level budget data.
@@ -699,7 +732,11 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
     Parameters
     ----------
     filepath : str
-        Path to Excel file (frederikse2020_global_timeseries.xlsx)
+        Path to the PO.DAAC netCDF (JPL_RECON_GMSL v1.0,
+        global_timeseries_measures.nc, doi:10.5067/GMSLT-FJPL1), or to the
+        Zenodo Excel file (frederikse2020_global_timeseries.xlsx). The netCDF
+        has the seven series from gmsl to tws below but not reservoir,
+        groundwater, tws_natural or altimetry.
     convert_to_meters : bool, default True
         If True, convert from mm to meters.
         
@@ -728,7 +765,11 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
     Nature, 584(7821), 393-397.
     https://doi.org/10.1038/s41586-020-2591-3
     """
-    df = pd.read_excel(filepath, sheet_name='Global')
+    from_podaac = str(filepath).endswith('.nc')
+    if from_podaac:
+        df = _frederikse2020_podaac_as_sheet(filepath)
+    else:
+        df = pd.read_excel(filepath, sheet_name='Global')
     
     # First column is year
     df = df.rename(columns={'Unnamed: 0': 'year'})
@@ -796,7 +837,7 @@ def read_frederikse2020(filepath: str, convert_to_meters: bool = True) -> pd.Dat
         'dataset': 'frederikse2020',
         'reference': 'Frederikse et al. (2020)',
         'doi': '10.1038/s41586-020-2591-3',
-        'data_doi': '10.5281/zenodo.3862995',
+        'data_doi': '10.5067/GMSLT-FJPL1' if from_podaac else '10.5281/zenodo.3862995',
         'native_units': {c: 'mm' for c in _vcols},
         'current_units': {**{c: cu for c in _vcols}, 'year': 'yr'},
         'units_standard': False,

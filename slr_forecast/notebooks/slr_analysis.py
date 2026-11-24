@@ -702,7 +702,8 @@ def compute_thermodynamic_signal(df: pd.DataFrame) -> pd.DataFrame:
     
     # Compute components
     df['barystatic'] = df['glaciers'] + df['greenland'] + df['antarctica'] + df['tws']
-    df['sum_tws_comps'] = df['reservoir'] + df['groundwater'] + df['tws_natural']
+    if {'reservoir', 'groundwater', 'tws_natural'} <= set(df.columns):
+        df['sum_tws_comps'] = df['reservoir'] + df['groundwater'] + df['tws_natural']
     
     df['thermodynamic_sum'] = df['sum_contributors'] - df['tws']
     df['thermodynamic_gmsl'] = df['gmsl'] - df['tws']
