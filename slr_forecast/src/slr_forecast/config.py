@@ -115,10 +115,19 @@ SEEDS: dict[str, int] = {
     "bayesian": 42,
     "tests": 42,
     "warming": 2027,
+    "thermo_scale": 2028,
 }
 """Named random seeds for reproducibility.  Use as:
     rng = np.random.default_rng(SEEDS['projections'])
 """
+
+THERMO_SCALE_SD: float = 0.05
+"""Standard deviation of the common scale error of the bias-corrected NOAA
+thermosteric records (the x1.14 correction of Li et al. 2022).  An error in
+that scale is the same in every year, so component_ocean draws one factor
+from N(1, THERMO_SCALE_SD**2) per projection member (seed
+SEEDS['thermo_scale']) and multiplies the member's 0-2000 m contribution by
+it; the below-2000 m term is not scaled.  0 switches the factor off."""
 
 SAMPLE_WARMING_PATHS: bool = True
 """Propagate within-scenario GMST uncertainty (forcing uncertainty) into the
