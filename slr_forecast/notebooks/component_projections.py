@@ -1850,7 +1850,8 @@ def blend_rate_space(proj_years, comp_samples, sq_rate_samples, sq_level_samples
 # uncharted (missing + disappeared) glaciers, lower / upper bound, mm/yr.
 UNCHARTED_RATE_1901_1990 = (0.17, 0.53)
 UNCHARTED_RATE_1993_2010 = (0.08, 0.21)
-UNCHARTED_END_YEAR = 2000    # zero from here on: covered by GlaMBIE (see below)
+UNCHARTED_TAPER_START = 2000   # rate falls linearly from here ...
+UNCHARTED_END_YEAR = 2015      # ... to zero here (negligible by 2015, P&M 2018)
 
 
 def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None):
@@ -1867,10 +1868,12 @@ def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None
     Shape (our construction from those period means): for each bound the
     rate falls linearly from 2*r1 - r2 in 1901 to r2 in 1990 (so its
     1901-1990 mean is r1) and stays at r2 through 1999; it is zero before
-    1901. It is set to zero from 2000, the start of the GlaMBIE calibration
-    record, because GlaMBIE's gravimetric and altimetric inputs measure
-    whole-region mass and may already include these glaciers; the term
-    remaining after 2000 is at most r2 = 0.08-0.21 mm/yr. Each sample takes
+    1901. From 2000, the start of the GlaMBIE calibration record, the rate
+    falls linearly from r2 to zero in 2015, by when Parkes & Marzeion (2018)
+    find the contribution negligible (rate in year Y: r2 (2015 - Y) / 15).
+    This adds 8 r2 = 0.6-1.7 mm over 2000-2015. GlaMBIE's gravimetric and
+    altimetric inputs measure whole-region mass and may already include part
+    of it, so over 2000-2015 the term is an upper-end treatment. Each sample takes
     a uniform position between the two bounds (they are bounds, not a
     confidence interval) and is scaled by N(1, 0.09) for the 95% ranges of
     the published totals (16.7 +/- 3.0 and 48.0 +/- 8.9 mm).
@@ -1897,7 +1900,9 @@ def uncharted_glacier_hindcast(years, n_samples, baseline_year=2000.0, seed=None
         r = np.zeros(len(yy))
         early = (yy >= 1901) & (yy <= 1990)
         r[early] = (2 * r1 - r2) + (r2 - (2 * r1 - r2)) * (yy[early] - 1901) / 89.0
-        r[(yy > 1990) & (yy < UNCHARTED_END_YEAR)] = r2
+        r[(yy > 1990) & (yy < UNCHARTED_TAPER_START)] = r2
+        taper = (yy >= UNCHARTED_TAPER_START) & (yy < UNCHARTED_END_YEAR)
+        r[taper] = r2 * (UNCHARTED_END_YEAR - yy[taper]) / (UNCHARTED_END_YEAR - UNCHARTED_TAPER_START)
         return r * 1e-3                                     # m/yr
 
     lo = profile(UNCHARTED_RATE_1901_1990[0], UNCHARTED_RATE_1993_2010[0])

@@ -645,9 +645,22 @@ class TestUnchartedGlacierHindcast:
         y = np.arange(1900, 2026, dtype=float)
         a = uncharted_glacier_hindcast(y, 50, baseline_year=2000.0, seed=3)
         # the rate is zero in 1900, so the level at the start of 1901 equals
-        # the level at the start of 1900; the rate from 2000 on is zero
+        # the level at the start of 1900; the rate tapers to zero in 2015
         np.testing.assert_allclose(a[:, 1], a[:, 0])
-        np.testing.assert_allclose(a[:, y >= 2000], 0.0)
+        np.testing.assert_allclose(a[:, y == 2000], 0.0)
+        np.testing.assert_allclose(a[:, y >= 2015], a[:, [int(np.argmax(y == 2015))]] * np.ones((1, int((y >= 2015).sum()))))
+        assert np.all(a[:, y == 2015] > 0)
         # the 1999 rate (r2 > 0) still enters: the start of 1999 is below 2000.0
         assert np.all(a[:, y == 1999] < 0)
+
+    def test_taper_rate(self):
+        # the 2000-2015 rise is 8 r2 for the deterministic bound profile:
+        # sum over 2000-2014 of r2 (2015 - Y) / 15 = r2 * 120 / 15
+        from component_projections import (uncharted_glacier_hindcast,
+                                           UNCHARTED_RATE_1993_2010)
+        y = np.array([2000.0, 2015.0])
+        a = uncharted_glacier_hindcast(y, 4000, baseline_year=2000.0, seed=5)
+        rise_mm = (a[:, 1] - a[:, 0]) * 1e3
+        lo, hi = UNCHARTED_RATE_1993_2010
+        assert 8 * lo * 0.7 < rise_mm.min() and rise_mm.max() < 8 * hi * 1.4
 
