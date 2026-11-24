@@ -60,11 +60,21 @@
 \begin{document}
 \maketitle
 
+\noindent\textbf{Key Points:}
+\begin{itemize}
+\item A model that sums the separate sources of sea-level rise reproduces observed rates without being fitted to any sea-level record
+\item If West Antarctic ice loss most likely follows its observed trend, median rise over 2000--2100 is 0.45--0.64 m for 1.8--3.6 $^\circ$C of warming
+\item Cutting emissions lowers the median rise, but the chance of rapid West Antarctic ice loss sets the high end of the range this century
+\end{itemize}
+
 %% ================================================================
 \begin{abstract}
 As the rise in global mean sea level (GMSL) accelerates and warming carries projections beyond the conditions their models were calibrated on, the central challenge is validating those models against withheld observations spanning a comparable change in warming. We present a framework for projecting GMSL that uses a simple physical model of each contributor, and we withhold observed GMSL from every calibration to test the sum of the components. Thermal expansion, glaciers, the Antarctic Peninsula, and Greenland ice discharge are calibrated by Bayesian inference against independent observations, with discharge modeled as a delayed response to ocean warming. Greenland surface mass balance is emulated, and East Antarctic snowfall and terrestrial water storage are adopted from published work. The component sum accounts for 89--104\% of the satellite-altimetry rate since 1993. Forced with observed warming over 1950--2025 (1.0--1.1 $^\circ$C), the components match satellite-era rates. Future West Antarctic Ice Sheet (WAIS) acceleration is poorly constrained by observations and models, so we use two storylines adapted from the literature. Under the slow-WAIS storyline, which assigns 90\% probability to continued loss along the observed trajectory, median GMSL rise over 2000--2100 is 0.45, 0.54, and 0.64 m for scenarios leading to 1.8, 2.7, and 3.6 $^\circ$C above pre-industrial. Under the fast-WAIS storyline, which assigns a 90\% probability to accelerated loss, the medians are 0.60, 0.69, and 0.79 m. The fast-WAIS 95th percentile lies about 1 m above the median in all three emission scenarios.
 
 \end{abstract}
+
+\section*{Plain Language Summary}
+Coastal communities need forecasts of sea-level rise they can trust, but continued warming will soon carry every forecast beyond the conditions in the observed record. We built a forecast that treats each source of sea-level rise separately: the expansion of warming ocean water, the melting of mountain glaciers, and ice loss from Greenland and Antarctica. Each part is matched to its own observations. None is matched to the record of sea level itself, which we keep aside to test the forecast. Added together, the parts account for nearly all of the observed rise since 1993, and since 1950 they follow the observed increase in the rate of rise as the planet warmed. If West Antarctica most likely keeps losing ice along its observed trend, the middle estimate of sea-level rise from 2000 to 2100 is 0.45 to 0.64~m, depending on how much the planet warms, and cutting emissions lowers it. If West Antarctica most likely loses ice rapidly, there is a 1 in 20 chance of more than 1.7~m of rise by 2100 with 2.7 $^\circ$C of warming. Better observations of West Antarctica are needed to tell which of these futures we face.
 
 
 
@@ -444,8 +454,8 @@ The first comparison is between the GMSL level and rate from SPECTRUM and those 
 \centering
 \includegraphics[width=0.88\textwidth]{fig1v2_observations.png}
 \caption{\textbf{Global mean sea-level rise and global mean surface temperature.}
-\textbf{(a)} GMSL reconstructions from \citet{Frederikse2020} (light gray) and \citet{Dangendorf2024} (navy, with 90\% uncertainty range shaded), the IPCC AR6 observational compilation \citep{Fox-Kemper2021} (white circles with 5--95\% range bars), and NASA satellite altimetry \citep{Beckley2017} (mid gray, with our satellite-era quadratic fit, following \citet{Hamlington2024}, extrapolated as a dashed line). These records show sea level rising with warming. The hindcast of this study is shown in solid blue with shading for its 90\% credible interval, and the median forecast for the 2.7 $^\circ$C scenario in dashed blue. The dotted blue line is the hindcast median with terrestrial water storage set to zero before 2003, when the \citet{Frederikse2020} estimate is not constrained by gravimetry (Fig.~S10 of the Supplementary Material). Before 2000 the hindcast includes the prescribed contribution of uncharted glaciers \citep{Parkes2018}. GMST (red) \citep{Rohde2020}, relative to its 1995--2005 mean and continued by the AR6 median path of the 2.7 $^\circ$C scenario (dashed red), is referenced to the right-hand axis.
-\textbf{(b)} Rate of GMSL rise ($\dot{H}=dH/dt$) as a function of GMST anomaly, $T$. Observed values are shown as circles \citep{Frederikse2020}, colored by year, with 90\% error bars that account for the correlated errors of a cumulative record, and diamonds show the rate of the satellite-era quadratic fit. The observed rates include terrestrial water storage throughout. The component model of this study, the median of the summed component ensemble without blending and with terrestrial water storage set to zero before 2003, is a line colored by instantaneous transient sensitivity $\alpha = d\dot{H}/dT$, with rates estimated by the same local regression as the observed rates (a tricube kernel with a 30-yr half-width).}
+\textbf{(a)} GMSL reconstructions from \citet{Frederikse2020} (light gray) and \citet{Dangendorf2024} (navy, with 90\% uncertainty range shaded), the IPCC AR6 observational compilation \citep{Fox-Kemper2021} (white circles with 5--95\% range bars), and NASA satellite altimetry \citep{Beckley2017} (mid gray, with our satellite-era quadratic fit, following \citet{Hamlington2024}, extrapolated as a dashed line). The hindcast of this study is shown in solid blue with shading for its 90\% credible interval, and the median forecast for the 2.7 $^\circ$C scenario in dashed blue. The dotted blue line is the hindcast median with terrestrial water storage set to zero before 2003, when the \citet{Frederikse2020} estimate is not constrained by gravimetry (Fig.~S10 of the Supplementary Material). GMST (red) \citep{Rohde2020}, relative to its 1995--2005 mean and continued by the AR6 median path of the 2.7 $^\circ$C scenario (dashed red), is referenced to the right-hand axis.
+\textbf{(b)} Rate of GMSL rise ($\dot{H}=dH/dt$) versus GMST anomaly, $T$. Observed values are shown as circles \citep{Frederikse2020}, colored by year, with 90\% error bars that account for the correlated errors of a cumulative record, and diamonds show the rate of the satellite-era quadratic fit. The component model of this study, the median of the summed component ensemble without blending and without terrestrial water storage prior to 2003, is a line colored by instantaneous transient sensitivity $\alpha = d\dot{H}/dT$, with rates estimated by the same local regression as the observed rates (a tricube kernel with a 30-yr half-width).}
 \label{fig:observations}
 \end{figure}
 
@@ -576,6 +586,17 @@ Even under the slow-WAIS storyline, WAIS accounts for 89 to 96\% of the forecast
 %% ================================================================
 %% REFERENCES
 %% ================================================================
+
+\section*{Open Research}
+The SPECTRUM code (version 1.0), the container used for the reference run, and the scripts that produce every number and figure in this paper and its Supplementary Material are available at \url{https://github.com/bminchew/spectrum-gmsl} and archived at Zenodo \textcolor{red}{[software DOI]} under the BSD-3-Clause license. The processed data, the inputs we derived from third-party datasets, and the 10,000-member results of record are archived at Zenodo \textcolor{red}{[data DOI]} under the CC-BY-4.0 license; third-party datasets keep their own terms.
+
+The analysis uses the following publicly available datasets.
+Global mean sea level: NASA satellite altimetry \citep{Beckley2017}, the reconstructions of \citet{Frederikse2020} and \citet{Dangendorf2024}, and the IPCC AR6 observational compilation \citep{Fox-Kemper2021}.
+Ocean: NOAA NCEI thermosteric sea level for 0--700\,m and 0--2000\,m \citep{Levitus2012}, the EN4.2.2 objective analyses \citep{Good2013}, and IAP ocean heat content \citep{Cheng2017}.
+Forcing and temperature: Berkeley Earth surface temperature \citep{Rohde2020}, the volcanic effective radiative forcing of the Indicators of Global Climate Change 2024 \citep[doi:10.5281/zenodo.15639576;][]{Forster2025}, and the IPCC AR6 GMST projections \citep{Lee2021}.
+Glaciers: the GlaMBIE global consensus \citep[doi:10.5904/wgms-glambie-2024-07;][]{GlaMBIE2025} and the glaciological and geodetic estimates of \citet{Zemp2019}.
+Ice sheets: Greenland mass balance and discharge from \citet{Mouginot2019} and \citet{Mankoff2021}, IMBIE-3 mass balance for Greenland and the three Antarctic regions \citep{Otosaka2026}, MARv3.12 surface mass balance driven by seven CMIP6 models \citep{Boberg2026}, and the ISMIP6 Antarctic projections \citep{Seroussi2020}.
+Projections for comparison: IPCC AR6 sea-level projections from FACTS \citep[doi:10.5281/zenodo.6382554;][]{Garner2023,Kopp2023}.
 
 \section*{Conflict of Interest}
 B.M. is a co-founder of the Ar\^ete Glacier Initiative (\url{https://www.areteglaciers.org}), where he serves as Chief Scientist through his allowance for outside professional activities provided by Caltech. C.M. is a co-founder of Ar\^ete, where he serves as Deputy Scientist through his allowance for outside professional activities provided by Dartmouth College. T.B. is a Program Scientist at Ar\^ete. T.T., A.G., B.W., and L.J. are employed by Ar\^ete. Ar\^ete is a 501(c)(3) nonprofit organization, founded in 2024 to provide funding for glaciological research focused on forecasting and slowing sea-level rise.
