@@ -1,16 +1,31 @@
-\documentclass[12pt]{article}
+%% Load apacite with natbib-style commands (\citep, \citet) before the class loads it.
+\PassOptionsToPackage{natbibapa}{apacite}
+\documentclass[draft,linenumbers]{agujournal2025}
 
-% Packages
 \usepackage[T1]{fontenc}
-\usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
-\usepackage{natbib}
-\usepackage{graphicx}
-\usepackage{authblk}
 \usepackage{booktabs}
-\usepackage{xcolor}
 \usepackage{hyperref}
 \graphicspath{{../../../figures/}}
+
+% lineno does not number the lines of a paragraph that contains display math
+% unless the math sits inside a linenomath environment. Wrap the amsmath
+% display environments in linenomath so every line is numbered.
+\newcommand*\patchAmsMathEnvironmentForLineno[1]{%
+  \expandafter\let\csname old#1\expandafter\endcsname\csname #1\endcsname
+  \expandafter\let\csname oldend#1\expandafter\endcsname\csname end#1\endcsname
+  \renewenvironment{#1}%
+    {\linenomath\csname old#1\endcsname}%
+    {\csname oldend#1\endcsname\endlinenomath}}
+\newcommand*\patchBothAmsMathEnvironmentsForLineno[1]{%
+  \patchAmsMathEnvironmentForLineno{#1}%
+  \patchAmsMathEnvironmentForLineno{#1*}}
+\AtBeginDocument{%
+  \patchBothAmsMathEnvironmentsForLineno{equation}%
+  \patchBothAmsMathEnvironmentsForLineno{align}%
+  \patchBothAmsMathEnvironmentsForLineno{gather}%
+  \patchBothAmsMathEnvironmentsForLineno{multline}%
+}
 
 % Float placement: let figures that are tall relative to the page sit at the
 % top of a text page or on a float page near their first reference, rather
@@ -23,58 +38,41 @@
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{4}
 
-% The article class stops at \subsubsection, so define a fourth level.
-% titlesec is used rather than a hand-rolled \@startsection definition, which
-% typesets the heading twice for a newly created counter. Loading titlesec
-% leaves the font, weight, and numbering of the existing \section,
-% \subsection, and \subsubsection headings unchanged.
-\usepackage{titlesec}
-\titleclass{\subsubsubsection}{straight}[\subsubsection]
-\newcounter{subsubsubsection}[subsubsection]
-\renewcommand\thesubsubsubsection{\thesubsubsection.\arabic{subsubsubsection}}
-\titleformat{\subsubsubsection}
-  {\normalfont\normalsize\bfseries}{\thesubsubsubsection}{1em}{}
-\titlespacing*{\subsubsubsection}
-  {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
-\makeatletter
-\def\toclevel@subsubsubsection{4}
-\def\l@subsubsubsection{\@dottedtocline{4}{7em}{4em}}
-\makeatother
-\setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{4}
+\begin{document}
+
+\journalname{Earth's Future}
 
 \title{A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise}
-\author[1,2]{Brent Minchew\thanks{Corresponding author: Brent Minchew, \href{mailto:bminchew@caltech.edu}{bminchew@caltech.edu}}}
-\author[3,2]{Colin Meyer}
-\author[2]{Tobias Tiecke}
-\author[2]{Andreas Gros}
-\author[2]{Brian White}
-\author[2]{Lucas Johnson}
-\author[4,2]{Timothy Bartholomaus}
-\affil[1]{Division of Geological and Planetary Sciences, California Institute of Technology, Pasadena, California, USA}
-\affil[2]{Ar\^ete Glacier Initiative, USA}
-\affil[3]{Thayer School of Engineering, Dartmouth College, Hanover, New Hampshire, USA}
-\affil[4]{Department of Earth and Spatial Sciences, University of Idaho, Moscow, Idaho, USA}
-\date{}
 
-\begin{document}
+\authors{%
+Brent Minchew\affil{1,2},
+Colin Meyer\affil{3,2},
+Tobias Tiecke\affil{2},
+Andreas Gros\affil{2},
+Brian White\affil{2},
+Lucas Johnson\affil{2},
+Timothy Bartholomaus\affil{4,2}
+}
+
+\affiliation{1}{Division of Geological and Planetary Sciences, California Institute of Technology, Pasadena, California, USA}
+\affiliation{2}{Ar\^ete Glacier Initiative, USA}
+\affiliation{3}{Thayer School of Engineering, Dartmouth College, Hanover, New Hampshire, USA}
+\affiliation{4}{Department of Earth and Spatial Sciences, University of Idaho, Moscow, Idaho, USA}
+
+\correspondingauthor{Brent Minchew}{bminchew@caltech.edu}
+
+\keypoints{A sum of separately calibrated sources of sea-level rise closes the observed budget without being fitted to observed global mean sea level}{If West Antarctic ice loss most likely follows its observed trend, median rise over 2000--2100 is 0.45--0.64 m for 1.8--3.6 $^\circ$C of warming}{Cutting emissions lowers the median rise, but the chance of rapid West Antarctic ice loss sets the high end of the range this century}
+
 \maketitle
-
-\noindent\textbf{Key Points:}
-\begin{itemize}
-\item A sum of separately calibrated sources of sea-level rise closes the observed budget without being fitted to observed global mean sea level
-\item If West Antarctic ice loss most likely follows its observed trend, median rise over 2000--2100 is 0.45--0.64 m for 1.8--3.6 $^\circ$C of warming
-\item Cutting emissions lowers the median rise, but the chance of rapid West Antarctic ice loss sets the high end of the range this century
-\end{itemize}
 
 %% ================================================================
 \begin{abstract}
 As the rise in global mean sea level (GMSL) accelerates and warming carries projections beyond the conditions their models were calibrated on, the central challenge is testing those models against withheld observations spanning a comparable change in warming. We present a framework for projecting GMSL that uses a simple physical model of each contributor, and we withhold observed GMSL from every calibration to test the sum of the components. Thermal expansion, glaciers, the Antarctic Peninsula, and Greenland ice discharge are calibrated by Bayesian inference against independent observations, with discharge modeled as a delayed response to ocean warming. Greenland surface mass balance is emulated, and East Antarctic snowfall and terrestrial water storage are adopted from published work. The component sum accounts for 90--104\% of the satellite-altimetry rate since 1993. Forced with observed warming over 1950--2025 (1.0--1.1 $^\circ$C), the components match satellite-era rates. Future West Antarctic Ice Sheet (WAIS) acceleration is poorly constrained by observations and models, so we use two storylines adapted from the literature. Under the slow-WAIS storyline, which assigns 90\% probability to continued loss along the observed trajectory, median GMSL rise over 2000--2100 is 0.45, 0.54, and 0.64 m for scenarios leading to 1.8, 2.7, and 3.6 $^\circ$C above pre-industrial. Under the fast-WAIS storyline, which assigns a 90\% probability to accelerated loss, the medians are 0.60, 0.69, and 0.79 m. The fast-WAIS 95th percentile lies about 1 m above the median in all three emission scenarios.
 
-\end{abstract}
-
-\section*{Plain Language Summary}
+\begin{plainlanguagesummary}
 Coastal communities need forecasts of sea-level rise they can trust, but continued warming will soon carry every forecast beyond the conditions in the observed record. We built a forecast that treats each source of sea-level rise separately: the expansion of warming ocean water, the melting of mountain glaciers, and ice loss from Greenland and Antarctica. Each part is matched to its own observations. None is matched to the record of sea level itself, which we keep aside to test the forecast. Added together, the parts account for nearly all of the observed rise since 1993, and since 1950 they follow the observed increase in the rate of rise as the planet warmed. If West Antarctica most likely keeps losing ice along its observed trend, the middle estimate of sea-level rise from 2000 to 2100 is 0.45 to 0.64~m, depending on how much the planet warms, and cutting emissions lowers it. If West Antarctica most likely loses ice rapidly, there is a 1 in 20 chance of about 1.7~m or more of rise by 2100 with 2.7 $^\circ$C of warming. Better observations of West Antarctica are needed to tell which of these futures we face.
+\end{plainlanguagesummary}
+\end{abstract}
 
 
 
@@ -131,7 +129,7 @@ Unless otherwise noted, all sea-level values in the main text are global-mean 21
 
 The Greenland Ice Sheet (GrIS) is among the largest land-ice contributors to sea-level rise and has lost mass every year since 1998 \citep{Mouginot2019}. That loss is the imbalance between solid-ice discharge and surface mass balance (SMB), where SMB is the difference between mass gained by snow accumulation and mass lost to meltwater runoff and sublimation. GrIS discharge is sensitive to ocean temperature and surface melt runoff \citep{Straneo2013,Slater2020,Wood2021}. Warm subsurface waters thin and undercut the calving fronts of marine-terminating glaciers, driving increased calving and net terminus retreat. This effect is amplified where surface runoff drives mixing and buoyant upwelling along the calving face \citep{Slater2022}. Surface melt also lubricates glacier beds, but that effect is generally short-lived and localized as the subglacial hydrological system evolves to accommodate changes in meltwater flux \citep{Schoof2010,Tedstone2013,Ultee2022}. We therefore model discharge as a lagged response to ocean temperature.
 
-\subsubsubsection{Discharge}
+\paragraph{Discharge}
 We approximate the GrIS-wide discharge as
 \begin{equation}
 	D = \gamma\,T_{\mathrm{ocean}}(t - \delta) + r_0,
@@ -191,7 +189,7 @@ which contains our calibrated $\gamma = 0.338$~mm\,SLE\,yr$^{-1}$\,$^\circ$C$^{-
 
 Surface meltwater that drains beneath glaciers strengthens the plumes that melt their fronts, and this runoff rises along with ocean temperature. The calibrated $\gamma$ is therefore an effective sensitivity that also captures part of the atmospheric influence on discharge. At the ice-sheet scale, variability in submarine melting driven by the atmosphere accounts for about 30\% of modeled retreat and dynamic sea-level contribution \citep{Slater2022}.
 
-\subsubsubsection{Surface mass balance}
+\paragraph{Surface mass balance}
 \label{s:greenland_smb}
 
 For Greenland SMB, the forecast uses a statistical emulator of the regional climate model MARv3.12. The training simulations, produced by \citet{Boberg2026}, are MAR runs driven by seven global climate models of the Coupled Model Intercomparison Project Phase 6 (CMIP6). For each global model, we smooth its GMST anomaly $T$ relative to 1995--2005 with an 11-yr centered mean. We then fit the annual SMB contribution as a quadratic in the smoothed anomaly with first-order autoregressive residuals, $\dot{H}_{\mathrm{smb}} = a_{\mathrm{gris}}T^2 + b_{\mathrm{gris}}T + c_{\mathrm{gris}}$, pooling its historical and SSP simulations (Supplementary Material, Figs.~S6--S8). Each Monte Carlo member draws one global model, with equal weight, and one posterior draw of $a_{\mathrm{gris}}$ and $b_{\mathrm{gris}}$. Because MAR is the only regional climate model in the training set, the spread between regional climate models is not sampled \citep{Glaude2024}. When each global model is left out in turn, the other six predict its 2015--2100 SMB contribution within the 90\% predictive range for all 13 withheld simulations.
@@ -607,7 +605,6 @@ The authors used Claude Sonnet, Opus, and Fable (Anthropic) to help write and de
 \section*{Conflict of Interest}
 B.M. is a co-founder of the Ar\^ete Glacier Initiative (\url{https://www.areteglaciers.org}), where he serves as Chief Scientist through his allowance for outside professional activities provided by Caltech. C.M. is a co-founder of Ar\^ete, where he serves as Deputy Scientist through his allowance for outside professional activities provided by Dartmouth College. T.B. is a Program Scientist at Ar\^ete. T.T., A.G., B.W., and L.J. are employed by Ar\^ete. Ar\^ete is a 501(c)(3) nonprofit organization, founded in 2024 to provide funding for glaciological research focused on forecasting and slowing sea-level rise.
 
-\bibliographystyle{agufull08}
 \bibliography{references}
 
 \end{document}     

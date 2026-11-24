@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build a self-contained Overleaf upload bundle for the main text and supplement.
 #
-# Copies both .tex files, references.bib, and agufull08.bst into overleaf/,
+# Copies both .tex files, references.bib, agufull08.bst (supplement) and
+# agujournal2025.cls (main text, AGU template) into overleaf/,
 # copies every figure the two documents include (commented-out calls are
 # skipped) into overleaf/figures/, points \graphicspath at figures/ in the
 # copies, test-compiles both, and zips the result as overleaf.zip.
@@ -17,7 +18,7 @@ DOCS=(01_slr_forecast_intervention2026 01_slr_forecast_intervention2026_supp)
 
 rm -rf "$OUT" "$HERE/overleaf.zip"
 mkdir -p "$OUT/figures"
-cp "$HERE/references.bib" "$HERE/agufull08.bst" "$OUT/"
+cp "$HERE/references.bib" "$HERE/agufull08.bst" "$HERE/agujournal2025.cls" "$OUT/"
 
 for doc in "${DOCS[@]}"; do
     # Point the copy at the bundled figures folder.
