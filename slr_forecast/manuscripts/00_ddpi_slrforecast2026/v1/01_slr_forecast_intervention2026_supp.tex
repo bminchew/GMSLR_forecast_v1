@@ -78,9 +78,10 @@ The component models are calibrated, forced, and validated with the published ob
 \end{itemize}
 The dataset records for the reconstruction of \citet{Frederikse2020}, the glacier estimates of \citet{Zemp2019} (version 1.0.0), IMBIE-3 \citep{Otosaka2026}, and the ISMIP6 Antarctic projections \citep{Seroussi2020} are \citet{Frederikse2020data}, \citet{Zemp2019data}, \citet{Otosaka2026data}, and \citet{Seroussi2020data}, respectively.
 
+\begin{landscape}
 \begin{table}[!htbp]
 \centering
-\caption{Datasets used in the component framework and the role each plays. Records marked \emph{validation}, including observed GMSL itself, are withheld from every component calibration. A complete dataset inventory including versions, spatial domains, and processing details is provided in \texttt{data/dataset\_inventory.xlsx}.}
+\caption{Datasets used in the component framework and the role each plays. Records marked validation, including observed GMSL itself, are withheld from every component calibration. A complete dataset inventory including versions, spatial domains, and processing details is provided in \texttt{data/dataset\_inventory.xlsx}.}
 \label{tab:obs_datasets}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -124,6 +125,7 @@ Projections & IPCC AR6 FACTS & 2020--2150 & Comparison & Garner et~al.~\citeyear
 \bottomrule
 \end{tabular}
 \end{table}
+\end{landscape}
 
 \FloatBarrier
 \subsection{Variables and parameters}
@@ -251,7 +253,7 @@ $\beta$ & Exponent of the power law in time followed by the S2 trajectory & medi
 $\dot{H}_{\mathrm{smb}}$ & Surface mass balance rate. For Greenland it is expressed as a contribution to sea-level rise & --- & Gt\,yr$^{-1}$ (EAIS), mm\,SLE\,yr$^{-1}$ (Greenland) & --- \\
 $a_{\mathrm{gris}}$ & Quadratic sensitivity of the Greenland SMB contribution to warming & fitted to MAR for each of seven GCMs (Fig.~\ref{fig:greenland_smb_fit}) & mm\,SLE\,yr$^{-1}$ $^\circ$C$^{-2}$ & this study, from MARv3.12 \\
 $b_{\mathrm{gris}}$ & Linear sensitivity of the Greenland SMB contribution to warming & fitted to MAR for each of seven GCMs (Fig.~\ref{fig:greenland_smb_fit}) & mm\,SLE\,yr$^{-1}$ $^\circ$C$^{-1}$ & this study, from MARv3.12 \\
-$c_{\mathrm{gris}}$ & Greenland SMB contribution at zero GMST anomaly, fitted with the drift state & $-1.07$ [$-1.41$, $-0.75$] & mm\,SLE\,yr$^{-1}$ & this study, from \citet{Mouginot2019} \\
+$c_{\mathrm{gris}}$ & Greenland SMB contribution at zero GMST anomaly, fitted with the drift state & $-1.06$ [$-1.41$, $-0.75$] & mm\,SLE\,yr$^{-1}$ & this study, from \citet{Mouginot2019} \\
 $s$ & Drift state, the slowly varying departure of observed SMB from the emulator & fitted & Gt\,yr$^{-1}$ & this study, from \citet{Mouginot2019} \\
 $\tau_{\mathrm{s}}$ & Relaxation timescale of the drift state, set by a lognormal prior with 90\% range 5--25~yr & 12 [6, 26] & yr & this study \\
 $\sigma_s$ & Standard deviation of the drift state & 108 [60, 186] & Gt\,yr$^{-1}$ & this study \\
@@ -359,9 +361,9 @@ The projections add white weather noise with the member's $\sigma_\varepsilon$ a
 \label{fig:greenland_smb_lomo}
 \end{figure}
 
-We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). The prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-19.6$ to $+28.7$~mm SLE, with a median absolute difference of 14.3~mm. The largest are for UKESM1-0-LL, at $+17.4$~mm (SSP2-4.5) and $+28.7$~mm (SSP5-8.5), where the emulator fitted to the other six GCMs underpredicts its mass loss. Figure~\ref{fig:greenland_smb_rcm} shows the same comparison year by year.
+We test the emulator out of sample by leaving out each GCM in turn and predicting its runs from the other six (Fig.~\ref{fig:greenland_smb_lomo}). The prediction is anchored to the withheld run's own 1995--2005 mean. Over 2015--2100, all 13 withheld runs fall within the 90\% predictive range. The differences between MAR and the emulator range from $-20.6$ to $+32.6$~mm SLE, with a median absolute difference of 13.6~mm. The largest are for UKESM1-0-LL, at $+16.2$~mm (SSP2-4.5) and $+32.6$~mm (SSP5-8.5), where the emulator fitted to the other six GCMs underpredicts its mass loss. Figure~\ref{fig:greenland_smb_rcm} shows the same comparison year by year.
 
-The emulator is trained on MAR alone, so it does not sample the differences between regional climate models. Forced by the same CESM2 SSP5-8.5 run, RACMO gives an SMB contribution of 87~mm over 2015--2099 and MAR gives 145~mm, compared with an emulator prediction of 117 [88, 146]~mm. The two regional models differ by 58~mm, as much as the width of the emulator's 90\% range (Fig.~\ref{fig:greenland_smb_rcm}n).
+The emulator is trained on MAR alone, so it does not sample the differences between regional climate models. Forced by the same CESM2 SSP5-8.5 run, RACMO gives an SMB contribution of 87~mm over 2015--2099 and MAR gives 145~mm, compared with an emulator prediction of 117 [92, 146]~mm. The two regional models differ by 58~mm, as much as the width of the emulator's 90\% range (Fig.~\ref{fig:greenland_smb_rcm}n).
 
 \begin{figure}[!htbp]
 \centering
@@ -377,13 +379,13 @@ The emulator is trained on MAR alone, so it does not sample the differences betw
 \label{fig:greenland_smb_hindcast}
 \end{figure}
 
-Driven by observed GMST, the emulator's forced response declines more slowly than the observed SMB (Fig.~\ref{fig:greenland_smb_hindcast}). Its median SMB falls from 388~Gt\,yr$^{-1}$ over 1972--1985 to 357~Gt\,yr$^{-1}$ over 2010--2018, while the \citet{Mouginot2019} SMB falls from 466 to 252~Gt\,yr$^{-1}$. Every year of the \citet{Mouginot2019} SMB lies within the emulator's 90\% range once weather noise is included, and 3 of the 38 years of the withheld \citet{Mankoff2021} SMB lie outside it (2010, 2012, and 2019). The emulator represents the response of SMB to global warming. It does not reproduce multi-year departures from that response, such as the low SMB of 2000--2018.
+Driven by observed GMST, the emulator's forced response declines more slowly than the observed SMB (Fig.~\ref{fig:greenland_smb_hindcast}). Its median SMB falls from 392~Gt\,yr$^{-1}$ over 1972--1985 to 355~Gt\,yr$^{-1}$ over 2010--2018, while the \citet{Mouginot2019} SMB falls from 466 to 252~Gt\,yr$^{-1}$. Every year of the \citet{Mouginot2019} SMB lies within the emulator's 90\% range once weather noise is included, and 3 of the 38 years of the withheld \citet{Mankoff2021} SMB lie outside it (2010, 2012, and 2019). The emulator represents the response of SMB to global warming. It does not reproduce multi-year departures from that response, such as the low SMB of 2000--2018.
 
-The drift state described above accounts for these departures. Fitted to the \citet{Mouginot2019} SMB over 1972--2018, it raises the maximum log likelihood from $-293.4$ for a constant level to $-284.2$. The likelihood is nearly flat in $\tau_{\mathrm{s}}$ from about 10 to more than 100~yr, so $\tau_{\mathrm{s}}$ follows its prior. Out of sample, the drift state helps little. Fitted to 1972--2004, it forecasts the 2005--2018 SMB no better than a fixed 1995--2004 anchor, and both overpredict it. When the drift state is fitted to 1972--2018, its forecast of the 2019--2023 mean SMB is slightly closer than the fixed anchor to the \citet{Mankoff2021} and IMBIE-3 \citep{Otosaka2026} records, and both again overpredict it. At 2100 the drift state changes the median SMB contribution by 2--3~mm and widens its 90\% interval by 13--17~mm at 1.8--3.6~$^\circ$C, mostly through the uncertainty of $c_{\mathrm{gris}}$. A prior on $\tau_{\mathrm{s}}$ that is uniform in $\log\tau_{\mathrm{s}}$ over 3--150~yr moves the 2100 medians by about 2~mm. Continued backward before 1972, the state adds 6~mm of SMB mass gain over 1900--1971 relative to a fixed anchor, because the record begins in a period of high SMB. This moves our Greenland hindcast further from the \citet{Frederikse2020} estimate, whose Greenland term before 1972 is the reconstruction of \citet{Kjeldsen2015}.
+The drift state described above accounts for these departures. Fitted to the \citet{Mouginot2019} SMB over 1972--2018, it raises the maximum log likelihood from $-292.9$ for a constant level to $-284.2$. The likelihood is nearly flat in $\tau_{\mathrm{s}}$ from about 10 to more than 100~yr, so $\tau_{\mathrm{s}}$ follows its prior. Out of sample, the drift state helps little. Fitted to 1972--2004, it forecasts the 2005--2018 SMB no better than a fixed 1995--2004 anchor, and both overpredict it. When the drift state is fitted to 1972--2018, its forecast of the 2019--2023 mean SMB is slightly closer than the fixed anchor to the \citet{Mankoff2021} and IMBIE-3 \citep{Otosaka2026} records, and both again overpredict it. At 2100 the drift state changes the median SMB contribution by 2~mm and widens its 90\% interval by 13--16~mm at 1.8--3.6~$^\circ$C, mostly through the uncertainty of $c_{\mathrm{gris}}$. A prior on $\tau_{\mathrm{s}}$ that is uniform in $\log\tau_{\mathrm{s}}$ over 3--150~yr moves the 2100 medians by 2--3~mm. Continued backward before 1972, the state adds 6~mm of SMB mass gain over 1900--1971 relative to a fixed anchor, because the record begins in a period of high SMB. This moves our Greenland hindcast further from the \citet{Frederikse2020} estimate, whose Greenland term before 1972 is the reconstruction of \citet{Kjeldsen2015}.
 
 \subsection{Variance decomposition}
 
-We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. The total here is the sum of the component models before blending with the observed trend, excluding terrestrial water storage. Under the fast-WAIS storyline, WAIS accounts for 99.2\%, 98.8\%, and 98.2\% of the total variance at 1.8, 2.7, and 3.6\,$^\circ$C. The thermosteric, glacier, and Greenland contributions together account for 0.7\%, 1.3\%, and 2.1\%, a share that includes the covariance among them from the warming path they share. EAIS and the Antarctic Peninsula account for the small remainder. WAIS does not depend on the warming trajectory or on the parameters of any other component, so these shares nearly sum to one. Under the slow-WAIS storyline, $p(\mathrm{S1}) = 0.90$, the WAIS variance is that of the two-branch mixture, $p\,\mathrm{var}(S_1) + (1-p)\,\mathrm{var}(S_2) + p(1-p)\,(\bar{S}_1 - \bar{S}_2)^2$, and WAIS accounts for 95.9\%, 93.2\%, and 89.4\% of the total variance at 1.8, 2.7, and 3.6\,$^\circ$C.
+We decompose the variance of the 2100 forecast separately for each warming trajectory. Pooling the trajectories would require assigning each one a probability. The total here is the sum of the component models before blending with the observed trend, excluding terrestrial water storage. Under the fast-WAIS storyline, WAIS accounts for 99.3\%, 98.9\%, and 98.3\% of the total variance at 1.8, 2.7, and 3.6\,$^\circ$C. The thermosteric, glacier, and Greenland contributions together account for 0.8\%, 1.3\%, and 2.0\%, a share that includes the covariance among them from the warming path they share. EAIS and the Antarctic Peninsula account for the small remainder. WAIS does not depend on the warming trajectory or on the parameters of any other component, so these shares nearly sum to one. Under the slow-WAIS storyline, $p(\mathrm{S1}) = 0.90$, the WAIS variance is that of the two-branch mixture, $p\,\mathrm{var}(S_1) + (1-p)\,\mathrm{var}(S_2) + p(1-p)\,(\bar{S}_1 - \bar{S}_2)^2$, and WAIS accounts for 95.9\%, 93.2\%, and 89.6\% of the total variance at 1.8, 2.7, and 3.6\,$^\circ$C.
 
 \subsection{Temperature scenarios}
 
@@ -409,7 +411,7 @@ For the thermosteric model the quoted value uses the variance of each point, its
 
 The Greenland discharge value of 1.45 is evaluated on the annual increments of the cumulative record, which is equivalent to using its full covariance, before the error scale is applied. It is the factor by which the parameter covariance is inflated, so it is a statement about the reported errors being too small rather than about the model missing the data. It has 38 degrees of freedom, the 40 annual increments between the 41 fitted points minus two for the fitted parameters. The error scale is not counted, because the value reported is the error scale itself.
 
-Three components need further comment. WAIS is fitted in time rather than in temperature, but with the same annual-increment likelihood as the Peninsula, including a fitted model-inadequacy term, so its reduced chi-square of 1.01 is comparable with the other rows. A cubic in time is not supported by the record, with a BIC 3.6 higher than that of the quadratic. Snowfall anomalies also modulate the record. In the Amundsen Sea Embayment, persistently low snowfall added $51 \pm 4$~Gt\,yr$^{-1}$ to the mass loss during 2009--2013, and extreme snowfall reduced it by $60 \pm 16$~Gt\,yr$^{-1}$ in 2019 and 2020 \citep{Davison2023}. To test their effect on the fit, we removed both anomalies from the IMBIE-3 record, converting at 362.5~Gt per mm SLE, and refitted the S1 model with the same likelihood. With the anomalies removed, the contribution at 2100 relative to 2000 falls from 86 to 79~mm. This test is approximate, because \citet{Davison2023} report the anomalies for the Amundsen Sea Embayment alone and as multi-year means. The 7~mm change is small relative to the S1 90\% interval of [$-10$, 182]~mm, so we fit the record as reported.
+Three components need further comment. WAIS is fitted in time rather than in temperature, but with the same annual-increment likelihood as the Peninsula, including a fitted model-inadequacy term, so its reduced chi-square of 1.01 is comparable with the other rows. A cubic in time is not supported by the record, with a BIC 3.7 higher than that of the quadratic. Snowfall anomalies also modulate the record. In the Amundsen Sea Embayment, persistently low snowfall added $51 \pm 4$~Gt\,yr$^{-1}$ to the mass loss during 2009--2013, and extreme snowfall reduced it by $60 \pm 16$~Gt\,yr$^{-1}$ in 2019 and 2020 \citep{Davison2023}. To test their effect on the fit, we removed both anomalies from the IMBIE-3 record, converting at 362.5~Gt per mm SLE, and refitted the S1 model with the same likelihood. With the anomalies removed, the contribution at 2100 relative to 2000 falls from 86 to 80~mm. This test is approximate, because \citet{Davison2023} report the anomalies for the Amundsen Sea Embayment alone and as multi-year means. The 6.5~mm change is small relative to the S1 90\% interval of [$-10$, 183]~mm, so we fit the record as reported.
 
 We also tested curvature in the Peninsula model by fitting a quadratic rate model, $\dot{H}_{\mathrm{p}} = a_{\mathrm{p}}T^2 + b_{\mathrm{p}}T + c_{\mathrm{p}}$, with $a_{\mathrm{p}}$ unrestricted in sign. With the BIC computed from the maximized likelihood, including the fitted $\sigma_{\mathrm{p,extra}}$, the quadratic is preferred (its BIC is 4.6 lower than that of the linear model), with negative curvature, $a_{\mathrm{p}} = -0.35$ [$-0.54$, $-0.16$]~mm\,yr$^{-1}$\,$^\circ$C$^{-2}$. This preference comes from the warmest years of the record. The Peninsula loss rate averaged 0.12~mm\,yr$^{-1}$ over 2005--2014 and 0.01~mm\,yr$^{-1}$ over 2015--2023, and in the IMBIE-3 partition about half of this decline comes from increased surface mass balance and half from slower ice discharge \citep{Otosaka2026}. Fitted to 1979--2019 alone, the quadratic is no longer clearly preferred (its BIC is 0.3 lower). Extrapolated, the quadratic would make the Peninsula gain mass whenever GMST is more than 0.6~$^\circ$C above its 1995--2005 mean, a level reached in 2023, and at 3~$^\circ$C above that mean the gain would be about 1000~Gt\,yr$^{-1}$. A recent surface-mass-balance anomaly and a slowdown in discharge do not support a response that grows with the square of warming, so we keep the linear model and set $a_{\mathrm{p}} = 0$.
 
@@ -421,7 +423,7 @@ Greenland SMB is passed through as the RACMO-derived \citet{Mouginot2019} SMB ov
 
 These are all within-sample statistics, and on their own they establish only that each model is consistent with the record it was fitted to. The tests that bear on forecasting skill are out of sample.
 
-The thermosteric model is compared with the \citet{Frederikse2020} steric reconstruction, withheld from calibration, with an RMS difference of 2.97\,mm over 1957--2018 and 5.00\,mm before 1957, when that reconstruction is constrained by models rather than by subsurface observations. When the thermosteric model is refitted with the 0--700\,m record before 1990 withheld, retaining the full 700--2000\,m record, which begins in 2005, it gives $b_{\mathrm{u}} = 43.0$ [36.7, 52.0]~mm\,$^\circ$C$^{-1}$, compared with 42.3 [36.9, 51.2]~mm\,$^\circ$C$^{-1}$ from the full record. It predicts a rate of 0.22 [0.17, 0.29]~mm\,yr$^{-1}$ over the withheld years 1955--1989, compared with 0.20 [0.16, 0.24]~mm\,yr$^{-1}$ observed. In the prediction, the withheld years lie 12.6 [9.3, 16.4]~mm below the 1995--2005 mean, compared with 12.0 [11.4, 12.6]~mm observed, and 94\% of the withheld annual values fall within the 90\% predictive interval (Fig.~\ref{fig:ocean_early_holdout}). GMST rose by only 0.3 to 0.4 $^\circ$C over the withheld years, so this test constrains the level of the fit more than its sensitivity to warming.
+The thermosteric model is compared with the \citet{Frederikse2020} steric reconstruction, withheld from calibration, with an RMS difference of 2.97\,mm over 1957--2018 and 5.00\,mm before 1957, when that reconstruction is constrained by models rather than by subsurface observations. When the thermosteric model is refitted with the 0--700\,m record before 1990 withheld, retaining the full 700--2000\,m record, which begins in 2005, it gives $b_{\mathrm{u}} = 43.0$ [36.6, 52.2]~mm\,$^\circ$C$^{-1}$, compared with 42.3 [36.9, 51.2]~mm\,$^\circ$C$^{-1}$ from the full record. It predicts a rate of 0.22 [0.17, 0.29]~mm\,yr$^{-1}$ over the withheld years 1955--1989, compared with 0.20 [0.16, 0.24]~mm\,yr$^{-1}$ observed. In the prediction, the withheld years lie 12.6 [9.2, 16.5]~mm below the 1995--2005 mean, compared with 12.0 [11.4, 12.6]~mm observed, and 94\% of the withheld annual values fall within the 90\% predictive interval (Fig.~\ref{fig:ocean_early_holdout}). GMST rose by only 0.3 to 0.4 $^\circ$C over the withheld years, so this test constrains the level of the fit more than its sensitivity to warming.
 
 The glacier model is compared with the global glacier mass changes of \citet{Zemp2019} for 1962--1999, withheld from calibration, and gives a mean rate of 0.30 [0.17, 0.40]~mm\,yr$^{-1}$, compared with an observed 0.32 [$-0.02$, 0.66]~mm\,yr$^{-1}$. For this comparison the posterior rate $b_{\mathrm{gl}}T + c_{\mathrm{gl}}$ is evaluated for each hydrological year (October to September) with $T$ weighted 0.25 from the preceding calendar year and 0.75 from the current one. The uncertainties of \citet{Zemp2019}, reported as 95\% intervals, are converted to standard deviations and combined following their prescription, with the glaciological, interpolation, and area terms added in quadrature across years and the geodetic term added linearly. Like the GlaMBIE global total, their record includes the Greenland and Antarctic peripheral glaciers. A fit to the 1962--1989 part of the \citet{Zemp2019} record shows no detectable sensitivity to GMST, unlike a fit to 1990--2016. A delayed glacier response does not account for the difference. For response times of 10 to 100 years the two sensitivities remain 2.5 to 3.9 standard deviations apart. A quadratic dependence on GMST fitted to 1962--2016 reduces the separation from 3.5 to 1.5 standard deviations but fits the record less well than separate linear fits to the two periods.
 
@@ -457,7 +459,7 @@ The hindcast depends on the TWS term before 2003, when the \citet{Frederikse2020
 \toprule
 Component & Calibration data & Reduced $\chi^2$ & Model \\
 \midrule
-Thermosteric (0--700\,m)  & NOAA, 1955--2024 (70)     & 0.86 & Two-layer, 8 sampled \\
+Thermosteric (0--700\,m)  & NOAA, 1955--2024 (70)     & 0.84 & Two-layer, 8 sampled \\
 Thermosteric (700--2000\,m) & NOAA, 2005--2024 (20)   & 0.58 & Joint with 0--700\,m \\
 Glaciers                  & GlaMBIE, 2000--2023 (24)  & 1.09 & Linear rate--$T$, 1850 balance, $\sigma_{\mathrm{extra}}$ \\
 Greenland discharge       & Mouginot, 1978--2018 (41) & 1.45 & Delay, 2 fitted \\
@@ -491,9 +493,9 @@ The upper 2000\,m can also be compared with CMIP6. In the NOAA 0--2000\,m record
 Scenario & Thermosteric & Heat, fixed & Heat, drawn & AR6 two-layer & Heat & CMIP6 \\
  & (mm) & (YJ) & (YJ) & (YJ) & (YJ) & (YJ) \\
 \midrule
-1.8 $^\circ$C & 106 [84, 132] & 0.94 [0.75, 1.17] & 0.94 [0.71, 1.27] & 1.18 (0.99--1.42) & 0.76 [0.60, 0.97] & 1.06 (0.80--1.31) \\
-2.7 $^\circ$C & 142 [116, 175] & 1.26 [1.03, 1.55] & 1.26 [0.97, 1.69] & 1.56 (1.33--1.86) & 1.05 [0.85, 1.31] & 1.35 (1.08--1.67) \\
-3.6 $^\circ$C & 176 [144, 214] & 1.56 [1.28, 1.90] & 1.56 [1.20, 2.08] & 1.90 (1.63--2.21) & 1.32 [1.07, 1.62] & 1.62 (1.37--1.91) \\
+1.8 $^\circ$C & 106 [84, 132] & 0.94 [0.74, 1.17] & 0.94 [0.70, 1.27] & 1.18 (0.99--1.42) & 0.76 [0.60, 0.97] & 1.06 (0.80--1.31) \\
+2.7 $^\circ$C & 142 [116, 175] & 1.26 [1.03, 1.55] & 1.26 [0.96, 1.69] & 1.56 (1.33--1.86) & 1.05 [0.85, 1.31] & 1.35 (1.08--1.67) \\
+3.6 $^\circ$C & 176 [144, 215] & 1.56 [1.27, 1.90] & 1.56 [1.20, 2.08] & 1.90 (1.63--2.21) & 1.32 [1.07, 1.63] & 1.62 (1.37--1.91) \\
 4.4 $^\circ$C & 208 [165, 259] & 1.84 [1.46, 2.29] & 1.85 [1.39, 2.50] & 2.23 (1.92--2.64) & 1.57 [1.24, 1.98] & 1.89 (1.60--2.29) \\
 \bottomrule
 \end{tabular}
@@ -507,7 +509,7 @@ We test how much the thermosteric projections depend on the choice of calibratio
 
 The three records differ most in the early decades and in the last decade (Fig.~\ref{fig:thermo_records}a,b). We compare their trends through the trend of the difference between two records, which removes the variability they share, and give 90\% intervals that account for autocorrelated residuals. Over 1955--2012, the 0--700\,m trend of IAP exceeds that of NOAA by 0.04 [0.00, 0.08]~mm\,yr$^{-1}$, and the trend of EN4 falls below it by 0.11 [0.01, 0.22]~mm\,yr$^{-1}$. EN4 is flatter than the other two records before about 1975, when sparse observations leave its analysis close to the climatology toward which it relaxes \citep{Good2013}. Over 2013--2024, EN4 and IAP both rise faster than NOAA. Their trends exceed that of NOAA by 0.20 [0.05, 0.35] and 0.18 [0.02, 0.33]~mm\,yr$^{-1}$ over 0--700\,m and by 0.29 [0.13, 0.44] and 0.17 [0.09, 0.26]~mm\,yr$^{-1}$ over 0--2000\,m.
 
-At equal scaling, calibrating with EN4 or IAP instead of NOAA raises the 2100 medians by 4 to 13~mm at 1.8, 2.7, and 3.6~$^\circ$C (Fig.~\ref{fig:thermo_records}e). The factor of 1.14 raises them by 14 to 27~mm. Every median lies within the 90\% credible interval of our projections. With the factor applied, the model fits the IAP record with a smaller noise term than the NOAA record, $\sigma_{\mathrm{extra,u}} = 1.46$~mm compared with 1.81~mm, and fits the EN4 record with a larger one, 3.21~mm. The EN4 residuals are also more strongly autocorrelated ($\rho = 0.85$ compared with 0.60).
+At equal scaling, calibrating with EN4 or IAP instead of NOAA raises the 2100 medians by 4 to 13~mm at 1.8, 2.7, and 3.6~$^\circ$C (Fig.~\ref{fig:thermo_records}e). The factor of 1.14 raises them by 13 to 28~mm. Every median lies within the 90\% credible interval of our projections. With the factor applied, the model fits the IAP record with a smaller noise term than the NOAA record, $\sigma_{\mathrm{extra,u}} = 1.46$~mm compared with 1.81~mm, and fits the EN4 record with a larger one, 3.20~mm. The EN4 residuals are also more strongly autocorrelated ($\rho = 0.85$ compared with 0.60).
 
 We also compare the records and our model with global-mean thermosteric sea level simulated by CMIP6 models (Fig.~\ref{fig:thermo_records}c,d). We use the full-depth thermosteric sea level of 30 models from the CMIP6 archive, 25 of which continue under SSP2-4.5 to 2024. One of these, GISS-E2-1-G, has a step at the junction of its historical and SSP2-4.5 runs, so we use it only to 2014. From each model we remove the linear drift of its pre-industrial control run over the years that correspond to 1850--2024. The control run of GISS-E2-1-G-CC ends before these years do, so we fit its drift over the part that it covers. For UKESM1-1-LL, whose branch point lies outside the archived control run, we fit the drift over the whole control run.
 
@@ -541,25 +543,25 @@ The tabulated values are the fractions of posterior samples above each threshold
 \textbf{SLR threshold} & \textbf{Warming} & \textbf{SPECTRUM} & \textbf{SPECTRUM} \\
 \textbf{(m, pre-ind.)} & \textbf{trajectory} & \textbf{$\boldsymbol{p(\mathrm{S1})=90\%}$} & \textbf{$\boldsymbol{p(\mathrm{S1})=10\%}$} \\
 \hline
-\multirow{3}{*}{0.5}   & 1.8\,$^\circ$C &  93.2 &  99.2 \\
-                        & 2.7\,$^\circ$C &  99.5 & 100.0 \\
+\multirow{3}{*}{0.5}   & 1.8\,$^\circ$C &  93.6 &  99.3 \\
+                        & 2.7\,$^\circ$C &  99.6 & 100.0 \\
                         & 3.6\,$^\circ$C & 100.0 & 100.0 \\
 \hline
-\multirow{3}{*}{0.75}  & 1.8\,$^\circ$C &   6.4 &  48.9 \\
-                        & 2.7\,$^\circ$C &  24.6 &  71.2 \\
-                        & 3.6\,$^\circ$C &  67.5 &  92.7 \\
+\multirow{3}{*}{0.75}  & 1.8\,$^\circ$C &   6.5 &  49.5 \\
+                        & 2.7\,$^\circ$C &  25.2 &  71.8 \\
+                        & 3.6\,$^\circ$C &  67.8 &  92.7 \\
 \hline
-\multirow{3}{*}{1.0}   & 1.8\,$^\circ$C &   2.4 &  21.8 \\
-                        & 2.7\,$^\circ$C &   3.2 &  28.7 \\
-                        & 3.6\,$^\circ$C &   4.9 &  39.4 \\
+\multirow{3}{*}{1.0}   & 1.8\,$^\circ$C &   2.4 &  22.0 \\
+                        & 2.7\,$^\circ$C &   3.2 &  28.9 \\
+                        & 3.6\,$^\circ$C &   4.9 &  39.7 \\
 \hline
 \multirow{3}{*}{1.5}   & 1.8\,$^\circ$C &   0.8 &   7.2 \\
-                        & 2.7\,$^\circ$C &   0.9 &   8.6 \\
+                        & 2.7\,$^\circ$C &   1.0 &   8.6 \\
                         & 3.6\,$^\circ$C &   1.1 &  10.3 \\
 \hline
 \multirow{3}{*}{2.0}   & 1.8\,$^\circ$C &   0.4 &   3.3 \\
                         & 2.7\,$^\circ$C &   0.4 &   3.7 \\
-                        & 3.6\,$^\circ$C &   0.5 &   4.5 \\
+                        & 3.6\,$^\circ$C &   0.5 &   4.3 \\
 \hline
 \end{tabular}
 \end{table}
