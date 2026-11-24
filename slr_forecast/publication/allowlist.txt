@@ -134,9 +134,9 @@ tests/test_units.py
 tests/test_wais_sampling.py
 tests/test_ratestate.py                      # rate-and-state functions still live in bayesian_models.py / slr_projections.py
 notebooks/component_greenland_robust_se.py   # test support only (tests/test_greenland.py); not used by the pipeline
-# Dev-repo result 2026-11-21: 518 passed, 0 skipped, 0 failed (76 s), with the
+# Dev-repo result 2026-11-23: 526 passed, 0 skipped, 0 failed (44 s), with the
 # dev data present; no file under data/ was written. In a copy with no data/
-# (2026-11-21): 294 passed, 224 skipped, 0 failed; tests/test_readers.py has
+# (2026-11-23): 300 passed, 226 skipped, 0 failed; tests/test_readers.py has
 # skip guards (4 passed, 14 skipped).
 
 # =============================================================================
