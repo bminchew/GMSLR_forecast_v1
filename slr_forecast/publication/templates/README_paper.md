@@ -1,19 +1,25 @@
 # SPECTRUM: global mean sea-level forecast
 
-<!-- DRAFT for the paper repository (bminchew/spectrum-gmsl). Items in
-     [square brackets] are pending decisions. This comment block and the
-     brackets go before v1.0. -->
-
-SPECTRUM forecasts global mean sea level to 2150 by modeling each contributor
-(ocean thermal expansion, glaciers, the Greenland ice sheet, East and West
-Antarctica, the Antarctic Peninsula, and land water storage) as a calibrated
-statistical model driven by global mean surface temperature. The component
-forecasts are summed with their uncertainties and checked against the observed
-sea-level budget, without fitting to the global mean sea-level record.
+SPECTRUM forecasts global mean sea level (GMSL) to 2100 by modeling each
+contributor separately. Ocean thermal expansion, glaciers, the Antarctic
+Peninsula, and Greenland ice discharge are calibrated by Bayesian inference
+against observational records. Greenland surface mass balance is emulated from
+regional climate model simulations. East Antarctic surface mass balance and
+land water storage use published sensitivities and assessments. West
+Antarctica follows two storylines, slow and fast. Each temperature-sensitive
+component is forced by global mean surface temperature, observed to 2025 and
+then following the IPCC AR6 warming paths. The components are summed member by
+member over a 10,000-member ensemble. Observed GMSL is withheld from every
+calibration and used to test the sum.
 
 This repository holds the code that produces the numbers and figures in
-[citation of the paper, DOI pending]. Fig. 1 is a hand-drawn schematic; the
-code does not produce it.
+
+> Minchew, B., Meyer, C., Tiecke, T., Gros, A., White, B., Johnson, L., and
+> Bartholomaus, T. A Data-Driven, Component-Level Projection Framework for
+> 21st-Century Sea-Level Rise. Manuscript in preparation.
+
+Fig. 1 of the paper is a schematic drawn separately; the code does not produce
+it.
 
 ## Install (Docker)
 
@@ -28,8 +34,9 @@ docker run --rm spectrum:1.0 exec python environment/check_env.py   # environmen
 ## Data
 
 Data are not stored in this repository. `data/data_manifest.md` lists every
-input the pipeline reads, its source, its citation, and how to obtain it
-[Zenodo data bundle, DOI pending]. Place the files under `data/raw/` and
+input the pipeline reads, its source, its citation, its license, and how to obtain it. The inputs
+that may be redistributed, and the results of the paper, will be archived on
+Zenodo; the link will be added here. Place the files under `data/raw/` and
 `data/processed/` with the relative paths given there. The small processed CSV
 files in `data/processed/` are included. The Docker run mounts a host directory
 at `/work/data/processed`, which hides these copies, so the mounted directory
@@ -70,10 +77,11 @@ follow `SLR_N_SAMPLES`: the WAIS mixture in `component_wais.ipynb` (at least
 posterior subsamples and diagnostic sweeps also do not follow it
 (`src/slr_forecast/config.py` lists them).
 
-The results in the paper come from a run of the linux/arm64 image on an Apple
-Silicon Mac. The image pins the package versions of the macOS environment in
-which the pipeline was developed; a 10,000-member run there took about
-2 h 40 min (10 threads). A 500-member run of the arm64 image took 2 h 15 min. The notebook timeouts in
+The results in the paper come from a 10,000-member run of the linux/arm64
+image on an Apple Silicon Mac, which took 2 h 25 min. The image pins the
+package versions of the macOS environment in which the pipeline was developed.
+A 500-member run of the same image took 2 h 15 min, because of the fixed draw
+counts listed above. The notebook timeouts in
 `run_pipeline.sh` were set for that machine; for a slower run, scale them with
 `NB_TIMEOUT_SCALE` or remove them with `NB_TIMEOUT=-1` (see
 `environment/README.md`).
@@ -106,7 +114,18 @@ from and the sha256 of every file.
 Code: BSD-3-Clause (`LICENSE`). Data bundle on Zenodo: CC-BY-4.0, except
 third-party datasets, which keep their own terms (see `data/data_manifest.md`).
 
+The three files `data/processed/en4_greenland_peripheral_*.csv` are regional
+averages derived from the Met Office EN.4.2.2 objective analyses (Good, S. A.,
+M. J. Martin, and N. A. Rayner, 2013, J. Geophys. Res. Oceans,
+doi:10.1002/2013JC009067). EN.4.2.2 data were obtained from
+https://www.metoffice.gov.uk/hadobs/en4/ and are British Crown Copyright, Met
+Office, provided under a Non-Commercial Government Licence
+(http://www.nationalarchives.gov.uk/doc/non-commercial-government-licence/version/2/).
+These files are not covered by the BSD license and may be used for
+non-commercial purposes only.
+
 ## Citation
 
-[CITATION.cff pending]. Please cite the paper [DOI pending], this code
-[Zenodo software DOI pending], and the data bundle [Zenodo data DOI pending].
+Please cite the paper and this code (see `CITATION.cff`). The paper and the
+Zenodo archives of the code and data do not have DOIs yet; they will be added
+here and in `CITATION.cff` when they do.

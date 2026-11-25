@@ -1,0 +1,52 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper and the software as below."
+title: "SPECTRUM: global mean sea-level forecast"
+type: software
+authors:
+  - family-names: Minchew
+    given-names: Brent
+    affiliation: "California Institute of Technology"
+repository-code: "https://github.com/bminchew/spectrum-gmsl"
+license: BSD-3-Clause
+keywords:
+  - sea level
+  - sea-level rise
+  - forecasting
+  - Bayesian inference
+  - ice sheets
+  - glaciers
+  - thermal expansion
+abstract: >-
+  Code that produces the numbers and figures in "A Data-Driven,
+  Component-Level Projection Framework for 21st-Century Sea-Level Rise".
+  SPECTRUM forecasts global mean sea level to 2100 by modeling each
+  contributor separately, calibrating the models against observational
+  records where they exist, and summing the components over a
+  10,000-member ensemble. Observed global mean sea level is withheld from
+  every calibration and used to test the sum.
+preferred-citation:
+  type: article
+  status: in-preparation
+  title: "A Data-Driven, Component-Level Projection Framework for 21st-Century Sea-Level Rise"
+  authors:
+    - family-names: Minchew
+      given-names: Brent
+      affiliation: "California Institute of Technology; Arête Glacier Initiative"
+    - family-names: Meyer
+      given-names: Colin
+      affiliation: "Dartmouth College; Arête Glacier Initiative"
+    - family-names: Tiecke
+      given-names: Tobias
+      affiliation: "Arête Glacier Initiative"
+    - family-names: Gros
+      given-names: Andreas
+      affiliation: "Arête Glacier Initiative"
+    - family-names: White
+      given-names: Brian
+      affiliation: "Arête Glacier Initiative"
+    - family-names: Johnson
+      given-names: Lucas
+      affiliation: "Arête Glacier Initiative"
+    - family-names: Bartholomaus
+      given-names: Timothy
+      affiliation: "University of Idaho; Arête Glacier Initiative"

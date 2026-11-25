@@ -152,6 +152,8 @@ data/processed/en4_greenland_peripheral_300_600m.csv   # 44 KB; EN4-derived, sen
 # (f) Top-level files of the paper repository
 # =============================================================================
 publication/templates/LICENSE -> LICENSE
+publication/templates/README_paper.md -> README.md
+publication/templates/CITATION.cff -> CITATION.cff
 
 # =============================================================================
 # Not shipped: development-only pipeline steps

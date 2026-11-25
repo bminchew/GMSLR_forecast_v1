@@ -93,14 +93,11 @@ dev repo (this one) --export_publication.sh--> clone of spectrum-gmsl --commit /
 working tree at HEAD and fails unless every shipped file and every release
 tool file is tracked, unmodified and not ignored.
 
-**Pending user decisions before v1.0.** The paper repo needs its own top-level
-`README.md`, `LICENSE` and `CITATION.cff`. `LICENSE` ships from
-`templates/LICENSE` (allowlist line `publication/templates/LICENSE -> LICENSE`).
-A draft README is in `templates/README_paper.md`; it ships once the allowlist
-has the line `publication/templates/README_paper.md -> README.md`. Until then,
-a release export (`--from-commit` or `--require-clean`) fails: release mode
-requires a top-level `README.md` with no `[... pending]` placeholder and no
-`<!-- DRAFT` comment. `CITATION.cff` does not exist yet.
+**Top-level files of the paper repo.** `LICENSE`, `README.md` and
+`CITATION.cff` ship from `publication/templates/` (allowlist `SRC -> DEST`
+lines). Release mode requires a top-level `README.md` with no `[... pending]`
+placeholder and no `<!-- DRAFT` comment. The DOIs of the paper and of the
+Zenodo archives are still to be added to `README.md` and `CITATION.cff`.
 
 ## Files
 
