@@ -57,6 +57,16 @@ public manifest should not carry.
   - **Open:** IAP (the archived CSV is the input of record, because a fresh
     download no longer reproduces it) and MAR PROTECT (57 h to rebuild; check
     whether ISMIP7 releases MAR under a license).
+  - **MAR check (2026-11-25):** ISMIP7 does not use MAR for Greenland
+    (its forcing is SDBN1 and dEBM2 downscaling; no data license stated). The
+    PROTECT MARv3.12 runs are archived under CC-BY-4.0 only as Goelzer's
+    processed ISMIP6-format forcing (NIRD doi:10.11582/2025.prm9am5n, 357 GB,
+    all 13 of our scenario runs plus 3 more): annual aSMB anomalies relative
+    to 1960-1989, regridded to the ISMIP6 1 km grid and extended beyond the MAR
+    ice mask; the reference climatology is not included. The emulator uses
+    anomalies relative to the history run's 1995-2005 mean, so the product
+    could in principle replace the ftp files, but integrated values would
+    differ (regridding, extension, mask) and the emulator would need a refit.
   - **`harmonized/df_argo_greenland_200_500m`** is in the h5 but no shipped
     code reads it; drop it from the distributed copy rather than check Argo
     terms.
