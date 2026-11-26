@@ -529,6 +529,10 @@ def cmd_collect(a):
                note='90% intervals; trends are OLS with AR(1)-adjusted effective sample size')
     OUT_JSON.write_text(json.dumps(out, indent=1))
     print(f'wrote {OUT_JSON}')
+    print('Note: IAP revises its v4.2 files without changing the version number (the paper used\n'
+          'files downloaded on 22 October 2026; IAP replaced them on 5 November 2026). Results\n'
+          'from IAP files downloaded later should agree with the paper generally, not to machine\n'
+          'precision.')
 
 
 def _ti(s, w):
