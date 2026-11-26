@@ -112,17 +112,26 @@ from and the sha256 of every file.
 ## License
 
 Code: BSD-3-Clause (`LICENSE`). Data bundle on Zenodo: CC-BY-4.0, except
-third-party datasets, which keep their own terms (see `data/data_manifest.md`).
+third-party datasets and the files derived from non-commercial datasets, which
+keep their own terms (see `data/data_manifest.md`).
 
-The three files `data/processed/en4_greenland_peripheral_*.csv` are regional
-averages derived from the Met Office EN.4.2.2 objective analyses (Good, S. A.,
-M. J. Martin, and N. A. Rayner, 2013, J. Geophys. Res. Oceans,
-doi:10.1002/2013JC009067). EN.4.2.2 data were obtained from
-https://www.metoffice.gov.uk/hadobs/en4/ and are British Crown Copyright, Met
-Office, provided under a Non-Commercial Government Licence
-(http://www.nationalarchives.gov.uk/doc/non-commercial-government-licence/version/2/).
-These files are not covered by the BSD license and may be used for
-non-commercial purposes only.
+Four small data files in `data/processed/` are derived from datasets licensed
+for non-commercial use only. They are not covered by the BSD license and keep
+the terms of their sources:
+
+- `en4_greenland_peripheral_*.csv` (three files) are regional averages of the
+  Met Office EN.4.2.2 objective analyses (Good, S. A., M. J. Martin, and
+  N. A. Rayner, 2013, J. Geophys. Res. Oceans, doi:10.1002/2013JC009067).
+  EN.4.2.2 data were obtained from https://www.metoffice.gov.uk/hadobs/en4/
+  and are British Crown Copyright, Met Office, provided under a Non-Commercial
+  Government Licence
+  (http://www.nationalarchives.gov.uk/doc/non-commercial-government-licence/version/2/).
+- `greenland_mask_berkeley_1deg.csv` lists the cells of the Berkeley Earth
+  1° grid that lie in Greenland. Berkeley Earth data are licensed under
+  CC BY-NC 4.0 (https://berkeleyearth.org/data/).
+
+`data/data_manifest.md` gives the license of every input, including the
+Berkeley Earth and EN4 material in the Zenodo data bundle.
 
 ## Citation
 

@@ -11,7 +11,23 @@ bundle, because the Docker image mounts `data/` at run time and does not see
 the copies in the repository.
 
 License: the Zenodo data bundle is distributed under CC-BY-4.0, except
-third-party datasets, which keep their own terms (License column of §2a).
+third-party datasets, which keep their own terms (License column of §2a),
+and the files derived from non-commercial datasets, which keep those terms:
+
+- from Berkeley Earth (CC BY-NC 4.0, non-commercial only):
+  `data/processed/greenland_mask_berkeley_1deg.csv` and the Berkeley Earth
+  keys of `slr_processed_data.h5` (`raw/df_berkeley`,
+  `harmonized/df_berkeley_h`, `kinematics/gmst/berkeley`);
+- from EN.4.2.2 (British Crown Copyright, Met Office, UK Non-Commercial
+  Government Licence v2, non-commercial only):
+  `data/processed/en4_greenland_peripheral_*.csv`,
+  `data/processed/en4_thermosteric_annual.csv` and the EN4 keys of
+  `slr_processed_data.h5` (`harmonized/df_en4_*`).
+
+`slr_processed_data.h5` therefore contains non-commercial material; its other
+keys are CC-BY-4.0 or carry the terms of their sources. Inputs with no license
+that permits redistribution are not in the bundle and must be downloaded from
+the provider (Route "source").
 
 ## Classes
 
@@ -114,32 +130,32 @@ needed only by preprocessing are in §2b.
 
 | Path | Size | Read by | Source (citation key) | License | Route |
 |---|---|---|---|---|---|
-| `data/raw/steric/noaa_tsl_yearly_0-700m.dat` | 8 KB | ocean, oceanholdout, thermorec; prep:refresh | NOAA NCEI thermosteric sea level, 0–700 m, yearly (Levitus2012) | US Government work | zenodo or source |
-| `data/raw/steric/noaa_tsl_yearly_0-2000m.dat` | 4 KB | ocean, oceanholdout, thermorec; prep:refresh | NOAA NCEI thermosteric sea level, 0–2000 m (Levitus2012) | US Government work | zenodo or source |
-| `data/raw/gmst/berkEarth_Global_TAVG_annual_highres_prelim.txt` | 16 KB | ocean | Berkeley Earth global annual mean (Rohde2020) | Berkeley Earth terms | source |
-| `data/raw/gmst/berkEarth_Global_TAVG_Gridded_1deg.nc` | 408 MB | greenland; prep:mask | Berkeley Earth 1° gridded TAVG (Rohde2020) | Berkeley Earth terms | source |
+| `data/raw/steric/noaa_tsl_yearly_0-700m.dat` | 8 KB | ocean, oceanholdout, thermorec; prep:refresh | NOAA NCEI thermosteric sea level, 0–700 m, yearly (Levitus2012) | US public domain (NCEI open data policy) | zenodo or source |
+| `data/raw/steric/noaa_tsl_yearly_0-2000m.dat` | 4 KB | ocean, oceanholdout, thermorec; prep:refresh | NOAA NCEI thermosteric sea level, 0–2000 m (Levitus2012) | US public domain (NCEI open data policy) | zenodo or source |
+| `data/raw/gmst/berkEarth_Global_TAVG_annual_highres_prelim.txt` | 16 KB | ocean | Berkeley Earth global annual mean (Rohde2020) | **CC BY-NC 4.0** (Berkeley Earth; non-commercial only) | source |
+| `data/raw/gmst/berkEarth_Global_TAVG_Gridded_1deg.nc` | 408 MB | greenland; prep:mask | Berkeley Earth 1° gridded TAVG (Rohde2020) | **CC BY-NC 4.0** (Berkeley Earth; non-commercial only) | source |
 | `data/raw/forcing/igcc2024/ERF_best_aggregates_1750-2024.csv` | 64 KB | ocean, oceanholdout, summation, thermorec (`config.VOLC_ERF_CSV`) | Indicators of Global Climate Change 2024, v2025.06.11, doi:10.5281/zenodo.15639576 (Forster2025) | CC-BY-4.0 (`LICENSE` in archive) | zenodo |
 | `data/raw/forcing/README.md` | 4 KB | (documentation) | Provenance of the forcing files: release, checksum, columns, the AR6 volcanic convention, and how the pipeline uses the file | CC-BY-4.0 | zenodo |
-| `data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files/` | 1.4 MB | ocean, glacier, greenland, eais, peninsula, wais, ipccdist, summation, forecast, thermorec, numbers, figures; prep:read_process | IPCC AR6 sea-level projections, FACTS (Garner2023; Fox-Kemper2021) | CC-BY-4.0 (`LICENSE` in the AR6 folder) | zenodo or source |
+| `data/raw/ipcc_ar6/slr/ar6/global/confidence_output_files/` | 1.4 MB | ocean, glacier, greenland, eais, peninsula, wais, ipccdist, summation, forecast, thermorec, numbers, figures; prep:read_process | IPCC AR6 sea-level projections, FACTS (Garner2023; Fox-Kemper2021) | CC-BY-4.0 (`LICENSE` in the AR6 folder; cite Fox-Kemper2021, Kopp2023 and the version) | zenodo or source |
 | `data/raw/ipcc_ar6/slr/ar6/global/dist_components/` | 4 MB | wais | as above | CC-BY-4.0 | zenodo or source |
 | `data/raw/ipcc_ar6/slr/ar6/global/full_sample_workflows/{wf_1e,wf_2e,wf_3e,wf_4}/…_globalsl.nc` (4 files) | 2.1 MB (folder: 147 MB) | wais | as above | CC-BY-4.0 | zenodo (the 4 files) or source |
-| `data/raw/glaciers/0_global_glambie_consensus.csv` | 4 KB | glacier | GlaMBIE global consensus, doi:10.5904/wgms-glambie-2024-07 (GlaMBIE2025) | WGMS terms | zenodo or source |
-| `data/raw/glaciers/glambie/GlaMBIE_Data_DOI_10.5904_wgms-glambie-2024-07/` | 3.2 MB | glacierdelay, numbers (via glacier_bookkeeping_check, glacier_zemp_diagnostic) | GlaMBIE regional results (GlaMBIE2025) | WGMS terms | zenodo or source |
-| `data/raw/glaciers/zemp2019/Zemp_etal_results_global.csv` | 8 KB | glacier, glacierdelay, numbers, figures | Zemp et al. 2019 (Zemp2019) | provider terms | zenodo or source |
-| `data/raw/ice_sheets/greenland/mouginot2019_data.xlsx` | 1.6 MB | greenland, smbsupp, smbstate | Mouginot et al. 2019 supplement (Mouginot2019) | PNAS supplement | source |
-| `data/raw/ice_sheets/greenland/mankoff/MB_SMB_D_BMB_ann.csv` | 20 KB | greenland, smbsupp, smbstate | Mankoff et al. 2021 Greenland mass balance (Mankoff2021) | CC-BY-4.0 | zenodo or source |
-| `data/raw/ice_sheets/imbie2026/imbie3_greenland_mm_partitioned.csv` | 104 KB | greenland, smbstate | IMBIE-3 (Otosaka2026) | provider terms | zenodo or source |
-| `data/raw/ice_sheets/imbie2026/imbie3_east_antarctica_mm_partitioned.csv` | 88 KB | eais | IMBIE-3 (Otosaka2026) | provider terms | zenodo or source |
-| `data/raw/ice_sheets/imbie2026/imbie3_antarctic_peninsula_mm_partitioned.csv` | 88 KB | peninsula, pencurv | IMBIE-3 (Otosaka2026) | provider terms | zenodo or source |
-| `data/raw/ice_sheets/imbie2026/imbie3_west_antarctica_mm_partitioned.csv` | 88 KB | wais | IMBIE-3 (Otosaka2026) | provider terms | zenodo or source |
-| `data/raw/ice_sheets/ismip6/ComputedScalarsPaper/` | 103 MB | eais, peninsula | ISMIP6 Antarctica scalars (Seroussi2020) | provider terms | source |
-| `data/raw/gmslr/ablain2019_gmsl_error_covariance.nc` | 5.3 MB | summation, forecast | Altimetry GMSL error covariance (Ablain2019) | provider terms | source |
-| `data/raw/ice_sheets/greenland/mar_protect/mar_protect_integrated_smb.csv` | 88 KB | greenland, smbsupp, smbrcm and smbstate (via `smb_emulator.py`), smblag | **PREP**, derived: MARv3.12 PROTECT multi-GCM SMB, integrated by prep:mar | MAR terms | zenodo |
-| `data/raw/ice_sheets/greenland/mar_protect/gcm_temperature.csv` | 80 KB | greenland, smbsupp, smbrcm and smbstate (via `smb_emulator.py`), smblag | **PREP**, derived: CMIP6 GMST and Greenland temperature from Pangeo, built by prep:gcmT | CMIP6 terms | zenodo |
-| `data/raw/ice_sheets/greenland/glaude2024/glaude2024_integrated_smb.csv` | 16 KB | smbrcm | **PREP**, derived: Glaude et al. 2024 RCM SMB (doi:10.5281/zenodo.13270554; Glaude2024), built by prep:glaude from `data/raw/glaude2024/` | provider terms | zenodo |
+| `data/raw/glaciers/0_global_glambie_consensus.csv` | 4 KB | glacier | GlaMBIE global consensus, doi:10.5904/wgms-glambie-2024-07 (GlaMBIE2025) | WGMS data policy (corresponds to CC-BY-4.0) | zenodo or source |
+| `data/raw/glaciers/glambie/GlaMBIE_Data_DOI_10.5904_wgms-glambie-2024-07/` | 3.2 MB | glacierdelay, numbers (via glacier_bookkeeping_check, glacier_zemp_diagnostic) | GlaMBIE regional results (GlaMBIE2025) | WGMS data policy (corresponds to CC-BY-4.0) | zenodo or source |
+| `data/raw/glaciers/zemp2019/Zemp_etal_results_global.csv` | 8 KB | glacier, glacierdelay, numbers, figures | Zemp et al. 2019 (Zemp2019) | CC-BY-4.0 (Zenodo 10.5281/zenodo.1492141, version 1.0.0) | zenodo or source |
+| `data/raw/ice_sheets/greenland/mouginot2019_data.xlsx` | 1.6 MB | greenland, smbsupp, smbstate | Mouginot et al. 2019 PNAS supplement, Dataset S2 (`sd02.xlsx`, renamed) (Mouginot2019) | no license found for the supplement (the article is CC BY-NC-ND 4.0) | source |
+| `data/raw/ice_sheets/greenland/mankoff/MB_SMB_D_BMB_ann.csv` | 20 KB | greenland, smbsupp, smbstate | Mankoff et al. 2021 Greenland mass balance (Mankoff2021) | CC-BY-4.0 (GEUS Dataverse doi:10.22008/FK2/OHI23Z; cite as "PROMICE mass balance product (Larsen et al., Mankoff et al. 2021)"; record the version) | zenodo or source |
+| `data/raw/ice_sheets/imbie2026/imbie3_greenland_mm_partitioned.csv` | 104 KB | greenland, smbstate | IMBIE-3 (Otosaka2026) | UK Open Government Licence v3.0 (UK Polar Data Centre) | zenodo or source |
+| `data/raw/ice_sheets/imbie2026/imbie3_east_antarctica_mm_partitioned.csv` | 88 KB | eais | IMBIE-3 (Otosaka2026) | UK Open Government Licence v3.0 (UK Polar Data Centre) | zenodo or source |
+| `data/raw/ice_sheets/imbie2026/imbie3_antarctic_peninsula_mm_partitioned.csv` | 88 KB | peninsula, pencurv | IMBIE-3 (Otosaka2026) | UK Open Government Licence v3.0 (UK Polar Data Centre) | zenodo or source |
+| `data/raw/ice_sheets/imbie2026/imbie3_west_antarctica_mm_partitioned.csv` | 88 KB | wais | IMBIE-3 (Otosaka2026) | UK Open Government Licence v3.0 (UK Polar Data Centre) | zenodo or source |
+| `data/raw/ice_sheets/ismip6/ComputedScalarsPaper/` | 103 MB | eais, peninsula | ISMIP6 Antarctica scalars (Seroussi2020) | CC-BY-4.0 (Zenodo 10.5281/zenodo.3940766; acknowledge CMIP6, ISMIP6 and the modeling groups) | source |
+| `data/raw/gmslr/ablain2019_gmsl_error_covariance.nc` | 5.3 MB | summation, forecast | Altimetry GMSL error covariance (Ablain2019) | **CC BY-NC 4.0** (SEANOE doi:10.17882/58344; non-commercial only) | zenodo or source |
+| `data/raw/ice_sheets/greenland/mar_protect/mar_protect_integrated_smb.csv` | 88 KB | greenland, smbsupp, smbrcm and smbstate (via `smb_emulator.py`), smblag | **PREP**, derived: MARv3.12 PROTECT multi-GCM SMB, integrated by prep:mar | no license found (ftp.climato.be) | zenodo |
+| `data/raw/ice_sheets/greenland/mar_protect/gcm_temperature.csv` | 80 KB | greenland, smbsupp, smbrcm and smbstate (via `smb_emulator.py`), smblag | **PREP**, derived: CMIP6 GMST and Greenland temperature from Pangeo, built by prep:gcmT | CMIP6 Terms of Use: CC-BY-4.0, or CC0 for the GISS models | zenodo |
+| `data/raw/ice_sheets/greenland/glaude2024/glaude2024_integrated_smb.csv` | 16 KB | smbrcm | **PREP**, derived: Glaude et al. 2024 RCM SMB (doi:10.5281/zenodo.13270554; Glaude2024), built by prep:glaude from `data/raw/glaude2024/` | CC-BY-4.0 (Zenodo 10.5281/zenodo.13270554) | zenodo |
 | `data/raw/ipcc_ar6/slr/ar6/global/full_sample_components/oceandynamics-tlm-oceandynamics-ssp245_globalsl.nc` | 612 KB | zostoga | IPCC AR6 FACTS thermal-expansion samples, SSP2-4.5 (Garner2023) | CC-BY-4.0 | zenodo or source |
-| `data/raw/steric/cmip6_zostoga/fetch_provenance.json` | 44 KB | zostoga | **PREP**, derived: members, data sources and drift fits of the CMIP6 zostoga download, written by prep:zfetch | CMIP6 terms | zenodo |
-| `data/raw/steric/cmip6_zostoga/zelinka_ecs.json` | 80 KB | zostoga | ECS of the CMIP6 models (Zelinka et al. 2020, GitHub `mzelinka/cmip56_forcing_feedback_ecs`), downloaded by prep:zfetch | provider terms | zenodo or source |
+| `data/raw/steric/cmip6_zostoga/fetch_provenance.json` | 44 KB | zostoga | **PREP**, derived: members, data sources and drift fits of the CMIP6 zostoga download, written by prep:zfetch | CMIP6 Terms of Use: CC-BY-4.0, or CC0 for the GISS models | zenodo |
+| `data/raw/steric/cmip6_zostoga/zelinka_ecs.json` | 80 KB | zostoga | ECS of the CMIP6 models (Zelinka et al. 2020, GitHub `mzelinka/cmip56_forcing_feedback_ecs`), downloaded by prep:zfetch | no license found (GitHub repository has none) | source (prep:zfetch downloads it) |
 
 The three derived CSVs under `data/raw/ice_sheets/greenland/` and
 `fetch_provenance.json` are derived files stored under `data/raw/`. Their
@@ -153,7 +169,7 @@ class is PREP, not RAW.
 | `data/raw/gmslr/dangendorf2024_KSSLfin.mat`, `dangendorf2024_KSSL_SEfin.mat` | 426 MB + 227 MB | prep:read_process, prep:refresh | Dangendorf et al. 2024 (Dangendorf2024) | source |
 | `data/raw/gmslr/horwath2021_ESACCI_SLBC_v2.2.csv` | 112 KB | prep:read_process, prep:refresh | ESA CCI sea-level budget closure (Horwath2022) | source or zenodo |
 | `data/raw/gmslr/nasa_GMSL_TPJAOS_5.2.txt` | 148 KB | prep:read_process | NASA GSFC altimetry GMSL v5.2 (Beckley2017) | source |
-| `data/raw/gmslr/ipccar6_global_sea_level_observed.csv` | 4 KB | prep:read_process, prep:refresh | AR6 WGI Ch. 9 observed GMSL (Fox-Kemper2021) | source or zenodo |
+| `data/raw/gmslr/ipccar6_global_sea_level_observed.csv` | 4 KB | prep:read_process, prep:refresh | IPCC AR6 Figure SPM.8 data, observed GMSL (Fyfe2021data; CC-BY-4.0, CEDA doi:10.5285/98af2184e13e4b91893ab72f301790db) | source or zenodo |
 | `data/raw/ice_sheets/antarctica/imbie_west_antarctica_2021_mm.csv` | 12 KB | prep:read_process, prep:refresh | IMBIE 2021 release (Otosaka2023) | source or zenodo |
 | `data/raw/gmst/berkEarth_globalmean_airTaboveseaice.txt` | 208 KB | prep:read_process, prep:refresh | Berkeley Earth (Rohde2020) | source |
 | `data/raw/gmst/hadcrut5_global_monthly.csv` | 88 KB | prep:read_process | HadCRUT5 (Morice2021) | source |
@@ -161,7 +177,7 @@ class is PREP, not RAW.
 | `data/raw/gmst/noaa_atmoT_landocean.txt` | 4 KB | prep:read_process | NOAAGlobalTemp (Vose2021) | source |
 | `data/raw/saod/GloSSAC_V2.23_NC4.nc` | 530 MB | prep:read_process | GloSSAC v2.23 (Thomason2018) | source |
 | `data/raw/saod/maunaLoa_transmission.txt` | 28 KB | prep:read_process | NOAA GML Mauna Loa apparent transmission | source |
-| `data/raw/ipcc_ar6/atmo_temp/` | 44 KB | prep:read_process (`projections/temp/*`) | AR6 WGI GMST projections (Lee2021) | zenodo or source |
+| `data/raw/ipcc_ar6/atmo_temp/` | 44 KB | prep:read_process (`projections/temp/*`) | IPCC AR6 Figure SPM.8 data, GMST projections (Fyfe2021data, Lee2021; CC-BY-4.0, CEDA doi:10.5285/98af2184e13e4b91893ab72f301790db) | zenodo or source |
 | `data/raw/ocean_temp/en4/EN.4.2.2.analyses.g10.{1970…2021}.zip` | 15 GB | prep:refresh, prep:en4layers, prep:eos; ocean only if `harmonized/df_en4_global_0_700m` is missing from the h5 | Met Office EN4.2.2 objective analyses (Good2013) | source |
 | `data/raw/ocean_temp/en4/EN.4.2.2.analyses.g10.{1950…2020}.zip` and `data/raw/ocean_temp/en4/analyses_2021_2025/EN.4.2.2.analyses.g10.{2021…2025}.zip` | 21 GB + 1.5 GB (includes the 1970–2020 files above) | prep:en4thermo (`--zip-dirs` takes both folders) | as above | source |
 | `data/raw/glaude2024/{MAR,HIRHAM,RACMO}_SMB_1km.nc` | 9.6 GB | prep:glaude | Glaude et al. 2024 (Glaude2024), doi:10.5281/zenodo.13270554 | source |

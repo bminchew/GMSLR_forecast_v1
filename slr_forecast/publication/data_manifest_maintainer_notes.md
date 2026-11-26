@@ -6,16 +6,68 @@ public manifest should not carry.
 
 ## Before the Zenodo bundle
 
-- **Licenses not yet checked against the provider's terms.** The public
-  manifest says "provider terms" (or names the provider) for these:
-  NOAA NCEI thermosteric files (US Government work assumed), Berkeley Earth,
-  GlaMBIE (WGMS), Zemp et al. 2019, Mouginot et al. 2019 supplement (PNAS),
-  Mankoff et al. 2021 (CC-BY-4.0 assumed), IMBIE-3, ISMIP6, Ablain et al. 2019,
-  MARv3.12 PROTECT (derived CSV), CMIP6 (derived CSV), Glaude et al. 2024
-  (derived CSV), EN4 (Met Office license; the three shipped
-  `en4_greenland_peripheral_*.csv` files and two h5 keys are EN4-derived),
-  IAP v4.2, the 2021 IMBIE releases and the Horwath and AR6
-  observed-GMSL files.
+- **Licenses checked 2026-11-25** against each provider's own pages, DOI
+  records (DataCite, Zenodo API) or license files.
+  - **Compatible with the CC-BY-4.0 bundle** (CC BY 4.0, CC0/US public domain,
+    or UK OGL v3), attribution required as stated by each provider:
+    - NOAA NCEI thermosteric (US public domain, NCEI open data policy);
+    - NASA GSFC altimetry GMSL v5.2 (EOSDIS guidance, CC0);
+    - Dangendorf 2024 KSSL files (Zenodo 10.5281/zenodo.10621070, CC BY);
+    - AR6 observed GMSL and AR6 GMST projections: both are the Figure SPM.8
+      data (Fyfe et al. 2021, CEDA 10.5285/98af2184e13e4b91893ab72f301790db),
+      CC BY; cite that dataset, not only Fox-Kemper/Lee;
+    - AR6 FACTS projections incl. `tlmdata/twolayer_SSPs.h5` (CC BY; CITATION
+      file obliges citing Fox-Kemper 2021, Kopp 2023 and the version);
+    - IGCC 2024 (CC BY); HadCRUT5 (OGL v3); GISTEMP v4 and NOAAGlobalTemp
+      (US public domain, no dataset license); GloSSAC v2.23 (NASA, open);
+      NOAA GML Mauna Loa transmission (public domain);
+    - GlaMBIE (WGMS policy, "corresponds to" CC BY 4.0); Zemp 2019 (Zenodo
+      1492141, v1.0.0, CC BY; v1.1.0 corrects Iceland and the global sum);
+      Mankoff 2021 (GEUS Dataverse, CC BY; required phrase "PROMICE mass
+      balance product (Larsen et al., 2026, Mankoff et al. 2021)");
+    - IMBIE-3 and IMBIE 2021 (UK Polar Data Centre, OGL v3; IMBIE 2021
+      dataset citation is Shepherd et al. 2021, PDC);
+    - ISMIP6 ComputedScalarsPaper (Zenodo 3940765, CC BY; acknowledge CMIP6,
+      ISMIP6 and the modeling groups);
+    - Glaude 2024 (CC BY); Noël 2021 mask (CC BY; cite GIMP DEM too);
+    - CMIP6 (Terms of Use 6.2: 125 models CC BY 4.0, 6 GISS CC0; check each
+      model used against the per-model license page);
+    - ESA SLBC_cci v2.2 (ESA terms: "any user for any purpose";
+      redistribution not named; medium confidence).
+  - **Non-commercial only; must be carved out of the CC-BY grant and labeled:**
+    - Berkeley Earth (CC BY-NC 4.0; berkeleyearth.org/data). Affects the
+      gridded and annual files, `greenland_mask_berkeley_1deg.csv`, and the
+      Berkeley keys of `slr_processed_data.h5`.
+    - EN4.2.2 (UK NCGL v2): the three `en4_greenland_peripheral_*.csv`, the
+      EN4 keys of the h5, `en4_thermosteric_annual.csv`.
+    - Ablain 2019 covariance (SEANOE 10.17882/58344, CC BY-NC 4.0).
+  - **No license found; ask the producer or leave to the "source" route:**
+    - MARv3.12 PROTECT (ftp.climato.be; no license anywhere): ask Fettweis.
+      The derived CSV takes ~57 h to rebuild, so permission matters most here.
+    - Mouginot 2019 PNAS Dataset S2 (`sd02.xlsx`; article CC BY-NC-ND; no
+      SI license): ask Mouginot/Rignot, or users download from PNAS.
+    - IAP v4.2 OHC (usage statement only; asks users to submit results to the
+      platform): ask Cheng, or users rebuild with prep:iap.
+    - Zelinka ECS (GitHub repo has no LICENSE; Zenodo 6647291 "other-open"):
+      ask Zelinka, or prep:zfetch downloads it.
+  - **Decision (user, 2026-11-25): option (a).** The bundle stays CC-BY-4.0
+    with the Berkeley Earth and EN4 derived files carved out as non-commercial
+    (listed at the top of `data_manifest.md`); no permission requests will be
+    sent; inputs without a license go to the "source" route.
+  - **Open:** IAP (the archived CSV is the input of record, because a fresh
+    download no longer reproduces it) and MAR PROTECT (57 h to rebuild; check
+    whether ISMIP7 releases MAR under a license).
+  - **`harmonized/df_argo_greenland_200_500m`** is in the h5 but no shipped
+    code reads it; drop it from the distributed copy rather than check Argo
+    terms.
+  - **Manifest corrections found during the check:** Ablain license is CC
+    BY-NC 4.0; the AR6 observed GMSL and GMST files are SPM.8 data; the
+    Mouginot file is Dataset S2; record the Zemp (v1.0.0) and Mankoff versions;
+    the Berkeley high-res annual file asks for Rohde, Calvert & Hausfather
+    (ESSD Discuss. 2026). `data/raw/gmst/noaa_atmoT_landocean.txt` is an
+    **October-only** Climate at a Glance series, not annual; only the
+    preprocessing overview plot reads it (labeled "annual"); the paper does
+    not use NOAAGlobalTemp, GISTEMP or HadCRUT.
 - **Frederikse et al. 2020: checked 2026-11-24.** The Zenodo record
   (10.5281/zenodo.3862995) is `other-closed`, "(c) 2020 All Rights Reserved".
   The pipeline now reads the NASA PO.DAAC copy (JPL_RECON_GMSL v1.0,
