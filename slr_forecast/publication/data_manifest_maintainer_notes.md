@@ -54,9 +54,15 @@ public manifest should not carry.
     with the Berkeley Earth and EN4 derived files carved out as non-commercial
     (listed at the top of `data_manifest.md`); no permission requests will be
     sent; inputs without a license go to the "source" route.
-  - **Open:** IAP (the archived CSV is the input of record, because a fresh
-    download no longer reproduces it) and MAR PROTECT (57 h to rebuild; check
-    whether ISMIP7 releases MAR under a license).
+  - **IAP decision (user, 2026-11-25):** source route; users run prep:iap.
+    IAP overwrote all v4.2 files on 2026-11-05 (Last-Modified header; zips
+    dated 2026-11-07) under the same label and URL, and the DOI
+    (10.12157/IOCAS.20240117.001) names the product, not a frozen file set.
+    The README and manifest say thermorec may not reproduce exactly.
+  - **MAR decision (user, 2026-11-25):** keep the current analysis and move
+    `mar_protect_integrated_smb.csv` to the "source" route (prep:mar from
+    ftp.climato.be, about 57 h). No refit on the NIRD product before
+    submission; the NIRD comparison was not run.
   - **MAR check (2026-11-25):** ISMIP7 does not use MAR for Greenland
     (its forcing is SDBN1 and dEBM2 downscaling; no data license stated). The
     PROTECT MARv3.12 runs are archived under CC-BY-4.0 only as Goelzer's
@@ -77,7 +83,9 @@ public manifest should not carry.
     (ESSD Discuss. 2026). `data/raw/gmst/noaa_atmoT_landocean.txt` is an
     **October-only** Climate at a Glance series, not annual; only the
     preprocessing overview plot reads it (labeled "annual"); the paper does
-    not use NOAAGlobalTemp, GISTEMP or HadCRUT.
+    not use NOAAGlobalTemp. GISTEMP and HadCRUT are used: with Berkeley Earth
+    they give the 1950-present warming of 1.0-1.1 degC (component_summation
+    cell 13; abstract and main text).
 - **Frederikse et al. 2020: checked 2026-11-24.** The Zenodo record
   (10.5281/zenodo.3862995) is `other-closed`, "(c) 2020 All Rights Reserved".
   The pipeline now reads the NASA PO.DAAC copy (JPL_RECON_GMSL v1.0,

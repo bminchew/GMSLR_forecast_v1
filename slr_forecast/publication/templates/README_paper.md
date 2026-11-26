@@ -42,6 +42,21 @@ files in `data/processed/` are included. The Docker run mounts a host directory
 at `/work/data/processed`, which hides these copies, so the mounted directory
 must also hold them (they are also in the Zenodo bundle).
 
+Inputs whose licenses do not permit redistribution must be downloaded from
+their providers (route "source" in the manifest). Two of them are processed
+files that the full run needs:
+
+- `data/raw/ice_sheets/greenland/mar_protect/mar_protect_integrated_smb.csv`
+  (MARv3.12 Greenland surface mass balance). `scripts/extract_mar_protect_smb.py`
+  downloads and integrates the model output, which takes about 57 h.
+- `data/processed/iap_v42_ohc_global_monthly.csv` (IAP ocean heat content),
+  read only by the calibration-record sensitivity test (`thermorec`).
+  `scripts/iap_ohc_global.py` builds it. IAP updates its files without changing
+  the version label: the paper used files downloaded on 22 October 2026, and
+  IAP replaced them on 5 November 2026. A later download, or a later
+  recalibration by IAP, can therefore change the `thermorec` results slightly
+  from those in the paper.
+
 `data/processed/slr_processed_data.h5` is built from `data/raw/` by
 `notebooks/read_process_datafiles.ipynb` (see the manifest for the run order of
 the preprocessing scripts).
